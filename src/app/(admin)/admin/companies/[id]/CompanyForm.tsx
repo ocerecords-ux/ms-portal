@@ -7,7 +7,8 @@ import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { AdminField } from '../../NewCompanyForm';
 import { CountrySelect } from '../../CountrySelect';
 import type { Company } from '@prisma/client';
-import { COMPANY_TYPE_LABELS } from '@/lib/roles';
+import { nazevTypuFirmy } from '@/lib/roles';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 
 /**
@@ -18,6 +19,8 @@ import { DEFAULT_COUNTRY } from '@/lib/countries';
  */
 export function CompanyForm({ company }: { company: Company }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const isClient = company.type === 'KLIENT';
 
   const [name, setName] = useState(company.name);
@@ -91,7 +94,7 @@ export function CompanyForm({ company }: { company: Company }) {
       const res = await fetch(`/api/admin/ares?ico=${encodeURIComponent(ic)}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Načtení z registru se nezdařilo.');
+        setError(data?.error || t('firma.aresNezdarilo'));
         return;
       }
       if (data.name) setName(data.name);
@@ -101,9 +104,9 @@ export function CompanyForm({ company }: { company: Company }) {
       if (data.addressCity) setAddressCity(data.addressCity);
       if (data.addressZip) setAddressZip(data.addressZip);
       if (data.addressCountry) setAddressCountry(data.addressCountry);
-      setAresNote('Údaje z registru doplněny — zkontrolujte a uložte.');
+      setAresNote(t('firma.aresDoplneno'));
     } catch {
-      setError('Načtení z registru se nezdařilo.');
+      setError(t('firma.aresNezdarilo'));
     } finally {
       setAresBusy(false);
     }
@@ -150,7 +153,7 @@ export function CompanyForm({ company }: { company: Company }) {
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.error || 'Uložení se nezdařilo.');
+        throw new Error(errBody.error || t('firma.ulozeniNezdarilo'));
       }
       setSaved(true);
       setAresNote(null);
@@ -161,7 +164,7 @@ export function CompanyForm({ company }: { company: Company }) {
       router.push(`/admin?tab=${company.type === 'KLIENT' ? 'klienti' : 'dodavatele'}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
+      setError(err instanceof Error ? err.message : t('firma.ulozeniNezdarilo'));
       setSaving(false);
     }
   }
@@ -186,13 +189,13 @@ export function CompanyForm({ company }: { company: Company }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Změna se nezdařila.');
+        setError(data?.error || t('firma.zmenaNezdarila'));
         return;
       }
       setAktivni(nove);
       router.refresh();
     } catch {
-      setError('Změna se nezdařila.');
+      setError(t('firma.zmenaNezdarila'));
     } finally {
       setVyrazuje(false);
     }
@@ -201,21 +204,21 @@ export function CompanyForm({ company }: { company: Company }) {
   return (
     <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4">
       <p className="text-xs font-heading text-muted uppercase tracking-wide -mb-1">
-        Typ firmy: <span className="text-ink">{COMPANY_TYPE_LABELS[company.type]}</span>
+        {t('firma.typFirmy')} <span className="text-ink">{nazevTypuFirmy(company.type, jazyk)}</span>
       </p>
 
-      <AdminField label="Název firmy" required>
+      <AdminField label={t('firma.nazev')} required>
         <input required value={name} onChange={(e) => setName(e.target.value)} className="admin-input" />
       </AdminField>
 
       <div className="flex gap-4 flex-wrap items-end">
         <div className="flex-1 min-w-[140px]">
-          <AdminField label="IČ">
+          <AdminField label={t('firma.ic')}>
             <input value={ic} onChange={(e) => setIc(e.target.value)} inputMode="numeric" className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[140px]">
-          <AdminField label="DIČ">
+          <AdminField label={t('firma.dic')}>
             <input value={dic} onChange={(e) => setDic(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -223,10 +226,10 @@ export function CompanyForm({ company }: { company: Company }) {
           type="button"
           onClick={loadFromAres}
           disabled={aresBusy || ic.replace(/\D/g, '').length !== 8}
-          title="Doplnit název, DIČ a adresu z veřejného registru podle IČ"
+          title={t('firma.nacistZRegistruTitul')}
           className="bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[2px]"
         >
-          {aresBusy ? 'Načítám…' : 'Načíst z registru'}
+          {aresBusy ? t('obecne.nacitam') : t('firma.nacistZRegistru')}
         </button>
       </div>
 
@@ -234,17 +237,17 @@ export function CompanyForm({ company }: { company: Company }) {
 
       <label className="flex items-center gap-2 text-sm font-heading text-ink">
         <input type="checkbox" checked={vatPayer} onChange={(e) => setVatPayer(e.target.checked)} />
-        Plátce DPH
+        {t('firma.platceDph')}
       </label>
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-[2] min-w-[220px]">
-          <AdminField label="Ulice a číslo popisné">
+          <AdminField label={t('firma.ulice')}>
             <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[120px]">
-          <AdminField label="PSČ">
+          <AdminField label={t('firma.psc')}>
             <input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -252,12 +255,12 @@ export function CompanyForm({ company }: { company: Company }) {
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Město">
+          <AdminField label={t('firma.mesto')}>
             <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Země">
+          <AdminField label={t('firma.zeme')}>
             <CountrySelect value={addressCountry} onChange={setAddressCountry} />
           </AdminField>
         </div>
@@ -265,12 +268,12 @@ export function CompanyForm({ company }: { company: Company }) {
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Číslo účtu">
+          <AdminField label={t('firma.cisloUctu')}>
             <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Doba splatnosti (dny)" hint="předvyplní se při vystavování faktury">
+          <AdminField label={t('firma.splatnost')} hint={t('firma.splatnostHint')}>
             <input
               value={paymentTermDays}
               onChange={(e) => setPaymentTermDays(e.target.value)}
@@ -284,17 +287,17 @@ export function CompanyForm({ company }: { company: Company }) {
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Kontaktní osoba">
+          <AdminField label={t('firma.kontaktniOsoba')}>
             <input value={contactName} onChange={(e) => setContactName(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="E-mail" hint="sem chodí nabídky a faktury">
+          <AdminField label={t('firma.sloupecEmail')} hint={t('firma.emailHint')}>
             <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Telefon">
+          <AdminField label={t('firma.sloupecTelefon')}>
             <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -308,12 +311,9 @@ export function CompanyForm({ company }: { company: Company }) {
           className="mt-0.5"
         />
         <span>
-          Posílat faktury i klientovi
+          {t('firma.fakturyKlientovi')}
           <br />
-          <span className="text-xs font-body text-muted">
-            Vedle e-mailu výš dostane fakturu v kopii i člověk, který má u téhle firmy na starost
-            projekt, ke kterému je faktura navázaná.
-          </span>
+          <span className="text-xs font-body text-muted">{t('firma.fakturyKlientoviPopis')}</span>
         </span>
       </label>
 
@@ -322,36 +322,27 @@ export function CompanyForm({ company }: { company: Company }) {
           {/* Tahle dve zaskrtavatka rozhoduji i o ZNENI ZPRAV klientovi
               (zadani 14. 9. 2026): kdo dela jen reklamy, dostava reklamni
               vzory a jedinou zpravu ve stavu „Dokonceno - ke schvaleni". */}
-          <AdminField
-            label="Druh zakázek"
-            hint="klient uvidí jen příslušný typ objednávky — a podle toho mu chodí i zprávy o stavu projektu"
-          >
+          <AdminField label={t('firma.druhZakazek')} hint={t('firma.druhZakazekHint')}>
             <div className="flex flex-col gap-1.5">
               <div className="flex flex-wrap gap-2">
                 <Volba vybrano={dealsAudiobooks} onZmena={setDealsAudiobooks}>
-                  Audioknihy
+                  {t('firma.audioknihy')}
                 </Volba>
                 <Volba vybrano={dealsAds} onZmena={setDealsAds}>
-                  Reklamy
+                  {t('firma.reklamy')}
                 </Volba>
               </div>
-              <span className="text-xs font-body text-muted">
-                Jen Reklamy = zprávy podle vzorů pro reklamy, a to jen ve stavu „Dokončeno - ke schválení".
-                Audioknihy (i spolu s reklamami) = zpráva ke každému kroku.
-              </span>
+              <span className="text-xs font-body text-muted">{t('firma.druhZakazekPopis')}</span>
             </div>
           </AdminField>
 
           {/* Na klic = platime i herce a jednorazove veci. Ukazuje se jen
               u audioknih, u reklamy ten pojem nedava smysl. */}
           {dealsAudiobooks && (
-            <AdminField
-              label="Audioknihy na klíč"
-              hint="platíme i herce a jednorázové položky (přeposlech, úprava textu) — v rozpočtu projektu pak přibude celkový rozpočet se ziskem z knihy"
-            >
+            <AdminField label={t('firma.naKlic')} hint={t('firma.naKlicHint')}>
               <label className="flex items-center gap-2 text-sm font-heading text-ink">
                 <input type="checkbox" checked={naKlic} onChange={(e) => setNaKlic(e.target.checked)} />
-                Děláme na klíč
+                {t('firma.delameNaKlic')}
               </label>
             </AdminField>
           )}
@@ -359,30 +350,24 @@ export function CompanyForm({ company }: { company: Company }) {
           {/* Cenu navrhuje klient (23. 9. 2026) - pak se z normostran nic
               nepocita a sazba neni potreba. */}
           {dealsAudiobooks && (
-            <AdminField
-              label="Cenu navrhuje klient"
-              hint="v objednávce se cena nepočítá z normostran — klient si ji vyplní sám (pole Počet normostran i Cena zůstávají)"
-            >
+            <AdminField label={t('firma.cenuUrcujeKlient')} hint={t('firma.cenuUrcujeKlientHint')}>
               <label className="flex items-center gap-2 text-sm font-heading text-ink">
                 <input
                   type="checkbox"
                   checked={cenuUrcujeKlient}
                   onChange={(e) => setCenuUrcujeKlient(e.target.checked)}
                 />
-                Cenu si navrhuje sám
+                {t('firma.cenuSiNavrhuje')}
               </label>
             </AdminField>
           )}
 
           {/* Fakturace na dve casti (30. 9. 2026) - jen u firmy, ktera to tak
               opravdu ma. Nesouvisi s druhem zakazek, proto bez podminky. */}
-          <AdminField
-            label="Fakturujeme na dvě části"
-            hint="po podpisu smlouvy polovina, zbytek potom — u faktury z nabídky se pak předvyplní naše interní značka 1. / 2. část; na dokladu se netiskne"
-          >
+          <AdminField label={t('firma.naCasti')} hint={t('firma.naCastiHint')}>
             <label className="flex items-center gap-2 text-sm font-heading text-ink">
               <input type="checkbox" checked={naCasti} onChange={(e) => setNaCasti(e.target.checked)} />
-              Zakázka se fakturuje nadvakrát
+              {t('firma.naCastiVolba')}
             </label>
           </AdminField>
 
@@ -390,16 +375,16 @@ export function CompanyForm({ company }: { company: Company }) {
               klientu se cena bude pocitat kalkulackou nad Cenikem. A u firmy,
               ktera si cenu navrhuje sama, se nepouzije vubec. */}
           {dealsAudiobooks && !cenuUrcujeKlient && (
-            <AdminField label="Sazba za normostranu (Kč bez DPH)" required>
+            <AdminField label={t('firma.sazba')} required>
               <input required type="number" min={0} value={rate} onChange={(e) => setRate(e.target.value)} className="admin-input" />
             </AdminField>
           )}
 
-          <AdminField label="ID firmy v Caflou" hint="podle tohoto ID se z Caflou tahají projekty této firmy do sekce Projekty">
-            <input value={caflouCompanyId} onChange={(e) => setCaflouCompanyId(e.target.value)} placeholder="např. 12345" className="admin-input" />
+          <AdminField label={t('firma.caflouId')} hint={t('firma.caflouIdHint')}>
+            <input value={caflouCompanyId} onChange={(e) => setCaflouCompanyId(e.target.value)} placeholder={t('firma.caflouIdPlaceholder')} className="admin-input" />
           </AdminField>
 
-          <AdminField label="Odkaz na složku Google Disk">
+          <AdminField label={t('firma.drive')}>
             <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/…" className="admin-input" />
           </AdminField>
         </>
@@ -413,21 +398,19 @@ export function CompanyForm({ company }: { company: Company }) {
           disabled={saving}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {saving ? 'Ukládám…' : 'Uložit změny'}
+          {saving ? t('obecne.ukladam') : t('firma.ulozitZmeny')}
         </button>
-        {saved && <span className="text-status-done text-sm font-heading">✓ Uloženo</span>}
+        {saved && <span className="text-status-done text-sm font-heading">{t('firma.ulozeno')}</span>}
       </div>
 
       {/* Vyrazeni misto mazani (zadani 10. 9. 2026). */}
       <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
         <div className="flex-1 min-w-[260px]">
           <p className="font-heading font-semibold text-sm text-ink m-0">
-            {aktivni ? 'Vyřadit firmu' : 'Firma je vyřazená'}
+            {aktivni ? t('firma.vyradit') : t('firma.jeVyrazena')}
           </p>
           <p className="text-xs font-body text-muted m-0 mt-1">
-            {aktivni
-              ? 'Zmizí ze seznamů a z nabídek u dokladů. Faktury, smlouvy a projekty, které na ni odkazují, zůstanou beze změny — proto se nemaže.'
-              : 'Neukazuje se v seznamech ani v nabídkách. Vrátit ji jde kdykoliv.'}
+            {aktivni ? t('firma.vyraditPopis') : t('firma.vyrazenaPopis')}
           </p>
         </div>
         <button
@@ -440,7 +423,7 @@ export function CompanyForm({ company }: { company: Company }) {
               : 'bg-brand-green text-onAccent hover:brightness-95'
           }`}
         >
-          {vyrazuje ? 'Měním…' : aktivni ? 'Vyřadit firmu' : 'Vrátit mezi aktivní'}
+          {vyrazuje ? t('firma.menim') : aktivni ? t('firma.vyradit') : t('firma.vratitMeziAktivni')}
         </button>
       </div>
 
@@ -448,16 +431,13 @@ export function CompanyForm({ company }: { company: Company }) {
           nabidne archivaci - viz SmazatSPrekazkami. */}
       <div className="flex flex-col gap-3">
         <div>
-          <p className="font-heading font-semibold text-sm text-ink m-0">Smazat firmu úplně</p>
-          <p className="text-xs font-body text-muted m-0 mt-1">
-            Když na firmě nic nevisí, smaže se rovnou. Když něco visí, portál nejdřív ukáže co
-            a nabídne archivaci. Nevratné.
-          </p>
+          <p className="font-heading font-semibold text-sm text-ink m-0">{t('firma.smazatUplne')}</p>
+          <p className="text-xs font-body text-muted m-0 mt-1">{t('firma.smazatUplnePopis')}</p>
         </div>
         <SmazatSPrekazkami
           url={`/api/admin/companies/${company.id}`}
-          co={`Firmu ${company.name}`}
-          popisek="Smazat firmu"
+          co={t('firma.smazatCo', { nazev: company.name })}
+          popisek={t('firma.smazatPopisek')}
           onSmazano={() => {
             router.push('/admin');
             router.refresh();

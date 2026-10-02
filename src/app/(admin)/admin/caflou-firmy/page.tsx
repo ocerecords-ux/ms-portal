@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { comparableCompanyName } from '@/lib/caflouCompanies';
 import { CaflouCompaniesBrowser } from './CaflouCompaniesBrowser';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Firmy z Caflou (zadani 8. 9. 2026). Surovy seznam k roztrideni na klienty a
 // herce - do modelu Company (tenant portalu) se nic nezaklada automaticky,
@@ -8,6 +10,7 @@ import { CaflouCompaniesBrowser } from './CaflouCompaniesBrowser';
 export const dynamic = 'force-dynamic';
 
 export default async function CaflouCompaniesPage() {
+  const jazyk = nactiJazyk();
   const [rows, companies, people] = await Promise.all([
     prisma.caflouCompany.findMany({ orderBy: { name: 'asc' }, take: 3000 }),
     prisma.company.findMany({ select: { id: true, name: true, ic: true, caflouCompanyId: true } }),
@@ -40,15 +43,15 @@ export default async function CaflouCompaniesPage() {
 
     let existing: { label: string; where: string } | null = null;
     if (companyByCaflouId.has(row.id)) {
-      existing = { label: companyByCaflouId.get(row.id)!, where: 'Firmy (napojeno na Caflou)' };
+      existing = { label: companyByCaflouId.get(row.id)!, where: prelozit(jazyk, 'caflou.shodaNapojeno') };
     } else if (ic && companyByIc.has(ic)) {
-      existing = { label: companyByIc.get(ic)!, where: 'Firmy (shodné IČ)' };
+      existing = { label: companyByIc.get(ic)!, where: prelozit(jazyk, 'caflou.shodaFirmyIc') };
     } else if (ic && personByIc.has(ic)) {
-      existing = { label: personByIc.get(ic)!, where: 'Herci (shodné IČ)' };
+      existing = { label: personByIc.get(ic)!, where: prelozit(jazyk, 'caflou.shodaHerciIc') };
     } else if (key && companyByName.has(key)) {
-      existing = { label: companyByName.get(key)!, where: 'Firmy (shodný název)' };
+      existing = { label: companyByName.get(key)!, where: prelozit(jazyk, 'caflou.shodaFirmyNazev') };
     } else if (key && personByName.has(key)) {
-      existing = { label: personByName.get(key)!, where: 'Herci (shodný název)' };
+      existing = { label: personByName.get(key)!, where: prelozit(jazyk, 'caflou.shodaHerciNazev') };
     }
 
     return {

@@ -4,6 +4,8 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RozdilPole } from '@/lib/pozvankaUdaju';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatumCas } from '@/lib/jazyk';
 
 /**
  * Co se s vyplněnou žádostí dá udělat (zadání 16. 9. 2026).
@@ -29,6 +31,8 @@ export function ZpracovaniZadosti({
   rozdily: RozdilPole[];
 }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [vybrane, setVybrane] = useState<string[]>(rozdily.map((r) => r.klic));
   const [bezi, setBezi] = useState(false);
   const [zprava, setZprava] = useState<string | null>(null);
@@ -49,13 +53,13 @@ export function ZpracovaniZadosti({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Nepodařilo se to.');
+        setChyba(data?.error || t('zadost.nepodariloSe'));
         return;
       }
       setZprava(hotovaZprava);
       router.refresh();
     } catch {
-      setChyba('Nepodařilo se to.');
+      setChyba(t('zadost.nepodariloSe'));
     } finally {
       setBezi(false);
     }
@@ -67,10 +71,10 @@ export function ZpracovaniZadosti({
     try {
       const res = await fetch(`/api/admin/pozvanky-udaju/${id}`, { method: 'DELETE' });
       if (!res.ok) {
-        setChyba('Zrušení se nepodařilo.');
+        setChyba(t('zadost.zruseniNepodarilo'));
         return;
       }
-      setZprava('Odkaz přestal platit.');
+      setZprava(t('zadost.odkazPrestalPlatit'));
       router.refresh();
     } finally {
       setBezi(false);
@@ -81,20 +85,20 @@ export function ZpracovaniZadosti({
     <div className="flex flex-col gap-5">
       {stav === 'CEKA' && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
-          <p className="font-heading font-semibold text-ink m-0">Čeká se na vyplnění</p>
+          <p className="font-heading font-semibold text-ink m-0">{t('zadost.cekaSeNaVyplneni')}</p>
           <div className="flex gap-2 items-center flex-wrap">
             <input readOnly value={odkaz} className="admin-input flex-1 min-w-[220px] text-xs" />
             <button
               type="button"
               onClick={() => {
                 void navigator.clipboard?.writeText(odkaz).then(
-                  () => setZprava('Odkaz je ve schránce.'),
-                  () => setZprava('Zkopírujte odkaz ručně.'),
+                  () => setZprava(t('zadost.veSchrance')),
+                  () => setZprava(t('zadost.zkopirujteRucne')),
                 );
               }}
               className="text-sm font-heading font-semibold rounded-lg border border-line px-3 py-2 hover:border-brand-purple"
             >
-              Zkopírovat
+              {t('zadost.zkopirovat')}
             </button>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
@@ -102,16 +106,16 @@ export function ZpracovaniZadosti({
               value={kam}
               onChange={(e) => setKam(e.target.value)}
               type="email"
-              placeholder="E-mail"
+              placeholder={t('firma.sloupecEmail')}
               className="admin-input flex-1 min-w-[200px]"
             />
             <button
               type="button"
               disabled={bezi}
-              onClick={() => void akce({ akce: 'poslat', ...(kam ? { email: kam } : {}) }, 'Odkaz odešel.')}
+              onClick={() => void akce({ akce: 'poslat', ...(kam ? { email: kam } : {}) }, t('zadost.odkazOdeselKratce'))}
               className="text-sm font-heading font-semibold rounded-lg border border-brand-purple text-brand-purple px-4 py-2 disabled:opacity-60"
             >
-              Poslat e-mailem
+              {t('zadost.poslatEmailem')}
             </button>
           </div>
         </div>
@@ -120,19 +124,15 @@ export function ZpracovaniZadosti({
       {stav === 'VYPLNENA' && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
           <div>
-            <p className="font-heading font-semibold text-ink m-0">Co se má zapsat</p>
+            <p className="font-heading font-semibold text-ink m-0">{t('zadost.coSeMaZapsat')}</p>
             <p className="text-xs font-body text-muted m-0 mt-1">
-              {vyplneno
-                ? `Vyplněno ${new Date(vyplneno).toLocaleString('cs-CZ', { timeZone: 'Europe/Prague' })}.`
-                : ''}{' '}
-              Zaškrtnuté se zapíše do portálu, odškrtnuté zůstane, jak je.
+              {vyplneno ? t('zadost.vyplneno', { kdy: formatDatumCas(jazyk, new Date(vyplneno)) }) : ''}{' '}
+              {t('zadost.zaskrtnutePopis')}
             </p>
           </div>
 
           {rozdily.length === 0 ? (
-            <p className="text-sm font-body text-muted m-0">
-              Nic se neliší od toho, co už v portálu je. Není co zapisovat.
-            </p>
+            <p className="text-sm font-body text-muted m-0">{t('zadost.nicSeNelisi')}</p>
           ) : (
             <ul className="m-0 p-0 list-none flex flex-col gap-2">
               {rozdily.map((r) => (
@@ -149,13 +149,13 @@ export function ZpracovaniZadosti({
                     <span className="block text-sm font-heading font-semibold text-ink">
                       {r.popisek}
                       {!r.doplneni && (
-                        <span className="ml-2 text-xs font-body text-brand-purple">přepisuje</span>
+                        <span className="ml-2 text-xs font-body text-brand-purple">{t('zadost.prepisuje')}</span>
                       )}
                     </span>
                     <span className="block text-sm font-body text-ink break-words">{r.nove}</span>
                     {!r.doplneni && (
                       <span className="block text-xs font-body text-muted break-words">
-                        teď: {r.ted}
+                        {t('zadost.tedHodnota', { co: r.ted })}
                       </span>
                     )}
                   </span>
@@ -168,18 +168,18 @@ export function ZpracovaniZadosti({
             <button
               type="button"
               disabled={bezi || rozdily.length === 0}
-              onClick={() => void akce({ akce: 'zapsat', klice: vybrane }, 'Zapsáno do portálu.')}
+              onClick={() => void akce({ akce: 'zapsat', klice: vybrane }, t('zadost.zapsano'))}
               className="text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-5 py-2.5 disabled:opacity-60"
             >
-              {bezi ? 'Zapisuji…' : 'Zapsat do portálu'}
+              {bezi ? t('zadost.zapisuji') : t('zadost.zapsatDoPortalu')}
             </button>
             <button
               type="button"
               disabled={bezi}
-              onClick={() => void akce({ akce: 'zapsat', klice: [] }, 'Odloženo — nic se nezapsalo.')}
+              onClick={() => void akce({ akce: 'zapsat', klice: [] }, t('zadost.odlozeno'))}
               className="text-sm font-heading font-semibold rounded-pill border border-line text-muted px-5 py-2.5 hover:border-brand-purple disabled:opacity-60"
             >
-              Nezapisovat nic
+              {t('zadost.nezapisovatNic')}
             </button>
           </div>
         </div>
@@ -187,17 +187,15 @@ export function ZpracovaniZadosti({
 
       {stav === 'HOTOVA' && (
         <div className="bg-okTint border border-brand-green rounded-card p-5">
-          <p className="font-heading font-semibold text-brand-greenDeep m-0">Údaje jsou v portálu</p>
-          <p className="text-sm font-body text-ink m-0 mt-1">
-            Odkaz už nejde použít znovu. Když bude potřeba něco doplnit, založte novou žádost.
-          </p>
+          <p className="font-heading font-semibold text-brand-greenDeep m-0">{t('zadost.udajeJsouVPortalu')}</p>
+          <p className="text-sm font-body text-ink m-0 mt-1">{t('zadost.hotovaPopis')}</p>
         </div>
       )}
 
       {stav === 'ZRUSENA' && (
         <div className="bg-field border border-line rounded-card p-5">
-          <p className="font-heading font-semibold text-ink m-0">Zrušeno</p>
-          <p className="text-sm font-body text-muted m-0 mt-1">Odkaz už neplatí.</p>
+          <p className="font-heading font-semibold text-ink m-0">{t('zadost.zruseno')}</p>
+          <p className="text-sm font-body text-muted m-0 mt-1">{t('zadost.odkazNeplati')}</p>
         </div>
       )}
 
@@ -208,8 +206,8 @@ export function ZpracovaniZadosti({
         <TlacitkoSmazat
           onSmazat={() => zrus()}
           disabled={bezi}
-          popisek="Zrušit žádost"
-          otazka="Opravdu zrušit žádost?"
+          popisek={t('zadost.zrusitZadost')}
+          otazka={t('zadost.opravduZrusit')}
           trida="self-start"
         />
       )}

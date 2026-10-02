@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { SLUZBY_REKLAMY } from '@/lib/sluzbyReklamy';
 import {
   DRUHY_PARAMETRU,
-  NAZVY_DRUHU,
+  nazevDruhuParametru,
   pocetRadku,
   radkyZTextu,
   type DruhParametru,
@@ -12,6 +12,7 @@ import {
   type TechnickyProfilData,
 } from '@/lib/technickeParametry';
 import { VyberVOkne } from '@/app/(portal)/projekty/VyberVOkne';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * ÚPRAVA SAD TECHNICKÝCH PARAMETRŮ (zadání 27. 9. 2026).
@@ -36,6 +37,11 @@ export function ParametryEditor({
   firmy: { id: string; name: string }[];
   smiMenit: boolean;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  // Tri tvary cisla v cestine, dva v anglictine - kazdy tvar vlastni klic.
+  const pocetSad = (n: number) =>
+    t(n === 1 ? 'techparam.sadJedna' : n < 5 ? 'techparam.sadyMalo' : 'techparam.sadMnoho', { pocet: n });
   const [profily, setProfily] = useState<Stav[]>(pocatecni);
   const [uklada, setUklada] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -63,9 +69,9 @@ export function ParametryEditor({
         }),
       });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || 'Uložení se nepovedlo.');
+      if (!res.ok) throw new Error(telo.error || t('techparam.neulozeno'));
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Uložení se nepovedlo.');
+      setChyba(err instanceof Error ? err.message : t('techparam.neulozeno'));
     } finally {
       setUklada(null);
     }
@@ -84,15 +90,15 @@ export function ParametryEditor({
         }),
       });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || 'Sadu se nepodařilo založit.');
+      if (!res.ok) throw new Error(telo.error || t('techparam.sadaNezalozena'));
       setProfily((p) => [...p, { ...telo.profil, rozbaleno: true }]);
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Sadu se nepodařilo založit.');
+      setChyba(err instanceof Error ? err.message : t('techparam.sadaNezalozena'));
     }
   }
 
   async function smaz(profil: Stav) {
-    if (!window.confirm(`Smazat sadu „${profil.nazev}"?`)) return;
+    if (!window.confirm(t('techparam.smazatSaduPotvrzeni', { nazev: profil.nazev }))) return;
     const res = await fetch(`/api/admin/technicke-parametry/${profil.id}`, { method: 'DELETE' });
     if (res.ok) setProfily((p) => p.filter((x) => x.id !== profil.id));
   }
@@ -110,21 +116,21 @@ export function ParametryEditor({
         return (
           <section key={druh} className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <h2 className="font-heading font-semibold text-lg text-ink m-0">{NAZVY_DRUHU[druh]}</h2>
-              <span className="text-xs font-body text-muted">{skupina.length} sad</span>
+              <h2 className="font-heading font-semibold text-lg text-ink m-0">{nazevDruhuParametru(druh, jazyk)}</h2>
+              <span className="text-xs font-body text-muted">{pocetSad(skupina.length)}</span>
               {smiMenit && (
                 <button
                   type="button"
                   onClick={() => void zaloz(druh)}
                   className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-xs px-3 py-1.5 hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer"
                 >
-                  + Nová sada
+                  {t('techparam.novaSada')}
                 </button>
               )}
             </div>
 
             {skupina.length === 0 ? (
-              <p className="text-sm font-body text-muted m-0">Zatím tu žádná sada není.</p>
+              <p className="text-sm font-body text-muted m-0">{t('techparam.zadnaSada')}</p>
             ) : (
               <ul className="list-none p-0 m-0 flex flex-col gap-2">
                 {skupina.map((profil) => (
@@ -139,20 +145,20 @@ export function ParametryEditor({
                           {profil.nazev}
                           {profil.vychozi && (
                             <span className="ml-2 rounded-pill bg-brand-purple/15 text-brand-purpleDeep dark:text-brand-purpleLight px-2 py-0.5 text-[11px]">
-                              výchozí
+                              {t('techparam.vychozi')}
                             </span>
                           )}
                           {!profil.aktivni && (
                             <span className="ml-2 rounded-pill border border-line text-muted px-2 py-0.5 text-[11px]">
-                              vypnuto
+                              {t('techparam.vypnuto')}
                             </span>
                           )}
                         </span>
                         <span className="block text-xs font-body text-muted mt-0.5 truncate">
                           {profil.firmy.length > 0
                             ? profil.firmy.map((f) => f.name).join(', ')
-                            : 'Zatím bez firmy'}{' '}
-                          · {pocetRadku(profil.sekce)} parametrů
+                            : t('techparam.bezFirmy')}{' '}
+                          · {t('techparam.parametruPocet', { pocet: pocetRadku(profil.sekce) })}
                         </span>
                       </button>
                       <span className="text-muted text-xs">{profil.rozbaleno ? '▴' : '▾'}</span>
@@ -162,7 +168,7 @@ export function ParametryEditor({
                       <div className="px-4 pb-4 flex flex-col gap-4 border-t border-line pt-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <label className="flex flex-col gap-1">
-                            <span className="text-xs font-heading text-muted">Název sady</span>
+                            <span className="text-xs font-heading text-muted">{t('techparam.nazevSady')}</span>
                             <input
                               value={profil.nazev}
                               disabled={!smiMenit}
@@ -171,21 +177,21 @@ export function ParametryEditor({
                             />
                           </label>
                           <label className="flex flex-col gap-1">
-                            <span className="text-xs font-heading text-muted">Poznámka do přehledu</span>
+                            <span className="text-xs font-heading text-muted">{t('techparam.perex')}</span>
                             <input
                               value={profil.perex ?? ''}
                               disabled={!smiMenit}
                               onChange={(e) => uprav(profil.id, { perex: e.target.value })}
                               className={pole}
-                              placeholder="Odkud to víme, od kdy platí…"
+                              placeholder={t('techparam.perexPlaceholder')}
                             />
                           </label>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4">
-                          <span className="text-xs font-heading text-muted">Platí pro firmy:</span>
+                          <span className="text-xs font-heading text-muted">{t('techparam.platiProFirmy')}</span>
                           <VyberVOkne
-                            popisek="Firmy, které tuhle sadu dodržují"
+                            popisek={t('techparam.vyberFirem')}
                             prazdne="firmy"
                             polozky={firmy.map((f) => ({ id: f.id, nazev: f.name, ikona: null }))}
                             vybrane={profil.firmy.map((f) => f.id)}
@@ -203,7 +209,7 @@ export function ParametryEditor({
                               disabled={!smiMenit}
                               onChange={(e) => uprav(profil.id, { vychozi: e.target.checked })}
                             />
-                            Výchozí pro {NAZVY_DRUHU[druh].toLowerCase()}
+                            {t('techparam.vychoziPro', { druh: nazevDruhuParametru(druh, jazyk).toLowerCase() })}
                           </label>
                           <label className="flex items-center gap-1.5 text-sm font-body text-ink">
                             <input
@@ -212,7 +218,7 @@ export function ParametryEditor({
                               disabled={!smiMenit}
                               onChange={(e) => uprav(profil.id, { aktivni: e.target.checked })}
                             />
-                            Používá se
+                            {t('techparam.pouzivaSe')}
                           </label>
                         </div>
 
@@ -229,7 +235,7 @@ export function ParametryEditor({
                                     uprav(profil.id, { sekce: nove });
                                   }}
                                   className={`${pole} flex-1 min-w-[160px] font-heading font-semibold`}
-                                  placeholder="Nadpis sekce"
+                                  placeholder={t('techparam.nadpisSekce')}
                                 />
                                 {druh === 'REKLAMA' && (
                                   <>
@@ -242,12 +248,12 @@ export function ParametryEditor({
                                         uprav(profil.id, { sekce: nove });
                                       }}
                                       className={pole}
-                                      title="Kdy se sekce ukáže"
+                                      title={t('techparam.kdySeUkaze')}
                                     >
-                                      <option value="">Vždycky</option>
+                                      <option value="">{t('techparam.vzdycky')}</option>
                                       {SLUZBY_REKLAMY.map((s) => (
                                         <option key={s.klic} value={s.klic}>
-                                          Jen: {s.nazev}
+                                          {t('techparam.jenSluzba', { nazev: s.nazev })}
                                         </option>
                                       ))}
                                     </select>
@@ -262,7 +268,7 @@ export function ParametryEditor({
                                           uprav(profil.id, { sekce: nove });
                                         }}
                                       />
-                                      jen rádiový spot
+                                      {t('techparam.jenRadio')}
                                     </label>
                                   </>
                                 )}
@@ -274,7 +280,7 @@ export function ParametryEditor({
                                     }
                                     className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer"
                                   >
-                                    Smazat sekci
+                                    {t('techparam.smazatSekci')}
                                   </button>
                                 )}
                               </div>
@@ -302,7 +308,7 @@ export function ParametryEditor({
                               }
                               className="self-start text-xs font-heading text-brand-purple bg-transparent border-0 cursor-pointer p-0 hover:underline"
                             >
-                              + Přidat sekci
+                              {t('techparam.pridatSekci')}
                             </button>
                           )}
                         </div>
@@ -315,14 +321,14 @@ export function ParametryEditor({
                               disabled={uklada === profil.id}
                               className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 hover:bg-brand-purpleDeep transition-colors cursor-pointer disabled:opacity-50"
                             >
-                              {uklada === profil.id ? 'Ukládám…' : 'Uložit'}
+                              {uklada === profil.id ? t('obecne.ukladam') : t('obecne.ulozit')}
                             </button>
                             <button
                               type="button"
                               onClick={() => void smaz(profil)}
                               className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer"
                             >
-                              Smazat sadu
+                              {t('techparam.smazatSadu')}
                             </button>
                           </div>
                         )}

@@ -77,7 +77,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [~] |
 | 7a | 28. 9. | Formáty a číselníky napříč repozitářem — `formatMoney` a `formatCzk` s jazykem, formátovače času a záložky v `lib/chat.ts`, statusy v chatu, smajlíci, náhledové pohledy, úkol bez příjemce | [x] |
 | 7b | další večer | Zapomenuté obrazovky I — sekce na detailu projektu (rodný list, licenční list, výstupy, `ProjectMetaForm`, rozpočty, posluchači přeposlechu, `ProjectDocuments`), objednávka reklamy, `NovyProjektForm`, `InternalProjectsBrowser` | [x] |
-| 7c | další večer | Zapomenuté obrazovky II — administrace: firmy a `CompanyForm`, caflou-firmy, údaje (žádosti), vzory zpráv i natáčení, wikipedie, technické parametry, návody, přenos projektu | [ ] |
+| 7c | další večer | Zapomenuté obrazovky II — administrace: firmy a `CompanyForm`, caflou-firmy, údaje (žádosti), vzory zpráv i natáčení, wikipedie, technické parametry, návody, přenos projektu | [x] |
 | 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [ ] |
 | 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [ ] |
 
@@ -387,6 +387,95 @@ třicet souborů, mezi nimi `index.lock.zaseklo-se-7b` z 29. 9.). Gitu
 nevadí — jsou to jiná jména než `index.lock` — ale sdílená složka je mazat
 nesmí, takže je potřeba je smazat z počítače. Stejně tak `git rm --cached
 stubs/prisma-client.d.ts` (viz dávka 7a).
+
+### Dávka 7c je HOTOVÁ (1. 10. 2026)
+
+Administrace: firmy a jejich panely, firmy z Caflou, žádosti o údaje, vzory
+zpráv i natáčecích textů, wikipedie, technické parametry, návody a přenos
+projektů. **28 obrazovek, slovník +571 klíčů (3 068 → 3 639)** a sedm souborů
+v `src/lib`.
+
+**Číselníky dostaly funkci s NEPOVINNÝM jazykem** (vzor `nazevMeny` z dávky 4,
+překládá se podle KÓDU, ne podle českého názvu; bez jazyka vrací češtinu, ať
+PDF a pošta mluví dál česky):
+
+- `lib/roles.ts` — `nazevRole()` a `nazevTypuFirmy()`. Tím je splacený lístek
+  z dávky 5: `ROLE_LABELS` bral `admin/navody` i `admin/companies`.
+- `lib/notifikaceFirmy.ts` — `nazevKomu()` (Neposílat / Klientovi / Jen nám
+  interně).
+- `lib/caflouCompanies.ts` — `nazevDruhuKontaktu()`.
+- `lib/technickeParametry.ts` — `nazevDruhuParametru()`.
+- `lib/navody.ts` — `nazevDruhuZakazky()`.
+- `lib/pozvankaUdaju.ts` — `popisekPole()` a `rozdilyPozvanky(zadost, jazyk?)`.
+  Popisky polí formuláře údajů se tedy překládají podle klíče pole; `name` se
+  u herce a u firmy liší, proto to bere i druh žádosti.
+
+`lib/vzoryZprav.ts`, `lib/formatovaniZpravy.ts` a `lib/nataceniText.ts`
+funkci NEDOSTALY schválně — mají v hlavičce napsané, že stojí bez závislostí,
+aby si je mohl vzít i prohlížeč. Jejich `popis` a `nazev` se proto překládají
+v komponentě podle klíče (`t('promenna.projekt')`, `t('barva.fialova')`,
+`t('velikost.18')`, `t('promennaNat.delka')`).
+
+**Nová `prelozitNaKusy()` v `lib/jazyk.ts`** — obecná varianta
+`prelozitKolem`, kterou si dávka 5 napsala na lístek („`prelozitKolem` umí jen
+JEDNU značku"). Věta zůstává jedním klíčem (pravidlo 7) a rozseká se až při
+vykreslení, takže značky mohou v angličtině stát v jiném pořadí. Používá ji
+věta o vkládání obrázků do návodu (dvakrát `<code>`) a věta o tokenu na
+wikipedii (odkaz + kurzíva).
+
+**Tři tvary čísla** jako v dávce 7b: „{n} zakázka / zakázky / zakázek"
+(kontakt ke všem zakázkám firmy), „{pocet} sada / sady / sad" (technické
+parametry) a „{pocet} zdroj / zdroje / zdrojů" (wikipedie). Každý tvar je
+vlastní klíč a vybírá ho krátká funkce u komponenty.
+
+**Česky zůstává schválně:**
+
+- `CO_SE_POSILA` v `lib/notifikaceFirmy.ts` — je to TĚLO ZPRÁVY klientovi,
+  tedy pošta (pravidlo 5), a zároveň to, co se ukládá jako vzor. Na záložce
+  Notifikace je vidět jako náhled znění, ne jako text rozhraní.
+- `STAVY_S_NOTIFIKACI` a názvy stavů na tlačítkách vzorů — stavy projektů jsou
+  v databázi česky a čekají na kódy (dávka 7e).
+- `ukazka` u proměnných vzoru zprávy („ANNIE BOT", „Dobrý den, Radko,") — je to
+  vzorek dat, ne text rozhraní.
+- **ukázky v polích formuláře „Údaje o sobě" na wikipedii** („je český režisér
+  audioknih", „Čeští režiséři, Narození v roce 1985", „Audiotéka", „čte Jan
+  Maxián") a placeholder `Wikipedista:VaseJmeno/Pískoviště`. Je to obsah
+  českého článku a názvy kategorií české Wikipedie; anglická ukázka by radila
+  napsat do článku něco, co tam nemá být. Stejné rozhodnutí jako u „Úvod
+  audioknihy" v dávce 7b. Popisky a nápovědy přeložené jsou.
+- hodnoty, které se ZAKLÁDAJÍ do databáze: `Nová sada`, `Nová sekce` a
+  `Export` v technických parametrech. Totéž jako výchozí názvy výstupů
+  v dávce 7b.
+- popis obrázku v návodu (`soubor.name` bez přípony) — je to součást textu
+  návodu, tedy data.
+
+**Texty, které tečou z API už hotové** a komponenta je nemá jak přeložit —
+patří do stejné škatulky jako `/api/admin/upominky` z dávky 4:
+
+- `kindReason` u firem z Caflou („podle IČ", „podle názvu") se ukládá při
+  importu do databáze, takže ho nezmění ani přeložený kód.
+- `vysledky[].detail` z `/api/admin/caflou-firmy/zalozit` je hotová věta
+  z routy; přeložené je jen slovo Založeno / Doplněno / Přeskočeno před ní.
+- `bezFirmy` a `chyba` z `/api/admin/projekty/prenos`, `chybaKontroly`
+  z hlídání wikipedie (uložená v databázi).
+- `shrnuti` revizí z Wikipedie je text od jejích editorů, ten se nepřekládá
+  vůbec.
+
+**Náhledy, které vykresluje server** zůstávají, jak jsou:
+`/api/admin/vzory-zprav/nahled` vrací HTML zprávy (pošta, pravidlo 5)
+a `/api/admin/wikipedie/nahled` vrací článek od Wikipedie.
+
+**„Klient" se v angličtině píše dvěma způsoby** — `Client` (role, záložky
+Firem z dávky 5) i `Customer` (doklady, projekty, dávka 7c). Slovníček má
+*customer* jen u odběratele, u klienta nic neříká. Sjednotit to patří do
+dávky 7e („sjednocení termínů podle slovníčku"); dávka 7c to schválně
+nepřepisovala, aby nehýbala s hotovými obrazovkami.
+
+**Do seznamu známých hlášek přibyly dvě**, které s překladem nesouvisí —
+`admin/slozky/page.tsx` (přetypování `DiskovaSlozka[]` na `Radek[]`)
+a `api/klient/doklady/nahled/route.ts` (chybějící `sluzby`). Jsou na HEADu
+i bez téhle dávky (ověřeno na čisté kopii z `git archive`), přišly s prací
+po dávce 7b. Proti nové verzi seznamu je výstup kontroly čistý.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

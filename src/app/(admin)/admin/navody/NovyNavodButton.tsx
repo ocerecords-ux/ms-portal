@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Založí prázdný článek a rovnou ho otevře k psaní (zadání 16. 9. 2026).
@@ -11,12 +12,14 @@ import { useRouter } from 'next/navigation';
  */
 export function NovyClanekButton({
   druh = 'NAVOD',
-  popisek = '+ Nový návod',
+  popisek,
 }: {
   druh?: 'NAVOD' | 'PROCES';
+  /** Bez popisku se vezme „+ Nový návod" ze slovníku. */
   popisek?: string;
 } = {}) {
   const router = useRouter();
+  const t = usePreklad();
   const [nazev, setNazev] = useState('');
   const [otevreno, setOtevreno] = useState(false);
   const [bezi, setBezi] = useState(false);
@@ -35,12 +38,12 @@ export function NovyClanekButton({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Návod se nepodařilo založit.');
+        setChyba(data?.error || t('navod.nezalozen'));
         return;
       }
       router.push(`/admin/navody/${data.id}`);
     } catch {
-      setChyba('Návod se nepodařilo založit.');
+      setChyba(t('navod.nezalozen'));
     } finally {
       setBezi(false);
     }
@@ -53,7 +56,7 @@ export function NovyClanekButton({
         onClick={() => setOtevreno(true)}
         className="text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-5 py-2.5"
       >
-        {popisek}
+        {popisek ?? t('navod.novyNavod')}
       </button>
     );
   }
@@ -66,7 +69,7 @@ export function NovyClanekButton({
           onChange={(e) => setNazev(e.target.value)}
           autoFocus
           required
-          placeholder={druh === 'PROCES' ? 'Název postupu' : 'Název návodu'}
+          placeholder={t(druh === 'PROCES' ? 'navod.nazevPostupu' : 'navod.nazevNavodu')}
           className="admin-input flex-1 min-w-[180px]"
         />
         <button
@@ -74,7 +77,7 @@ export function NovyClanekButton({
           disabled={bezi}
           className="text-sm font-heading font-semibold rounded-lg bg-brand-purple text-white px-4 py-2 disabled:opacity-60"
         >
-          {bezi ? 'Zakládám…' : 'Založit'}
+          {bezi ? t('navod.zakladam') : t('navod.zalozit')}
         </button>
       </div>
       {chyba && <p className="text-sm font-body text-danger m-0">{chyba}</p>}

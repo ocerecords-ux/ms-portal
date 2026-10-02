@@ -6,6 +6,8 @@ import { prisma } from '@/lib/db';
 import { vychoziKoncept } from '@/lib/wikipedie';
 import { PRAZDNE_UDAJE, type UdajeOsoby } from '@/lib/wikipedieUdaje';
 import { WikipedieEditor } from './WikipedieEditor';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * Wikipedie - koncept a hlídání článku o sobě (zadání 22. 9. 2026: „chtěl
@@ -30,19 +32,18 @@ export default async function WikipediePage() {
         .catch(() => [])
     : [];
   const vychozi = vychoziKoncept(session.user.name || '');
+  const jazyk = nactiJazyk();
 
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin" className="text-muted text-sm font-heading no-underline">
-        ← Zpět do administrace
+        {prelozit(jazyk, 'vzoryNat.zpetDoAdmin')}
       </Link>
       <div>
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Wikipedie</h1>
-        <p className="text-sm font-body text-muted m-0 mt-2 max-w-[80ch]">
-          Tady se článek o vás píše a ladí. Na Wikipedii ho vložíte sami svým účtem, portál tam nic
-          neukládá. Až bude článek venku, doplňte jeho název dole do Hlídání a portál vám každou
-          hodinu zvonkem ohlásí, když ho někdo upraví.
-        </p>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'wiki.nadpis')}
+        </h1>
+        <p className="text-sm font-body text-muted m-0 mt-2 max-w-[80ch]">{prelozit(jazyk, 'wiki.uvod')}</p>
       </div>
       <WikipedieEditor
         pocatecni={{

@@ -13,6 +13,8 @@ import {
   pravidlaWiki,
   type JazykWiki,
 } from '@/lib/wikipedie';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { kodJazyka, prelozitKolem, prelozitNaKusy, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Editor konceptu článku na Wikipedii (zadání 22. 9. 2026). Vlevo wikitext,
@@ -43,8 +45,15 @@ const tlacitko =
 const tlacitko2 =
   'font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-ink no-underline hover:border-brand-purple transition-colors bg-transparent cursor-pointer disabled:opacity-60';
 
-function datum(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
+/**
+ * Datum s časem KRÁTCE, bez roku v plné podobě - `formatDatumCas`
+ * z lib/jazyk.ts sází rok naplno a tady by to řádek rozhodilo.
+ * Anglicky vyjde „13/09/2026, 14:32".
+ */
+function datum(iso: string, jazyk: Jazyk): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), { dateStyle: 'short', timeStyle: 'short' }).format(
+    new Date(iso),
+  );
 }
 
 function obalNahledu(html: string, jazyk: string): string {
@@ -63,6 +72,8 @@ sup.reference{font-size:75%}
 }
 
 export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecni: Pocatecni; verze: Verze[] }) {
+  const t = usePreklad();
+  const jazykPortalu = useJazyk();
   const [jazyk, setJazyk] = useState<JazykWiki>((JAZYKY_WIKI as readonly string[]).includes(pocatecni.jazyk) ? (pocatecni.jazyk as JazykWiki) : 'cs');
   const [nazev, setNazev] = useState(pocatecni.nazev);
   const [wikitext, setWikitext] = useState(pocatecni.wikitext);
@@ -139,12 +150,12 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
   function sestav() {
     const novy = sestavWikitext(udaje);
     const rucne = wikitext.trim() && wikitext !== poslednSestaveny.current && wikitext !== pocatecni.wikitext;
-    if (rucne && !window.confirm('Text v záložce Wikitext se přepíše textem z údajů. Pokračovat?')) return;
+    if (rucne && !window.confirm(t('wiki.prepsatPotvrzeni'))) return;
     poslednSestaveny.current = novy;
     setWikitext(novy);
     setNazev((n) => n || udaje.jmeno);
     setZalozka('text');
-    setHlaska('Text je sestavený z údajů - projděte ho a uložte.');
+    setHlaska(t('wiki.sestaveno'));
   }
 
   async function uloz() {
@@ -159,15 +170,15 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; ulozeno?: string; verze?: Verze[] };
       if (!res.ok) {
-        setChyba(data.error || 'Uložení se nezdařilo.');
+        setChyba(data.error || t('firma.ulozeniNezdarilo'));
         return;
       }
       setUlozeno(data.ulozeno ?? new Date().toISOString());
       if (data.verze) setVerze(data.verze);
       setUlozenyStav({ jazyk, nazev, wikitext, sledovany, udaje: JSON.stringify(udaje) });
-      setHlaska('Uloženo.');
+      setHlaska(t('prodleva.ulozeno'));
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vzory.bezSpojeni'));
     } finally {
       setPracuje(false);
     }
@@ -184,12 +195,12 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { html?: string; error?: string };
       if (!res.ok || !data.html) {
-        setNahledChyba(data.error || 'Náhled se nepodařil.');
+        setNahledChyba(data.error || t('wiki.nahledNepodaril'));
         return;
       }
       setNahled(data.html);
     } catch {
-      setNahledChyba('Nepodařilo se spojit se serverem.');
+      setNahledChyba(t('vzory.bezSpojeni'));
     } finally {
       setNahledNacita(false);
     }
@@ -198,9 +209,9 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
   async function kopiruj() {
     try {
       await navigator.clipboard.writeText(wikitext);
-      setHlaska('Wikitext je ve schránce - vložte ho na Wikipedii.');
+      setHlaska(t('wiki.wikitextVeSchrance'));
     } catch {
-      setChyba('Kopírování se nepodařilo - označte text ručně (Cmd+A, Cmd+C).');
+      setChyba(t('wiki.kopirovaniNepodarilo'));
     }
   }
 
@@ -209,19 +220,19 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
     const res = await fetch(`/api/admin/wikipedie?verze=${encodeURIComponent(id)}`);
     const data = (await res.json().catch(() => ({}))) as { wikitext?: string; error?: string };
     if (!res.ok || data.wikitext === undefined) {
-      setChyba(data.error || 'Verzi se nepodařilo načíst.');
+      setChyba(data.error || t('wiki.verziNeulozena'));
       return;
     }
     setWikitext(data.wikitext);
-    setHlaska('Starší verze je v editoru - uložte ji, pokud ji chcete ponechat.');
+    setHlaska(t('wiki.starsiVerze'));
   }
 
   /** Vloží návrh z chatu do konceptu - přidá na konec, nebo celý nahradí. */
   function vlozZChatu(navrh: string, nahradit: boolean) {
-    if (nahradit && !window.confirm('Nahradit celý koncept tímhle textem?')) return;
+    if (nahradit && !window.confirm(t('wiki.nahraditPotvrzeni'))) return;
     setWikitext((s) => (nahradit ? `${navrh}\n` : `${s.replace(/\s+$/, '')}\n\n${navrh}\n`));
     setZalozka('text');
-    setHlaska(nahradit ? 'Koncept je nahrazený - projděte ho a uložte.' : 'Text je přidaný na konec konceptu - projděte ho a uložte.');
+    setHlaska(nahradit ? t('wiki.konceptNahrazen') : t('wiki.textPridan'));
   }
 
   async function ulozToken() {
@@ -236,21 +247,21 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; ulozen?: boolean };
       if (!res.ok) {
-        setChyba(data.error || 'Token se nepodařilo uložit.');
+        setChyba(data.error || t('wiki.tokenNeulozen'));
         return;
       }
       setMaToken(Boolean(data.ulozen));
       setToken('');
-      setHlaska('Token je uložený.');
+      setHlaska(t('wiki.tokenUlozen'));
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vzory.bezSpojeni'));
     } finally {
       setPracuje(false);
     }
   }
 
   async function smazToken() {
-    if (!window.confirm('Opravdu token smazat? Odesílání z portálu pak nebude fungovat.')) return;
+    if (!window.confirm(t('wiki.smazatTokenPotvrzeni'))) return;
     setToken('');
     setPracuje(true);
     try {
@@ -260,7 +271,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
         body: JSON.stringify({ token: '' }),
       });
       setMaToken(false);
-      setHlaska('Token je smazaný.');
+      setHlaska(t('wiki.tokenSmazan'));
     } finally {
       setPracuje(false);
     }
@@ -270,7 +281,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
   async function odesli() {
     const kam = cil.trim();
     if (!kam) return;
-    if (!window.confirm(`Uložit koncept na Wikipedii jako „${kam}"? Úprava bude veřejná a pod vaším účtem.`)) return;
+    if (!window.confirm(t('wiki.odeslatPotvrzeni', { kam }))) return;
     setOdesilam(true);
     setChyba(null);
     setHlaska(null);
@@ -283,14 +294,14 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
       if (!res.ok || !data.url) {
-        setChyba(data.error || 'Odeslání se nepovedlo.');
+        setChyba(data.error || t('wiki.odeslaniNepovedlo'));
         return;
       }
       setOdeslano(data.url);
-      setHlaska('Hotovo — text je na Wikipedii.');
+      setHlaska(t('wiki.hotovoNaWiki'));
       if (!sledovany.trim()) setSledovany(kam);
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vzory.bezSpojeni'));
     } finally {
       setOdesilam(false);
     }
@@ -304,13 +315,13 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       const res = await fetch(`/api/admin/wikipedie/stav?jazyk=${jazyk}&nazev=${encodeURIComponent(sledovany.trim())}`);
       const data = (await res.json().catch(() => ({}))) as { existuje?: boolean; revize?: Revize[]; error?: string };
       if (!res.ok) {
-        setStavChyba(data.error || 'Wikipedie neodpověděla.');
+        setStavChyba(data.error || t('wiki.neodpovedela'));
         return;
       }
       setExistuje(Boolean(data.existuje));
       setRevize(data.revize ?? []);
     } catch {
-      setStavChyba('Nepodařilo se spojit se serverem.');
+      setStavChyba(t('vzory.bezSpojeni'));
     }
   }
 
@@ -326,35 +337,30 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
 
       {/* Jak na to - účet, pravidla, kam vložit. */}
       <div className={karta}>
-        <h2 className="font-heading font-semibold text-base text-ink m-0">Jak článek dostat na Wikipedii</h2>
+        <h2 className="font-heading font-semibold text-base text-ink m-0">{t('wiki.jakNaTo')}</h2>
         <ol className="text-sm font-body text-ink m-0 pl-5 flex flex-col gap-1.5">
+          {/* Dvě věty mají uprostřed odkaz - celá věta je jeden klíč
+              a rozdělí se až tady (pravidlo 7). */}
           <li>
-            Založte si účet na Wikipedii (zdarma, stačí jméno a heslo):{' '}
+            {prelozitKolem(jazykPortalu, 'wiki.krokUcet', 'odkaz')[0]}
             <a href={adresaRegistrace(jazyk)} target="_blank" rel="noreferrer" className="text-brand-purple">
-              vytvořit účet ↗
+              {t('wiki.vytvoritUcet')}
             </a>
-            . Heslo zadáváte jen tam, portál ho nikdy nevidí.
+            {prelozitKolem(jazykPortalu, 'wiki.krokUcet', 'odkaz')[1]}
           </li>
+          <li>{t('wiki.krokStretZajmu')}</li>
+          <li>{t('wiki.krokZdroje')}</li>
           <li>
-            Na své uživatelské stránce uveďte, že píšete o sobě (střet zájmů). Wikipedie to vyžaduje a článek
-            bez toho snadno smaže.
-          </li>
-          <li>
-            Každé tvrzení doložte nezávislým zdrojem (rozhovor, článek v médiích) - vlastní web nestačí. Pište
-            věcně, bez hodnocení.
-          </li>
-          <li>
-            Wikitext zkopírujte a vložte do svého{' '}
+            {prelozitKolem(jazykPortalu, 'wiki.krokPiskoviste', 'odkaz')[0]}
             <a href={adresaPiskoviste(jazyk)} target="_blank" rel="noreferrer" className="text-brand-purple">
-              pískoviště ↗
+              {t('wiki.piskoviste')}
             </a>
-            . Odtud ho po kontrole zkušenější wikipedista přesune mezi články - o pomoc se dá požádat na
-            diskusní stránce pískoviště.
+            {prelozitKolem(jazykPortalu, 'wiki.krokPiskoviste', 'odkaz')[1]}
           </li>
-          <li>Až bude článek venku, napište jeho název do Hlídání dole.</li>
+          <li>{t('wiki.krokHlidani')}</li>
         </ol>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-body">
-          <span className="text-muted">Pravidla:</span>
+          <span className="text-muted">{t('wiki.pravidla')}</span>
           {pravidlaWiki(jazyk).map((p) => (
             <a key={p.url} href={p.url} target="_blank" rel="noreferrer" className="text-brand-purple">
               {p.nazev} ↗
@@ -367,11 +373,11 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       <div className={karta}>
         <div className="flex items-end gap-3 flex-wrap">
           <label className="flex flex-col gap-1 flex-1 min-w-[240px]">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Název článku</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('wiki.nazevClanku')}</span>
             <input value={nazev} onChange={(e) => setNazev(e.target.value)} className={pole} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Wikipedie</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('wiki.wikipedie')}</span>
             <select value={jazyk} onChange={(e) => setJazyk(e.target.value as JazykWiki)} className={pole}>
               {JAZYKY_WIKI.map((j) => (
                 <option key={j} value={j}>
@@ -381,13 +387,13 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
             </select>
           </label>
           <button type="button" onClick={uloz} disabled={pracuje || !zmeneno} className={tlacitko}>
-            {pracuje ? 'Ukládám…' : zmeneno ? 'Uložit' : 'Uloženo'}
+            {pracuje ? t('obecne.ukladam') : zmeneno ? t('obecne.ulozit') : t('vzory.ulozeno')}
           </button>
           <button type="button" onClick={nactiNahled} disabled={nahledNacita} className={tlacitko2}>
-            {nahledNacita ? 'Vykresluji…' : 'Náhled'}
+            {nahledNacita ? t('wiki.vykresluji') : t('wiki.nahled')}
           </button>
           <button type="button" onClick={kopiruj} className={tlacitko2}>
-            Kopírovat wikitext
+            {t('wiki.kopirovatWikitext')}
           </button>
         </div>
         <div className="flex items-center gap-2 flex-wrap border-t border-line pt-3">
@@ -401,27 +407,34 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
                   zalozka === z ? 'bg-brand-purple text-white' : 'bg-transparent text-ink'
                 }`}
               >
-                {z === 'udaje' ? 'Údaje o sobě' : 'Wikitext'}
+                {t(z === 'udaje' ? 'wiki.zalozkaUdaje' : 'wiki.zalozkaText')}
               </button>
             ))}
           </div>
           {zalozka === 'udaje' && (
             <button type="button" onClick={sestav} className={tlacitko}>
-              Sestavit text z údajů
+              {t('wiki.sestavit')}
             </button>
           )}
         </div>
         <p className="text-xs font-body text-muted m-0">
-          {pocetSlov} slov · {pocetZdroju} {pocetZdroju === 1 ? 'zdroj' : pocetZdroju >= 2 && pocetZdroju <= 4 ? 'zdroje' : 'zdrojů'}
-          {ulozeno ? ` · uloženo ${datum(ulozeno)}` : ' · zatím neuloženo'}
-          {zmeneno ? ' · máte neuložené změny' : ''}
+          {t('wiki.slov', { pocet: pocetSlov })} ·{' '}
+          {t(
+            pocetZdroju === 1
+              ? 'wiki.zdrojJeden'
+              : pocetZdroju >= 2 && pocetZdroju <= 4
+                ? 'wiki.zdrojeMalo'
+                : 'wiki.zdrojuMnoho',
+            { pocet: pocetZdroju },
+          )}
+          {ulozeno
+            ? t('wiki.ulozenoKdy', { kdy: datum(ulozeno, jazykPortalu) })
+            : t('wiki.zatimNeulozeno')}
+          {zmeneno ? t('wiki.neulozeneZmeny') : ''}
         </p>
         {zalozka === 'udaje' && (
           <>
-            <p className="text-sm font-body text-muted m-0 max-w-[80ch]">
-              Vyplňte, co o sobě chcete mít v článku. „Sestavit text z údajů" z toho poskládá celý wikitext
-              i s referencemi a přepíše jím záložku Wikitext — ručních úprav textu se tedy předtím zeptá.
-            </p>
+            <p className="text-sm font-body text-muted m-0 max-w-[80ch]">{t('wiki.sestavitPopis')}</p>
             <UdajeForm udaje={udaje} zmena={setUdaje} />
           </>
         )}
@@ -436,14 +449,14 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
             {nahledChyba && <p className="text-sm text-danger m-0">{nahledChyba}</p>}
             {nahled ? (
               <iframe
-                title="Náhled článku"
+                title={t('wiki.nahledTitul')}
                 sandbox="allow-popups allow-popups-to-escape-sandbox"
                 srcDoc={obalNahledu(nahled, jazyk)}
                 className="w-full flex-1 min-h-[560px] rounded-lg border border-line bg-white"
               />
             ) : (
               <div className="flex-1 rounded-lg border border-dashed border-line flex items-center justify-center text-sm font-body text-muted p-6 text-center">
-                Klikněte na Náhled - Wikipedie text vykreslí tak, jak by vypadal v článku (šablony, odkazy, reference).
+                {t('wiki.nahledPrazdny')}
               </div>
             )}
           </div>
@@ -452,46 +465,43 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
 
       {/* Hlídání živého článku */}
       <div className={karta}>
-        <h2 className="font-heading font-semibold text-base text-ink m-0">Hlídání článku</h2>
-        <p className="text-sm font-body text-muted m-0 max-w-[75ch]">
-          Název stránky na Wikipedii, jak je v adrese (např. „Ondřej Černý (režisér)“). Portál ji kontroluje každou
-          hodinu a o každé cizí úpravě vám dá vědět zvonkem. Nezapomeňte uložit.
-        </p>
+        <h2 className="font-heading font-semibold text-base text-ink m-0">{t('wiki.hlidani')}</h2>
+        <p className="text-sm font-body text-muted m-0 max-w-[75ch]">{t('wiki.hlidaniPopis')}</p>
         <div className="flex items-center gap-3 flex-wrap">
           <input
             value={sledovany}
             onChange={(e) => setSledovany(e.target.value)}
-            placeholder="zatím nehlídáno"
+            placeholder={t('wiki.zatimNehlidano')}
             className={`${pole} flex-1 min-w-[240px]`}
           />
           <button type="button" onClick={nactiStav} disabled={!sledovany.trim()} className={tlacitko2}>
-            Zkontrolovat teď
+            {t('wiki.zkontrolovatTed')}
           </button>
           {sledovany.trim() && (
             <a href={adresaWiki(jazyk, sledovany)} target="_blank" rel="noreferrer" className="text-sm text-brand-purple font-heading">
-              Otevřít článek ↗
+              {t('wiki.otevritClanek')}
             </a>
           )}
         </div>
         {pocatecni.posledniKontrola && (
           <p className="text-xs font-body text-muted m-0">
-            Poslední automatická kontrola {datum(pocatecni.posledniKontrola)}
+            {t('wiki.posledniKontrola', { kdy: datum(pocatecni.posledniKontrola, jazykPortalu) })}
             {pocatecni.chybaKontroly ? ` - ${pocatecni.chybaKontroly}` : ''}
           </p>
         )}
         {stavChyba && <p className="text-sm text-danger m-0">{stavChyba}</p>}
-        {existuje === false && <p className="text-sm font-body text-muted m-0">Stránka s tímhle názvem na Wikipedii zatím není.</p>}
+        {existuje === false && <p className="text-sm font-body text-muted m-0">{t('wiki.strankaNeni')}</p>}
         {revize && revize.length > 0 && (
           <table className="w-full border-collapse text-sm font-body">
             <tbody>
               {revize.map((r) => (
                 <tr key={r.revid} className="border-t border-line">
-                  <td className="py-1.5 pr-3 text-muted whitespace-nowrap">{datum(r.kdy)}</td>
+                  <td className="py-1.5 pr-3 text-muted whitespace-nowrap">{datum(r.kdy, jazykPortalu)}</td>
                   <td className="py-1.5 pr-3 text-ink whitespace-nowrap">{r.kdo}</td>
                   <td className="py-1.5 pr-3 text-muted">{r.shrnuti || '—'}</td>
                   <td className="py-1.5 text-right whitespace-nowrap">
                     <a href={r.diff} target="_blank" rel="noreferrer" className="text-brand-purple">
-                      rozdíl ↗
+                      {t('wiki.rozdil')}
                     </a>
                   </td>
                 </tr>
@@ -506,41 +516,46 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
 
       {/* Odesílání na Wikipedii */}
       <div className={karta}>
-        <h2 className="font-heading font-semibold text-base text-ink m-0">Odeslání na Wikipedii</h2>
+        <h2 className="font-heading font-semibold text-base text-ink m-0">{t('wiki.odeslani')}</h2>
+        {/* Věta má DVA vložené kusy - odkaz a kurzívu. Zůstává jedním klíčem
+            a rozseká ji prelozitNaKusy (pravidlo 7). */}
         <p className="text-sm font-body text-muted m-0 max-w-[80ch]">
-          Portál umí uloženou verzi konceptu zapsat na Wikipedii pod vaším účtem. Potřebuje k tomu osobní
-          přístupový token:{' '}
-          <a href={ADRESA_OAUTH} target="_blank" rel="noreferrer" className="text-brand-purple">
-            vytvořit token ↗
-          </a>{' '}
-          — v žádosti vyberte „This consumer is for use only by <em>vaše jméno</em>", jako povolení stačí
-          úprava a zakládání stránek. Schvalovat to nikdo nemusí, token dostanete hned. Vložte ho sem;
-          portál ho uloží a už nikdy neukáže.
+          {prelozitNaKusy(jazykPortalu, 'wiki.odeslaniPopis', ['odkaz', 'jmeno']).map((kus, i) =>
+            kus.znacka === 'odkaz' ? (
+              <a key={i} href={ADRESA_OAUTH} target="_blank" rel="noreferrer" className="text-brand-purple">
+                {t('wiki.vytvoritToken')}
+              </a>
+            ) : kus.znacka === 'jmeno' ? (
+              <em key={i}>{t('wiki.vaseJmeno')}</em>
+            ) : (
+              <span key={i}>{kus.text}</span>
+            ),
+          )}
         </p>
         <div className="flex items-end gap-3 flex-wrap">
           <label className="flex flex-col gap-1 flex-1 min-w-[260px]">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Přístupový token</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('wiki.token')}</span>
             <input
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder={maToken ? 'uložený — vyplňte jen při výměně' : 'vložte token z Wikimedie'}
+              placeholder={maToken ? t('wiki.tokenUlozeny') : t('wiki.tokenPlaceholder')}
               autoComplete="off"
               className={pole}
             />
           </label>
           <button type="button" onClick={ulozToken} disabled={pracuje || !token.trim()} className={tlacitko2}>
-            Uložit token
+            {t('wiki.ulozitToken')}
           </button>
           {maToken && (
             <button type="button" onClick={smazToken} disabled={pracuje} className={tlacitko2}>
-              Smazat token
+              {t('wiki.smazatToken')}
             </button>
           )}
         </div>
         <div className="flex items-end gap-3 flex-wrap border-t border-line pt-3">
           <label className="flex flex-col gap-1 flex-1 min-w-[260px]">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Kam uložit</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('wiki.kamUlozit')}</span>
             <input
               value={cil}
               onChange={(e) => setCil(e.target.value)}
@@ -549,28 +564,27 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
             />
           </label>
           <label className="flex flex-col gap-1 flex-1 min-w-[220px]">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Shrnutí úpravy</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('wiki.shrnutiUpravy')}</span>
             <input
               value={shrnutiUpravy}
               onChange={(e) => setShrnutiUpravy(e.target.value)}
-              placeholder="doplnění zdrojů"
+              placeholder={t('wiki.shrnutiPlaceholder')}
               className={pole}
             />
           </label>
           <button type="button" onClick={odesli} disabled={odesilam || !maToken || !cil.trim() || zmeneno} className={tlacitko}>
-            {odesilam ? 'Odesílám…' : 'Odeslat na Wikipedii'}
+            {odesilam ? t('wiki.odesilam') : t('wiki.odeslat')}
           </button>
         </div>
         <p className="text-xs font-body text-muted m-0">
-          Odesílá se POSLEDNÍ ULOŽENÁ verze konceptu, takže před odesláním uložte. Úprava se na Wikipedii
-          objeví pod vaším jménem a je veřejně dohledatelná — u článku o sobě nezapomeňte na střet zájmů.
-          {zmeneno ? ' Máte neuložené změny, proto je odesílání zamčené.' : ''}
+          {t('wiki.odeslaniPoznamka')}
+          {zmeneno ? t('wiki.odeslaniZamceno') : ''}
         </p>
         {odeslano && (
           <p className="text-sm font-body text-ink m-0">
-            Uloženo na Wikipedii —{' '}
+            {t('wiki.ulozenoNaWiki')}{' '}
             <a href={odeslano} target="_blank" rel="noreferrer" className="text-brand-purple">
-              otevřít stránku ↗
+              {t('wiki.otevritStranku')}
             </a>
           </p>
         )}
@@ -578,19 +592,19 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
 
       {/* Verze */}
       <div className={karta}>
-        <h2 className="font-heading font-semibold text-base text-ink m-0">Uložené verze</h2>
+        <h2 className="font-heading font-semibold text-base text-ink m-0">{t('wiki.ulozeneVerze')}</h2>
         {verze.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">Zatím žádná - první vznikne uložením.</p>
+          <p className="text-sm font-body text-muted m-0">{t('wiki.zadnaVerze')}</p>
         ) : (
           <ul className="list-none m-0 p-0 flex flex-col">
             {verze.map((v) => (
               <li key={v.id} className="flex items-center justify-between gap-3 border-t border-line py-1.5 text-sm font-body">
                 <span className="text-ink">
-                  {datum(v.kdy)}
+                  {datum(v.kdy, jazykPortalu)}
                   {v.autor ? <span className="text-muted"> · {v.autor}</span> : null}
                 </span>
                 <button type="button" onClick={() => obnovVerzi(v.id)} className="text-brand-purple bg-transparent border-0 cursor-pointer font-heading text-sm">
-                  Načíst do editoru
+                  {t('wiki.nacistDoEditoru')}
                 </button>
               </li>
             ))}

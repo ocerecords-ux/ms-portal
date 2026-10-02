@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PROMENNE_NATACENI, VYCHOZI_VZOR_NATACENI } from '@/lib/nataceniText';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * VZORY NATÁČECÍCH TEXTŮ (zadání 26. 9. 2026: „měli bychom nějaké vzory pro
@@ -27,6 +28,7 @@ const inputClass =
 
 export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRadek[] }) {
   const router = useRouter();
+  const t = usePreklad();
   const [vzory, setVzory] = useState<VzorNataceniRadek[]>(pocatecni);
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -54,13 +56,13 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Vzor se nepodařilo uložit.');
+        setChyba((data as { error?: string })?.error || t('vzoryNat.neulozeno'));
         return;
       }
       setUlozeno(vzor.id);
       router.refresh();
     } catch {
-      setChyba('Vzor se nepodařilo uložit.');
+      setChyba(t('vzoryNat.neulozeno'));
     } finally {
       setPracuje(false);
     }
@@ -78,7 +80,7 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
         method: 'DELETE',
       });
       if (!res.ok) {
-        setChyba('Vzor se nepodařilo vyřadit.');
+        setChyba(t('vzoryNat.nevyrazeno'));
         return;
       }
       setVzory((s) => s.filter((v) => v.id !== id));
@@ -91,12 +93,12 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-card border border-line bg-surface p-4 flex flex-col gap-2">
-        <span className="font-heading font-semibold text-sm text-ink">Proměnné</span>
+        <span className="font-heading font-semibold text-sm text-ink">{t('vzoryNat.promenne')}</span>
         <div className="flex flex-wrap gap-2">
           {PROMENNE_NATACENI.map((p) => (
             <span
               key={p.klic}
-              title={p.popis}
+              title={t(`promennaNat.${p.klic}`)}
               className="rounded-pill border border-line bg-field px-2.5 py-1 text-xs font-heading text-muted"
             >
               {`{{${p.klic}}}`}
@@ -104,8 +106,7 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
           ))}
         </div>
         <p className="text-xs font-body text-muted m-0">
-          Dosadí se při vyrábění dokumentu. Co v datech není, zmizí i se svou značkou — v listu
-          zůstane prázdné místo, ne „{'{{delka}}'}".
+          {t('vzoryNat.promennePopis', { znacka: '{{delka}}' })}
         </p>
       </div>
 
@@ -121,7 +122,7 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
             <input
               value={vzor.nazev}
               onChange={(e) => zmen(vzor.id, { nazev: e.target.value })}
-              placeholder="Název vzoru"
+              placeholder={t('vzoryNat.nazevVzoru')}
               className={`${inputClass} flex-1 min-w-[200px]`}
             />
             <label className="flex items-center gap-2 text-sm font-body text-ink">
@@ -130,23 +131,23 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
                 checked={vzor.vychozi}
                 onChange={(e) => zmen(vzor.id, { vychozi: e.target.checked })}
               />
-              Výchozí
+              {t('vzoryNat.vychozi')}
             </label>
           </div>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Úvod dokumentu</span>
+            <span className="text-sm font-body text-ink">{t('vzoryNat.uvodDokumentu')}</span>
             <textarea
               value={vzor.uvod ?? ''}
               onChange={(e) => zmen(vzor.id, { uvod: e.target.value })}
               rows={4}
-              placeholder="Napíše se jednou nahoře. Prázdné = dokument začne rovnou prvním spotem."
+              placeholder={t('vzoryNat.uvodPlaceholder')}
               className={`${inputClass} font-body`}
             />
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Blok spotu</span>
+            <span className="text-sm font-body text-ink">{t('vzoryNat.blokSpotu')}</span>
             <textarea
               value={vzor.blok}
               onChange={(e) => zmen(vzor.id, { blok: e.target.value })}
@@ -154,10 +155,7 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
               placeholder={VYCHOZI_VZOR_NATACENI.blok}
               className={`${inputClass} font-body`}
             />
-            <span className="text-xs font-body text-muted">
-              Zopakuje se u každého výstupu. První řádek se v dokumentu vytiskne tučně jako
-              hlavička spotu.
-            </span>
+            <span className="text-xs font-body text-muted">{t('vzoryNat.blokHint')}</span>
           </label>
 
           <div className="flex items-center gap-3 flex-wrap">
@@ -167,10 +165,10 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
               disabled={pracuje}
               className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 border-0 cursor-pointer disabled:opacity-50"
             >
-              Uložit vzor
+              {t('vzoryNat.ulozitVzor')}
             </button>
             {ulozeno === vzor.id && (
-              <span className="text-sm font-body text-brand-greenDeep">Uloženo.</span>
+              <span className="text-sm font-body text-brand-greenDeep">{t('vzoryNat.ulozeno')}</span>
             )}
             <button
               type="button"
@@ -178,7 +176,7 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
               disabled={pracuje}
               className="ml-auto text-sm font-heading text-muted bg-transparent border-0 underline cursor-pointer hover:text-status-error"
             >
-              Vyřadit
+              {t('vzoryNat.vyradit')}
             </button>
           </div>
         </div>
@@ -200,7 +198,7 @@ export function VzoryNataceniEditor({ pocatecni }: { pocatecni: VzorNataceniRade
         }
         className="self-start rounded-pill border border-dashed border-line px-4 py-2 text-sm font-heading text-muted bg-transparent cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
       >
-        + Přidat vzor
+        {t('vzoryNat.pridatVzor')}
       </button>
     </div>
   );

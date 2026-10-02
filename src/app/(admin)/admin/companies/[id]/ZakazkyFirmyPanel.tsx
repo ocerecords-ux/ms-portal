@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * ZAKÁZKY FIRMY: HEREC, NABÍDKA, FAKTURA (zadání 25. 9. 2026: „potřebuji
@@ -47,6 +48,7 @@ export function ZakazkyFirmyPanel({
   volneFaktury: DokladVolba[];
 }) {
   const router = useRouter();
+  const t = usePreklad();
   const prazdno = { herec: '', typ: '', nabidka: '', faktura: '' };
   const [vyber, setVyber] = useState<Record<string, typeof prazdno>>(
     Object.fromEntries(zakazky.map((z) => [z.caflouProjectId, { ...prazdno }])),
@@ -57,7 +59,7 @@ export function ZakazkyFirmyPanel({
 
   if (zakazky.length === 0) {
     return (
-      <p className="text-sm font-body text-muted m-0">U téhle firmy zatím žádná zakázka není.</p>
+      <p className="text-sm font-body text-muted m-0">{t('firma.zadnaZakazka')}</p>
     );
   }
 
@@ -78,7 +80,7 @@ export function ZakazkyFirmyPanel({
       .filter((r) => r.actorUserId || r.projectType || r.offerId || r.invoiceId);
 
     if (radky.length === 0) {
-      setChyba('Nejdřív něco vyberte.');
+      setChyba(t('firma.nejdrivVyberte'));
       return;
     }
 
@@ -93,16 +95,21 @@ export function ZakazkyFirmyPanel({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Uložení se nepodařilo.');
+        setChyba(data?.error || t('firma.ulozeniNepodarilo'));
         return;
       }
       setHlaska(
-        `Hotovo — herec u ${data.herci ?? 0}, typ u ${data.typy ?? 0}, nabídka u ${data.nabidky ?? 0} a faktura u ${data.faktury ?? 0} zakázek. Nikomu nic neodešlo.`,
+        t('firma.doplnenoHotovo', {
+          herci: data.herci ?? 0,
+          typy: data.typy ?? 0,
+          nabidky: data.nabidky ?? 0,
+          faktury: data.faktury ?? 0,
+        }),
       );
       setVyber(Object.fromEntries(zakazky.map((z) => [z.caflouProjectId, { ...prazdno }])));
       router.refresh();
     } catch {
-      setChyba('Uložení se nepodařilo.');
+      setChyba(t('firma.ulozeniNepodarilo'));
     } finally {
       setBezi(false);
     }
@@ -114,13 +121,8 @@ export function ZakazkyFirmyPanel({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div>
-        <h3 className="font-heading font-semibold text-sm text-ink m-0">
-          Doplnit k zakázkám herce, typ a doklady
-        </h3>
-        <p className="text-xs font-body text-muted m-0 mt-1">
-          Uloží se potichu — žádná notifikace, žádný zápis do historie projektu. V nabídce dokladů
-          jsou jen nabídky a faktury téhle firmy, které ještě žádnou zakázku nemají.
-        </p>
+        <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('firma.doplnitKZakazkam')}</h3>
+        <p className="text-xs font-body text-muted m-0 mt-1">{t('firma.doplnitKZakazkamPopis')}</p>
       </div>
 
       {chyba && <p className="text-sm text-danger m-0">{chyba}</p>}
@@ -130,11 +132,11 @@ export function ZakazkyFirmyPanel({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="text-left text-xs font-heading text-muted">
-              <th className="py-2 pr-3 font-semibold">Zakázka</th>
-              <th className="py-2 pr-3 font-semibold">Herec</th>
-              <th className="py-2 pr-3 font-semibold">Typ projektu</th>
-              <th className="py-2 pr-3 font-semibold">Nabídka</th>
-              <th className="py-2 font-semibold">Faktura</th>
+              <th className="py-2 pr-3 font-semibold">{t('firma.sloupecZakazka')}</th>
+              <th className="py-2 pr-3 font-semibold">{t('firma.sloupecHerec')}</th>
+              <th className="py-2 pr-3 font-semibold">{t('firma.sloupecTypProjektu')}</th>
+              <th className="py-2 pr-3 font-semibold">{t('firma.sloupecNabidka')}</th>
+              <th className="py-2 font-semibold">{t('firma.sloupecFaktura')}</th>
             </tr>
           </thead>
           <tbody>
@@ -146,7 +148,7 @@ export function ZakazkyFirmyPanel({
                 <td className="py-2 pr-3 min-w-[190px]">
                   {z.herecJmeno && (
                     <span className="block text-[11px] font-body text-muted mb-1">
-                      teď: {z.herecJmeno}
+                      {t('firma.ted', { co: z.herecJmeno })}
                     </span>
                   )}
                   <select
@@ -154,8 +156,8 @@ export function ZakazkyFirmyPanel({
                     onChange={(e) => zmen(z.caflouProjectId, 'herec', e.target.value)}
                     className={pole}
                   >
-                    <option value="">— nechat —</option>
-                    <option value="__zadny__">— žádný herec —</option>
+                    <option value="">{t('firma.nechat')}</option>
+                    <option value="__zadny__">{t('firma.zadnyHerec')}</option>
                     {herci.map((h) => (
                       <option key={h.id} value={h.id}>
                         {h.label}
@@ -165,17 +167,17 @@ export function ZakazkyFirmyPanel({
                 </td>
                 <td className="py-2 pr-3 min-w-[200px]">
                   {z.typ && (
-                    <span className="block text-[11px] font-body text-muted mb-1">teď: {z.typ}</span>
+                    <span className="block text-[11px] font-body text-muted mb-1">{t('firma.ted', { co: z.typ })}</span>
                   )}
                   <select
                     value={vyber[z.caflouProjectId]?.typ ?? ''}
                     onChange={(e) => zmen(z.caflouProjectId, 'typ', e.target.value)}
                     className={pole}
                   >
-                    <option value="">— nechat —</option>
-                    {typy.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
+                    <option value="">{t('firma.nechat')}</option>
+                    {typy.map((typ) => (
+                      <option key={typ} value={typ}>
+                        {typ}
                       </option>
                     ))}
                   </select>
@@ -183,7 +185,7 @@ export function ZakazkyFirmyPanel({
                 <td className="py-2 pr-3 min-w-[220px]">
                   {z.nabidka && (
                     <span className="block text-[11px] font-body text-muted mb-1">
-                      teď: {z.nabidka.popis}
+                      {t('firma.ted', { co: z.nabidka.popis })}
                     </span>
                   )}
                   <select
@@ -191,7 +193,7 @@ export function ZakazkyFirmyPanel({
                     onChange={(e) => zmen(z.caflouProjectId, 'nabidka', e.target.value)}
                     className={pole}
                   >
-                    <option value="">— nechat —</option>
+                    <option value="">{t('firma.nechat')}</option>
                     {volneNabidky.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.popis}
@@ -202,7 +204,7 @@ export function ZakazkyFirmyPanel({
                 <td className="py-2 min-w-[220px]">
                   {z.faktura && (
                     <span className="block text-[11px] font-body text-muted mb-1">
-                      teď: {z.faktura.popis}
+                      {t('firma.ted', { co: z.faktura.popis })}
                     </span>
                   )}
                   <select
@@ -210,7 +212,7 @@ export function ZakazkyFirmyPanel({
                     onChange={(e) => zmen(z.caflouProjectId, 'faktura', e.target.value)}
                     className={pole}
                   >
-                    <option value="">— nechat —</option>
+                    <option value="">{t('firma.nechat')}</option>
                     {volneFaktury.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.popis}
@@ -231,7 +233,7 @@ export function ZakazkyFirmyPanel({
           disabled={bezi}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {bezi ? 'Ukládám…' : 'Uložit potichu'}
+          {bezi ? t('obecne.ukladam') : t('firma.ulozitPotichu')}
         </button>
       </div>
     </div>

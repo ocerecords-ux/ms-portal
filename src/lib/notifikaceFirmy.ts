@@ -1,5 +1,6 @@
 import type { KomuNotifikace } from '@prisma/client';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Nastavení zpráv klientovi podle stavu projektu (zadání 10. 9. 2026).
@@ -19,6 +20,11 @@ export const KOMU_POPISKY: Record<KomuNotifikace, string> = {
 };
 
 export const KOMU_MOZNOSTI: KomuNotifikace[] = ['NIKAM', 'KLIENT', 'INTERNE'];
+
+/** Popisek volby podle jazyka (davka 7c); bez jazyka cesky. */
+export function nazevKomu(komu: KomuNotifikace, jazyk: Jazyk = 'cs'): string {
+  return jazyk === 'cs' ? KOMU_POPISKY[komu] : prelozit(jazyk, `komu.${komu}`);
+}
 
 /**
  * Stavy, u kterých má smysl zprávu posílat.

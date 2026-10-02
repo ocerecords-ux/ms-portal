@@ -3,9 +3,10 @@
 import { useMemo, useState } from 'react';
 import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { useRouter } from 'next/navigation';
-import { DRUH_LABELS, DRUHY_ZAKAZEK, KATEGORIE_NAVODU, navodNaHtml } from '@/lib/navody';
-import { ROLE_LABELS } from '@/lib/roles';
+import { DRUHY_ZAKAZEK, KATEGORIE_NAVODU, navodNaHtml, nazevDruhuZakazky } from '@/lib/navody';
+import { nazevRole } from '@/lib/roles';
 import { ALL_ROLES } from '@/lib/menu';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Psaní návodu (zadání 16. 9. 2026).
@@ -29,6 +30,8 @@ export type NavodKUprave = {
 
 export function NavodForm({ navod }: { navod: NavodKUprave }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [n, setN] = useState<NavodKUprave>(navod);
   const [bezi, setBezi] = useState(false);
   const [zprava, setZprava] = useState<string | null>(null);
@@ -49,13 +52,14 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
       const res = await fetch('/api/admin/navody/obrazek', { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.url) {
-        setChybaObrazku(data?.error || 'Obrázek se nepodařilo nahrát.');
+        setChybaObrazku(data?.error || t('navod.obrazekNenahran'));
         return;
       }
+      // Popis obrazku je soucast textu navodu, tedy data - zustava, jak je.
       const popis = (soubor.name || 'obrázek').replace(/\.[^.]+$/, '');
       setN((p) => ({ ...p, obsah: `${p.obsah}${p.obsah.endsWith('\n') || !p.obsah ? '' : '\n'}\n![${popis}](${data.url})\n` }));
     } catch {
-      setChybaObrazku('Obrázek se nepodařilo nahrát.');
+      setChybaObrazku(t('navod.obrazekNenahran'));
     } finally {
       setNahravam(false);
     }
@@ -85,13 +89,13 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Uložení se nepodařilo.');
+        setChyba(data?.error || t('navod.neulozeno'));
         return;
       }
-      setZprava('Uloženo.');
+      setZprava(t('navod.ulozeno'));
       router.refresh();
     } catch {
-      setChyba('Uložení se nepodařilo.');
+      setChyba(t('navod.neulozeno'));
     } finally {
       setBezi(false);
     }
@@ -106,7 +110,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
     try {
       const res = await fetch(`/api/admin/navody/${n.id}`, { method: 'DELETE' });
       if (!res.ok) {
-        setChyba('Smazání se nepodařilo.');
+        setChyba(t('navod.nesmazano'));
         return;
       }
       router.push('/admin/navody');
@@ -119,11 +123,11 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
     <div className="flex flex-col gap-5">
       <div className="flex gap-4 flex-wrap">
         <label className="flex flex-col gap-1 flex-1 min-w-[220px]">
-          <span className="text-sm font-heading font-semibold text-ink">Název</span>
+          <span className="text-sm font-heading font-semibold text-ink">{t('navod.nazev')}</span>
           <input value={n.nazev} onChange={(e) => nastav('nazev', e.target.value)} className="admin-input" />
         </label>
         <label className="flex flex-col gap-1 w-48">
-          <span className="text-sm font-heading font-semibold text-ink">Kategorie</span>
+          <span className="text-sm font-heading font-semibold text-ink">{t('navod.kategorie')}</span>
           <input
             value={n.kategorie}
             onChange={(e) => nastav('kategorie', e.target.value)}
@@ -137,7 +141,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
           </datalist>
         </label>
         <label className="flex flex-col gap-1 w-24">
-          <span className="text-sm font-heading font-semibold text-ink">Pořadí</span>
+          <span className="text-sm font-heading font-semibold text-ink">{t('navod.poradi')}</span>
           <input
             type="number"
             value={n.poradi}
@@ -148,11 +152,11 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-heading font-semibold text-ink">Perex</span>
+        <span className="text-sm font-heading font-semibold text-ink">{t('navod.perex')}</span>
         <input
           value={n.perex}
           onChange={(e) => nastav('perex', e.target.value)}
-          placeholder="Jedna věta do seznamu — o čem návod je."
+          placeholder={t('navod.perexPlaceholder')}
           className="admin-input"
         />
       </label>
@@ -161,7 +165,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
         <label className="flex flex-col gap-1">
           <span className="flex items-center justify-between gap-3 flex-wrap">
             <span className="text-sm font-heading font-semibold text-ink">
-              Text <span className="font-normal text-muted">(Markdown)</span>
+              {t('navod.text')} <span className="font-normal text-muted">{t('navod.textMarkdown')}</span>
             </span>
             {/* VLOŽENÍ OBRÁZKU (zadání 28. 9. 2026: „vkládat k textu obrázky -
                 printscreeny"). Soubor jde do úložiště a do textu se připíše
@@ -172,7 +176,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
                 <span className="text-xs font-body text-danger">{chybaObrazku}</span>
               )}
               <label className="text-xs font-heading font-semibold rounded-pill border border-line text-muted px-3 py-1.5 cursor-pointer hover:text-brand-purple hover:border-brand-purple">
-                {nahravam ? 'Nahrávám…' : '+ Obrázek'}
+                {nahravam ? t('navod.nahravam') : t('navod.pridatObrazek')}
                 <input
                   type="file"
                   accept="image/*"
@@ -193,12 +197,12 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
             rows={22}
             spellCheck
             className="admin-input font-mono text-xs leading-relaxed"
-            placeholder={'## Nadpis\n\nOdstavec textu.\n\n- odrážka\n- druhá\n\n![Popis obrázku](/navody/soubor.png)'}
+            placeholder={t('navod.textPlaceholder')}
           />
         </label>
 
         <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-sm font-heading font-semibold text-ink">Náhled</span>
+          <span className="text-sm font-heading font-semibold text-ink">{t('navod.nahled')}</span>
           <div
             className="navod-text bg-surface rounded-lg border border-line p-4 overflow-auto max-h-[520px]"
             dangerouslySetInnerHTML={{ __html: nahled }}
@@ -215,15 +219,15 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
             className="w-4 h-4 accent-brand-purple"
           />
           <span className="text-sm font-body text-ink">
-            Zveřejnit
-            <span className="block text-xs text-muted">dokud není zaškrtnuté, vidíte návod jen vy</span>
+            {t('navod.zverejnit')}
+            <span className="block text-xs text-muted">{t('navod.zverejnitPopis')}</span>
           </span>
         </label>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">
-            Komu se ukáže
-            <span className="block text-xs text-muted">nic nezaškrtnuto = jen náš tým (Žůžo-labůžo, Produkce, Zvukař). Herci a klienti uvidí jen návod, kde je jejich role zaškrtnutá.</span>
+            {t('navod.komuSeUkaze')}
+            <span className="block text-xs text-muted">{t('navod.komuSeUkazePopis')}</span>
           </span>
           <div className="flex gap-2 flex-wrap">
             {/* Klient studia (25. 9. 2026) sem patří taky - má vlastní
@@ -236,7 +240,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
                 vybrano={n.proRole.includes(role)}
                 onZmena={(zapnout) => nastav('proRole', prepniVSeznamu(n.proRole, role, zapnout))}
               >
-                {ROLE_LABELS[role]}
+                {nazevRole(role, jazyk)}
               </Volba>
             ))}
           </div>
@@ -247,11 +251,8 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
             objevovat klientovi"). */}
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">
-            Pro jaké zakázky
-            <span className="block text-xs text-muted">
-              nic nezaškrtnuto = pro obojí. Klient uvidí návod jen tehdy, když jeho firma má
-              zaškrtnutý stejný Druh zakázek; našeho týmu se to netýká.
-            </span>
+            {t('navod.proJakeZakazky')}
+            <span className="block text-xs text-muted">{t('navod.proJakeZakazkyPopis')}</span>
           </span>
           <div className="flex gap-2 flex-wrap">
             {DRUHY_ZAKAZEK.map((druh) => (
@@ -261,7 +262,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
                 vybrano={n.proDruhy.includes(druh)}
                 onZmena={(zapnout) => nastav('proDruhy', prepniVSeznamu(n.proDruhy, druh, zapnout))}
               >
-                {DRUH_LABELS[druh]}
+                {nazevDruhuZakazky(druh, jazyk)}
               </Volba>
             ))}
           </div>
@@ -278,7 +279,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
           disabled={bezi}
           className="text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-6 py-3 disabled:opacity-60"
         >
-          {bezi ? 'Ukládám…' : 'Uložit návod'}
+          {bezi ? t('obecne.ukladam') : t('navod.ulozitNavod')}
         </button>
         <button
           type="button"
@@ -288,7 +289,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
             mazani ? 'border-danger text-danger bg-dangerTint' : 'border-line text-muted hover:border-danger'
           }`}
         >
-          {mazani ? 'Opravdu smazat?' : 'Smazat'}
+          {mazani ? t('mazani.opravduSmazat') : t('obecne.smazat')}
         </button>
       </div>
     </div>

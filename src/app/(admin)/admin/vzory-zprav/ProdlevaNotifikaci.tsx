@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Prodleva zpráv klientovi po změně stavu (zadání 22. 9. 2026: „z bezpečnostních
  * důvodů latenci ... 10s ... hromadně nastavit"). Platí pro všechny firmy.
  */
 export function ProdlevaNotifikaci({ pocatecni, max }: { pocatecni: number; max: number }) {
+  const t = usePreklad();
   const [hodnota, setHodnota] = useState(String(pocatecni));
   const [ulozeno, setUlozeno] = useState(pocatecni);
   const [pracuje, setPracuje] = useState(false);
@@ -16,7 +18,7 @@ export function ProdlevaNotifikaci({ pocatecni, max }: { pocatecni: number; max:
   async function uloz() {
     const sekund = Number(hodnota);
     if (!Number.isInteger(sekund) || sekund < 0 || sekund > max) {
-      setChyba(`Zadejte celé číslo od 0 do ${max}.`);
+      setChyba(t('prodleva.rozsah', { max }));
       return;
     }
     setPracuje(true);
@@ -30,14 +32,14 @@ export function ProdlevaNotifikaci({ pocatecni, max }: { pocatecni: number; max:
       });
       const data = (await res.json().catch(() => ({}))) as { sekund?: number; error?: string };
       if (!res.ok) {
-        setChyba(data.error || 'Uložení se nezdařilo.');
+        setChyba(data.error || t('firma.ulozeniNezdarilo'));
         return;
       }
       setUlozeno(data.sekund ?? sekund);
       setHodnota(String(data.sekund ?? sekund));
-      setHlaska('Uloženo.');
+      setHlaska(t('prodleva.ulozeno'));
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vzory.bezSpojeni'));
     } finally {
       setPracuje(false);
     }
@@ -46,12 +48,8 @@ export function ProdlevaNotifikaci({ pocatecni, max }: { pocatecni: number; max:
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
       <div>
-        <h2 className="font-heading font-semibold text-base text-ink m-0">Prodleva odeslání po změně stavu</h2>
-        <p className="text-sm font-body text-muted m-0 mt-1 max-w-[75ch]">
-          Zpráva klientovi neodejde hned po přehození stavu, ale až po této době. Když se stav mezitím
-          změní jinam (překlep, špatný projekt), zpráva k původnímu stavu neodejde vůbec. Platí pro
-          všechny firmy. 0 = posílat hned.
-        </p>
+        <h2 className="font-heading font-semibold text-base text-ink m-0">{t('prodleva.nadpis')}</h2>
+        <p className="text-sm font-body text-muted m-0 mt-1 max-w-[75ch]">{t('prodleva.popis')}</p>
       </div>
       <div className="flex items-center gap-3 flex-wrap">
         <input
@@ -62,14 +60,14 @@ export function ProdlevaNotifikaci({ pocatecni, max }: { pocatecni: number; max:
           onChange={(e) => setHodnota(e.target.value)}
           className="w-24 rounded-lg border border-line bg-field px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
         />
-        <span className="text-sm font-body text-muted">sekund</span>
+        <span className="text-sm font-body text-muted">{t('prodleva.sekund')}</span>
         <button
           type="button"
           onClick={uloz}
           disabled={pracuje || hodnota === String(ulozeno)}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {pracuje ? 'Ukládám…' : 'Uložit'}
+          {pracuje ? t('obecne.ukladam') : t('obecne.ulozit')}
         </button>
         {hlaska && <span className="text-sm font-body text-ink">{hlaska}</span>}
         {chyba && <span className="text-sm font-body text-danger">{chyba}</span>}

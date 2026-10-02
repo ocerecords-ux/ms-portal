@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { codePrefixForRole, nextCode } from '@/lib/codes';
 import { notifyMany } from '@/lib/notifications';
 import { kodZeme } from '@/lib/countries';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * ŽÁDOST O ÚDAJE ODKAZEM (zadání 16. 9. 2026: „potřebuji vymyslet nějaký
@@ -82,6 +83,21 @@ export const POLE_FIRMY: PolePozvanky[] = [
 
 export function poleProDruh(druh: DruhPozvanky): PolePozvanky[] {
   return druh === 'HEREC' ? POLE_HERCE : POLE_FIRMY;
+}
+
+/**
+ * Popisek pole podle jazyka (davka 7c). Preklada se podle KLICE pole, ne
+ * podle ceskeho popisku; bez jazyka vraci cestinu, protoze stejna pole
+ * popisuje i verejny formular a posta.
+ *
+ * Druh rozhoduje jen u klice `name` - u herce je to jmeno a prijmeni,
+ * u firmy nazev firmy.
+ */
+export function popisekPole(klic: string, druh: DruhPozvanky, jazyk: Jazyk = 'cs'): string {
+  const pole = poleProDruh(druh).find((p) => p.klic === klic);
+  if (jazyk === 'cs') return pole?.popisek ?? klic;
+  const prekladovyKlic = klic === 'name' && druh === 'FIRMA' ? 'pole.nameFirma' : `pole.${klic}`;
+  return pole ? prelozit(jazyk, prekladovyKlic) : klic;
 }
 
 /** Token je jediný klíč od formuláře - proto je dlouhý a náhodný. */
@@ -169,12 +185,16 @@ export type RozdilPole = {
  * Co se od dnešního stavu liší. Pole, které se nezměnilo, se v přehledu
  * neukazuje - jinak by se v deseti řádcích ztratil ten jeden, o který jde.
  */
-export async function rozdilyPozvanky(p: {
-  druh: string;
-  userId: string | null;
-  companyId: string | null;
-  data: unknown;
-}): Promise<RozdilPole[]> {
+export async function rozdilyPozvanky(
+  p: {
+    druh: string;
+    userId: string | null;
+    companyId: string | null;
+    data: unknown;
+  },
+  /** Jazyk popisku. Nepovinny - bez nej cesky, at posta zustava ceska. */
+  jazyk: Jazyk = 'cs',
+): Promise<RozdilPole[]> {
   const vyplnene = (p.data ?? {}) as Record<string, unknown>;
   const soucasne = (await soucasneUdaje(p)) as Record<string, unknown> | null;
 
@@ -182,7 +202,13 @@ export async function rozdilyPozvanky(p: {
     .map((pole) => {
       const nove = naText(vyplnene[pole.klic]);
       const ted = naText(soucasne ? soucasne[pole.klic] : null);
-      return { klic: pole.klic, popisek: pole.popisek, ted, nove, doplneni: ted === '' };
+      return {
+        klic: pole.klic,
+        popisek: popisekPole(pole.klic, p.druh as DruhPozvanky, jazyk),
+        ted,
+        nove,
+        doplneni: ted === '',
+      };
     })
     .filter((r) => r.nove !== '' && r.nove !== r.ted);
 }

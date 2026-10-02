@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Přenos projektů z Caflou (zadání 10. 9. 2026).
@@ -29,6 +30,7 @@ type Vysledek = {
 };
 
 export function PrenosPanel() {
+  const t = usePreklad();
   const [prehled, setPrehled] = useState<Prehled | null>(null);
   const [vysledek, setVysledek] = useState<Vysledek | null>(null);
   const [bezi, setBezi] = useState(false);
@@ -49,13 +51,13 @@ export function PrenosPanel() {
       const res = await fetch('/api/admin/projekty/prenos', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Přenos se nepodařil.');
+        setChyba(data?.error || t('prenos.nepodaril'));
         return;
       }
       setVysledek(data as Vysledek);
       setPrehled((data as Vysledek).prehled);
     } catch {
-      setChyba('Přenos se nepodařil — zkuste to prosím znovu.');
+      setChyba(t('prenos.nepodarilZnovu'));
     } finally {
       setBezi(false);
     }
@@ -64,12 +66,7 @@ export function PrenosPanel() {
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
       <div className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
-        <p className="text-sm font-body text-muted m-0">
-          Stáhne z Caflou všechny projekty i s názvem, firmou, stavem, prioritou, normostranami,
-          hercem, datem vydání a popisem a uloží je do portálu. Dá se pustit opakovaně — údaje
-          zadané v portálu (manažer, odkaz na složku, rodný list) se nepřepisují a projektů
-          založených přímo v portálu se přenos nedotkne.
-        </p>
+        <p className="text-sm font-body text-muted m-0">{t('prenos.uvod')}</p>
 
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -78,12 +75,10 @@ export function PrenosPanel() {
             disabled={bezi}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
           >
-            {bezi ? 'Přenáším…' : 'Přenést projekty z Caflou'}
+            {bezi ? t('prenos.prenasim') : t('prenos.prenestProjekty')}
           </button>
           {bezi && (
-            <span className="text-xs font-body text-muted">
-              Sedm stovek projektů po stovkách — může to trvat i minutu, nezavírejte stránku.
-            </span>
+            <span className="text-xs font-body text-muted">{t('prenos.trvaToChvili')}</span>
           )}
         </div>
 
@@ -95,14 +90,14 @@ export function PrenosPanel() {
       {prehled && (
         <div className="bg-surface border border-line rounded-card shadow-sm p-5">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Co portál drží
+            {t('prenos.coPortalDrzi')}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-            <Cislo popisek="Projektů celkem" hodnota={prehled.celkem} />
-            <Cislo popisek="Z toho z Caflou" hodnota={prehled.zCaflou} />
-            <Cislo popisek="Založeno v portálu" hodnota={prehled.zPortalu} />
-            <Cislo popisek="Rozpracovaných" hodnota={prehled.rozpracovane} />
-            <Cislo popisek="Bez názvu" hodnota={prehled.bezNazvu} varovat={prehled.bezNazvu > 0} />
+            <Cislo popisek={t('prenos.projektuCelkem')} hodnota={prehled.celkem} />
+            <Cislo popisek={t('prenos.zTohoZCaflou')} hodnota={prehled.zCaflou} />
+            <Cislo popisek={t('prenos.zalozenoVPortalu')} hodnota={prehled.zPortalu} />
+            <Cislo popisek={t('prenos.rozpracovanych')} hodnota={prehled.rozpracovane} />
+            <Cislo popisek={t('prenos.bezNazvu')} hodnota={prehled.bezNazvu} varovat={prehled.bezNazvu > 0} />
           </div>
         </div>
       )}
@@ -110,13 +105,13 @@ export function PrenosPanel() {
       {vysledek && (
         <div className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Poslední přenos
+            {t('prenos.posledniPrenos')}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Cislo popisek="Přečteno z Caflou" hodnota={vysledek.precteno} />
-            <Cislo popisek="Nově založeno" hodnota={vysledek.zalozeno} />
-            <Cislo popisek="Doplněno" hodnota={vysledek.aktualizovano} />
-            <Cislo popisek="Přeskočeno" hodnota={vysledek.preskoceno} />
+            <Cislo popisek={t('prenos.prectenoZCaflou')} hodnota={vysledek.precteno} />
+            <Cislo popisek={t('prenos.noveZalozeno')} hodnota={vysledek.zalozeno} />
+            <Cislo popisek={t('prenos.doplneno')} hodnota={vysledek.aktualizovano} />
+            <Cislo popisek={t('prenos.preskoceno')} hodnota={vysledek.preskoceno} />
           </div>
 
           {vysledek.chyba && (
@@ -127,10 +122,7 @@ export function PrenosPanel() {
 
           {vysledek.bezFirmy.length > 0 && (
             <div className="bg-warnTint border border-line rounded-lg px-3 py-2">
-              <p className="text-sm font-body text-ink m-0">
-                U těchto projektů se nepodařilo dohledat firmu v portálu — název firmy se uložil
-                textem, ale projekt nebude vidět v přehledu klienta:
-              </p>
+              <p className="text-sm font-body text-ink m-0">{t('prenos.bezFirmy')}</p>
               <p className="text-xs font-body text-muted m-0 mt-1">{vysledek.bezFirmy.join(', ')}</p>
             </div>
           )}

@@ -3,6 +3,8 @@
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useEffect, useRef, useState } from 'react';
 import { DRUHY_NOTIFIKACI, DRUH_POPISKY, type DruhNotifikace } from '@/lib/notifikaceFirmy';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { prelozit } from '@/lib/jazyk';
 import { BARVY_TEXTU, VELIKOSTI_TEXTU } from '@/lib/formatovaniZpravy';
 import { PROMENNE, type Vzor } from '@/lib/vzoryZprav';
 
@@ -25,7 +27,14 @@ type VzorSeStavem = Vzor & {
   upravilJmeno: string | null;
 };
 
+/** Druh zprav podle KODU druhu; bez anglictiny projde cesky popisek. */
+function nazevDruhu(druh: DruhNotifikace, jazyk: 'cs' | 'en'): string {
+  return jazyk === 'cs' ? DRUH_POPISKY[druh] : prelozit(jazyk, `druhZprav.${druh}`);
+}
+
 export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [vzory, setVzory] = useState(pocatecni);
   /**
    * Dva druhy zprav (zadani 14. 9. 2026): audioknihy maji zpravu ke kazdemu
@@ -54,7 +63,7 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
       const res = await fetch(url, init);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
+        setChyba((data as { error?: string })?.error || t('vzory.neulozeno'));
         return false;
       }
       const vracene = (data as { vzory?: VzorSeStavem[] }).vzory;
@@ -64,7 +73,7 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
       }
       return true;
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vzory.bezSpojeni'));
       return false;
     } finally {
       setPracuje(false);
@@ -117,16 +126,14 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
                   : 'bg-surface border border-line text-muted hover:text-ink'
               }`}
             >
-              {DRUH_POPISKY[d]}
+              {nazevDruhu(d, jazyk)}
             </button>
           ))}
         </div>
 
         {druh === 'REKLAMA' && (
           <p className="text-sm font-body text-muted bg-tint border border-line rounded-lg px-3 py-2 m-0">
-            U reklam odchází jediná zpráva, a to ve stavu „Dokončeno - ke schválení". Ostatní stavy se
-            u nich neposílají, i kdyby je firma měla zapnuté. Tohle znění dostanou firmy, které mají
-            na kartě v „Druh zakázek" zaškrtnuté jen Reklamy.
+            {t('vzory.poznamkaReklama')}
           </p>
         )}
 
@@ -154,17 +161,17 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
         {vzor && (
           <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
             <Pole
-              popisek="Předmět"
+              popisek={t('vzory.predmet')}
               hodnota={vzor.predmet}
               onZmena={(v) => uprav({ predmet: v })}
-              napoveda="Co uvidí klient v seznamu pošty — a co se propíše do fialového pruhu v hlavičce zprávy."
+              napoveda={t('vzory.predmetHint')}
             />
             <Pole
-              popisek="Nadpis ve zprávě"
+              popisek={t('vzory.nadpis')}
               hodnota={vzor.nadpis}
               onZmena={(v) => uprav({ nadpis: v })}
-              placeholder="nepovinné — prázdné znamená bez nadpisu"
-              napoveda="Velký nadpis nad textem. Nechte prázdné a zpráva vypadá jako doteď."
+              placeholder={t('vzory.nadpisPlaceholder')}
+              napoveda={t('vzory.nadpisHint')}
             />
             <PoleText hodnota={vzor.text} onZmena={(v) => uprav({ text: v })} />
 
@@ -179,12 +186,9 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
                 className="mt-0.5"
               />
               <span>
-                Přidat tlačítko „Přeposlechnout v AudioTaggeru"
+                {t('vzory.pridatAudiotagger')}
                 <br />
-                <span className="text-xs font-body text-muted">
-                  Klient si tracky pustí rovnou v prohlížeči a chyby označí v textu. Hodí se všude, kde už
-                  je co poslouchat — i když se všechny tracky odevzdávají najednou.
-                </span>
+                <span className="text-xs font-body text-muted">{t('vzory.pridatAudiotaggerPopis')}</span>
               </span>
             </label>
 
@@ -195,10 +199,10 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
                 disabled={pracuje || !vzor.text.trim()}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
               >
-                {pracuje ? 'Ukládám…' : 'Uložit vzor'}
+                {pracuje ? t('obecne.ukladam') : t('vzory.ulozitVzor')}
               </button>
               {ulozeno === vzor.stav && (
-                <span className="text-sm font-heading text-brand-greenDeep">Uloženo</span>
+                <span className="text-sm font-heading text-brand-greenDeep">{t('vzory.ulozeno')}</span>
               )}
               {/* Obnovením se vlastní znění zahodí - proto pojistka
                   (18. 9. 2026). */}
@@ -206,8 +210,8 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
                 <TlacitkoSmazat
                   onSmazat={() => vychozi()}
                   disabled={pracuje}
-                  popisek="Obnovit výchozí znění"
-                  otazka="Opravdu zahodit vlastní znění?"
+                  popisek={t('vzory.obnovitVychozi')}
+                  otazka={t('vzory.opravduZahodit')}
                   trida="ml-auto text-xs"
                 />
               )}
@@ -217,7 +221,7 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
               <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{chyba}</p>
             )}
             {vzor.upraveno && vzor.upravilJmeno && (
-              <p className="text-xs font-body text-muted m-0">Naposledy upravil(a): {vzor.upravilJmeno}</p>
+              <p className="text-xs font-body text-muted m-0">{t('vzory.naposledyUpravil', { kdo: vzor.upravilJmeno })}</p>
             )}
           </div>
         )}
@@ -230,6 +234,7 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
 
 /** Značky proměnných - kliknutím se vloží tam, kde je kurzor. */
 function Znacky({ vloz }: { vloz: (znacka: string) => void }) {
+  const t = usePreklad();
   return (
     <span className="flex items-center gap-1.5 flex-wrap">
       {PROMENNE.map((p) => (
@@ -237,7 +242,9 @@ function Znacky({ vloz }: { vloz: (znacka: string) => void }) {
           key={p.klic}
           type="button"
           onClick={() => vloz(`{${p.klic}}`)}
-          title={`${p.popis} — v ukázce „${p.ukazka}“`}
+          // Popis promenne se preklada podle jejiho KLICE; ukazka zustava
+          // ceska, je to vzorek dat, ne text rozhrani (pravidlo 4).
+          title={t('vzory.znackaTitul', { popis: t(`promenna.${p.klic}`), ukazka: p.ukazka })}
           className="text-[11px] font-heading font-semibold rounded-pill border border-line bg-field px-2 py-0.5 text-brand-purple hover:border-brand-purple transition-colors"
         >
           {'{'}
@@ -282,6 +289,7 @@ function Pole({
 }
 
 function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) => void }) {
+  const t = usePreklad();
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
   /** Obalí označený text značkou; bez označení vloží značku prázdnou. */
@@ -295,7 +303,7 @@ function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) 
   return (
     <label className="flex flex-col gap-1.5">
       <span className="flex items-center justify-between gap-3 flex-wrap">
-        <span className="text-sm font-body text-ink">Text zprávy</span>
+        <span className="text-sm font-body text-ink">{t('vzory.textZpravy')}</span>
         <Znacky vloz={(z) => onZmena(vlozNaKurzor(ref.current, hodnota, z, onZmena))} />
       </span>
 
@@ -309,16 +317,16 @@ function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) 
         // oznaceny text ztratil driv, nez ho stihneme obalit.
         onMouseDown={(e) => e.preventDefault()}
       >
-        <button type="button" onClick={() => obal('**', '**')} title="Tučně" className={`${tlacitkoClass} font-bold`}>
+        <button type="button" onClick={() => obal('**', '**')} title={t('vzory.tucne')} className={`${tlacitkoClass} font-bold`}>
           B
         </button>
-        <button type="button" onClick={() => obal('*', '*')} title="Kurzíva" className={`${tlacitkoClass} italic`}>
+        <button type="button" onClick={() => obal('*', '*')} title={t('vzory.kurziva')} className={`${tlacitkoClass} italic`}>
           I
         </button>
         <button
           type="button"
           onClick={() => obal('__', '__')}
-          title="Podtrženo"
+          title={t('vzory.podtrzeno')}
           className={`${tlacitkoClass} underline`}
         >
           U
@@ -331,11 +339,11 @@ function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) 
             key={b.klic}
             type="button"
             onClick={() => obal(`[barva=${b.klic}]`, '[/barva]')}
-            title={`Barva: ${b.nazev}`}
+            title={t('vzory.barvaTitul', { nazev: t(`barva.${b.klic}`) })}
             className="w-5 h-5 rounded-full border border-line"
             style={{ backgroundColor: b.hex }}
           >
-            <span className="sr-only">{b.nazev}</span>
+            <span className="sr-only">{t(`barva.${b.klic}`)}</span>
           </button>
         ))}
 
@@ -346,10 +354,10 @@ function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) 
             key={v.px}
             type="button"
             onClick={() => obal(`[velikost=${v.px}]`, '[/velikost]')}
-            title={`Velikost písma ${v.px} px`}
+            title={t('vzory.velikostTitul', { px: v.px })}
             className={tlacitkoClass}
           >
-            {v.nazev}
+            {t(`velikost.${v.px}`)}
           </button>
         ))}
       </span>
@@ -362,10 +370,15 @@ function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) 
         className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
       />
       <span className="text-xs text-muted font-body">
-        Tohle je celá zpráva včetně oslovení — {'{osloveni}'} se nahradí za „Dobrý den, Radko,". Prázdný
-        řádek oddělí odstavce. Formátování: {'**tučně**'}, {'*kurzívou*'}, {'__podtrženo__'},{' '}
-        {'[barva=cervena]…[/barva]'}, {'[velikost=18]…[/velikost]'} — nebo označte text a klepněte na
-        tlačítko výš. Odkazy psát nemusíte, tlačítka na složku a na AudioTagger se doplní sama.
+        {/* Znacky formatovani jsou syntaxe, ne text - do vety se dosazuji. */}
+        {t('vzory.napovedaText', {
+          osloveni: '{osloveni}',
+          tucne: '**tučně**',
+          kurzivou: '*kurzívou*',
+          podtrzeno: '__podtrženo__',
+          barva: '[barva=cervena]…[/barva]',
+          velikost: '[velikost=18]…[/velikost]',
+        })}
       </span>
     </label>
   );
@@ -421,6 +434,7 @@ function obalVyber(
  * požadavek na každé klepnutí do klávesnice.
  */
 function Nahled({ vzor }: { vzor: VzorSeStavem }) {
+  const t = usePreklad();
   const [html, setHtml] = useState('');
 
   useEffect(() => {
@@ -450,12 +464,12 @@ function Nahled({ vzor }: { vzor: VzorSeStavem }) {
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden xl:sticky xl:top-4">
       <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Jak zpráva dopadne
+          {t('vzory.jakDopadne')}
         </h2>
-        <span className="text-[11px] font-body text-muted">ukázková data</span>
+        <span className="text-[11px] font-body text-muted">{t('vzory.ukazkovaData')}</span>
       </div>
       <iframe
-        title="Náhled zprávy"
+        title={t('vzory.nahledTitul')}
         srcDoc={html}
         className="w-full block bg-white"
         style={{ height: '72vh', border: 0 }}

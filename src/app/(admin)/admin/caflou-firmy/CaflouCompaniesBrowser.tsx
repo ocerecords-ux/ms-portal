@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import type { CaflouContactKind } from '@prisma/client';
 import {
   CONTACT_KIND_CLASSES,
-  CONTACT_KIND_LABELS,
   CONTACT_KIND_OPTIONS,
+  nazevDruhuKontaktu,
 } from '@/lib/caflouCompanies';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { useRazeni, ThRadit } from '@/app/(portal)/components/RaditelnaTabulka';
 import { VyberPole } from '@/components/VyberPole';
 
@@ -38,6 +39,8 @@ type Filter = 'vse' | CaflouContactKind | 'duplicity';
  */
 export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('vse');
   const [importing, setImporting] = useState(false);
@@ -91,7 +94,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
     setImporting(true);
     setError(null);
     setReport(null);
-    setProgress('Načítám z Caflou…');
+    setProgress(t('caflou.nacitam'));
     try {
       // Typy jsou tu vypsane schvalne. Bez nich TypeScript hlasil "'res'
       // implicitly has type 'any' ... referenced directly or indirectly in its
@@ -109,19 +112,19 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
         });
         const data: any = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setError(data?.error || 'Import se nezdařil.');
+          setError(data?.error || t('caflou.importNezdaril'));
           return;
         }
         total += Number(data?.ulozeno ?? 0);
-        setProgress(`Načteno ${total} firem…`);
+        setProgress(t('caflou.nacteno', { pocet: total }));
         page = typeof data?.dalsiStranka === 'number' ? data.dalsiStranka : null;
       }
       if (!prenest) {
-        setProgress(`Hotovo — načteno ${total} firem.`);
+        setProgress(t('caflou.hotovoNacteno', { pocet: total }));
         router.refresh();
         return;
       }
-      setProgress(`Načteno ${total} firem, přenáším do portálu…`);
+      setProgress(t('caflou.nactenoPrenasim', { pocet: total }));
       const resPrenos: Response = await fetch('/api/admin/caflou-firmy/zalozit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,16 +132,21 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       });
       const data: any = await resPrenos.json().catch(() => ({}));
       if (!resPrenos.ok) {
-        setError(data?.error || 'Přenos se nezdařil.');
+        setError(data?.error || t('caflou.prenosNezdaril'));
         return;
       }
       setReport(Array.isArray(data?.vysledky) ? data.vysledky : []);
       setProgress(
-        `Načteno ${total} firem · založeno ${data?.zalozeno ?? 0}, doplněno ${data?.doplneno ?? 0}, přeskočeno ${data?.preskoceno ?? 0}.`,
+        t('caflou.souhrnPrenosu', {
+          nacteno: total,
+          zalozeno: data?.zalozeno ?? 0,
+          doplneno: data?.doplneno ?? 0,
+          preskoceno: data?.preskoceno ?? 0,
+        }),
       );
       router.refresh();
     } catch {
-      setError('Import se nezdařil.');
+      setError(t('caflou.importNezdaril'));
     } finally {
       setImporting(false);
     }
@@ -152,7 +160,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
   async function transferToPortal() {
     const ids = items.filter((i) => i.kind === 'KLIENT' || i.kind === 'HEREC').map((i) => i.id);
     if (ids.length === 0) {
-      setError('Nejdřív u firem vyberte, jestli jde o klienta, nebo o herce.');
+      setError(t('caflou.nejdrivRoztridit'));
       return;
     }
     setTransferring(true);
@@ -166,16 +174,20 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Přenos se nezdařil.');
+        setError(data?.error || t('caflou.prenosNezdaril'));
         return;
       }
       setReport(Array.isArray(data?.vysledky) ? data.vysledky : []);
       setProgress(
-        `Založeno ${data?.zalozeno ?? 0}, doplněno ${data?.doplneno ?? 0}, přeskočeno ${data?.preskoceno ?? 0}.`,
+        t('caflou.souhrnZalozeni', {
+          zalozeno: data?.zalozeno ?? 0,
+          doplneno: data?.doplneno ?? 0,
+          preskoceno: data?.preskoceno ?? 0,
+        }),
       );
       router.refresh();
     } catch {
-      setError('Přenos se nezdařil.');
+      setError(t('caflou.prenosNezdaril'));
     } finally {
       setTransferring(false);
     }
@@ -202,16 +214,21 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(`${nazev}: ${data?.error || 'přenos se nezdařil.'}`);
+        setError(t('caflou.chybaUFirmy', { nazev, chyba: data?.error || t('caflou.prenosNezdarilMale') }));
         return;
       }
       setReport(Array.isArray(data?.vysledky) ? data.vysledky : []);
       setProgress(
-        `${nazev}: založeno ${data?.zalozeno ?? 0}, doplněno ${data?.doplneno ?? 0}, přeskočeno ${data?.preskoceno ?? 0}.`,
+        t('caflou.souhrnJednoho', {
+          nazev,
+          zalozeno: data?.zalozeno ?? 0,
+          doplneno: data?.doplneno ?? 0,
+          preskoceno: data?.preskoceno ?? 0,
+        }),
       );
       router.refresh();
     } catch {
-      setError(`${nazev}: přenos se nezdařil.`);
+      setError(t('caflou.chybaUFirmy', { nazev, chyba: t('caflou.prenosNezdarilMale') }));
     } finally {
       setBusyId(null);
     }
@@ -237,12 +254,12 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'E-mail se nepodařilo uložit.');
+        setError(data?.error || t('caflou.emailNeulozen'));
         return;
       }
       router.refresh();
     } catch {
-      setError('E-mail se nepodařilo uložit.');
+      setError(t('caflou.emailNeulozen'));
     } finally {
       setBusyId(null);
     }
@@ -258,31 +275,31 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
         body: JSON.stringify({ kind }),
       });
       if (!res.ok) {
-        setError('Uložení se nezdařilo.');
+        setError(t('firma.ulozeniNezdarilo'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('firma.ulozeniNezdarilo'));
     } finally {
       setBusyId(null);
     }
   }
 
   const tabs: { key: Filter; label: string }[] = [
-    { key: 'vse', label: 'Vše' },
-    { key: 'NEZARAZENO', label: CONTACT_KIND_LABELS.NEZARAZENO },
-    { key: 'KLIENT', label: CONTACT_KIND_LABELS.KLIENT },
-    { key: 'HEREC', label: CONTACT_KIND_LABELS.HEREC },
-    { key: 'IGNOROVAT', label: CONTACT_KIND_LABELS.IGNOROVAT },
-    { key: 'duplicity', label: 'Už v portálu' },
+    { key: 'vse', label: t('caflou.vse') },
+    { key: 'NEZARAZENO', label: nazevDruhuKontaktu('NEZARAZENO', jazyk) },
+    { key: 'KLIENT', label: nazevDruhuKontaktu('KLIENT', jazyk) },
+    { key: 'HEREC', label: nazevDruhuKontaktu('HEREC', jazyk) },
+    { key: 'IGNOROVAT', label: nazevDruhuKontaktu('IGNOROVAT', jazyk) },
+    { key: 'duplicity', label: t('caflou.uzVPortalu') },
   ];
 
   return (
     <section className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Firmy z Caflou</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{t('caflou.nadpis')}</h1>
         </div>
         <div className="text-right">
           <div className="flex items-center gap-3 justify-end flex-wrap">
@@ -292,25 +309,27 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
               disabled={importing || transferring}
               className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
             >
-              {importing ? 'Pracuji…' : 'Jen načíst'}
+              {importing ? t('caflou.pracuji') : t('caflou.jenNacist')}
             </button>
             <button
               type="button"
               onClick={transferToPortal}
               disabled={transferring || importing || counts.KLIENT + counts.HEREC === 0}
-              title="Přenese jen to, co je tady roztříděné"
+              title={t('caflou.prenestRoztrideneTitul')}
               className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
             >
-              {transferring ? 'Přenáším…' : `Přenést roztříděné (${counts.KLIENT + counts.HEREC})`}
+              {transferring
+                ? t('caflou.prenasim')
+                : t('caflou.prenestRoztridene', { pocet: counts.KLIENT + counts.HEREC })}
             </button>
             <button
               type="button"
               onClick={() => runImport(true)}
               disabled={importing || transferring}
-              title="Načte firmy z Caflou, odhadne klienty a herce a rovnou je založí v portálu"
+              title={t('caflou.nacistAPrenestTitul')}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {importing || transferring ? 'Pracuji…' : 'Načíst a přenést do portálu'}
+              {importing || transferring ? t('caflou.pracuji') : t('caflou.nacistAPrenest')}
             </button>
           </div>
           {progress && <p className="text-xs font-body text-muted m-0 mt-1.5">{progress}</p>}
@@ -324,7 +343,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       {report && report.length > 0 && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-4 max-h-64 overflow-y-auto">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 mb-2">
-            Co se stalo
+            {t('caflou.coSeStalo')}
           </h2>
           <ul className="m-0 pl-0 list-none flex flex-col gap-1.5">
             {report.map((r, index) => (
@@ -338,7 +357,11 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                         : 'text-status-progress'
                   }`}
                 >
-                  {r.akce === 'zalozeno' ? 'Založeno' : r.akce === 'doplneno' ? 'Doplněno' : 'Přeskočeno'}
+                  {r.akce === 'zalozeno'
+                    ? t('caflou.zalozeno')
+                    : r.akce === 'doplneno'
+                      ? t('caflou.doplneno')
+                      : t('caflou.preskoceno')}
                 </span>
                 {r.detail}
               </li>
@@ -370,7 +393,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Hledat název, IČ, e-mail…"
+            placeholder={t('caflou.hledat')}
             className="w-64 max-w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
           />
         </div>
@@ -381,22 +404,20 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
           <table className="w-full min-w-[1020px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">
-                <ThRadit label="Název" sloupec="nazev" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
-                <ThRadit label="IČ" sloupec="ic" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
-                <ThRadit label="Kontakt" sloupec="kontakt" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
-                <ThRadit label="Město" sloupec="mesto" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
-                <ThRadit label="Už v portálu" sloupec="vPortalu" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
-                <ThRadit label="Kdo to je" sloupec="kdoToJe" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
-                <th className="text-left px-3 py-3.5 whitespace-nowrap">Přenést</th>
+                <ThRadit label={t('caflou.sloupecNazev')} sloupec="nazev" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label={t('caflou.sloupecIc')} sloupec="ic" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label={t('caflou.sloupecKontakt')} sloupec="kontakt" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label={t('caflou.sloupecMesto')} sloupec="mesto" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label={t('caflou.uzVPortalu')} sloupec="vPortalu" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label={t('caflou.sloupecKdoToJe')} sloupec="kdoToJe" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <th className="text-left px-3 py-3.5 whitespace-nowrap">{t('caflou.sloupecPrenest')}</th>
               </tr>
             </thead>
             <tbody>
               {visible.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                    {items.length === 0
-                      ? 'Zatím tu nic není — načtěte firmy z Caflou tlačítkem nahoře.'
-                      : 'Nic neodpovídá filtru.'}
+                    {items.length === 0 ? t('caflou.prazdno') : t('caflou.nicNeodpovida')}
                   </td>
                 </tr>
               )}
@@ -415,7 +436,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                         type="email"
                         defaultValue=""
                         disabled={busyId === item.id}
-                        placeholder="dopište e-mail"
+                        placeholder={t('caflou.dopisteEmail')}
                         onBlur={(e) => {
                           const hodnota = e.target.value.trim();
                           if (hodnota) void setEmail(item.id, hodnota);
@@ -450,7 +471,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                     >
                       {CONTACT_KIND_OPTIONS.map((kind) => (
                         <option key={kind} value={kind}>
-                          {CONTACT_KIND_LABELS[kind]}
+                          {nazevDruhuKontaktu(kind, jazyk)}
                         </option>
                       ))}
                     </VyberPole>
@@ -470,10 +491,10 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                         disabled={busyId === item.id || transferring || importing}
                         className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 border border-line text-brand-purple hover:bg-tint transition-colors disabled:opacity-50"
                       >
-                        {busyId === item.id ? 'Přenáším…' : 'Přenést'}
+                        {busyId === item.id ? t('caflou.prenasim') : t('caflou.prenest')}
                       </button>
                     ) : (
-                      <span className="text-xs font-body text-muted/60">nejdřív vyberte vlevo</span>
+                      <span className="text-xs font-body text-muted/60">{t('caflou.nejdrivVyberteVlevo')}</span>
                     )}
                   </td>
                 </tr>

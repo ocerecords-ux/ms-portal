@@ -7,6 +7,7 @@
  */
 
 import { INTERNAL_ROLES } from '@/lib/roles';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * NÁVOD, NEBO PROCES (zadání 28. 9. 2026). Nápověda je o portálu, Procesy
@@ -52,6 +53,12 @@ export const DRUH_LABELS: Record<string, string> = {
   AUDIOBOOK: 'Audioknihy',
   AD: 'Reklamy',
 };
+
+/** Druh zakazek podle jazyka (davka 7c); bez jazyka cesky. */
+export function nazevDruhuZakazky(druh: string, jazyk: Jazyk = 'cs'): string {
+  if (jazyk === 'cs') return DRUH_LABELS[druh] ?? druh;
+  return DRUH_LABELS[druh] ? prelozit(jazyk, `druhZakazky.${druh}`) : druh;
+}
 
 /**
  * Sedí návod na to, co firma poptává?

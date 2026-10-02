@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Chat nad konceptem (zadání 22. 9. 2026: „budu vzpomínat na minulost a věci,
@@ -34,6 +35,7 @@ export function WikiChat({
   pripraveno: boolean;
   onVlozit: (wikitext: string, nahradit: boolean) => void;
 }) {
+  const t = usePreklad();
   const [zpravy, setZpravy] = useState<Zprava[]>([]);
   const [text, setText] = useState('');
   const [pise, setPise] = useState(false);
@@ -72,12 +74,12 @@ export function WikiChat({
       const data = (await res.json().catch(() => ({}))) as { moje?: Zprava; odpoved?: Zprava; error?: string };
       if (data.moje) setZpravy((s) => [...s, data.moje!]);
       if (!res.ok || !data.odpoved) {
-        setChyba(data.error || 'Odpověď se nepodařilo získat.');
+        setChyba(data.error || t('wiki.odpovedNeziskana'));
         return;
       }
       setZpravy((s) => [...s, data.odpoved!]);
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vzory.bezSpojeni'));
     } finally {
       setPise(false);
     }
@@ -86,19 +88,14 @@ export function WikiChat({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
       <div>
-        <h2 className="font-heading font-semibold text-base text-ink m-0">Vzpomínání</h2>
-        <p className="text-sm font-body text-muted m-0 mt-1 max-w-[80ch]">
-          Vyprávějte, co jste zažil a na co si vzpomenete. Pomocník se doptá na podrobnosti a hlavně na zdroje,
-          a když bude látky dost, napíše hotový kus wikitextu. Do konceptu ho vloží až vaše kliknutí.
-        </p>
+        <h2 className="font-heading font-semibold text-base text-ink m-0">{t('wiki.vzpominani')}</h2>
+        <p className="text-sm font-body text-muted m-0 mt-1 max-w-[80ch]">{t('wiki.vzpominaniPopis')}</p>
       </div>
 
       <div className="rounded-lg border border-line bg-field/40 p-3 max-h-[420px] overflow-y-auto flex flex-col gap-3">
-        {!nacteno && <p className="text-sm font-body text-muted m-0">Načítám…</p>}
+        {!nacteno && <p className="text-sm font-body text-muted m-0">{t('obecne.nacitam')}</p>}
         {nacteno && zpravy.length === 0 && (
-          <p className="text-sm font-body text-muted m-0">
-            Zatím nic. Zkuste třeba: „V roce 2014 jsem začal režírovat audioknihy pro…“
-          </p>
+          <p className="text-sm font-body text-muted m-0">{t('wiki.chatPrazdno')}</p>
         )}
         {zpravy.map((z) => {
           const { rec, navrh } = z.role === 'bot' ? rozdel(z.text) : { rec: z.text, navrh: null };
@@ -116,10 +113,10 @@ export function WikiChat({
                   <pre className="m-0 text-[12px] leading-relaxed font-mono text-ink whitespace-pre-wrap">{navrh}</pre>
                   <div className="flex gap-2 flex-wrap">
                     <button type="button" className={tlacitko2} onClick={() => onVlozit(navrh, false)}>
-                      Přidat do konceptu
+                      {t('wiki.pridatDoKonceptu')}
                     </button>
                     <button type="button" className={tlacitko2} onClick={() => onVlozit(navrh, true)}>
-                      Nahradit koncept
+                      {t('wiki.nahraditKoncept')}
                     </button>
                   </div>
                 </div>
@@ -127,13 +124,13 @@ export function WikiChat({
             </div>
           );
         })}
-        {pise && <p className="text-sm font-body text-muted m-0">Píše…</p>}
+        {pise && <p className="text-sm font-body text-muted m-0">{t('wiki.pise')}</p>}
         <div ref={konec} />
       </div>
 
       {chyba && <p className="text-sm text-danger m-0">{chyba}</p>}
       {!pripraveno && (
-        <p className="text-sm font-body text-muted m-0">Nejdřív koncept uložte — chat se váže k němu.</p>
+        <p className="text-sm font-body text-muted m-0">{t('wiki.nejdrivUlozte')}</p>
       )}
 
       <div className="flex items-end gap-2">
@@ -144,12 +141,12 @@ export function WikiChat({
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void posli();
           }}
           rows={2}
-          placeholder="Na co si vzpomínáte? (Cmd+Enter odešle)"
+          placeholder={t('wiki.naCoVzpominate')}
           disabled={!pripraveno}
           className={`${pole} resize-y`}
         />
         <button type="button" onClick={posli} disabled={pise || !text.trim() || !pripraveno} className={tlacitko}>
-          {pise ? 'Posílám…' : 'Poslat'}
+          {pise ? t('wiki.posilam') : t('wiki.poslat')}
         </button>
       </div>
     </div>

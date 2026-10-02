@@ -17,6 +17,8 @@
  * SOUBOR JE BEZ PRISMY, ať si ho vezme formulář v prohlížeči i server.
  */
 
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
 export type DruhParametru = 'AUDIOKNIHA' | 'REKLAMA';
 
 export const DRUHY_PARAMETRU: DruhParametru[] = ['AUDIOKNIHA', 'REKLAMA'];
@@ -25,6 +27,11 @@ export const NAZVY_DRUHU: Record<DruhParametru, string> = {
   AUDIOKNIHA: 'Audioknihy',
   REKLAMA: 'Reklamy',
 };
+
+/** Nazev druhu podle jazyka (davka 7c); bez jazyka cesky. */
+export function nazevDruhuParametru(druh: DruhParametru, jazyk: Jazyk = 'cs'): string {
+  return jazyk === 'cs' ? NAZVY_DRUHU[druh] : prelozit(jazyk, `druhParametru.${druh}`);
+}
 
 export type SekceTech = {
   /** „Natáčení", „Export", „Tagy"… */

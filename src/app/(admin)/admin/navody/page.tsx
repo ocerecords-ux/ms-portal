@@ -1,5 +1,7 @@
 import type { Role } from '@prisma/client';
-import { ROLE_LABELS } from '@/lib/roles';
+import { nazevRole } from '@/lib/roles';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitNaKusy, prelozitS } from '@/lib/jazyk';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { NovyNavodButton } from './NovyNavodButton';
@@ -13,6 +15,7 @@ import { NovyNavodButton } from './NovyNavodButton';
 export const dynamic = 'force-dynamic';
 
 export default async function NavodyPage() {
+  const jazyk = nactiJazyk();
   const navody = await prisma.navod
     .findMany({
       orderBy: [{ kategorie: 'asc' }, { poradi: 'asc' }, { nazev: 'asc' }],
@@ -32,19 +35,15 @@ export default async function NavodyPage() {
     <section className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Návody</h1>
-          <p className="text-sm font-body text-muted m-0 mt-1">
-            Co je tu zveřejněné, najde celý tým v Nápovědě — včetně hledání v textu.
-          </p>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{prelozit(jazyk, 'navod.nadpis')}</h1>
+          <p className="text-sm font-body text-muted m-0 mt-1">{prelozit(jazyk, 'navod.uvod')}</p>
         </div>
         <NovyNavodButton />
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         {navody.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0 px-5 py-6">
-            Zatím tu žádný návod není.
-          </p>
+          <p className="text-sm font-body text-muted m-0 px-5 py-6">{prelozit(jazyk, 'navod.zadnyNavod')}</p>
         ) : (
           <ul className="m-0 p-0 list-none">
             {navody.map((n) => (
@@ -61,8 +60,10 @@ export default async function NavodyPage() {
                     {/* Bez zaskrtnute role je navod jen pro tym (19. 9. 2026). */}
                     <span className="block text-xs font-body text-muted">
                       {n.proRole.length > 0
-                        ? `jen pro: ${n.proRole.map((r) => ROLE_LABELS[r as Role] ?? r).join(', ')}`
-                        : 'jen náš tým - herci a klienti nevidí'}
+                        ? prelozitS(jazyk, 'navod.jenPro', {
+                            role: n.proRole.map((r) => nazevRole(r as Role, jazyk) ?? r).join(', '),
+                          })
+                        : prelozit(jazyk, 'navod.jenNasTym')}
                     </span>
                   </span>
                   <span
@@ -72,10 +73,10 @@ export default async function NavodyPage() {
                         : 'border-line text-muted'
                     }`}
                   >
-                    {n.zverejneno ? 'Zveřejněno' : 'Rozepsané'}
+                    {prelozit(jazyk, n.zverejneno ? 'navod.zverejneno' : 'navod.rozepsane')}
                   </span>
                   <span className="text-xs font-body text-muted w-24 text-right">
-                    {n.updatedAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}
+                    {formatDatum(jazyk, n.updatedAt)}
                   </span>
                 </Link>
               </li>
@@ -84,9 +85,16 @@ export default async function NavodyPage() {
         )}
       </div>
 
+      {/* Věta se DVĚMA kusy v <code> - rozseká ji prelozitNaKusy, aby zůstala
+          jedním klíčem a šla v angličtině poskládat jinak (pravidlo 7). */}
       <p className="text-xs font-body text-muted m-0">
-        Obrázky do návodu se nahrávají do složky <code>public/navody/</code> a v textu se na ně
-        odkazuje jako <code>![popis](/navody/soubor.png)</code>.
+        {prelozitNaKusy(jazyk, 'navod.obrazkyPoznamka', ['slozka', 'odkaz']).map((kus, i) =>
+          kus.znacka ? (
+            <code key={i}>{kus.znacka === 'slozka' ? 'public/navody/' : '![popis](/navody/soubor.png)'}</code>
+          ) : (
+            <span key={i}>{kus.text}</span>
+          ),
+        )}
       </p>
     </section>
   );

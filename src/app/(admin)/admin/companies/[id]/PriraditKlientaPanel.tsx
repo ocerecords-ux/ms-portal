@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * KONTAKTNÍ OSOBA KE VŠEM ZAKÁZKÁM FIRMY (zadání 24. 9. 2026: „potřebuju
@@ -25,6 +26,7 @@ export function PriraditKlientaPanel({
   ucty: { id: string; label: string }[];
 }) {
   const router = useRouter();
+  const t = usePreklad();
   const [kdo, setKdo] = useState('');
   const [prepsat, setPrepsat] = useState(false);
   const [ptaSe, setPtaSe] = useState(false);
@@ -47,23 +49,30 @@ export function PriraditKlientaPanel({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Přiřazení se nepodařilo.');
+        setChyba(data?.error || t('firma.prirazeniNepodarilo'));
         return;
       }
       const pocet = Number(data?.pocet ?? 0);
       const celkem = Number(data?.celkem ?? 0);
-      const zakazek = (n: number) => `${n} ${n === 1 ? 'zakázka' : n < 5 ? 'zakázky' : 'zakázek'}`;
+      // Tri tvary cisla v cestine, dva v anglictine - kazdy tvar je vlastni
+      // klic a vybira ho tohle (stejne jako klicOdpoctu v ProjectMetaForm).
+      const zakazek = (n: number) =>
+        t(n === 1 ? 'firma.zakazkaJedna' : n < 5 ? 'firma.zakazkyMalo' : 'firma.zakazekMnoho', { n });
       setHlaska(
         celkem === 0
-          ? 'U téhle firmy zatím žádná zakázka není.'
+          ? t('firma.zadnaZakazka')
           : pocet === 0
-            ? `Nebylo co měnit — ${zakazek(celkem)} už kontakt má.`
-            : `Hotovo: ${zakazek(pocet)} z ${celkem} teď vede ${data?.jmeno ?? 'vybraný kontakt'}.`,
+            ? t('firma.nebyloCoMenit', { pocet: zakazek(celkem) })
+            : t('firma.prirazenoHotovo', {
+                pocet: zakazek(pocet),
+                celkem,
+                jmeno: data?.jmeno ?? t('firma.vybranyKontakt'),
+              }),
       );
       setPtaSe(false);
       router.refresh();
     } catch {
-      setChyba('Přiřazení se nepodařilo.');
+      setChyba(t('firma.prirazeniNepodarilo'));
     } finally {
       setBezi(false);
     }
@@ -72,13 +81,8 @@ export function PriraditKlientaPanel({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
       <div>
-        <h3 className="font-heading font-semibold text-sm text-ink m-0">Přiřadit kontakt ke všem zakázkám firmy</h3>
-        <p className="text-xs font-body text-muted m-0 mt-1">
-          Vybraný člověk uvidí zakázky firmy ve svých Projektech včetně dokončených. Proběhne to
-          potichu — nikomu nechodí zpráva ani zvonek a do historie projektu se nic nepíše.
-          Počítají se i starší zakázky, které mají firmu jen názvem (přenesené z Caflou) — těm se
-          firma při té příležitosti naváže.
-        </p>
+        <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('firma.priraditKontakt')}</h3>
+        <p className="text-xs font-body text-muted m-0 mt-1">{t('firma.priraditKontaktPopis')}</p>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -90,7 +94,7 @@ export function PriraditKlientaPanel({
           }}
           className="bg-field border border-line rounded-lg px-3 py-2 text-sm font-heading text-ink"
         >
-          <option value="">Vyberte kontaktní osobu…</option>
+          <option value="">{t('firma.vyberteKontakt')}</option>
           {ucty.map((u) => (
             <option key={u.id} value={u.id}>
               {u.label}
@@ -109,8 +113,8 @@ export function PriraditKlientaPanel({
             className="w-4 h-4 accent-brand-purple"
           />
           <span className="text-xs font-body text-ink">
-            přepsat i tam, kde už někdo je
-            <span className="block text-muted">bez zaškrtnutí se doplní jen zakázky bez kontaktu</span>
+            {t('firma.prepsatIKde')}
+            <span className="block text-muted">{t('firma.prepsatIKdePopis')}</span>
           </span>
         </label>
 
@@ -128,7 +132,7 @@ export function PriraditKlientaPanel({
             ptaSe ? 'bg-brand-purple text-white' : 'bg-bar text-white'
           }`}
         >
-          {bezi ? 'Přiřazuji…' : ptaSe ? 'Opravdu? Klepněte znovu' : 'Přiřadit'}
+          {bezi ? t('firma.prirazuji') : ptaSe ? t('firma.opravduKlepnete') : t('firma.priradit')}
         </button>
       </div>
 

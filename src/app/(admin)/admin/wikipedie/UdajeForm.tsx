@@ -2,6 +2,7 @@
 
 import type { DiloUdaju, MilnikUdaju, UdajeOsoby, ZdrojUdaju } from '@/lib/wikipedieUdaje';
 import { DatumPole } from '@/components/DatumPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Formulář „Údaje o sobě" (zadání 22. 9. 2026: „napíšu o sobě nějaká data
@@ -41,7 +42,15 @@ function Policko({
   );
 }
 
+/**
+ * UKÁZKY V POLÍCH ZŮSTÁVAJÍ ČESKÉ (dávka 7c, stejné rozhodnutí jako
+ * u „Úvod audioknihy" v dávce 7b): je to obsah českého článku - názvy
+ * kategorií („Čeští režiséři"), věta „je český režisér audioknih" nebo
+ * vydavatel. Anglická ukázka by radila napsat do článku něco, co tam nemá
+ * být. Popisky a nápovědy přeložené jsou.
+ */
 export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: UdajeOsoby) => void }) {
+  const t = usePreklad();
   function set<K extends keyof UdajeOsoby>(klic: K, hodnota: UdajeOsoby[K]) {
     zmena({ ...udaje, [klic]: hodnota });
   }
@@ -49,7 +58,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
   function zdrojeNabidka(vybrany: string, nastav: (v: string) => void) {
     return (
       <select value={vybrany} onChange={(e) => nastav(e.target.value)} className={pole}>
-        <option value="">bez zdroje</option>
+        <option value="">{t('wiki.bezZdroje')}</option>
         {udaje.zdroje
           .filter((z) => z.klic.trim())
           .map((z) => (
@@ -65,23 +74,23 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
     <div className="flex flex-col gap-6">
       {/* Základ */}
       <div className="flex flex-col gap-3">
-        <h3 className="font-heading font-semibold text-sm text-ink m-0">Kdo jste</h3>
+        <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('wiki.kdoJste')}</h3>
         <div className="flex gap-3 flex-wrap">
-          <Policko label="Jméno" hodnota={udaje.jmeno} zmena={(v) => set('jmeno', v)} placeholder="Ondřej Černý" />
+          <Policko label={t('wiki.jmeno')} hodnota={udaje.jmeno} zmena={(v) => set('jmeno', v)} placeholder="Ondřej Černý" />
           <Policko
-            label="Čím jste"
-            hint="doplní se za jméno: „… je český režisér audioknih…“"
+            label={t('wiki.cimJste')}
+            hint={t('wiki.cimJsteHint')}
             hodnota={udaje.cimJe}
             zmena={(v) => set('cimJe', v)}
             placeholder="je český režisér audioknih a zvukový režisér ze studia Mediaspace"
           />
         </div>
         <div className="flex gap-3 flex-wrap">
-          <Policko label="Datum narození" typ="date" hodnota={udaje.datumNarozeni} zmena={(v) => set('datumNarozeni', v)} />
-          <Policko label="Místo narození" hodnota={udaje.mistoNarozeni} zmena={(v) => set('mistoNarozeni', v)} placeholder="Brno" />
+          <Policko label={t('wiki.datumNarozeni')} typ="date" hodnota={udaje.datumNarozeni} zmena={(v) => set('datumNarozeni', v)} />
+          <Policko label={t('wiki.mistoNarozeni')} hodnota={udaje.mistoNarozeni} zmena={(v) => set('mistoNarozeni', v)} placeholder="Brno" />
           <Policko
-            label="Povolání"
-            hint="do infoboxu, oddělujte čárkou"
+            label={t('wiki.povolani')}
+            hint={t('wiki.povolaniHint')}
             hodnota={udaje.povolani}
             zmena={(v) => set('povolani', v)}
             placeholder="režisér audioknih, zvukový režisér"
@@ -89,31 +98,31 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
         </div>
         <div className="flex gap-3 flex-wrap">
           <Policko
-            label="Fotka na Commons"
-            hint="název souboru bez „File:“"
+            label={t('wiki.fotka')}
+            hint={t('wiki.fotkaHint')}
             hodnota={udaje.fotka}
             zmena={(v) => set('fotka', v)}
             placeholder="ONDREJ CERNY.jpg"
           />
-          <Policko label="Popisek fotky" hodnota={udaje.popisekFotky} zmena={(v) => set('popisekFotky', v)} placeholder="Ondřej Černý (2026)" />
+          <Policko label={t('wiki.popisekFotky')} hodnota={udaje.popisekFotky} zmena={(v) => set('popisekFotky', v)} placeholder="Ondřej Černý (2026)" />
         </div>
         <div className="flex gap-3 flex-wrap">
-          <Policko label="Oficiální web" hodnota={udaje.web} zmena={(v) => set('web', v)} placeholder="https://www.mediaspace.cz" />
+          <Policko label={t('wiki.web')} hodnota={udaje.web} zmena={(v) => set('web', v)} placeholder="https://www.mediaspace.cz" />
           <Policko
-            label="Kategorie"
-            hint="oddělujte čárkou"
+            label={t('wiki.kategorie')}
+            hint={t('wiki.oddelujteCarkou')}
             hodnota={udaje.kategorie}
             zmena={(v) => set('kategorie', v)}
             placeholder="Čeští režiséři, Narození v roce 1985"
           />
         </div>
         <label className="flex flex-col gap-1">
-          <span className={popisek}>Shrnutí (nepovinné)</span>
+          <span className={popisek}>{t('wiki.shrnuti')}</span>
           <textarea
             value={udaje.shrnuti}
             onChange={(e) => set('shrnuti', e.target.value)}
             rows={3}
-            placeholder="Odstavec pod úvodní větu — čím se zabýváte, s kým spolupracujete."
+            placeholder={t('wiki.shrnutiHint')}
             className={`${pole} resize-y`}
           />
         </label>
@@ -122,23 +131,20 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
       {/* Zdroje */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-heading font-semibold text-sm text-ink m-0">Zdroje</h3>
+          <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('wiki.zdroje')}</h3>
           <button
             type="button"
             className={tlacitkoMale}
             onClick={() => set('zdroje', [...udaje.zdroje, { klic: '', titul: '', kde: '', url: '', datum: '' } as ZdrojUdaju])}
           >
-            + Přidat zdroj
+            {t('wiki.pridatZdroj')}
           </button>
         </div>
-        <p className="text-xs font-body text-muted m-0">
-          Nezávislé články a rozhovory, ze kterých tvrzení pocházejí. Klíč je jen krátké jméno zdroje (např. „youradio“),
-          kterým se pak u údajů níž vybírá.
-        </p>
+        <p className="text-xs font-body text-muted m-0">{t('wiki.zdrojePopis')}</p>
         {udaje.zdroje.map((z, i) => (
           <div key={i} className="flex gap-2 flex-wrap items-end border-t border-line pt-3">
             <label className="flex flex-col gap-1 w-[110px]">
-              <span className={popisek}>Klíč</span>
+              <span className={popisek}>{t('wiki.klic')}</span>
               <input
                 value={z.klic}
                 onChange={(e) => set('zdroje', udaje.zdroje.map((x, j) => (j === i ? { ...x, klic: e.target.value } : x)))}
@@ -147,7 +153,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 flex-1 min-w-[200px]">
-              <span className={popisek}>Titulek</span>
+              <span className={popisek}>{t('wiki.titulek')}</span>
               <input
                 value={z.titul}
                 onChange={(e) => set('zdroje', udaje.zdroje.map((x, j) => (j === i ? { ...x, titul: e.target.value } : x)))}
@@ -155,7 +161,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 w-[150px]">
-              <span className={popisek}>Kde vyšlo</span>
+              <span className={popisek}>{t('wiki.kdeVyslo')}</span>
               <input
                 value={z.kde}
                 onChange={(e) => set('zdroje', udaje.zdroje.map((x, j) => (j === i ? { ...x, kde: e.target.value } : x)))}
@@ -164,7 +170,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 flex-1 min-w-[200px]">
-              <span className={popisek}>Odkaz</span>
+              <span className={popisek}>{t('wiki.odkaz')}</span>
               <input
                 value={z.url}
                 onChange={(e) => set('zdroje', udaje.zdroje.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))}
@@ -173,7 +179,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 w-[150px]">
-              <span className={popisek}>Datum vydání</span>
+              <span className={popisek}>{t('wiki.datumVydani')}</span>
               <DatumPole
                 value={z.datum}
                 onChange={(e) => set('zdroje', udaje.zdroje.map((x, j) => (j === i ? { ...x, datum: e.target.value } : x)))}
@@ -181,7 +187,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <button type="button" className={tlacitkoMale} onClick={() => set('zdroje', udaje.zdroje.filter((_, j) => j !== i))}>
-              Odebrat
+              {t('wiki.odebrat')}
             </button>
           </div>
         ))}
@@ -190,18 +196,16 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
       {/* Milníky */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-heading font-semibold text-sm text-ink m-0">Život — co se kdy stalo</h3>
+          <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('wiki.zivot')}</h3>
           <button type="button" className={tlacitkoMale} onClick={() => set('milniky', [...udaje.milniky, { rok: '', text: '', zdroj: '' } as MilnikUdaju])}>
-            + Přidat milník
+            {t('wiki.pridatMilnik')}
           </button>
         </div>
-        <p className="text-xs font-body text-muted m-0">
-          Z každého řádku vznikne věta: rok + co se stalo. Pište bez hodnocení, třeba „založil studio Mediaspace“.
-        </p>
+        <p className="text-xs font-body text-muted m-0">{t('wiki.milnikyPopis')}</p>
         {udaje.milniky.map((m, i) => (
           <div key={i} className="flex gap-2 flex-wrap items-end border-t border-line pt-3">
             <label className="flex flex-col gap-1 w-[90px]">
-              <span className={popisek}>Rok</span>
+              <span className={popisek}>{t('wiki.rok')}</span>
               <input
                 value={m.rok}
                 onChange={(e) => set('milniky', udaje.milniky.map((x, j) => (j === i ? { ...x, rok: e.target.value } : x)))}
@@ -210,7 +214,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 flex-1 min-w-[280px]">
-              <span className={popisek}>Co se stalo</span>
+              <span className={popisek}>{t('wiki.coSeStalo')}</span>
               <input
                 value={m.text}
                 onChange={(e) => set('milniky', udaje.milniky.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
@@ -219,11 +223,11 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 w-[150px]">
-              <span className={popisek}>Zdroj</span>
+              <span className={popisek}>{t('wiki.zdroj')}</span>
               {zdrojeNabidka(m.zdroj, (v) => set('milniky', udaje.milniky.map((x, j) => (j === i ? { ...x, zdroj: v } : x))))}
             </label>
             <button type="button" className={tlacitkoMale} onClick={() => set('milniky', udaje.milniky.filter((_, j) => j !== i))}>
-              Odebrat
+              {t('wiki.odebrat')}
             </button>
           </div>
         ))}
@@ -232,19 +236,19 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
       {/* Tvorba */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-heading font-semibold text-sm text-ink m-0">Tvorba</h3>
+          <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('wiki.tvorba')}</h3>
           <button
             type="button"
             className={tlacitkoMale}
             onClick={() => set('dila', [...udaje.dila, { nazev: '', rok: '', vydavatel: '', poznamka: '', zdroj: '' } as DiloUdaju])}
           >
-            + Přidat dílo
+            {t('wiki.pridatDilo')}
           </button>
         </div>
         {udaje.dila.map((d, i) => (
           <div key={i} className="flex gap-2 flex-wrap items-end border-t border-line pt-3">
             <label className="flex flex-col gap-1 flex-1 min-w-[220px]">
-              <span className={popisek}>Název</span>
+              <span className={popisek}>{t('wiki.nazev')}</span>
               <input
                 value={d.nazev}
                 onChange={(e) => set('dila', udaje.dila.map((x, j) => (j === i ? { ...x, nazev: e.target.value } : x)))}
@@ -252,7 +256,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 w-[90px]">
-              <span className={popisek}>Rok</span>
+              <span className={popisek}>{t('wiki.rok')}</span>
               <input
                 value={d.rok}
                 onChange={(e) => set('dila', udaje.dila.map((x, j) => (j === i ? { ...x, rok: e.target.value } : x)))}
@@ -260,7 +264,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 w-[160px]">
-              <span className={popisek}>Vydavatel</span>
+              <span className={popisek}>{t('wiki.vydavatel')}</span>
               <input
                 value={d.vydavatel}
                 onChange={(e) => set('dila', udaje.dila.map((x, j) => (j === i ? { ...x, vydavatel: e.target.value } : x)))}
@@ -269,7 +273,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 flex-1 min-w-[180px]">
-              <span className={popisek}>Poznámka</span>
+              <span className={popisek}>{t('wiki.poznamka')}</span>
               <input
                 value={d.poznamka}
                 onChange={(e) => set('dila', udaje.dila.map((x, j) => (j === i ? { ...x, poznamka: e.target.value } : x)))}
@@ -278,11 +282,11 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
               />
             </label>
             <label className="flex flex-col gap-1 w-[150px]">
-              <span className={popisek}>Zdroj</span>
+              <span className={popisek}>{t('wiki.zdroj')}</span>
               {zdrojeNabidka(d.zdroj, (v) => set('dila', udaje.dila.map((x, j) => (j === i ? { ...x, zdroj: v } : x))))}
             </label>
             <button type="button" className={tlacitkoMale} onClick={() => set('dila', udaje.dila.filter((_, j) => j !== i))}>
-              Odebrat
+              {t('wiki.odebrat')}
             </button>
           </div>
         ))}

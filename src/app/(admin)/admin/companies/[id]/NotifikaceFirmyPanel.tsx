@@ -6,14 +6,17 @@ import {
   CO_SE_POSILA,
   INTERNI_PRIJEMCI,
   KOMU_MOZNOSTI,
-  KOMU_POPISKY,
   STAVY_S_NOTIFIKACI,
+  nazevKomu,
   jeToEmail,
   predvolbaJakoAudioteka,
   predvolbaJakoJota,
   prazdneNastaveni,
   type NastaveniNotifikaci,
 } from '@/lib/notifikaceFirmy';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { prelozitKolem } from '@/lib/jazyk';
+import { vyjmenuj } from '@/lib/dotoceni';
 
 /**
  * Záložka Notifikace na kartě firmy (zadání 10. 9. 2026: "u firem ta záložka
@@ -34,6 +37,10 @@ import {
 type Ucet = { email: string; jmeno: string };
 
 export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  // Veta s tucnym kusem uprostred - pravidlo 7: jeden klic, rozdeli se az tady.
+  const [pred, za] = prelozitKolem(jazyk, 'firma.notifikaceUvod', 'komu');
   const [nastaveni, setNastaveni] = useState<NastaveniNotifikaci>(prazdneNastaveni());
   const [prijemci, setPrijemci] = useState<string[]>([]);
   const [nabidka, setNabidka] = useState<Ucet[]>([]);
@@ -72,7 +79,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
     const adresa = novaAdresa.trim().toLowerCase();
     if (!adresa) return;
     if (!jeToEmail(adresa)) {
-      setChyba(`"${adresa}" nevypadá jako e-mail.`);
+      setChyba(t('firma.neniEmail', { adresa }));
       return;
     }
     if (!prijemci.includes(adresa)) setPrijemci((p) => [...p, adresa]);
@@ -92,27 +99,27 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || 'Uložení se nezdařilo.');
+        setChyba(data?.error || t('firma.ulozeniNezdarilo'));
         return;
       }
       setUlozeno(true);
     } catch {
-      setChyba('Uložení se nezdařilo.');
+      setChyba(t('firma.ulozeniNezdarilo'));
     } finally {
       setUklada(false);
     }
   }
 
   if (nacita) {
-    return <p className="text-sm font-body text-muted m-0">Načítám nastavení…</p>;
+    return <p className="text-sm font-body text-muted m-0">{t('firma.notifikaceNacitam')}</p>;
   }
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <p className="text-sm font-body text-muted m-0">
-        Kdykoliv projekt téhle firmy přejde do některého ze stavů níž, portál o tom může dát vědět.
-        Zpráva jde <strong className="text-ink">klientovi projektu</strong> — tedy člověku, který je
-        u projektu vyplněný v poli Klient — a nese v sobě tlačítko s odkazem na složku na Disku.
+        {pred}
+        <strong className="text-ink">{t('firma.notifikaceKlientProjektu')}</strong>
+        {za}
       </p>
 
       <div className="flex flex-col gap-3">
@@ -142,7 +149,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
                       : 'bg-surface text-muted hover:text-ink'
                   }`}
                 >
-                  {KOMU_POPISKY[komu]}
+                  {nazevKomu(komu, jazyk)}
                 </button>
               ))}
             </span>
@@ -155,11 +162,8 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
           zprava temto lidem v kopii - at je videt, co klientovi odeslo. */}
       <div className="border-t border-line pt-5 flex flex-col gap-3">
         <div>
-          <h3 className="font-heading font-semibold text-sm text-ink m-0">Komu z nás to chodí</h3>
-          <p className="text-xs font-body text-muted m-0 mt-1">
-            U volby „Jen nám interně" jsou to jediní příjemci. U volby „Klientovi" jim zpráva chodí
-            v kopii, ať je vidět, co klientovi odešlo.
-          </p>
+          <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('firma.komuZNas')}</h3>
+          <p className="text-xs font-body text-muted m-0 mt-1">{t('firma.komuZNasPopis')}</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -199,7 +203,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
                   <button
                     type="button"
                     onClick={() => prepniPrijemce(e)}
-                    aria-label={`Odebrat ${e}`}
+                    aria-label={t('firma.odebratAdresu', { email: e })}
                     className="text-muted hover:text-danger"
                   >
                     ✕
@@ -220,7 +224,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
                 pridejAdresu();
               }
             }}
-            placeholder="Další adresa, třeba fakturace@mediaspace.cz"
+            placeholder={t('firma.dalsiAdresa')}
             className="flex-1 min-w-[240px] rounded-lg border border-line bg-field px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
           />
           <button
@@ -228,13 +232,13 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
             onClick={pridejAdresu}
             className="font-heading font-semibold text-sm text-brand-purple hover:underline px-2 py-2"
           >
-            Přidat
+            {t('firma.pridat')}
           </button>
         </div>
 
         {prijemci.length === 0 && (
           <p className="text-xs font-body text-muted m-0">
-            Nikdo vybraný — zprávy proto půjdou na {INTERNI_PRIJEMCI.join(' a ')}.
+            {t('firma.nikdoVybrany', { kdo: vyjmenuj([...INTERNI_PRIJEMCI], jazyk) })}
           </p>
         )}
       </div>
@@ -248,12 +252,12 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
           disabled={uklada}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {uklada ? 'Ukládám…' : 'Uložit nastavení'}
+          {uklada ? t('obecne.ukladam') : t('firma.ulozitNastaveni')}
         </button>
-        {ulozeno && <span className="text-status-done text-sm font-heading">✓ Uloženo</span>}
+        {ulozeno && <span className="text-status-done text-sm font-heading">{t('firma.ulozeno')}</span>}
 
         <span className="flex items-center gap-3 ml-auto">
-          <span className="text-xs font-body text-muted">Předvyplnit:</span>
+          <span className="text-xs font-body text-muted">{t('firma.predvyplnit')}</span>
           <button
             type="button"
             onClick={() => {
@@ -262,7 +266,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
             }}
             className="text-xs font-heading font-semibold text-brand-purple hover:underline"
           >
-            jako Audioteka
+            {t('firma.jakoAudioteka')}
           </button>
           <button
             type="button"
@@ -272,7 +276,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
             }}
             className="text-xs font-heading font-semibold text-brand-purple hover:underline"
           >
-            jako Jota
+            {t('firma.jakoJota')}
           </button>
         </span>
       </div>

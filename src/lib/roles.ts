@@ -1,4 +1,5 @@
 import type { Role, CompanyType } from '@prisma/client';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Popisky roli pouzivane v adminu. Hodnoty enumu Role (schema.prisma)
@@ -114,6 +115,21 @@ export const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
   KLIENT: 'Klient',
   DODAVATEL: 'Dodavatel',
 };
+
+/**
+ * Nazev role a typu firmy podle jazyka (davka 7c).
+ *
+ * Jazyk je NEPOVINNY a bez nej vrati cestinu - konstanty vys si bere i PDF
+ * a posta, kde jazyk urcuje dokument, ne prepinac v liste (pravidlo 5).
+ * Preklada se podle KODU role, nikdy podle ceskeho nazvu.
+ */
+export function nazevRole(role: Role, jazyk: Jazyk = 'cs'): string {
+  return jazyk === 'cs' ? ROLE_LABELS[role] : prelozit(jazyk, `role.${role}`);
+}
+
+export function nazevTypuFirmy(typ: CompanyType, jazyk: Jazyk = 'cs'): string {
+  return jazyk === 'cs' ? COMPANY_TYPE_LABELS[typ] : prelozit(jazyk, `typFirmy.${typ}`);
+}
 
 /**
  * Zalozky na strance /admin (Firmy), zadani 5. 9. 2026: Firmy se deli na

@@ -1,4 +1,5 @@
 import type { CaflouContactKind } from '@prisma/client';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Firmy z Caflou (zadani 8. 9. 2026) - mapovani syrove odpovedi a ciselnik
@@ -15,6 +16,11 @@ export const CONTACT_KIND_LABELS: Record<CaflouContactKind, string> = {
   HEREC: 'Herec',
   IGNOROVAT: 'Nepoužívat',
 };
+
+/** Kdo to je, podle jazyka (davka 7c); bez jazyka cesky. */
+export function nazevDruhuKontaktu(kind: CaflouContactKind, jazyk: Jazyk = 'cs'): string {
+  return jazyk === 'cs' ? CONTACT_KIND_LABELS[kind] : prelozit(jazyk, `kontaktCaflou.${kind}`);
+}
 
 export const CONTACT_KIND_CLASSES: Record<CaflouContactKind, string> = {
   NEZARAZENO: 'bg-warnTint text-status-progress',

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type CompanyHit = { id: string | number; name: string };
 
@@ -10,6 +11,7 @@ type CompanyHit = { id: string | number; name: string };
 // Vercel Logs. Hledani firem je zvlast (zobrazuje jen nazev + ID, ne cely
 // syrovy JSON), protoze uctu ma Mediaspace pres Caflou stovky.
 export function CaflouTestPanel({ companyId }: { companyId: string }) {
+  const t = usePreklad();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [statusLine, setStatusLine] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
       setStatusLine(`HTTP ${res.status}`);
       setResult(JSON.stringify(body, null, 2));
     } catch (err) {
-      setStatusLine('Chyba požadavku');
+      setStatusLine(t('firma.chybaPozadavku'));
       setResult(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
@@ -52,13 +54,18 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
         const hits: CompanyHit[] = body.body.results.map((r: any) => ({ id: r.id, name: r.name }));
         setCompanyHits(hits);
         setCompanyHitsInfo(
-          `Nalezeno ${body.body.total_results ?? hits.length} firem${body.body.total_pages > 1 ? ` (zobrazeno prvních ${hits.length}, zkus hledání zúžit)` : ''}.`,
+          body.body.total_pages > 1
+            ? t('firma.nalezenoFiremZuzit', {
+                pocet: body.body.total_results ?? hits.length,
+                kolik: hits.length,
+              })
+            : t('firma.nalezenoFirem', { pocet: body.body.total_results ?? hits.length }),
         );
       } else {
         setResult(JSON.stringify(body, null, 2));
       }
     } catch (err) {
-      setStatusLine('Chyba požadavku');
+      setStatusLine(t('firma.chybaPozadavku'));
       setResult(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
@@ -76,11 +83,8 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
   return (
     <div className="bg-surface border border-line rounded-card p-6 flex flex-col gap-3">
       <div>
-        <h3 className="font-heading font-semibold text-sm text-ink m-0">Test napojení na Caflou</h3>
-        <p className="text-muted text-xs font-body mt-1">
-          Nevíš ID firmy v Caflou? Napiš níže její název (nebo část) a klikni na „Najít" — vypíšou se jen odpovídající firmy.
-          Až ID doplníš a uložíš výše, ověř přímo projekty tlačítkem „Otestovat".
-        </p>
+        <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('firma.testCaflou')}</h3>
+        <p className="text-muted text-xs font-body mt-1">{t('firma.testCaflouPopis')}</p>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -88,7 +92,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleListCompanies()}
-          placeholder="název firmy v Caflou…"
+          placeholder={t('firma.nazevVCaflou')}
           className="admin-input flex-1 min-w-[200px]"
         />
         <button
@@ -97,7 +101,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
           disabled={loading}
           className="bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
         >
-          {loading ? 'Hledám…' : 'Najít'}
+          {loading ? t('firma.hledam') : t('firma.najit')}
         </button>
         <button
           type="button"
@@ -105,7 +109,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
           disabled={loading}
           className="bg-bar text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDark transition-colors disabled:opacity-60"
         >
-          {loading ? 'Testuji…' : 'Otestovat projekty'}
+          {loading ? t('firma.testuji') : t('firma.otestovatProjekty')}
         </button>
       </div>
 
@@ -114,7 +118,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
 
       {companyHits && (
         <div className="border border-line rounded-lg divide-y divide-line max-h-80 overflow-y-auto">
-          {companyHits.length === 0 && <p className="text-sm text-muted font-body p-3 m-0">Nic nenalezeno.</p>}
+          {companyHits.length === 0 && <p className="text-sm text-muted font-body p-3 m-0">{t('firma.nicNenalezeno')}</p>}
           {companyHits.map((hit) => (
             <div key={hit.id} className="flex items-center justify-between gap-3 px-3 py-2">
               <div className="min-w-0">
@@ -126,7 +130,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
                 onClick={() => copyId(hit.id)}
                 className="shrink-0 text-xs font-heading font-semibold text-brand-purple border border-line rounded-lg px-2.5 py-1.5 hover:bg-field transition-colors"
               >
-                Kopírovat ID
+                {t('firma.kopirovatId')}
               </button>
             </div>
           ))}

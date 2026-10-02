@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Nová žádost o údaje (zadání 16. 9. 2026).
@@ -22,6 +23,7 @@ export function NovaZadostForm({
   firmy: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const t = usePreklad();
   const druh: 'HEREC' | 'FIRMA' = 'HEREC';
   const [komu, setKomu] = useState<'novy' | 'stavajici'>('novy');
   const [id, setId] = useState('');
@@ -54,7 +56,7 @@ export function NovaZadostForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Žádost se nepodařilo založit.');
+        setChyba(data?.error || t('zadost.nepodariloZalozit'));
         return;
       }
       const odkaz = `${window.location.origin}/udaje/${data.token}`;
@@ -70,15 +72,15 @@ export function NovaZadostForm({
         const vysledek = await poslano.json().catch(() => ({}));
         setZprava(
           poslano.ok
-            ? `Odkaz odešel na ${vysledek.komu}.`
-            : vysledek?.error || 'Odkaz se nepodařilo poslat — zkopírujte ho prosím.',
+            ? t('zadost.odkazOdesel', { komu: vysledek.komu })
+            : vysledek?.error || t('zadost.odkazNeodesel'),
         );
       } else {
-        setZprava('Odkaz je připravený — zkopírujte ho a pošlete, jak vám vyhovuje.');
+        setZprava(t('zadost.odkazPripraveny'));
       }
       router.refresh();
     } catch {
-      setChyba('Žádost se nepodařilo založit.');
+      setChyba(t('zadost.nepodariloZalozit'));
     } finally {
       setBezi(false);
     }
@@ -88,7 +90,7 @@ export function NovaZadostForm({
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
-      <h2 className="font-heading font-semibold text-ink m-0">Nová žádost</h2>
+      <h2 className="font-heading font-semibold text-ink m-0">{t('zadost.nova')}</h2>
 
       {/* FORMULÁŘ PRO FIRMY SE ZATÍM NEDĚLÁ (zadání 16. 9. 2026: „pro firmy
           ten formulář dělat nebudeme zatím"). Nabídka druhu je proto pryč -
@@ -98,24 +100,24 @@ export function NovaZadostForm({
       <div className="flex gap-4 flex-wrap text-sm font-body text-ink">
         <label className="flex items-center gap-2">
           <input type="radio" checked={komu === 'novy'} onChange={() => setKomu('novy')} className="accent-brand-purple" />
-          Ještě ho v portálu nemáme
+          {t('zadost.jesteNemame')}
         </label>
         <label className="flex items-center gap-2">
           <input type="radio" checked={komu === 'stavajici'} onChange={() => setKomu('stavajici')} className="accent-brand-purple" />
-          Doplnit někomu, koho máme
+          {t('zadost.doplnitKomu')}
         </label>
       </div>
 
       {komu === 'stavajici' ? (
         <label className="flex flex-col gap-1">
           <span className="text-sm font-heading font-semibold text-ink">
-            {druh === 'HEREC' ? 'Herec' : 'Firma'}
+            {t(druh === 'HEREC' ? 'zadost.druhHerec' : 'zadost.druhFirma')}
           </span>
           <select value={id} onChange={(e) => setId(e.target.value)} className="admin-input">
-            <option value="">Vyberte…</option>
+            <option value="">{t('zadost.vyberte')}</option>
             {seznam.map((p: { id: string; name: string | null }) => (
               <option key={p.id} value={p.id}>
-                {p.name || '(bez jména)'}
+                {p.name || t('zadost.bezJmena')}
               </option>
             ))}
           </select>
@@ -123,30 +125,30 @@ export function NovaZadostForm({
       ) : (
         <label className="flex flex-col gap-1">
           <span className="text-sm font-heading font-semibold text-ink">
-            {druh === 'HEREC' ? 'Jméno herce' : 'Název firmy'}
+            {t(druh === 'HEREC' ? 'zadost.jmenoHerce' : 'zadost.nazevFirmy')}
           </span>
           <input value={jmeno} onChange={(e) => setJmeno(e.target.value)} className="admin-input" />
         </label>
       )}
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-heading font-semibold text-ink">E-mail (kam poslat odkaz)</span>
+        <span className="text-sm font-heading font-semibold text-ink">{t('zadost.emailKamPoslat')}</span>
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
           className="admin-input"
-          placeholder="Nechte prázdné, když odkaz pošlete sami"
+          placeholder={t('zadost.emailPlaceholder')}
         />
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-heading font-semibold text-ink">Vzkaz do e-mailu (nepovinné)</span>
+        <span className="text-sm font-heading font-semibold text-ink">{t('zadost.vzkaz')}</span>
         <input
           value={poznamka}
           onChange={(e) => setPoznamka(e.target.value)}
           className="admin-input"
-          placeholder={'Např. „Kvůli smlouvě na Kubánské tango."'}
+          placeholder={t('zadost.vzkazPlaceholder')}
         />
       </label>
 
@@ -157,7 +159,7 @@ export function NovaZadostForm({
           onClick={() => void vytvor(true)}
           className="text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-5 py-2.5 disabled:opacity-60"
         >
-          {bezi ? 'Zakládám…' : 'Vytvořit a poslat e-mailem'}
+          {bezi ? t('zadost.zakladam') : t('zadost.vytvoritAPoslat')}
         </button>
         <button
           type="button"
@@ -165,7 +167,7 @@ export function NovaZadostForm({
           onClick={() => void vytvor(false)}
           className="text-sm font-heading font-semibold rounded-pill border border-line text-ink px-5 py-2.5 hover:border-brand-purple disabled:opacity-60"
         >
-          Jen vytvořit odkaz
+          {t('zadost.jenVytvorit')}
         </button>
       </div>
 
@@ -179,17 +181,17 @@ export function NovaZadostForm({
             type="button"
             onClick={() => {
               void navigator.clipboard?.writeText(hotovyOdkaz).then(
-                () => setZprava('Odkaz je ve schránce.'),
-                () => setZprava('Zkopírujte odkaz ručně.'),
+                () => setZprava(t('zadost.veSchrance')),
+                () => setZprava(t('zadost.zkopirujteRucne')),
               );
             }}
             className="text-sm font-heading font-semibold rounded-lg border border-line px-3 py-2 hover:border-brand-purple"
           >
-            Zkopírovat
+            {t('zadost.zkopirovat')}
           </button>
           {noveId && (
             <a href={`/admin/udaje/${noveId}`} className="text-sm font-heading text-brand-purple no-underline">
-              Otevřít žádost
+              {t('zadost.otevritZadost')}
             </a>
           )}
         </div>
