@@ -35,8 +35,22 @@ export type Vzor = {
   audiotagger: boolean;
 };
 
-/** Stavy, u kterých AudioTagger chodil, než se z toho stalo zaškrtávátko. */
-const AUDIOTAGGER_VYCHOZI = new Set(['Natáčíme/stříháme', 'Dotočeno/stříháme']);
+/**
+ * Stavy, u kterých se tlačítko „Přeposlechnout v AudioTaggeru" přidává samo.
+ *
+ * Původně to byly stavy, u kterých AudioTagger chodil, než se z toho stalo
+ * zaškrtávátko. „ČEKÁME NA OPRAVY" PŘIBYLO 1. 10. 2026 („tady by měl být odkaz
+ * na audiotagger stále"): u téhle zprávy je AudioTagger celý smysl věci -
+ * připomínáme klientovi opravy a jediné místo, kde je může napsat, je právě
+ * tagger. Zpráva bez odkazu ho posílá hledat ho ve starém mailu.
+ *
+ * Zaškrtávátko ve vzoru zůstává: tohle je výchozí stav, ne zámek.
+ */
+const AUDIOTAGGER_VYCHOZI = new Set([
+  'Natáčíme/stříháme',
+  'Dotočeno/stříháme',
+  'Čekáme na opravy',
+]);
 
 /**
  * Proměnné, které se ve vzoru dají použít. Do zprávy se dosadí těsně před

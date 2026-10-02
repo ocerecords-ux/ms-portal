@@ -219,6 +219,7 @@ async function main() {
   await zvukariJenCteni();
   await matejCernyVedeLondyn();
   await notifikaceReklamnichFirem();
+  await audiotaggerUCekameNaOpravy();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
@@ -485,6 +486,29 @@ async function notifikaceReklamnichFirem() {
     }
     console.log(`  notifikace reklamy: ${f.name}${f.dealsAudiobooks ? ' (jen doplneno)' : ''}`);
   }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * ODKAZ NA AUDIOTAGGER U „ČEKÁME NA OPRAVY" (zadání 1. 10. 2026: „tady by měl
+ * být odkaz na audiotagger stále").
+ *
+ * Výchozí hodnota se mění ve vzoryZprav.ts, jenže ta platí jen pro vzor, který
+ * zaškrtávátko nikdy neměl nastavené (sloupec je null). Vzor, který se někdy
+ * uložil s vypnutým tlačítkem, by o něj přišel - proto tenhle jednorázový
+ * zápis.
+ */
+async function audiotaggerUCekameNaOpravy() {
+  const ZNAMKA = 'vzor-audiotagger-cekame-na-opravy';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const zmeneno = await prisma.vzorZpravy.updateMany({
+    where: { stav: 'Čekáme na opravy', druh: 'AUDIOKNIHA' },
+    data: { audiotagger: true },
+  });
+  if (zmeneno.count > 0) console.log(`  vzor „Čekáme na opravy": AudioTagger zapnut (${zmeneno.count})`);
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
 }
