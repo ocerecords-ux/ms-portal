@@ -576,6 +576,17 @@ a `MESICE` / `MESICE_ZKRATKA` v `lib/palubovka.ts` (bere je ještě
 `MESICE_ZKRATKA` v grafu, `MESICE` už ne). Stejné rozhodnutí jako
 u `POPISKY_DRUHU_ARCHIVU` v dávce 5.
 
+**Co shodilo první build (a co z toho plyne pro další dávky).** Formulář údajů
+si popisky polí bral `popisekPole()` přímo z `lib/pozvankaUdaju.ts` — jenže je
+to KLIENTSKÁ komponenta a ten soubor táhne přes `lib/email.ts` nodemailer,
+takže webpack skončil na `Can't resolve 'fs'`. Typová kontrola to nechytí:
+běží bez `node_modules` a o balíčku pro prohlížeč nic neví. Popisky se teď
+překládají na serveru ve `udaje/[token]/page.tsx` a do komponenty chodí
+hotové. **Pravidlo pro dávku 7e: z komponenty s `'use client'` se smí sahat
+jen na soubory, které si v hlavičce píšou, že stojí bez závislostí** (jazyk.ts,
+tabule.ts, palubovka.ts, socialni.ts a spol.) — cokoli, co vede na Prismu nebo
+poštu, patří na server a dolů propem.
+
 **Zámky v `.git` jsou pořád tam a začínají překážet.** Dávka 7b je zapsala na
 lístek; dnes bylo v `.git` 51 přejmenovaných prázdných zámků a navíc ŽIVÝ
 `index.lock`, který musel jít před commitem pryč přejmenováním — sdílená složka

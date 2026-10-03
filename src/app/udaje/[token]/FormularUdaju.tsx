@@ -5,7 +5,7 @@ import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { CountrySelect } from '@/app/(admin)/admin/CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { HEREC_STUDIOS } from '@/lib/roles';
-import { popisekPole, type PolePozvanky } from '@/lib/pozvankaUdaju';
+import type { PolePozvanky } from '@/lib/pozvankaUdaju';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
@@ -169,7 +169,7 @@ export function FormularUdaju({
 
       <div className="flex flex-col gap-4">
         {pole.map((p) => (
-          <Pole key={p.klic} pole={p} hodnota={hodnoty[p.klic]} nastav={nastav} druh={druh} jazyk={jazyk} />
+          <Pole key={p.klic} pole={p} hodnota={hodnoty[p.klic]} nastav={nastav} />
         ))}
       </div>
 
@@ -203,17 +203,15 @@ function Pole({
   pole,
   hodnota,
   nastav,
-  druh,
-  jazyk,
 }: {
   pole: PolePozvanky;
   hodnota: string | boolean | string[] | undefined;
   nastav: (klic: string, hodnota: string | boolean | string[]) => void;
-  druh: 'HEREC' | 'FIRMA';
-  jazyk: Jazyk;
 }) {
-  // Popisek pole se překládá podle KLÍČE pole (popisekPole z dávky 7c).
-  const popisek = popisekPole(pole.klic, druh, jazyk);
+  // Popisek chodí přeložený ze stránky (popisekPole z dávky 7c). Sahat si na
+  // lib/pozvankaUdaju odsud NELZE: táhne za sebou lib/email.ts a s ním
+  // nodemailer, takže by se do balíčku pro prohlížeč dostalo `fs`.
+  const popisek = pole.popisek;
   if (pole.typ === 'ano-ne') {
     return (
       <label className="flex items-center gap-2">

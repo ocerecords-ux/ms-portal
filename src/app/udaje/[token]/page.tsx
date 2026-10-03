@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { najdiPlatnou, poleProDruh } from '@/lib/pozvankaUdaju';
+import { najdiPlatnou, poleProDruh, popisekPole } from '@/lib/pozvankaUdaju';
 import { FormularUdaju } from './FormularUdaju';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
@@ -48,7 +48,12 @@ export default async function StrankaUdaju({ params }: { params: { token: string
       <FormularUdaju
         token={params.token}
         druh={pozvanka.druh as 'HEREC' | 'FIRMA'}
-        pole={poleProDruh(pozvanka.druh as 'HEREC' | 'FIRMA')}
+        // Popisky polí se překládají tady na serveru: klientská komponenta
+        // si na lib/pozvankaUdaju sáhnout nesmí (viz poznámka v Pole).
+        pole={poleProDruh(pozvanka.druh as 'HEREC' | 'FIRMA').map((p) => ({
+          ...p,
+          popisek: popisekPole(p.klic, pozvanka.druh as 'HEREC' | 'FIRMA', jazyk),
+        }))}
         vychozi={znameUdaje}
         poznamka={pozvanka.poznamka}
         jazyk={jazyk}
