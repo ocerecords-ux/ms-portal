@@ -238,7 +238,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hoste.nadpis': { cs: 'Hosté na natáčení', en: 'Guests at the recording' },
   'hoste.popis': {
     cs: 'Klient, agentura nebo zadavatel, kteří u natáčení budou — ve studiu, nebo na dálku. Pozvánka jim pošle čas, adresu s mapou, parkování i odkaz na připojení.',
-    en: 'The customer, agency or client attending the recording — at the studio or remotely. The invitation sends them the time, the address with a map, parking and the joining link.',
+    en: 'The customer, agency or orderer attending the recording — at the studio or remotely. The invitation sends them the time, the address with a map, parking and the joining link.',
   },
   'hoste.zadneNataceni': {
     cs: 'K projektu zatím není v kalendáři žádné natáčení. Jakmile termín vznikne, objeví se tady i s hosty.',
@@ -699,7 +699,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'booking.zavreno': { cs: 'Zavřeno', en: 'Closed' },
   'booking.jenNahled': {
     cs: 'Díváte se na kalendář očima klienta studia — rezervovat odtud nejde.',
-    en: 'You are viewing the calendar as a studio client — booking is disabled here.',
+    en: 'You are viewing the calendar as a studio customer — booking is disabled here.',
   },
   'booking.napoveda': {
     cs: 'Klepnutím na volné místo si zabookujete termín. Nejkratší rezervace je {minut} minut.',
@@ -1438,7 +1438,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'nacitani.popis': { cs: 'Načítám', en: 'Loading' },
 
   // --- typ přístupu (role) - ukazuje se v Mém účtu (dávka 2) ----------------
-  'role.CLIENT': { cs: 'Klient', en: 'Client' },
+  'role.CLIENT': { cs: 'Klient', en: 'Customer' },
   'role.HEREC': { cs: 'Herec', en: 'Narrator' },
   // Žůžo-labůžo je náš vtip, anglicky prostě Admin (viz slovníček v
   // docs/preklad-portalu.md).
@@ -1447,7 +1447,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'role.PRODUKCE': { cs: 'Produkce', en: 'Production' },
   'role.ROBOT': { cs: 'Robot', en: 'Robot' },
   'role.TABULE': { cs: 'Tabule ve studiu', en: 'Studio display' },
-  'role.BOOKING': { cs: 'Klient studia (rezervace)', en: 'Studio client (bookings)' },
+  'role.BOOKING': { cs: 'Klient studia (rezervace)', en: 'Studio customer (bookings)' },
 
   // --- chat (dávka 3) ---
   'chat.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
@@ -1562,7 +1562,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.skrytChat': { cs: 'Skrýt MS chat', en: 'Hide MS chat' },
   'chat.nacitamProjekty': { cs: 'Načítám projekty…', en: 'Loading the projects…' },
   'chat.zadneProjekty': { cs: 'Žádné rozpracované projekty.', en: 'No projects in progress.' },
-  'chat.dotazyKlientu': { cs: 'Dotazy klientů', en: 'Client questions' },
+  'chat.dotazyKlientu': { cs: 'Dotazy klientů', en: 'Customer questions' },
   'chat.zadneSoukrome': {
     cs: 'Zatím si s nikým nepíšete.',
     en: 'You are not messaging anyone yet.',
@@ -3575,7 +3575,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'upominky.skrytaKopie': { cs: 'Skrytá kopie nám', en: 'Blind copy to us' },
   'upominky.skrytaKopiePopis': {
     cs: 'Klient adresy nevidí — chodí ve skryté kopii.',
-    en: 'The client cannot see the addresses — they go as a blind copy.',
+    en: 'The customer cannot see the addresses — they go as a blind copy.',
   },
   'upominky.zneni': { cs: 'Znění upomínky', en: 'Wording of the reminder' },
   'upominky.naposledyUpravil': { cs: 'naposledy upravil {kdo}', en: 'last edited by {kdo}' },
@@ -3608,7 +3608,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'upominky.poslatNa': { cs: 'Poslat na {komu}', en: 'Send to {komu}' },
   'upominky.nemaKontakt': {
     cs: 'Firma nemá kontaktní e-mail a projekt klienta',
-    en: 'The company has no contact email and no client project',
+    en: 'The company has no contact email and no customer project',
   },
   'upominky.posilam': { cs: 'Posílám…', en: 'Sending…' },
   'upominky.poslatUpominku': { cs: 'Poslat upomínku', en: 'Send the reminder' },
@@ -3805,7 +3805,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.skupinaInterni': { cs: 'Interní (Mediaspace)', en: 'Internal (Mediaspace)' },
   'uzivatel.skupinaRobot': { cs: 'Robot (účet bez člověka)', en: 'Robot (account with no person)' },
   'uzivatel.skupinaTabule': { cs: 'Obrazovka ve studiu', en: 'Studio display' },
-  'uzivatel.skupinaStudio': { cs: 'Klienti studia (rezervace)', en: 'Studio clients (bookings)' },
+  'uzivatel.skupinaStudio': { cs: 'Klienti studia (rezervace)', en: 'Studio customers (bookings)' },
 
   // --- založení uživatele ---
   'uzivatel.pridatUzivatele': { cs: 'Přidat uživatele', en: 'Add a user' },
@@ -4285,7 +4285,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- firmy (kořen administrace) ---
   'firmy.nadpis': { cs: 'Firmy', en: 'Companies' },
-  'firmy.vzoryZprav': { cs: 'Vzory zpráv klientovi', en: 'Message templates for the client' },
+  'firmy.vzoryZprav': { cs: 'Vzory zpráv klientovi', en: 'Message templates for the customer' },
   'firmy.vzoryNataceni': { cs: 'Vzory natáčecích textů', en: 'Recording text templates' },
   'firmy.technickeParametry': { cs: 'Technické parametry', en: 'Technical parameters' },
   'firmy.wikipedie': { cs: 'Wikipedie', en: 'Wikipedia' },
@@ -4304,7 +4304,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'firmy.hledaniPrazdne': { cs: 'Hledání nic nenašlo.', en: 'The search found nothing.' },
   'firmy.zadnyKlient': {
     cs: 'Zatím žádný klient. Založte prvního tlačítkem níže.',
-    en: 'No clients yet. Create the first one with the button below.',
+    en: 'No customers yet. Create the first one with the button below.',
   },
   'firmy.zadnyDodavatel': {
     cs: 'Zatím žádný dodavatel. Založte prvního tlačítkem níže.',
@@ -4322,10 +4322,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'firmy.sl.ic': { cs: 'IČ', en: 'Reg. no.' },
 
   // --- firmy: formulář nové firmy ---
-  'firmy.novyKlient': { cs: 'Nový klient', en: 'New client' },
+  'firmy.novyKlient': { cs: 'Nový klient', en: 'New customer' },
   'firmy.novyDodavatel': { cs: 'Nový dodavatel', en: 'New supplier' },
   'firmy.typFirmy': { cs: 'Typ firmy', en: 'Company type' },
-  'firmy.klient': { cs: 'Klient', en: 'Client' },
+  'firmy.klient': { cs: 'Klient', en: 'Customer' },
   'firmy.dodavatel': { cs: 'Dodavatel', en: 'Supplier' },
   'firmy.ic': { cs: 'IČ', en: 'Reg. no.' },
   'firmy.icNapoveda': {
@@ -4362,7 +4362,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'firmy.druhZakazek': { cs: 'Druh zakázek', en: 'Kind of jobs' },
   'firmy.druhZakazekNapoveda': {
     cs: 'podle toho klient uvidí jen příslušný typ objednávky',
-    en: 'this decides which order type the client is shown',
+    en: 'this decides which order type the customer is shown',
   },
   'firmy.audioknihy': { cs: 'Audioknihy', en: 'Audiobooks' },
   'firmy.reklamy': { cs: 'Reklamy', en: 'Adverts' },
@@ -4427,7 +4427,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'studia.zkratkyFrekvenci': { cs: 'Zkratky frekvencí', en: 'Recording session shortcuts' },
 
   // --- rezervace studia klienty ---
-  'studia.rezervaceNadpis': { cs: 'Rezervace studia klienty', en: 'Client studio bookings' },
+  'studia.rezervaceNadpis': { cs: 'Rezervace studia klienty', en: 'Customer studio bookings' },
   // Adresa stojí ve větě jinou barvou - vykresluje se přes prelozitKolem.
   'studia.rezervacePopis': {
     cs: 'Muzikanti a producenti si po pozvánce otevřou kalendář studia na adrese {adresa} a berou si volné termíny sami. Svoje rezervace vidí pojmenované, cizí jen jako obsazený čas — bez názvů.',
@@ -4442,7 +4442,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'studia.rezervaceZapnute': { cs: 'Rezervace zapnuté', en: 'Bookings enabled' },
   'studia.bezPracovniDoby': {
     cs: 'Studio nemá vyplněnou pracovní dobu — dokud ji nedoplníte výš, nebude si klient mít co vybrat.',
-    en: 'This studio has no opening hours — until you fill them in above, the client will have nothing to choose from.',
+    en: 'This studio has no opening hours — until you fill them in above, the customer will have nothing to choose from.',
   },
   'studia.nejkratsiRezervace': { cs: 'Nejkratší rezervace (min)', en: 'Shortest booking (min)' },
   'studia.dniDopredu': { cs: 'Dní dopředu (0 = bez limitu)', en: 'Days ahead (0 = no limit)' },
@@ -5534,7 +5534,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // Náhledové pohledy v pruhu náhledu (lib/nahledRole.ts). Popisek pohledu
   // drží stejná slova jako role.* výš, vysvětlení je věta pod ním.
   'nahled.pohled.tym': { cs: 'Tým', en: 'Team' },
-  'nahled.pohled.klient': { cs: 'Klient', en: 'Client' },
+  'nahled.pohled.klient': { cs: 'Klient', en: 'Customer' },
   'nahled.pohled.herec': { cs: 'Herec', en: 'Narrator' },
   'nahled.vysvetleni.tym': {
     cs: 'projekty napříč firmami, kalendář, pozvánky - jako produkce',
@@ -6070,10 +6070,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Separate paragraphs with a blank line.',
   },
   'licencniList.klient': { cs: 'Klient', en: 'Customer' },
-  'licencniList.klientPriklad': { cs: 'Koncový zadavatel', en: 'The end client' },
+  'licencniList.klientPriklad': { cs: 'Koncový zadavatel', en: 'The end customer' },
   'licencniList.klientNapoveda': {
     cs: 'Komu licence patří — u agenturní zakázky koncový zadavatel, ne objednatel. Pamatuje si ho projekt.',
-    en: 'Who the licence belongs to — on an agency job the end client, not the orderer. The project remembers it.',
+    en: 'Who the licence belongs to — on an agency job the end customer, not the orderer. The project remembers it.',
   },
   'licencniList.radek': { cs: 'Licenční list', en: 'Licence sheet' },
   'licencniList.nazevSpotu': { cs: 'Název spotu', en: 'Advert name' },
@@ -8718,6 +8718,109 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'doplneni.rekapitulace': { cs: 'Rekapitulace', en: 'Summary' },
   'doplneni.souhrnAdresa': { cs: 'Adresa', en: 'Address' },
   'doplneni.krokZe': { cs: 'Krok {krok} ze {celkem}', en: 'Step {krok} of {celkem}' },
+
+  /* ---------------------------------------------------------------
+   * DÁVKA 7e - kódy místo textů a poslední průchod.
+   * ------------------------------------------------------------- */
+
+  /* Stavy projektu. Do databáze se ukládá ČESKÝ NÁZEV (STAVY_PROJEKTU[].nazev)
+   * a ten se nemění; překládá se jen zobrazení, podle KÓDU stavu. */
+  'stav.V_PRIPRAVE': { cs: 'V přípravě', en: 'In preparation' },
+  'stav.PLANUJEME': { cs: 'Plánujeme', en: 'Scheduling' },
+  'stav.NATACIME': { cs: 'Natáčíme', en: 'Recording' },
+  'stav.NATACIME_STRIHAME': { cs: 'Natáčíme/stříháme', en: 'Recording/editing' },
+  'stav.DOTOCENO': { cs: 'Dotočeno', en: 'Recording finished' },
+  'stav.DOTOCENO_STRIHAME': { cs: 'Dotočeno/stříháme', en: 'Recorded/editing' },
+  'stav.DOKONCENO_KE_SCHVALENI': { cs: 'Dokončeno - ke schválení', en: 'Finished — for approval' },
+  'stav.CEKAME_NA_OPRAVY': { cs: 'Čekáme na opravy', en: 'Awaiting corrections' },
+  'stav.OPRAVUJEME': { cs: 'Opravujeme', en: 'Making corrections' },
+  'stav.SCHVALENO_K_FAKTURACI': { cs: 'Schváleno - k fakturaci', en: 'Approved — to invoice' },
+  'stav.VYFAKTUROVANO': { cs: 'Vyfakturováno', en: 'Invoiced' },
+  'stavPopis.V_PRIPRAVE': {
+    cs: 'Objednávka přišla, projekt je založený, ještě se neplánuje.',
+    en: 'The order has arrived and the project exists, but nothing is being scheduled yet.',
+  },
+  'stavPopis.PLANUJEME': {
+    cs: 'Cena je odsouhlasená, můžou se domlouvat termíny s herci.',
+    en: 'The price is agreed; sessions can be arranged with the narrators.',
+  },
+  'stavPopis.NATACIME': { cs: 'S hercem je naplánováno.', en: 'Sessions with the narrator are booked.' },
+  'stavPopis.NATACIME_STRIHAME': {
+    cs: 'Ještě se natáčí a na disku už jsou první zpracované tracky k poslechu.',
+    en: 'Recording is still going on and the first edited tracks are already on the drive.',
+  },
+  'stavPopis.DOTOCENO': {
+    cs: 'S hercem dotočeno, na disku zatím není ani jeden track.',
+    en: 'Recording with the narrator is done; there is not a single track on the drive yet.',
+  },
+  'stavPopis.DOTOCENO_STRIHAME': {
+    cs: 'S hercem dotočeno a na disku už jsou první tracky.',
+    en: 'Recording with the narrator is done and the first tracks are on the drive.',
+  },
+  'stavPopis.DOKONCENO_KE_SCHVALENI': {
+    cs: 'Na disku jsou všechny tracky, čekáme na finální opravy od klienta.',
+    en: 'Every track is on the drive; we are waiting for the customer’s final corrections.',
+  },
+  'stavPopis.CEKAME_NA_OPRAVY': {
+    cs: 'Sedm dní po odevzdání klient opravy nedodal.',
+    en: 'Seven days after delivery the customer has not sent any corrections.',
+  },
+  'stavPopis.OPRAVUJEME': {
+    cs: 'Klient dokončil přeposlech, zapracováváme jeho připomínky. Klientovi odsud nic nechodí.',
+    en: 'The customer has finished proof-listening and we are working their notes in. Nothing goes out to them from here.',
+  },
+  'stavPopis.SCHVALENO_K_FAKTURACI': {
+    cs: 'Opravené nahrávky jsou na disku, čeká se na fakturu.',
+    en: 'The corrected recordings are on the drive; the invoice is pending.',
+  },
+  'stavPopis.VYFAKTUROVANO': {
+    cs: 'Faktura je u klienta — projekt je uzavřený.',
+    en: 'The invoice is with the customer — the project is closed.',
+  },
+  'stav.klient.keSchvaleni': { cs: 'Ke schválení', en: 'For approval' },
+  'stav.klient.dokonceno': { cs: 'Dokončeno', en: 'Finished' },
+
+  /* Města, kde herec natáčí. Do databáze se ukládá český název (studioLocations),
+   * překládá se podle kódu města. */
+  'mesto.brno': { cs: 'Brno', en: 'Brno' },
+  'mesto.praha': { cs: 'Praha', en: 'Prague' },
+  'mesto.london': { cs: 'Londýn', en: 'London' },
+
+  /* Jak se dva stavy jmenují v přehledu projektů (STATUS_LABEL_OVERRIDES). */
+  'stav.prehled.SCHVALENO_K_FAKTURACI': { cs: 'Hotovo, fakturujeme', en: 'Done, invoicing' },
+  'stav.prehled.VYFAKTUROVANO': { cs: 'Dokončeno', en: 'Finished' },
+  'stav.prehoditStav': { cs: 'Přehodit stav projektu', en: 'Change the project status' },
+  'stav.bezStavu': { cs: 'Bez stavu', en: 'No status' },
+  'stav.neulozeno': { cs: 'Stav se nepodařilo uložit.', en: 'The status could not be saved.' },
+
+  /* Opakování porady (MOZNOSTI_OPAKOVANI v lib/porady.ts) - podle KÓDU. */
+  'opakovani.NE': { cs: 'Neopakovat', en: 'Do not repeat' },
+  'opakovani.DENNE': { cs: 'Každý den', en: 'Every day' },
+  'opakovani.PRACOVNI_DNY': { cs: 'Každý pracovní den (po–pá)', en: 'Every working day (Mon–Fri)' },
+  'opakovani.TYDNE': { cs: 'Každý týden', en: 'Every week' },
+  'opakovani.KAZDE_DVA_TYDNY': { cs: 'Každé dva týdny', en: 'Every two weeks' },
+  'opakovani.MESICNE': { cs: 'Každý měsíc', en: 'Every month' },
+  'porada.slovo.PORADA': { cs: 'porada', en: 'meeting' },
+  'porada.slovo.SCHUZKA': { cs: 'schůzka', en: 'appointment' },
+
+  /* Druhy nepřítomnosti (DRUHY_NEPRITOMNOSTI v lib/nepritomnost.ts). */
+  'nepritomnost.druh.DOVOLENA': { cs: 'Dovolená', en: 'Holiday' },
+  'nepritomnost.druh.MIMO_STUDIO': { cs: 'Mimo studio', en: 'Out of the studio' },
+  'nepritomnost.druh.JINE': { cs: 'Jiné', en: 'Other' },
+  'nepritomnost.druh.zaloha': { cs: 'Nepřítomnost', en: 'Absence' },
+
+  /* Stavy nabídky termínů (RECORDING_STATUS_LABELS v lib/calendar.ts). */
+  'nabidka.stav.DRAFT': { cs: 'Koncept', en: 'Draft' },
+  'nabidka.stav.PREPARING': { cs: 'Nabídka se připravuje', en: 'The offer is being prepared' },
+  'nabidka.stav.SENT': { cs: 'Nabídka odeslána herci', en: 'Offer sent to the narrator' },
+  'nabidka.stav.PICKING': { cs: 'Herec vybírá termíny', en: 'The narrator is choosing sessions' },
+  'nabidka.stav.SUBMITTED': { cs: 'Výběr čeká na schválení', en: 'The selection is awaiting approval' },
+  'nabidka.stav.RETURNED': { cs: 'Vráceno k přepracování', en: 'Returned for reworking' },
+  'nabidka.stav.REJECTED': { cs: 'Zamítnuto', en: 'Rejected' },
+  'nabidka.stav.CONFIRMED': { cs: 'Potvrzeno', en: 'Confirmed' },
+
+  'nabidka.stav.CANCELLED': { cs: 'Zrušeno', en: 'Cancelled' },
+  'nabidka.stav.COMPLETED': { cs: 'Dokončeno', en: 'Completed' },
 };
 
 /**

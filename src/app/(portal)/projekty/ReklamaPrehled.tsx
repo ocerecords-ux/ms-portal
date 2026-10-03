@@ -307,7 +307,8 @@ function Tabulka({
                     <StatusPill
                       finished={p.finished}
                       statusName={p.statusName}
-                      popisek={stavProKlientaReklamy(p.statusName)}
+                      popisek={stavProKlientaReklamy(p.statusName, jazyk)}
+                      jazyk={jazyk}
                     />
                   </td>
                   <td className="px-4 py-2.5 align-middle text-sm font-body text-muted">

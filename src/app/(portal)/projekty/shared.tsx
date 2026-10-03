@@ -20,7 +20,7 @@ import {
 } from '@/components/OdznakPreposlechu';
 import { NahledIkony } from '@/components/NahledIkony';
 import { initials } from '@/lib/chat';
-import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
+import { barvaStavu, kodStavu, nazevStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { HerciBunka } from './HerciBunka';
 import { SeznamTerminu, TlacitkoTerminu } from './TerminyKlienta';
@@ -32,18 +32,20 @@ import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { dnuDoTerminu, odznakTerminu, stavTerminu, type StavTerminu } from '@/lib/terminProjektu';
 import { formatDatum, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
-// Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
-// chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
-// pripadne pridavej sem - vse ostatni se zobrazuje tak, jak prijde z Caflou.
-const STATUS_LABEL_OVERRIDES: Record<string, string> = {
+// Dva stavy se klientovi v prehledu jmenuji jinak nez u nas. Od davky 7e se
+// rozhoduje podle KODU stavu (lib/stavyProjektu.ts), ne podle ceskeho textu -
+// jinak by se prejmenovanim nebo prekladem stavu prepis tise prestal chytat.
+const JINY_NAZEV_V_PREHLEDU: Record<string, string> = {
   // „Dokonceno" uz tady nesedi: od 15. 9. 2026 projekt konci az odeslanou
   // fakturou, ne timhle stavem.
-  'Schváleno - k fakturaci': 'Hotovo, fakturujeme',
-  'Vyfakturováno': 'Dokončeno',
+  SCHVALENO_K_FAKTURACI: 'stav.prehled.SCHVALENO_K_FAKTURACI',
+  VYFAKTUROVANO: 'stav.prehled.VYFAKTUROVANO',
 };
 
-function displayStatusName(statusName: string): string {
-  return STATUS_LABEL_OVERRIDES[statusName] ?? statusName;
+function displayStatusName(statusName: string, jazyk: Jazyk = 'cs'): string {
+  const kod = kodStavu(statusName);
+  const klic = kod ? JINY_NAZEV_V_PREHLEDU[kod] : undefined;
+  return klic ? prelozit(jazyk, klic) : nazevStavu(statusName, jazyk);
 }
 
 export function formatDate(d: Date | null, jazyk: Jazyk = 'cs') {
@@ -138,9 +140,12 @@ export function StatusPill({
   finished,
   statusName,
   popisek,
+  jazyk = 'cs',
 }: {
   finished: boolean;
   statusName: string;
+  /** Jazyk PROPEM - odznak se kreslí i ze serverových stránek (pravidlo 8). */
+  jazyk?: Jazyk;
   /**
    * Jiný text, než je název stavu - barva se pořád bere podle skutečného
    * stavu (25. 9. 2026: klient reklamy vidí „Ke schválení" a „Dokončeno",
@@ -157,13 +162,13 @@ export function StatusPill({
   // orizne text uvnitr a cely stav zustane v bublinkove napovede.
   return (
     <span
-      title={popisek ?? displayStatusName(statusName)}
+      title={popisek ?? displayStatusName(statusName, jazyk)}
       className={`inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill whitespace-nowrap max-w-full truncate ${barvaStavu(
         statusName,
         finished,
       )}`}
     >
-      {popisek ?? displayStatusName(statusName)}
+      {popisek ?? displayStatusName(statusName, jazyk)}
     </span>
   );
 }
@@ -392,7 +397,7 @@ export function ProjectsTable({
                   </td>
                 )}
                 <td className="px-4 py-0 overflow-hidden">
-                  <StatusPill finished={p.finished} statusName={p.statusName} />
+                  <StatusPill finished={p.finished} statusName={p.statusName} jazyk={jazyk} />
                 </td>
                 {/* Herec je bublina jako v internim prehledu (zadani
                     12. 9. 2026: „pojdme stejny princip s bublinama udelat
@@ -536,9 +541,12 @@ export function ProjectsTable({
 export function AdminProjectsTable({
   projects,
   emptyText,
+  jazyk = 'cs',
 }: {
   projects: AdminDisplayProject[];
   emptyText: string;
+  /** Jazyk PROPEM (pravidlo 8) - tabulka se kreslí ze serverové stránky. */
+  jazyk?: Jazyk;
 }) {
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
@@ -588,7 +596,7 @@ export function AdminProjectsTable({
                   {p.companyName}
                 </td>
                 <td className="px-4 py-0 overflow-hidden">
-                  <StatusPill finished={p.finished} statusName={p.statusName} />
+                  <StatusPill finished={p.finished} statusName={p.statusName} jazyk={jazyk} />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
                   {p.pageCount ?? '—'}
@@ -923,7 +931,7 @@ function bunkaSloupce(
           jeReklama={p.meta?.reklamniFirma === true}
         />
       ) : (
-        <StatusPill finished={p.finished} statusName={p.statusName} />
+        <StatusPill finished={p.finished} statusName={p.statusName} jazyk={jazyk} />
       );
     case 'priority': {
       const hodnota = p.priority ?? p.meta?.priority ?? null;

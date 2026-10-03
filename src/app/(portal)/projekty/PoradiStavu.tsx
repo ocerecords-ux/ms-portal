@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { barvaStavu } from '@/lib/stavyProjektu';
+import { barvaStavu, nazevStavu } from '@/lib/stavyProjektu';
+import { useJazyk } from '../components/JazykProvider';
 
 /**
  * POŘADÍ STAVŮ V PŘEHLEDU (zadání 24. 9. 2026: „potřebuju, abych si mohl
@@ -26,6 +27,7 @@ export function PoradiStavu({
   onZmena: (nove: string[]) => void;
   muzeMenit: boolean;
 }) {
+  const jazyk = useJazyk();
   const [otevreno, setOtevreno] = useState(false);
   const [draft, setDraft] = useState<string[]>(poradi);
   const [taheny, setTaheny] = useState<number | null>(null);
@@ -130,7 +132,7 @@ export function PoradiStavu({
               <span
                 className={`min-w-0 truncate rounded-pill px-2.5 py-1 text-xs font-heading font-semibold ${barvaStavu(nazev)}`}
               >
-                {nazev}
+                {nazevStavu(nazev, jazyk)}
               </span>
               {muzeMenit && (
                 <span className="ml-auto inline-flex items-center gap-0.5">

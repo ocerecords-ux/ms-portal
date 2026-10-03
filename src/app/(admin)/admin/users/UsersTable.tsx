@@ -251,7 +251,7 @@ export function UsersTable({
                                   title={l}
                                   className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-heading font-semibold whitespace-nowrap ${barvaLokace(l)}`}
                                 >
-                                  {popisekLokace(l)}
+                                  {popisekLokace(l, jazyk)}
                                 </span>
                               ))}
                             </span>

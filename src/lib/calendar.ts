@@ -39,6 +39,18 @@ export const RECORDING_STATUS_LABELS: Record<string, string> = {
   COMPLETED: 'Dokončeno',
 };
 
+/**
+ * Stav nabídky podle KÓDU (dávka 7e, vzor nazevMeny z dávky 4). Jazyk je
+ * NEPOVINNÝ - bez něj čeština, aby pošta a PDF mluvily dál česky.
+ * RECORDING_STATUS_LABELS zůstává jako český zdroj pravdy.
+ */
+export function nazevStavuNabidky(stav: string, jazyk?: Jazyk): string {
+  if (!jazyk || jazyk === 'cs') return RECORDING_STATUS_LABELS[stav] ?? stav;
+  const klic = `nabidka.stav.${stav}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? (RECORDING_STATUS_LABELS[stav] ?? stav) : text;
+}
+
 export const RECORDING_STATUS_CLASSES: Record<string, string> = {
   DRAFT: 'bg-field text-muted',
   PREPARING: 'bg-field text-muted',
@@ -553,6 +565,19 @@ export function formatDateTime(
 
 export const WEEKDAY_LABELS = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
 export const WEEKDAY_SHORT = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
+
+/**
+ * Den v týdnu podle jazyka (dávka 7e). Názvy jsou ve slovníku jednou
+ * (`obecne.den.*`, dávka 7d) - tahle dvojice polí zůstává jako český zdroj
+ * pravdy a pro volající, kteří jazyk neřeší. Index 0 je neděle.
+ */
+export function nazevDne(index: number, jazyk: Jazyk = 'cs'): string {
+  return prelozit(jazyk, `obecne.den.${index}`);
+}
+
+export function nazevDneKratce(index: number, jazyk: Jazyk = 'cs'): string {
+  return prelozit(jazyk, `obecne.denKratce.${index}`);
+}
 
 /**
  * Mřížka kreslí celý den, 0–24 (zprava uzivatele 9. 9. 2026: "určitě by tam

@@ -18,8 +18,41 @@
  * jde přehodit obojí ručně, aby to nikoho neblokovalo.
  */
 
+/**
+ * KÓD STAVU (dávka 7e, 3. 10. 2026).
+ *
+ * Do databáze se dál ukládá ČESKÝ NÁZEV - `nazev` je pořád ta hodnota, která
+ * leží v `ProjectMeta.statusName` i v historii projektu, a nic se v datech
+ * nepřepisuje. Kód je navíc, odvozený z názvu, a slouží ke DVĚMA věcem:
+ *
+ *  1. PŘEKLADU. Název stavu se v angličtině bere ze slovníku podle kódu
+ *     (`stav.<KOD>`), ne podle českého textu.
+ *  2. POROVNÁVÁNÍ. Dokud se porovnávalo s napsaným řetězcem, byl každý takový
+ *     test tikající bomba: jakmile by někdo stav přejmenoval nebo přeložil,
+ *     podmínka tiše přestane platit (viz docs/preklad-portalu.md, dávka 5).
+ *
+ * Skutečná migrace - uložit do databáze rovnou kód - zůstává dál na stole;
+ * tohle je ta polovina, která se dá udělat bez sáhnutí na data.
+ */
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
+export type KodStavu =
+  | 'V_PRIPRAVE'
+  | 'PLANUJEME'
+  | 'NATACIME'
+  | 'NATACIME_STRIHAME'
+  | 'DOTOCENO'
+  | 'DOTOCENO_STRIHAME'
+  | 'DOKONCENO_KE_SCHVALENI'
+  | 'CEKAME_NA_OPRAVY'
+  | 'OPRAVUJEME'
+  | 'SCHVALENO_K_FAKTURACI'
+  | 'VYFAKTUROVANO';
+
 export type StavProjektu = {
-  /** Přesně ten text, který se ukládá a ukazuje. */
+  /** Kód stavu - podle něj se překládá i porovnává. */
+  kod: KodStavu;
+  /** Přesně ten text, který se UKLÁDÁ do databáze. */
   nazev: string;
   /** Jednou větou, kdy se do stavu přechází — vysvětlivka u nabídky. */
   popis: string;
@@ -60,6 +93,7 @@ export type StavProjektu = {
 
 export const STAVY_PROJEKTU: StavProjektu[] = [
   {
+    kod: 'V_PRIPRAVE',
     nazev: 'V přípravě',
     popis: 'Objednávka přišla, projekt je založený, ještě se neplánuje.',
     rozpracovany: true,
@@ -76,6 +110,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
      * a rozsah, od téhle chvíle se obsazuje studio. Proto o něm jako
      * o jediném stavu cinkne zvonek - viz zvonekOPlanovani v lib/planovani.ts.
      */
+    kod: 'PLANUJEME',
     nazev: 'Plánujeme',
     popis: 'Cena je odsouhlasená, můžou se domlouvat termíny s herci.',
     rozpracovany: true,
@@ -83,6 +118,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-400/40',
   },
   {
+    kod: 'NATACIME',
     nazev: 'Natáčíme',
     popis: 'S hercem je naplánováno.',
     rozpracovany: true,
@@ -90,6 +126,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-sky-100 text-sky-800 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-200 dark:border-sky-400/40',
   },
   {
+    kod: 'NATACIME_STRIHAME',
     nazev: 'Natáčíme/stříháme',
     popis: 'Ještě se natáčí a na disku už jsou první zpracované tracky k poslechu.',
     rozpracovany: true,
@@ -97,6 +134,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-500/20 dark:text-yellow-100 dark:border-yellow-400/40',
   },
   {
+    kod: 'DOTOCENO',
     nazev: 'Dotočeno',
     popis: 'S hercem dotočeno, na disku zatím není ani jeden track.',
     rozpracovany: true,
@@ -104,6 +142,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-500/20 dark:text-cyan-200 dark:border-cyan-400/40',
   },
   {
+    kod: 'DOTOCENO_STRIHAME',
     nazev: 'Dotočeno/stříháme',
     popis: 'S hercem dotočeno a na disku už jsou první tracky.',
     rozpracovany: true,
@@ -111,6 +150,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-orange-100 text-orange-800 border border-orange-300 dark:bg-orange-500/20 dark:text-orange-100 dark:border-orange-400/40',
   },
   {
+    kod: 'DOKONCENO_KE_SCHVALENI',
     nazev: 'Dokončeno - ke schválení',
     popis: 'Na disku jsou všechny tracky, čekáme na finální opravy od klienta.',
     rozpracovany: true,
@@ -118,6 +158,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-400/40',
   },
   {
+    kod: 'CEKAME_NA_OPRAVY',
     nazev: 'Čekáme na opravy',
     popis: 'Sedm dní po odevzdání klient opravy nedodal.',
     rozpracovany: true,
@@ -136,6 +177,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
      * - viz jeStavBezNotifikaci níž - a projekt přestane spadat pod denní
      * překlápění na „Čekáme na opravy", protože v tom stavu už není.
      */
+    kod: 'OPRAVUJEME',
     nazev: 'Opravujeme',
     popis: 'Klient dokončil přeposlech, zapracováváme jeho připomínky. Klientovi odsud nic nechodí.',
     rozpracovany: true,
@@ -159,6 +201,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-fuchsia-700 text-white border border-fuchsia-800 dark:bg-fuchsia-600 dark:text-white dark:border-fuchsia-400/60',
   },
   {
+    kod: 'SCHVALENO_K_FAKTURACI',
     nazev: 'Schváleno - k fakturaci',
     // Zadani 15. 9. 2026: „projekt by se nemel ukoncit prehozenim stavu na
     // Schvaleno - k fakturaci. Ukoncit by se mel az ve chvili, kdy odesleme
@@ -170,6 +213,7 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/20 dark:text-red-200 dark:border-red-400/40',
   },
   {
+    kod: 'VYFAKTUROVANO',
     nazev: 'Vyfakturováno',
     popis: 'Faktura je u klienta — projekt je uzavřený.',
     rozpracovany: false,
@@ -181,6 +225,27 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
 const NAZVY = STAVY_PROJEKTU.map((s) => s.nazev);
 
 /**
+ * Kód stavu z toho, co je uložené v databázi. Stav, který v naší cestě není
+ * (starý přenos z Caflou), kód nemá - a je to vidět.
+ */
+export function kodStavu(nazev: string | null | undefined): KodStavu | null {
+  const stav = (nazev ?? '').trim();
+  return STAVY_PROJEKTU.find((s) => s.nazev === stav)?.kod ?? null;
+}
+
+/**
+ * Jak se stav JMENUJE NA OBRAZOVCE. Jazyk je NEPOVINNÝ (vzor nazevMeny
+ * z dávky 4): bez něj se vrací česky, takže pošta, PDF i zápis do databáze
+ * mluví dál česky. Cizí stav bez kódu projde tak, jak je.
+ */
+export function nazevStavu(nazev: string | null | undefined, jazyk?: Jazyk): string {
+  const text = (nazev ?? '').trim();
+  if (!jazyk || jazyk === 'cs') return text;
+  const kod = kodStavu(text);
+  return kod ? prelozit(jazyk, `stav.${kod}`) : text;
+}
+
+/**
  * STAVY U REKLAMY (zadání 18. 9. 2026: „u reklam by měly být vidět jen stavy:
  * V přípravě, Natáčíme, Dokončeno - ke schválení, Schváleno - k fakturaci").
  *
@@ -188,14 +253,14 @@ const NAZVY = STAVY_PROJEKTU.map((s) => s.nazev);
  * cesta je krátká. Zbylé stavy jsou z audioknižního světa a v nabídce jen
  * pletly.
  */
-const STAVY_REKLAMY = [
-  'V přípravě',
+const STAVY_REKLAMY: KodStavu[] = [
+  'V_PRIPRAVE',
   // Plánujeme patří i k reklamě - termín s hercem se domlouvá stejně
   // (24. 9. 2026).
-  'Plánujeme',
-  'Natáčíme',
-  'Dokončeno - ke schválení',
-  'Schváleno - k fakturaci',
+  'PLANUJEME',
+  'NATACIME',
+  'DOKONCENO_KE_SCHVALENI',
+  'SCHVALENO_K_FAKTURACI',
 ];
 
 /**
@@ -212,19 +277,21 @@ const STAVY_REKLAMY = [
  * Počítá se to podle POŘADÍ v cestě projektu, ne výčtem: až mezi stavy něco
  * přibude za „Schváleno - k fakturaci", spadne to pod „Dokončeno" samo.
  */
-const STAV_HOTOVO_OD = 'Schváleno - k fakturaci';
+const STAV_HOTOVO_OD: KodStavu = 'SCHVALENO_K_FAKTURACI';
+const KODY = STAVY_PROJEKTU.map((s) => s.kod);
 
-export function stavProKlientaReklamy(nazev: string | null | undefined): string {
+export function stavProKlientaReklamy(nazev: string | null | undefined, jazyk?: Jazyk): string {
   const stav = (nazev ?? '').trim();
   if (!stav) return '';
-  if (stav === 'Dokončeno - ke schválení') return 'Ke schválení';
+  const kod = kodStavu(stav);
+  if (kod === 'DOKONCENO_KE_SCHVALENI') return prelozit(jazyk ?? 'cs', 'stav.klient.keSchvaleni');
 
-  const odkud = NAZVY.indexOf(STAV_HOTOVO_OD);
-  const kde = NAZVY.indexOf(stav);
+  const odkud = KODY.indexOf(STAV_HOTOVO_OD);
+  const kde = kod ? KODY.indexOf(kod) : -1;
   // Stav, který v naší cestě není (starý přenos z Caflou), se nepřekřtívá -
   // vymyslet si u něj „Dokončeno" by mohlo lhát.
-  if (odkud >= 0 && kde >= odkud) return 'Dokončeno';
-  return stav;
+  if (odkud >= 0 && kde >= odkud) return prelozit(jazyk ?? 'cs', 'stav.klient.dokonceno');
+  return nazevStavu(stav, jazyk);
 }
 
 /**
@@ -236,7 +303,7 @@ export function stavProKlientaReklamy(nazev: string | null | undefined): string 
  */
 export function stavyProFirmu(jeReklama: boolean, aktualni?: string | null): StavProjektu[] {
   if (!jeReklama) return STAVY_PROJEKTU;
-  const vybrane = STAVY_PROJEKTU.filter((s) => STAVY_REKLAMY.includes(s.nazev));
+  const vybrane = STAVY_PROJEKTU.filter((s) => STAVY_REKLAMY.includes(s.kod));
   const stav = aktualni?.trim();
   if (stav && !vybrane.some((s) => s.nazev === stav)) {
     const chybejici = STAVY_PROJEKTU.find((s) => s.nazev === stav);
@@ -262,10 +329,11 @@ export function stavyProFirmu(jeReklama: boolean, aktualni?: string | null): Sta
  */
 export const STAV_ODEVZDANO = 'Dokončeno - ke schválení';
 
-const PRVNI_ODEVZDANY = NAZVY.indexOf(STAV_ODEVZDANO);
+const PRVNI_ODEVZDANY = KODY.indexOf('DOKONCENO_KE_SCHVALENI');
 
 export function stavJeOdevzdany(nazev: string | null | undefined): boolean {
-  const index = NAZVY.indexOf((nazev ?? '') as string);
+  const kod = kodStavu(nazev);
+  const index = kod ? KODY.indexOf(kod) : -1;
   return index >= 0 && PRVNI_ODEVZDANY >= 0 && index >= PRVNI_ODEVZDANY;
 }
 
@@ -285,8 +353,11 @@ export function stavJeDokonceny(nazev: string | null | undefined): boolean | nul
   return stav ? !stav.rozpracovany : null;
 }
 
-export function popisStavu(nazev: string | null | undefined): string | null {
-  return STAVY_PROJEKTU.find((s) => s.nazev === nazev)?.popis ?? null;
+export function popisStavu(nazev: string | null | undefined, jazyk?: Jazyk): string | null {
+  const stav = STAVY_PROJEKTU.find((s) => s.nazev === nazev);
+  if (!stav) return null;
+  if (!jazyk || jazyk === 'cs') return stav.popis;
+  return prelozit(jazyk, `stavPopis.${stav.kod}`);
 }
 
 /** Zaloha pro stavy, ktere v nasi ceste nejsou (prenesene z Caflou). */
@@ -313,7 +384,7 @@ export function barvaStavu(nazev: string | null | undefined, dokonceny = false):
  * s napsaným řetězcem - kdyby se stav jednou přejmenoval, drží to dál.
  */
 export function jeVPriprave(statusName: string | null | undefined): boolean {
-  return (statusName ?? '').trim() === STAVY_PROJEKTU[0].nazev;
+  return kodStavu(statusName) === 'V_PRIPRAVE';
 }
 
 /**
@@ -333,5 +404,5 @@ export const STAV_PLANUJEME = 'Plánujeme';
 export const STAV_OPRAVUJEME = 'Opravujeme';
 
 export function jeStavBezNotifikaci(nazev: string | null | undefined): boolean {
-  return (nazev ?? '').trim() === STAV_OPRAVUJEME;
+  return kodStavu(nazev) === 'OPRAVUJEME';
 }

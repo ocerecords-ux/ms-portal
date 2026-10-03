@@ -1,4 +1,5 @@
 import { zonedToUtc } from '@/lib/calendar';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * KALENDÁŘ PORADY (zadání 21. 9. 2026: „pojďme teď udělat ještě jeden
@@ -45,8 +46,10 @@ export function barvaKalendare(druh: DruhPorady): string {
 }
 
 /** „porada" / „schůzka" do vět v okně a hlášek. */
-export function slovoProDruh(druh: DruhPorady): string {
-  return druh === 'SCHUZKA' ? 'schůzka' : 'porada';
+export function slovoProDruh(druh: DruhPorady, jazyk?: Jazyk): string {
+  // Podle KÓDU druhu, ne podle českého slova (dávka 7e). Jazyk je nepovinný -
+  // bez něj čeština, aby pošta zůstala česká.
+  return prelozit(jazyk ?? 'cs', `porada.slovo.${druh === 'SCHUZKA' ? 'SCHUZKA' : 'PORADA'}`);
 }
 
 /**
@@ -71,8 +74,11 @@ export const MOZNOSTI_OPAKOVANI: { hodnota: Opakovani; popisek: string }[] = [
   { hodnota: 'MESICNE', popisek: 'Každý měsíc' },
 ];
 
-export function popisOpakovani(o: Opakovani): string {
-  return MOZNOSTI_OPAKOVANI.find((m) => m.hodnota === o)?.popisek ?? 'Neopakovat';
+export function popisOpakovani(o: Opakovani, jazyk?: Jazyk): string {
+  if (!jazyk || jazyk === 'cs') {
+    return MOZNOSTI_OPAKOVANI.find((m) => m.hodnota === o)?.popisek ?? 'Neopakovat';
+  }
+  return prelozit(jazyk, `opakovani.${o}`);
 }
 
 /** Jeden výskyt porady tak, jak ho dostane kalendář. */

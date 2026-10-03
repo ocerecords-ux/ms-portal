@@ -6,6 +6,8 @@
  * Ukladame ISO kod (dve pismena), vlajka se z nej dopocita - neni potreba
  * zadny obrazek ani knihovna.
  */
+import type { Jazyk } from '@/lib/jazyk';
+
 export const DEFAULT_COUNTRY = 'CZ';
 
 export type Country = { code: string; name: string };
@@ -64,9 +66,49 @@ export function countryFlag(code: string): string {
   return String.fromCodePoint(...[...upper].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
 }
 
-export function countryName(code: string | null | undefined): string {
+/**
+ * NÁZEV ZEMĚ PODLE JAZYKA (dávka 7e).
+ *
+ * Ukládá se ISO kód, takže překlad nesahá na data vůbec. Anglické názvy se
+ * neopisují do druhého stočlenného seznamu - bere je `Intl.DisplayNames`,
+ * tedy tatáž data, podle kterých je pojmenuje operační systém. Český seznam
+ * zůstává ručně psaný: je zdroj pravdy a je v něm dohodnuté znění
+ * („Spojené království", ne „Velká Británie").
+ *
+ * Kdyby `Intl.DisplayNames` v daném prostředí nebylo, projde český název -
+ * portál nikdy neukáže holý kód.
+ */
+let anglickeNazvy: Intl.DisplayNames | null | undefined;
+
+function anglicky(code: string): string | null {
+  if (anglickeNazvy === undefined) {
+    try {
+      anglickeNazvy = new Intl.DisplayNames(['en-GB'], { type: 'region' });
+    } catch {
+      anglickeNazvy = null;
+    }
+  }
+  if (!anglickeNazvy) return null;
+  try {
+    const nazev = anglickeNazvy.of(code);
+    return nazev && nazev !== code ? nazev : null;
+  } catch {
+    return null;
+  }
+}
+
+export function countryName(code: string | null | undefined, jazyk?: Jazyk): string {
   if (!code) return '';
-  return COUNTRIES.find((c) => c.code === code.toUpperCase())?.name ?? code;
+  const kod = code.toUpperCase();
+  const cesky = COUNTRIES.find((c) => c.code === kod)?.name;
+  if (!jazyk || jazyk === 'cs') return cesky ?? code;
+  return anglicky(kod) ?? cesky ?? code;
+}
+
+/** Seznam zemí v jazyce rozhraní. Pořadí zůstává - sousedi nahoře. */
+export function zeme(jazyk: Jazyk): Country[] {
+  if (jazyk === 'cs') return COUNTRIES;
+  return COUNTRIES.map((c) => ({ ...c, name: countryName(c.code, jazyk) }));
 }
 
 /** Text bez háčků, čárek a velkých písmen - kvůli hledání i porovnávání. */

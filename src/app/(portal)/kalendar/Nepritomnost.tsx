@@ -40,7 +40,7 @@ export function CipNepritomnosti({
   const t = usePreklad();
   const jazyk = useJazyk();
   // Jméno i poznámka jsou data uživatele - do věty vstupují, nepřekládají se.
-  const popis = `${t('nepritomnost.cipPopis', { jmeno: n.jmeno, rozsah: rozsahSlovy(n) })}${
+  const popis = `${t('nepritomnost.cipPopis', { jmeno: n.jmeno, rozsah: rozsahSlovy(n, jazyk) })}${
     n.poznamka ? ` · ${n.poznamka}` : ''
   }`;
   return (

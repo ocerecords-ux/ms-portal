@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { STAVY_PROJEKTU, barvaStavu, stavyProFirmu } from '@/lib/stavyProjektu';
+import { STAVY_PROJEKTU, barvaStavu, nazevStavu, stavyProFirmu } from '@/lib/stavyProjektu';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 import { OdznakSelect } from './OdznakSelect';
 
 /**
@@ -32,6 +33,8 @@ export function StavProjektuSelect({
   /** Reklamní firma má kratší cestu projektu - viz lib/stavyProjektu.ts. */
   jeReklama?: boolean;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [hodnota, setHodnota] = useState(stav);
   const [uklada, setUklada] = useState(false);
@@ -59,7 +62,7 @@ export function StavProjektuSelect({
       router.refresh();
     } catch {
       setHodnota(puvodni);
-      setChyba('Stav se nepodařilo uložit.');
+      setChyba(t('stav.neulozeno'));
     } finally {
       setUklada(false);
     }
@@ -76,8 +79,8 @@ export function StavProjektuSelect({
         onZmena={(v) => void zmen(v)}
         disabled={uklada}
         trida={barvaStavu(hodnota, dokonceny)}
-        titulek="Přehodit stav projektu"
-        prazdnyPopisek="Bez stavu"
+        titulek={t('stav.prehoditStav')}
+        prazdnyPopisek={t('stav.bezStavu')}
         /* Jen myší - v seznamu se stav ukládá hned po výběru a klávesa by
            ho přehodila dřív, než si toho kdo všimne (23. 9. 2026). */
         bezKlaves
@@ -85,7 +88,11 @@ export function StavProjektuSelect({
           // Stav prenesený z Caflou, ktery v nasi ceste projektu neni - at se
           // pri rozbaleni nabidky nezmeni na neco jineho.
           ...(neznamyStav ? [{ hodnota, popisek: hodnota }] : []),
-          ...stavyProFirmu(jeReklama, hodnota).map((s) => ({ hodnota: s.nazev, popisek: s.nazev })),
+          // Hodnota je ČESKÝ název (ukládá se do databáze), popisek přeložený.
+          ...stavyProFirmu(jeReklama, hodnota).map((s) => ({
+            hodnota: s.nazev,
+            popisek: nazevStavu(s.nazev, jazyk),
+          })),
         ]}
       />
       {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}

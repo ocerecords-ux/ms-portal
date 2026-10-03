@@ -11,11 +11,11 @@ import { CountrySelect } from '../CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { PhotoDropzone } from './PhotoDropzone';
 import { ROLE_GROUPS, roleRequiresCompany } from '@/lib/roles';
-import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
+import { LOKACE_S_BARVOU, nazevMesta } from '@/lib/lokaceHercu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -49,6 +49,7 @@ export function NewUserForm({
   defaultRole?: Role;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -292,7 +293,7 @@ export function NewUserForm({
                   <span
                     className={`inline-flex items-center rounded-pill px-2 py-0.5 text-xs font-heading font-semibold ${studio.barva}`}
                   >
-                    {studio.popisek}
+                    {nazevMesta(studio.popisek, jazyk)}
                   </span>
                 </Volba>
               ))}

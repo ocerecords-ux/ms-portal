@@ -79,7 +79,8 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7b | další večer | Zapomenuté obrazovky I — sekce na detailu projektu (rodný list, licenční list, výstupy, `ProjectMetaForm`, rozpočty, posluchači přeposlechu, `ProjectDocuments`), objednávka reklamy, `NovyProjektForm`, `InternalProjectsBrowser` | [x] |
 | 7c | další večer | Zapomenuté obrazovky II — administrace: firmy a `CompanyForm`, caflou-firmy, údaje (žádosti), vzory zpráv i natáčení, wikipedie, technické parametry, návody, přenos projektu | [x] |
 | 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [x] |
-| 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [ ] |
+| 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [x] |
+| 7f | další večer | Obrazovky, které nebyly v žádné dávce — Procesy, Složky na Disku, Bruno, Nastavení, Zprávy portálu, Doplnit dotočeno, zbylé karty na detailu projektu a režim pro nevidomé v přeposlechu | [ ] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -594,6 +595,97 @@ mazat nesmí. Každé `git status` si vyrobí nový a neuklidí ho. **Chce to sm
 z počítače** (`rm .git/*.lock.*`), jinak to jednou večer spadne na tom, že se
 zámek nepodaří ani přejmenovat. Platí i `git rm --cached stubs/prisma-client.d.ts`
 (viz dávka 7a).
+
+### Dávka 7e je HOTOVÁ (3. 10. 2026)
+
+Kódy místo textů, zbylé číselníky, názvy zemí a sjednocení termínů.
+**Slovník +54 klíčů (4 453 → 4 507)**, 21 souborů. Obrazovek přibylo málo
+schválně — tahle dávka je hlavně o tom, aby překlad nerozbil porovnávání.
+
+**STAVY PROJEKTŮ MAJÍ KÓDY — ALE V DATABÁZI ZŮSTÁVÁ ČESKÝ NÁZEV.** To je to
+hlavní rozhodnutí dávky. `StavProjektu` má nově `kod` (`V_PRIPRAVE`,
+`DOKONCENO_KE_SCHVALENI`…), podle kterého se překládá i porovnává; `nazev` je
+dál přesně ta hodnota, která leží v `ProjectMeta.statusName` i v historii
+projektu, a **do dat se nesáhlo**. Skutečná migrace (uložit rovnou kód) je dál
+na stole, ale je to zásah do všech projektů i do historie a do večerní dávky
+překladu nepatří.
+
+Co z toho plyne prakticky:
+
+- `jeVPriprave()`, `jeStavBezNotifikaci()` a `stavJeOdevzdany()` porovnávají
+  KÓD, ne napsaný řetězec. Lístek z dávky 5 („tikající bomba") je tím splacený
+  a `STAVY_PROJEKTU` se konečně smí překládat.
+- Nové `kodStavu()`, `nazevStavu(nazev, jazyk?)` a `popisStavu(nazev, jazyk?)`.
+  Jazyk je NEPOVINNÝ — bez něj čeština, takže pošta, PDF i zápis do databáze
+  mluví dál česky.
+- `stavProKlientaReklamy()` počítá podle pořadí KÓDŮ a vrací přeložený text.
+- `STATUS_LABEL_OVERRIDES` v `projekty/shared.tsx` (dva stavy se klientovi
+  v přehledu jmenují jinak) se klíčuje kódem, ne českým textem.
+- **Hodnota v nabídce zůstává český název.** Všude, kde se stav vybírá
+  (`StavProjektuSelect`, `ProjectMetaForm`, `NovyProjektForm`), je `hodnota`
+  česká a přeložený je jen `popisek` — jinak by se do databáze uložilo
+  „Recording".
+
+**Města herců mají kód taky.** `mesto()` je nově exportovaná,
+`MESTA_PRO_HERCE` mají `kod` a `nazevMesta(nazev, jazyk?)` překládá podle něj.
+Do `user.studioLocations` se dál ukládá český název, takže párování herec ↔
+studio se nemá o co rozbít (lístek z dávky 5). **`nazevMesta` porovnává
+PŘESNĚ, ne „obsahuje"**: „Brno II" je druhé studio v Brně a rozlišuje ho právě
+ta římská číslice — podle `mesto()` by z obou studií zbylo stejné „Brno".
+
+**Názvy zemí se překládají přes `Intl.DisplayNames`.** Druhý stočlenný seznam
+se nepsal: anglická znění bere tatáž data, podle kterých země pojmenuje
+operační systém. Český `COUNTRIES` zůstává ručně psaný jako zdroj pravdy
+(je v něm dohodnuté „Spojené království", ne „Velká Británie"), ukládá se
+pořád ISO kód a pořadí se nemění — sousedi nahoře. Hledání v `CountrySelect`
+běží nad přeloženým seznamem, takže v angličtině se najde „Germany" i „DE".
+PDF dokladu volá `countryName()` bez jazyka, tedy dál česky (pravidlo 5).
+
+**Zbylé číselníky v `src/lib` dostaly funkci s nepovinným jazykem:**
+
+- `lib/calendar.ts` — `nazevStavuNabidky()` (RECORDING_STATUS_LABELS),
+  `nazevDne()` a `nazevDneKratce()`. Dny si berou klíče `obecne.den.*`
+  z dávky 7d, takže se seznam nepíše podruhé; `WEEKDAY_LABELS` /
+  `WEEKDAY_SHORT` zůstávají jako český zdroj pravdy.
+- `lib/porady.ts` — `slovoProDruh(druh, jazyk?)` podle KÓDU druhu
+  a `popisOpakovani(o, jazyk?)`.
+- `lib/nepritomnost.ts` — `popisDruhu(druh, jazyk?)` a `rozsahSlovy(n, jazyk)`
+  (formátovala natvrdo `'cs-CZ'`).
+
+`lib/roles.ts`, `lib/tabule.ts` a `lib/timesheets.ts` mají své funkce
+z dávek 7c a 7d; `BLOCK_KIND_LABELS` má `nazevDruhuBloku` z dávky 5. Číselníky
+`src/lib` jsou tím hotové.
+
+**„Klient" je v angličtině `customer`.** Dávka 7c to nechala rozkročené mezi
+`Client` a `Customer`; sjednoceno na **customer**, protože slovníček má
+*odběratel → customer* a pro „klienta" nemá vlastní slovo. Přepsalo se těch
+pár míst, kde stál `Client` (role, záložky Firem, náhled role, sekce studia),
+ne osmdesát opačných. **Nepřepisovala se jedna věta**: „Outlook a většina
+klientů" v nápovědě k odběru kalendáře — tam jde o poštovní programy.
+
+**Co dávka 7e NEUDĚLALA a je to vidět.** Závěrečné proklikání ukázalo, že
+**asi 36 souborů nebylo v žádné dávce**: sekce Procesy, Složky na Disku,
+Bruno, Nastavení, Zprávy portálu a Doplnit dotočeno, většina karet na detailu
+projektu (`RecordingSection`, `SmlouvyKlienta`, `ProgresNataceniKarta`,
+`NaCestu`, `CerpaniPoDruzich`, `VykazyProjektu`, `PoznamkyProjektu`,
+`HledaniVPdf`, `ProtokolNataceni`, `HistorieProjektu`,
+`TechnickeParametryKarta`, `OdkazProKlienta`, `UpravitelnaBunka`) a **režim
+pro nevidomé v přeposlechu** (`preposlech/[token]/RezimNevidomi.tsx`, 45 řádků
+včetně hlášení pro čtečku a `casSlovy()`). Jsou to tytéž zapomenuté obrazovky
+jako v dávce 7a, jen o patro hlouběji — proto je z nich **dávka 7f**, ne
+dovětek k 7e. Jak si je najít:
+
+```bash
+for f in $(find src/app -name '*.tsx'); do
+  grep -q "usePreklad\|prelozit\|nactiJazyk" "$f" && continue
+  n=$(grep "[ěščřžýáíéúůňťďó]" "$f" | grep -vE "^\s*(//|\*)" | wc -l)
+  [ "${n:-0}" -ge 3 ] && echo "$n $f"
+done | sort -rn
+```
+
+**Zůstává k rozhodnutí:** `napoveda/page.tsx` pořád řadí kategorie porovnáním
+s českým `'Začínáme'`. Kategorie návodu je obsah z databáze (jako stavy před
+touhle dávkou), takže to drží — ale je to poslední místo toho druhu.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

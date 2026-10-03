@@ -28,7 +28,7 @@ export const DNU_NA_OPRAVY = 7;
 
 const STAV_ODEVZDANO = 'Dokončeno - ke schválení';
 const STAV_CEKAME =
-  STAVY_PROJEKTU.find((s) => s.nazev === 'Čekáme na opravy')?.nazev ?? 'Čekáme na opravy';
+  STAVY_PROJEKTU.find((s) => s.kod === 'CEKAME_NA_OPRAVY')?.nazev ?? 'Čekáme na opravy';
 
 /** Kdy projekt naposledy vstoupil do stavu `stav`. `null` = v historii to není. */
 export async function kdyVstoupilDoStavu(

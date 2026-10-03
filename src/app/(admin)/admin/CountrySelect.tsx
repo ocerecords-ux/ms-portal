@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { bezDiakritiky, COUNTRIES, countryFlag, countryName } from '@/lib/countries';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { bezDiakritiky, countryFlag, countryName, zeme } from '@/lib/countries';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr země s vlaječkami a hledáním (zadání 6. 9. 2026). Ukládá ISO kód.
@@ -15,19 +15,21 @@ import { usePreklad } from '@/app/(portal)/components/JazykProvider';
  * Enter vybere první zemi v seznamu - psaní „slov" a Enter je rychlejší než
  * hledat myší.
  */
-// POZOR: samotné NÁZVY ZEMÍ jsou pořád české - seznam COUNTRIES v
-// src/lib/countries.ts anglické znění nemá. Přeložený je jen obal (tlačítko,
-// hledání, prázdný stav). Viz docs/preklad-portalu.md, dávka 5.
+// NÁZVY ZEMÍ se od dávky 7e překládají taky - anglické znění bere
+// `Intl.DisplayNames`, viz countryName() v src/lib/countries.ts. Ukládá se
+// pořád ISO kód, takže se hledání ani řazení nemá o co rozbít.
 export function CountrySelect({ value, onChange }: { value: string; onChange: (code: string) => void }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
+  const seznam = useMemo(() => zeme(jazyk), [jazyk]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const boxRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo(() => {
     const needle = bezDiakritiky(query);
-    if (!needle) return COUNTRIES;
-    const shoda = COUNTRIES.filter(
+    if (!needle) return seznam;
+    const shoda = seznam.filter(
       (c) => bezDiakritiky(c.name).includes(needle) || c.code.toLowerCase().includes(needle),
     );
     // Co začíná na hledané, patří nahoru: „ma" má napřed Maďarsko, ne Rumunsko.
@@ -36,7 +38,7 @@ export function CountrySelect({ value, onChange }: { value: string; onChange: (c
       const zb = bezDiakritiky(b.name).startsWith(needle) || b.code.toLowerCase().startsWith(needle);
       return za === zb ? 0 : za ? -1 : 1;
     });
-  }, [query]);
+  }, [query, seznam]);
 
   return (
     <div
@@ -55,7 +57,7 @@ export function CountrySelect({ value, onChange }: { value: string; onChange: (c
         className="admin-input text-left flex items-center gap-2"
       >
         <span aria-hidden="true">{countryFlag(value)}</span>
-        <span className="flex-1 truncate">{countryName(value) || t('firmy.vyberteZemi')}</span>
+        <span className="flex-1 truncate">{countryName(value, jazyk) || t('firmy.vyberteZemi')}</span>
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5 shrink-0 text-muted">
           <path d="M5 8l5 5 5-5" />
         </svg>

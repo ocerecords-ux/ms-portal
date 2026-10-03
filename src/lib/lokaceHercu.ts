@@ -1,4 +1,5 @@
 import { HEREC_STUDIOS } from '@/lib/roles';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Barvy lokací herců (zadání 10. 9. 2026: „udělal bych paletu barevnou na
@@ -12,8 +13,13 @@ import { HEREC_STUDIOS } from '@/lib/roles';
  * pro rozhodování „kam ho pozvat" je to totéž. Rozlišuje je text, ne barva.
  */
 
-/** Město, podle kterého se barví. Co nepoznáme, dostane neutrální šedou. */
-function mesto(lokace: string): string {
+/**
+ * KÓD MĚSTA (dávka 7e). Do databáze (`user.studioLocations`) se dál ukládá
+ * ČESKÝ název - „Brno", „Praha", „Londýn" - a nic se v datech nepřepisuje.
+ * Kód slouží k barvě a k překladu odznaku; porovnává se podle něj, ne podle
+ * přeloženého textu, takže se párování herec ↔ studio nemá o co rozbít.
+ */
+export function mesto(lokace: string): string {
   const bez = lokace
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -46,8 +52,9 @@ export function barvaLokace(lokace: string): string {
  * Kratší popisek do odznaku. „MS Studio - " má každá lokace stejné, takže
  * v seznamu jen zabírá místo a nic nerozlišuje.
  */
-export function popisekLokace(lokace: string): string {
-  return lokace.replace(/^MS\s*Studio\s*[-–]\s*/i, '').trim() || lokace;
+export function popisekLokace(lokace: string, jazyk?: Jazyk): string {
+  const bezPrefixu = lokace.replace(/^MS\s*Studio\s*[-–]\s*/i, '').trim() || lokace;
+  return nazevMesta(bezPrefixu, jazyk);
 }
 
 /**
@@ -92,11 +99,26 @@ export const LOKACE_S_BARVOU = HEREC_STUDIOS.map((l) => ({
  * rozhoduje o tom kalendář. Odpovídá tedy na město a portál si sám zaškrtne
  * všechna studia, která k němu patří.
  */
-export const MESTA_PRO_HERCE: { mesto: string; studia: string[] }[] = [
-  { mesto: 'Brno', studia: ['MS Studio - Brno I', 'MS Studio - Brno II'] },
-  { mesto: 'Praha', studia: ['MS Studio - Praha'] },
-  { mesto: 'Londýn', studia: ['MS Studio - London'] },
+export const MESTA_PRO_HERCE: { mesto: string; kod: string; studia: string[] }[] = [
+  // `mesto` je hodnota, která se UKLÁDÁ; `kod` jen k barvě a překladu.
+  { mesto: 'Brno', kod: 'brno', studia: ['MS Studio - Brno I', 'MS Studio - Brno II'] },
+  { mesto: 'Praha', kod: 'praha', studia: ['MS Studio - Praha'] },
+  { mesto: 'Londýn', kod: 'london', studia: ['MS Studio - London'] },
 ];
+
+/**
+ * Jak se město jmenuje NA OBRAZOVCE. Jazyk je NEPOVINNÝ - bez něj čeština,
+ * takže zápis do databáze i pošta zůstávají české. Město, které nepoznáme,
+ * projde tak, jak je.
+ */
+export function nazevMesta(nazev: string, jazyk?: Jazyk): string {
+  if (!jazyk || jazyk === 'cs') return nazev;
+  // Porovnává se PŘESNĚ, ne „obsahuje": „Brno II" je druhé studio v Brně
+  // a rozlišuje ho právě ta římská číslice. Kdyby se překládalo podle
+  // `mesto()`, zbylo by z obou studií stejné „Brno".
+  const m = MESTA_PRO_HERCE.find((x) => x.mesto === nazev.trim());
+  return m ? prelozit(jazyk, `mesto.${m.kod}`) : nazev;
+}
 
 /** Z vybraných měst udělá studia na kartu herce. */
 export function studiaZMest(mesta: string[]): string[] {

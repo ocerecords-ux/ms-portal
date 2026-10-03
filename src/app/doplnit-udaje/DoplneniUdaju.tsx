@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { CountrySelect } from '@/app/(admin)/admin/CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
-import { MESTA_PRO_HERCE, mestaZeStudii, studiaZMest } from '@/lib/lokaceHercu';
+import { MESTA_PRO_HERCE, mestaZeStudii, nazevMesta, studiaZMest } from '@/lib/lokaceHercu';
 import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
@@ -262,13 +262,15 @@ export function DoplneniUdaju({
       popis: t('doplneni.mestaPopis'),
       obsah: (
         <div className="flex flex-wrap gap-2">
+          {/* Zaškrtnutá hodnota je ČESKÝ název města - ukládá se do
+              `studioLocations` (dávka 7e). Překládá se jen popisek. */}
           {MESTA_PRO_HERCE.map(({ mesto }) => (
             <Volba
               key={mesto}
               vybrano={u.mesta.includes(mesto)}
               onZmena={(zapnout) => nastav('mesta', prepniVSeznamu(u.mesta, mesto, zapnout))}
             >
-              {mesto}
+              {nazevMesta(mesto, jazyk)}
             </Volba>
           ))}
         </div>

@@ -14,10 +14,10 @@ import { SEKCE, celaSekce, sekcePrava } from '@/lib/pristupy';
 import { IkonaTypu } from '@/lib/ikonyTypu';
 import { PhotoDropzone } from '../PhotoDropzone';
 import { ROLE_GROUPS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
-import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
+import { LOKACE_S_BARVOU, nazevMesta } from '@/lib/lokaceHercu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -126,6 +126,7 @@ export function UserEditForm({
   jsemSuperadmin: boolean;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [email, setEmail] = useState(user.email);
   const [name, setName] = useState(user.name ?? '');
@@ -1128,7 +1129,7 @@ export function UserEditForm({
                   <span
                     className={`inline-flex items-center rounded-pill px-2 py-0.5 text-xs font-heading font-semibold ${studio.barva}`}
                   >
-                    {studio.popisek}
+                    {nazevMesta(studio.popisek, jazyk)}
                   </span>
                 </Volba>
               ))}

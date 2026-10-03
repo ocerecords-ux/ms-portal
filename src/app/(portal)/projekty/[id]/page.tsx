@@ -1186,6 +1186,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <StatusPill
               finished={meta?.statusName ? meta.finished : project.finished}
               statusName={meta?.statusName ?? project.statusName}
+              jazyk={jazyk}
             />
           )}
           {/* Jak daleko je přeposlech (25. 9. 2026) - sluchátka rovnou

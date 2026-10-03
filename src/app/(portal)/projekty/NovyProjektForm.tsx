@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { ProjectPriority } from '@prisma/client';
 import { AddButton } from '@/components/AddButton';
 import { VyberPriority } from '@/components/IkonaPriority';
-import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
+import { STAVY_PROJEKTU, nazevStavu, popisStavu } from '@/lib/stavyProjektu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { type Herec } from './VyberHerce';
 import { VyberHercu } from './VyberHercu';
@@ -314,13 +314,14 @@ export function NovyProjektForm({
       <label className="flex flex-col gap-1.5 sm:max-w-sm">
         <span className="text-sm font-body text-ink">{t('novyProjekt.stav')}</span>
         <VyberPole value={form.statusName} onChange={(e) => set('statusName', e.target.value)} className={tridaPole}>
+          {/* Hodnota je ČESKÝ název - ukládá se do databáze (dávka 7e). */}
           {STAVY_PROJEKTU.map((s) => (
             <option key={s.nazev} value={s.nazev}>
-              {s.nazev}
+              {nazevStavu(s.nazev, jazyk)}
             </option>
           ))}
         </VyberPole>
-        <span className="text-xs text-muted font-body">{popisStavu(form.statusName)}</span>
+        <span className="text-xs text-muted font-body">{popisStavu(form.statusName, jazyk)}</span>
       </label>
 
       {/* Slozka na Disku (zadani 10. 9. 2026). Kdyz uz slozka existuje, jde

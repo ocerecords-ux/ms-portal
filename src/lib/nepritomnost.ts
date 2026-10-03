@@ -1,4 +1,5 @@
 import type { DruhNepritomnosti } from '@prisma/client';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * KALENDÁŘ „MIMO STUDIO" (zadání 19. 9. 2026: „potřebuji jeden kalendář, do
@@ -41,8 +42,14 @@ export const DRUHY_NEPRITOMNOSTI: { druh: DruhNepritomnosti; popisek: string }[]
   { druh: 'JINE', popisek: 'Jiné' },
 ];
 
-export function popisDruhu(druh: string): string {
-  return DRUHY_NEPRITOMNOSTI.find((d) => d.druh === druh)?.popisek ?? 'Nepřítomnost';
+export function popisDruhu(druh: string, jazyk?: Jazyk): string {
+  if (!jazyk || jazyk === 'cs') {
+    return DRUHY_NEPRITOMNOSTI.find((d) => d.druh === druh)?.popisek ?? 'Nepřítomnost';
+  }
+  const klic = DRUHY_NEPRITOMNOSTI.some((d) => d.druh === druh)
+    ? `nepritomnost.druh.${druh}`
+    : 'nepritomnost.druh.zaloha';
+  return prelozit(jazyk, klic);
 }
 
 /** Jedna nepřítomnost tak, jak ji dostane kalendář. */
@@ -75,11 +82,20 @@ export function posledniDen(endIso: string): string {
 }
 
 /** „12. 9." nebo „12. 9. – 15. 9." - co se napíše do bubliny. */
-export function rozsahSlovy(n: Pick<NepritomnostVKalendari, 'start' | 'end' | 'celyDen'>): string {
+export function rozsahSlovy(
+  n: Pick<NepritomnostVKalendari, 'start' | 'end' | 'celyDen'>,
+  jazyk: Jazyk = 'cs',
+): string {
+  const kod = kodJazyka(jazyk);
   const den = (d: Date) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: PASMO_NEPRITOMNOSTI, day: 'numeric', month: 'numeric' }).format(d);
+    new Intl.DateTimeFormat(kod, { timeZone: PASMO_NEPRITOMNOSTI, day: 'numeric', month: 'numeric' }).format(d);
   const cas = (d: Date) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: PASMO_NEPRITOMNOSTI, hour: '2-digit', minute: '2-digit' }).format(d);
+    new Intl.DateTimeFormat(kod, {
+      timeZone: PASMO_NEPRITOMNOSTI,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d);
   const od = new Date(n.start);
   if (!n.celyDen) return `${den(od)} ${cas(od)}–${cas(new Date(n.end))}`;
   const doDen = new Date(new Date(n.end).getTime() - 60_000);

@@ -6,7 +6,7 @@ import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { ProjectPriority } from '@prisma/client';
 import { PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
 import { IkonaPriority, VyberPriority } from '@/components/IkonaPriority';
-import { STAVY_PROJEKTU, barvaStavu, popisStavu, stavyProFirmu } from '@/lib/stavyProjektu';
+import { STAVY_PROJEKTU, barvaStavu, nazevStavu, popisStavu, stavyProFirmu } from '@/lib/stavyProjektu';
 import type { NahledDotoceni } from '@/lib/dotoceni';
 import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
@@ -45,9 +45,9 @@ const TRIDA_PRAZDNEHO = 'bg-field text-muted border border-line';
 const TRIDA_TYPU =
   'bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight border border-brand-purple/40';
 
-function OdznakStavu({ stav }: { stav: string }) {
+function OdznakStavu({ stav, jazyk }: { stav: string; jazyk: Jazyk }) {
   if (!stav) return <span className="text-sm font-heading text-muted">—</span>;
-  return <span className={`${TRIDA_ODZNAKU} ${barvaStavu(stav)}`}>{stav}</span>;
+  return <span className={`${TRIDA_ODZNAKU} ${barvaStavu(stav)}`}>{nazevStavu(stav, jazyk)}</span>;
 }
 
 /**
@@ -589,7 +589,7 @@ export function ProjectMetaForm({
                 {t('projektMeta.stavProjektu')}
               </dt>
               <dd className="m-0 mt-1">
-                <OdznakStavu stav={values.statusName} />
+                <OdznakStavu stav={values.statusName} jazyk={jazyk} />
               </dd>
             </div>
             <div>
@@ -882,16 +882,17 @@ export function ProjectMetaForm({
                 // U reklamy kratší nabídka (zadání 18. 9. 2026, upřesněno
                 // 22. a 30. 9. 2026) - „Čekáme na opravy", „Natáčíme/stříháme",
                 // „Dotočeno" ani „Dotočeno/stříháme" se u ní nemají objevit.
+                // Hodnota je ČESKÝ název - ukládá se do databáze (dávka 7e).
                 ...stavyProFirmu(jeReklamniProjekt, values.statusName).map((st) => ({
                   hodnota: st.nazev,
-                  popisek: st.nazev,
+                  popisek: nazevStavu(st.nazev, jazyk),
                 })),
               ]}
             />
             <span className="text-xs text-muted font-body">
-              {/* Popis stavu je český (stavy se do databáze ukládají česky
-                  a nepřekládají se - viz dávka 5); věta pod ním ano. */}
-              {popisStavu(values.statusName) ?? t('projektMeta.stavRucne')}
+              {/* Od dávky 7e se popis i název stavu překládají podle KÓDU;
+                  do databáze se pořád ukládá český název. */}
+              {popisStavu(values.statusName, jazyk) ?? t('projektMeta.stavRucne')}
             </span>
             {/* ODPOČET DO AUTOMATICKÉHO PŘEKLOPENÍ (zadání 16. 9. 2026).
                 Ukazuje se jen u uloženého stavu „Dokončeno - ke schválení" -
