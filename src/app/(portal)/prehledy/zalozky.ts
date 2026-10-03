@@ -6,6 +6,10 @@
  * nesměl sáhnout ani na jeden odkaz a stránka by spadla.
  *
  * Další přehled = jeden řádek sem.
+ *
+ * `label` je ČESKÝ ZDROJ PRAVDY, ne text do rozhraní: lišta si název bere ze
+ * slovníku podle ADRESY (`prehledy.zalozka.<href>`), stejně jako horní lišta
+ * přes `nazevOdkazu`. Nová záložka tedy potřebuje i klíč ve slovníku.
  */
 export const ZALOZKY_PREHLEDU: {
   href: string;

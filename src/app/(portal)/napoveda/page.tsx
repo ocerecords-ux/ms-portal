@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db';
 import { SeznamNavodu } from './SeznamNavodu';
 import { sediDruh, vidiNavod } from '@/lib/navody';
 import { druhyKlienta } from '@/lib/navodyServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum } from '@/lib/jazyk';
 
 /**
  * NÁPOVĚDA — přehled návodů (zadání 16. 9. 2026: „přemýšlím, že by tyhle
@@ -26,6 +28,7 @@ export default async function NapovedaPage() {
   if (!session) redirect('/login');
   const role = session.user.role;
   const jeAdmin = role === 'ADMIN';
+  const jazyk = nactiJazyk();
 
   const navody = await prisma.navod
     .findMany({
@@ -83,7 +86,7 @@ export default async function NapovedaPage() {
         hledaci: n.hledaci,
         obsah: n.obsah,
         zverejneno: n.zverejneno,
-        upraveno: n.updatedAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }),
+        upraveno: formatDatum(jazyk, n.updatedAt),
       }))}
     />
   );

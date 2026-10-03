@@ -78,7 +78,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7a | 28. 9. | Formáty a číselníky napříč repozitářem — `formatMoney` a `formatCzk` s jazykem, formátovače času a záložky v `lib/chat.ts`, statusy v chatu, smajlíci, náhledové pohledy, úkol bez příjemce | [x] |
 | 7b | další večer | Zapomenuté obrazovky I — sekce na detailu projektu (rodný list, licenční list, výstupy, `ProjectMetaForm`, rozpočty, posluchači přeposlechu, `ProjectDocuments`), objednávka reklamy, `NovyProjektForm`, `InternalProjectsBrowser` | [x] |
 | 7c | další večer | Zapomenuté obrazovky II — administrace: firmy a `CompanyForm`, caflou-firmy, údaje (žádosti), vzory zpráv i natáčení, wikipedie, technické parametry, návody, přenos projektu | [x] |
-| 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [ ] |
+| 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [x] |
 | 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [ ] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
@@ -476,6 +476,113 @@ nepřepisovala, aby nehýbala s hotovými obrazovkami.
 a `api/klient/doklady/nahled/route.ts` (chybějící `sluzby`). Jsou na HEADu
 i bez téhle dávky (ověřeno na čisté kopii z `git archive`), přišly s prací
 po dávce 7b. Proti nové verzi seznamu je výstup kontroly čistý.
+
+### Dávka 7d je HOTOVÁ (3. 10. 2026)
+
+Zapomenuté obrazovky III: Přehledy (kapacita, obrat a zisk, knihy a rozpočty
+i jejich podrobný rozpad, režie porady, zvukaři), palubovka, backlog, ceník
+studia, Web (Sítě), tabule ve studiu, správa rezervací, veřejné formuláře,
+nápověda, honoráře a pozvánky. **53 obrazovek, slovník +814 klíčů
+(3 639 → 4 453)** a šest souborů v `src/lib`.
+
+**Nové obecné klíče, které si vezmou i další dávky.** Názvy měsíců a dnů
+(`obecne.mesic.*`, `obecne.mesicKratce.*`, `obecne.den.*`, `obecne.denKratce.*`)
+ležely v pěti souborech jako pole natvrdo. Teď jsou ve slovníku jednou a berou
+si je kapacita studií, analýzy roku, přehled knih i palubovka. Schválně ve
+slovníku a ne přes `Intl`: česky z něj podle verze ICU vypadne „ledna" (2. pád)
+a nadpis „leden 2026" musí stát v prvním. **Dávka 7e si je má vzít na
+`WEEKDAY_LABELS` / `WEEKDAY_SHORT` v `lib/calendar.ts`** místo nového seznamu.
+
+**Nová `formatDatumDlouhy(jazyk, datum)` v `lib/jazyk.ts`** — datum s názvem
+měsíce do záhlaví („28. září 2026" / „28 September 2026"). Používá ho záhlaví
+technické porady na plátně.
+
+**Číselníky a formátovače dostaly NEPOVINNÝ jazyk** (vzor `nazevMeny` z dávky 4
+— bez jazyka vrací češtinu, takže PDF a pošta mluví dál česky):
+
+- `lib/timesheets.ts` — `nazevDruhuPrace()`. Tím je splacený lístek z dávky 5:
+  `WORK_TYPE_LABELS` bral i podrobný rozpad knih. **Zbývá
+  `projekty/[id]/VykazyProjektu.tsx`** — to je obrazovka dávky 1, ne 7d.
+- `lib/palubovka.ts` — `nazevStavuBudiku()` (Šlape to / Hlídat / Přidat podle
+  KÓDU), `tachometr()`, `palivomer()`, `popisMesicu()`, `koruny()`,
+  `korunyKratce()` a nová `nazevMesicePalubovky()`. `POPIS_STAVU` zůstává jako
+  český zdroj pravdy.
+- `lib/tabule.ts` — `nazevPolozky()`. Bez jazyka dál česky, protože ji bere
+  `notify()` v `tabuleServer.ts` a ta ukládá hotovou větu do databáze.
+- `prehledy/finance/format.ts` a `prehledy/knihy/format.ts` — `kc`, `kcKratce`,
+  `hodiny`, `pocetKnih`, `datum`. „mil." / „tis." jsou ve slovníku jako
+  `format.milionu` / `format.tisic`.
+
+**Formátování se přesunulo o patro níž, do serveru** — tam, kam patří podle
+lístku z dávky 4 („texty, které tečou z API naformátované"):
+
+- `lib/knihyPrehledServer.ts` — `KnihyFiltr.jazyk` a `nactiKnihyUkazatele(…, jazyk)`.
+  Popisky měsíců („září 2026", „zář 26") chodily do komponenty hotové a ta je
+  neměla jak přeložit.
+- `lib/mesicniPrehledServer.ts` — `nazevMesice(mesic, jazyk?)` a
+  `spoctiPrehledy(mesic, jazyk?)`. Tím padl i `NAZVY_DRUHU` v tom souboru;
+  druhy práce teď chodí přes `nazevDruhuPrace`. **Pošta se nemění**: bez jazyka
+  je všechno dál české, a dávka 6 zapojená není.
+
+**Lišta záložek Přehledů se překládá podle ADRESY**, ne podle českého názvu
+(`prehledy.zalozka./prehledy/kapacita`) — stejný vzor jako `nazevOdkazu` pro
+horní lištu. `label` v `prehledy/zalozky.ts` zůstává českým zdrojem pravdy;
+**nová záložka potřebuje i klíč ve slovníku**, jinak se ukáže holý klíč.
+
+**Jazyk PROPEM, ne hookem** (pravidlo 8) tam, kde komponenta stojí mimo
+`JazykProvider`: tabule ve studiu (`/tabule/[klic]` — displej bez přihlášení,
+jazyk z cookie prohlížeče na něm), nastavení a obnova hesla, formulář údajů
+z odkazu, průvodce doplněním údajů a `SpotTagger` (kreslí se jednak v kartě
+projektu, jednak na veřejném odkazu pro klienta). `Pruhy`, `Analyzy`,
+`RadekKnihy`, `Lide` a spol. ho dostávají propem ze serverové stránky.
+
+**Tři tvary čísla** jako v dávkách 7b a 7c: „{pocet} faktura / faktury /
+faktur", „{pocet} výdaj / výdaje / výdajů", „{pocet} kniha / knihy / knih",
+„{pocet} výkaz / výkazy / výkazů", „{pocet} smlouva / smlouvy / smluv".
+Každý tvar je vlastní klíč a vybírá ho krátká funkce u komponenty.
+
+**Sekce /studio zůstává anglická, a je to vidět.** `SpravaStudia` je přeložená
+přes `usePreklad()`, ale `(studio)/layout.tsx` nasazuje `jazyk: 'en'` natvrdo
+(rozhodnutí 25. 9. 2026), takže se tam ukáže anglická strana slovníku bez
+ohledu na přepínač. Česká strana je ve slovníku jako zdroj pravdy.
+
+**Česky zůstává schválně:**
+
+- **obsah ceníku studia** — náhled, PDF i text e-mailu („Valid until",
+  „Session length", výchozí zpráva). Jde ven britským klientům studia
+  (pravidlo 5); přeložilo se jen rozhraní editoru.
+- **texty, které šablona Sítí vkládá do plátna** („Natočili jsme nový spot",
+  „Dobrý hlas se nepřehraje") a výchozí název příspěvku. Ukládají se do
+  databáze — totéž rozhodnutí jako u výchozích názvů výstupů v dávce 7b.
+- **názvy a druhy událostí na tabuli**, jména herců a zvukařů. Chodí
+  z kalendáře, jsou to data (pravidlo 4).
+- **titulek a popis v `metadata`** u `/instalace` a `/pripominkovat`. Next.js je
+  skládá mimo požadavek, takže se k nim cookie s jazykem nedostane.
+- `Nový text` ve vrstvě plátna, `Nový příspěvek` jako název v databázi.
+
+**Texty z API, které komponenta nemá jak přeložit** (stejná škatulka jako
+`/api/admin/upominky` z dávky 4): `chyba` z `pristupKVideu` a hláška
+`Neznámá aplikace.` z `/instalace/qr`.
+
+**Tikající bomba, kterou dávka 7d NEODSTRANILA.** `napoveda/page.tsx` řadí
+kategorie podle `KATEGORIE_NAHORE = ['Začínáme']`, tedy porovnáním s českým
+textem. Drží to proto, že kategorie návodu je obsah z databáze a ten se
+nepřekládá — ale je to tentýž vzor jako `jeVPriprave()`. Kdyby někdo začal
+kategorie překládat, „Začínáme" tiše přestane být první. **Do dávky 7e, ke
+stavům projektů.**
+
+**Nepoužité po dávce 7d, nemazali jsme:** `POPISKY_DRUHU` v `lib/backlog.ts`
+a `MESICE` / `MESICE_ZKRATKA` v `lib/palubovka.ts` (bere je ještě
+`MESICE_ZKRATKA` v grafu, `MESICE` už ne). Stejné rozhodnutí jako
+u `POPISKY_DRUHU_ARCHIVU` v dávce 5.
+
+**Zámky v `.git` jsou pořád tam a začínají překážet.** Dávka 7b je zapsala na
+lístek; dnes bylo v `.git` 51 přejmenovaných prázdných zámků a navíc ŽIVÝ
+`index.lock`, který musel jít před commitem pryč přejmenováním — sdílená složka
+mazat nesmí. Každé `git status` si vyrobí nový a neuklidí ho. **Chce to smazat
+z počítače** (`rm .git/*.lock.*`), jinak to jednou večer spadne na tom, že se
+zámek nepodaří ani přejmenovat. Platí i `git rm --cached stubs/prisma-client.d.ts`
+(viz dávka 7a).
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

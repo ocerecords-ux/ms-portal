@@ -5,6 +5,7 @@ import { getCnbRates } from '@/lib/cnb';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget, type BudgetSettingsValues } from '@/lib/budget';
 import { durationMinutes, entryAmount } from '@/lib/timesheets';
 import { STAV_ODEVZDANO, stavJeOdevzdany } from '@/lib/stavyProjektu';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * KNIHY, ROZPOČTY A ZISK (zadání 28. 9. 2026 pro Petera: „přehled celkový, na
@@ -51,6 +52,13 @@ export type KnihyFiltr = {
   /** Id zvukaře, nebo null pro všechny. */
   kdo: string | null;
   druh: DruhFiltr;
+  /**
+   * Jazyk popisků měsíců. NEPOVINNÝ (vzor nazevMeny z dávky 4) - bez něj
+   * popisky stojí česky, takže volající mimo rozhraní (pošta, PDF) se nemění.
+   * Formátování patří sem, ne do komponenty: ta dostává hotový text a neměla
+   * by ho jak přeložit (dávka 4, „texty, které tečou z API naformátované").
+   */
+  jazyk?: Jazyk;
 };
 
 export type CastkaDruhu = { hodiny: number; castka: number };
@@ -143,36 +151,28 @@ export type KnihyPrehled = {
   zvukari: { id: string; jmeno: string }[];
 };
 
-const MESICE = [
-  'leden',
-  'únor',
-  'březen',
-  'duben',
-  'květen',
-  'červen',
-  'červenec',
-  'srpen',
-  'září',
-  'říjen',
-  'listopad',
-  'prosinec',
-];
-const MESICE_KRATCE = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
+/** Názvy měsíců jsou ve slovníku (obecne.mesic.*), ne v poli natvrdo. */
+function nazevMesice(cislo: number, jazyk: Jazyk): string {
+  return prelozit(jazyk, `obecne.mesic.${cislo}`);
+}
+function nazevMesiceKratce(cislo: number, jazyk: Jazyk): string {
+  return prelozit(jazyk, `obecne.mesicKratce.${cislo}`);
+}
 
 function klicMesice(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 /** Všechny měsíce období, i prázdné - graf nesmí přeskočit měsíc bez práce. */
-function prazdneMesice(od: Date, doData: Date, vicLet: boolean): Mesic[] {
+function prazdneMesice(od: Date, doData: Date, vicLet: boolean, jazyk: Jazyk = 'cs'): Mesic[] {
   const radky: Mesic[] = [];
   const d = new Date(Date.UTC(od.getUTCFullYear(), od.getUTCMonth(), 1));
   while (d < doData) {
     radky.push({
       klic: klicMesice(d),
       popis: vicLet
-        ? `${MESICE_KRATCE[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`
-        : MESICE_KRATCE[d.getUTCMonth()],
+        ? `${nazevMesiceKratce(d.getUTCMonth() + 1, jazyk)} ${String(d.getUTCFullYear()).slice(2)}`
+        : nazevMesiceKratce(d.getUTCMonth() + 1, jazyk),
       nataceni: 0,
       strih: 0,
       opravy: 0,
@@ -184,9 +184,9 @@ function prazdneMesice(od: Date, doData: Date, vicLet: boolean): Mesic[] {
   return radky;
 }
 
-function popisMesice(klic: string): string {
+function popisMesice(klic: string, jazyk: Jazyk = 'cs'): string {
   const [rok, mesic] = klic.split('-');
-  return `${MESICE[Number(mesic) - 1]} ${rok}`;
+  return `${nazevMesice(Number(mesic), jazyk)} ${rok}`;
 }
 
 /** Jméno bez titulů před ním - v tabulce zabíraly půl sloupce. */
@@ -301,7 +301,7 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
 
   // --- Práce za období -----------------------------------------------------
 
-  const mesice = prazdneMesice(f.od, f.do, vicLet);
+  const mesice = prazdneMesice(f.od, f.do, vicLet, f.jazyk ?? 'cs');
   const podleKlice = new Map(mesice.map((m) => [m.klic, m]));
   const souhrn = {
     hodiny: 0,
@@ -459,7 +459,7 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     const klic = klicMesice(k.odevzdanoAt);
     let m = poMesicich.get(klic);
     if (!m) {
-      m = { klic, popis: popisMesice(klic), knihy: [] };
+      m = { klic, popis: popisMesice(klic, f.jazyk ?? 'cs'), knihy: [] };
       poMesicich.set(klic, m);
     }
     m.knihy.push({
@@ -635,6 +635,8 @@ export type KnihyUkazatele = {
 export async function nactiKnihyUkazatele(
   ted: Date = new Date(),
   obdobi: VolbaObdobi = 'tento',
+  /** Jazyk popisků měsíců - NEPOVINNÝ, bez něj česky (viz KnihyFiltr.jazyk). */
+  jazyk: Jazyk = 'cs',
 ): Promise<KnihyUkazatele> {
   const rok = ted.getUTCFullYear();
   const mesic = ted.getUTCMonth();
@@ -660,7 +662,7 @@ export async function nactiKnihyUkazatele(
 
   const settings: BudgetSettingsValues = nastaveni ?? DEFAULT_BUDGET_SETTINGS;
   const idKnih = projekty.map((p) => p.caflouProjectId);
-  if (idKnih.length === 0) return prazdneUkazatele(zacatekTohoto, zacatekMinuleho);
+  if (idKnih.length === 0) return prazdneUkazatele(zacatekTohoto, zacatekMinuleho, jazyk);
 
   const [vykazy, nabidky, vydaje, udalosti] = await Promise.all([
     prisma.timesheetEntry.findMany({
@@ -943,25 +945,25 @@ export async function nactiKnihyUkazatele(
     new Set(uzavrene.map((k) => klicMesice(k.odevzdanoAt as Date))),
   )
     .sort((a, b) => b.localeCompare(a))
-    .map((klic) => ({ klic, popis: popisMesice(klic) }));
+    .map((klic) => ({ klic, popis: popisMesice(klic, jazyk) }));
 
   let vybraneKnihy: KnihaUkazatel[];
   let vybrany: MesicKnih;
   if (obdobi === 'vse') {
     vybraneKnihy = uzavrene;
-    vybrany = doMesice('vse', 'Všechna uzavřená', uzavrene);
+    vybrany = doMesice('vse', prelozit(jazyk, 'knihy.vsechnaUzavrena'), uzavrene);
   } else if (obdobi === 'minuly') {
     vybraneKnihy = minuleKnihy;
-    vybrany = doMesice(klicMesice(zacatekMinuleho), popisMesice(klicMesice(zacatekMinuleho)), minuleKnihy);
+    vybrany = doMesice(klicMesice(zacatekMinuleho), popisMesice(klicMesice(zacatekMinuleho), jazyk), minuleKnihy);
   } else if (/^\d{4}-\d{2}$/.test(obdobi)) {
     const [r, m] = obdobi.split('-').map(Number);
     const od = new Date(Date.UTC(r, m - 1, 1));
     const doKdy = new Date(Date.UTC(r, m, 1));
     vybraneKnihy = vMesici(od, doKdy);
-    vybrany = doMesice(obdobi, popisMesice(obdobi), vybraneKnihy);
+    vybrany = doMesice(obdobi, popisMesice(obdobi, jazyk), vybraneKnihy);
   } else {
     vybraneKnihy = tentoKnihy;
-    vybrany = doMesice(klicMesice(zacatekTohoto), popisMesice(klicMesice(zacatekTohoto)), tentoKnihy);
+    vybrany = doMesice(klicMesice(zacatekTohoto), popisMesice(klicMesice(zacatekTohoto), jazyk), tentoKnihy);
   }
 
   return {
@@ -978,10 +980,10 @@ export async function nactiKnihyUkazatele(
       preteceniHodin: hodinCelkem - rozpocetHodinCelkem,
       prekrocenych: rozdelane.filter((k) => (k.preteceniProcent ?? 0) > 0).length,
     },
-    tento: doMesice(klicMesice(zacatekTohoto), popisMesice(klicMesice(zacatekTohoto)), tentoKnihy),
+    tento: doMesice(klicMesice(zacatekTohoto), popisMesice(klicMesice(zacatekTohoto), jazyk), tentoKnihy),
     minuly: doMesice(
       klicMesice(zacatekMinuleho),
-      popisMesice(klicMesice(zacatekMinuleho)),
+      popisMesice(klicMesice(zacatekMinuleho), jazyk),
       minuleKnihy,
     ),
     knihy: [...vybraneKnihy].sort(
@@ -990,10 +992,10 @@ export async function nactiKnihyUkazatele(
   };
 }
 
-function prazdneUkazatele(tento: Date, minuly: Date): KnihyUkazatele {
+function prazdneUkazatele(tento: Date, minuly: Date, jazyk: Jazyk = 'cs'): KnihyUkazatele {
   const prazdny = (d: Date): MesicKnih => ({
     klic: klicMesice(d),
-    popis: popisMesice(klicMesice(d)),
+    popis: popisMesice(klicMesice(d), jazyk),
     knih: 0,
     zisk: 0,
     prumernyZisk: null,

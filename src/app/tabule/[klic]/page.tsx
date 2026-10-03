@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nactiTabuli, studioPodleKlice } from '@/lib/tabuleServer';
 import { Tabule } from './Tabule';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * TABULE VE STUDIU (zadání 21. 9. 2026) - stránka pro dotykový displej ve
@@ -25,5 +26,7 @@ export default async function TabulePage({ params }: { params: { klic: string } 
    */
   const session = await getServerSession(authOptions);
   const zpetOdkaz = session && session.user.role !== 'TABULE' ? '/projekty' : null;
-  return <Tabule klic={params.klic} pocatecni={data} zpetOdkaz={zpetOdkaz} />;
+  // Jazyk PROPEM: tabule stoji mimo portalovy layout, takze JazykProvider
+  // nema kdo nasadit (pravidlo 8). Bere se z cookie prohlizece na displeji.
+  return <Tabule klic={params.klic} pocatecni={data} zpetOdkaz={zpetOdkaz} jazyk={nactiJazyk()} />;
 }

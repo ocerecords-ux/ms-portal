@@ -6,6 +6,8 @@ import { canSee } from '@/lib/menu';
 import { hodiny, nactiKapacituRoku, procenta } from '@/lib/kapacitaServer';
 import { analyzaRoku } from '@/lib/kapacitaAnalyzy';
 import { Analyzy } from './Analyzy';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitKolem, prelozitS } from '@/lib/jazyk';
 
 /**
  * KAPACITA STUDIÍ (zadání 20. 9. 2026: „potřebuji to vidět po měsících, ale
@@ -23,22 +25,6 @@ import { Analyzy } from './Analyzy';
  */
 export const dynamic = 'force-dynamic';
 
-const MESICE = [
-  'leden',
-  'únor',
-  'březen',
-  'duben',
-  'květen',
-  'červen',
-  'červenec',
-  'srpen',
-  'září',
-  'říjen',
-  'listopad',
-  'prosinec',
-];
-const MESICE_KRATCE = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
-const DNY_KRATCE = ['ne', 'po', 'út', 'st', 'čt', 'pá', 'so'];
 
 /** Barva obdélníčku podle toho, jak je den zaplněný. */
 function odstin(p: number | null): React.CSSProperties {
@@ -58,6 +44,12 @@ export default async function KapacitaPage({
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/login');
   if (!canSee('/prehledy', session.user.role)) redirect('/projekty');
+
+  const jazyk = nactiJazyk();
+  // Nazvy mesicu a dnu jsou ve slovniku (obecne.mesic.*), ne v poli natvrdo.
+  const mesicNazev = (m: number) => prelozit(jazyk, `obecne.mesic.${m}`);
+  const mesicKratce = (m: number) => prelozit(jazyk, `obecne.mesicKratce.${m}`);
+  const denKratce = (d: number) => prelozit(jazyk, `obecne.denKratce.${d}`);
 
   const ted = new Date();
   const rok = Number(searchParams?.rok) || ted.getUTCFullYear();
@@ -96,9 +88,16 @@ export default async function KapacitaPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <p className="text-muted font-body m-0 max-w-2xl">
-          Celý měsíc na jedné obrazovce: řádek je den, sloupec studio. Čím tmavší obdélníček, tím víc{' '}
-          <b>natáčení</b> proti otevírací době studia — prázdné místo je díra. Střih, casting ani blokace se
-          nepočítají; hodiny ukáže najetí myší.
+          {(() => {
+            const [pred, za] = prelozitKolem(jazyk, 'kapacita.uvodPredTucnym', 'tucne');
+            return (
+              <>
+                {pred}
+                <b>{prelozit(jazyk, 'kapacita.natacenia')}</b>
+                {za}
+              </>
+            );
+          })()}
         </p>
         <div className="flex items-center gap-1">
           <Link
@@ -108,7 +107,7 @@ export default async function KapacitaPage({
             ‹
           </Link>
           <span className="rounded-pill bg-brand-purple text-white px-4 py-1.5 text-sm font-heading font-semibold">
-            {MESICE[mesic - 1]} {rok}
+            {prelozitS(jazyk, 'kapacita.mesicRok', { mesic: mesicNazev(mesic), rok })}
           </span>
           <Link
             href={dalsi}
@@ -131,12 +130,16 @@ export default async function KapacitaPage({
             <Link
               key={m.mesic}
               href={odkaz(rok, m.mesic)}
-              title={`${MESICE[m.mesic - 1]} ${rok}: ${hodiny(m.natoceno)} h natáčení`}
+              title={prelozitS(jazyk, 'kapacita.bublinaMesice', {
+                mesic: mesicNazev(m.mesic),
+                rok,
+                hodin: hodiny(m.natoceno),
+              })}
               className={`rounded-lg px-2.5 py-1 text-xs font-heading no-underline border tabular-nums ${
                 vybrany ? 'border-brand-purple text-ink' : 'border-line text-muted hover:text-ink'
               }`}
             >
-              {MESICE_KRATCE[m.mesic - 1]} <span className="opacity-70">{p === null ? '—' : `${p} %`}</span>
+              {mesicKratce(m.mesic)} <span className="opacity-70">{p === null ? '—' : `${p} %`}</span>
             </Link>
           );
         })}
@@ -149,11 +152,14 @@ export default async function KapacitaPage({
       <div className="bg-surface rounded-card border border-line shadow-sm p-4">
         <div className="flex items-center gap-3 mb-3 flex-wrap">
           <span className="font-heading font-semibold text-ink">
-            {MESICE[mesic - 1]} {rok}
+            {prelozitS(jazyk, 'kapacita.mesicRok', { mesic: mesicNazev(mesic), rok })}
           </span>
           <span className="text-sm font-body text-muted tabular-nums">
-            obsazenost {pMesic === null ? '—' : `${pMesic} %`} · {hodiny(otevreny.natoceno)} z{' '}
-            {hodiny(otevreny.kapacitaMinut)} h
+            {prelozitS(jazyk, 'kapacita.obsazenost', {
+              procenta: pMesic === null ? '—' : `${pMesic} %`,
+              natoceno: hodiny(otevreny.natoceno),
+              kapacita: hodiny(otevreny.kapacitaMinut),
+            })}
           </span>
         </div>
 
@@ -171,7 +177,8 @@ export default async function KapacitaPage({
                       {s.nazev}
                     </span>
                     <span className="block text-[11px] font-body text-muted tabular-nums">
-                      {p === null ? '—' : `${p} %`} · {s.dnuSNatacenim} dnů
+                      {p === null ? '—' : `${p} %`} ·{' '}
+                      {prelozitS(jazyk, 'kapacita.dnu', { pocet: s.dnuSNatacenim })}
                     </span>
                     <span className="flex gap-1 mt-1">
                       {s.frekvence.map((f) => (
@@ -204,7 +211,7 @@ export default async function KapacitaPage({
                         dnes ? 'text-brand-purple font-bold' : d.vikend ? 'text-muted' : 'text-ink'
                       }`}
                     >
-                      {DNY_KRATCE[d.denVTydnu]} {d.den}.
+                      {denKratce(d.denVTydnu)} {d.den}.
                     </span>
                     {d.bunky.map((b, i) => {
                       const studio = prehled.studia[i];
@@ -225,17 +232,26 @@ export default async function KapacitaPage({
                                   c.kapacitaMinut === 0 && c.natoceno === 0 ? 'opacity-30' : ''
                                 }`}
                                 style={odstin(p)}
-                                title={`${DNY_KRATCE[d.denVTydnu]} ${d.den}. ${MESICE[mesic - 1]} · ${studio.nazev} ${
-                                  okno.popis
-                                }: ${
-                                  c.natoceno > 0
-                                    ? `${hodiny(c.natoceno)} h natáčení (${c.pocet}×)${
-                                        c.kapacitaMinut > 0 ? '' : ', mimo otevírací dobu'
-                                      }`
-                                    : c.kapacitaMinut > 0
-                                      ? 'volno'
-                                      : 'zavřeno / jen po domluvě'
-                                }`}
+                                title={prelozitS(jazyk, 'kapacita.bublinaBunky', {
+                                  den: denKratce(d.denVTydnu),
+                                  cislo: d.den,
+                                  mesic: mesicNazev(mesic),
+                                  studio: studio.nazev,
+                                  okno: okno.popis,
+                                  stav:
+                                    c.natoceno > 0
+                                      ? prelozitS(
+                                          jazyk,
+                                          c.kapacitaMinut > 0
+                                            ? 'kapacita.stavNatoceno'
+                                            : 'kapacita.stavNatocenoMimo',
+                                          { hodin: hodiny(c.natoceno), pocet: c.pocet },
+                                        )
+                                      : prelozit(
+                                          jazyk,
+                                          c.kapacitaMinut > 0 ? 'kapacita.stavVolno' : 'kapacita.stavZavreno',
+                                        ),
+                                })}
                               />
                             );
                           })}
@@ -251,28 +267,26 @@ export default async function KapacitaPage({
       </div>
 
       <div className="flex items-center gap-3 flex-wrap text-xs font-body text-muted">
-        <span>Zaplněnost dne:</span>
+        <span>{prelozit(jazyk, 'kapacita.zaplnenostDne')}</span>
         {[
-          { popis: 'volno', p: 0 },
-          { popis: 'do 20 %', p: 10 },
-          { popis: 'do 45 %', p: 30 },
-          { popis: 'do 70 %', p: 50 },
-          { popis: 'do 95 %', p: 80 },
-          { popis: 'plno', p: 100 },
+          { klic: 'kapacita.legendaVolno', p: 0 },
+          { klic: 'kapacita.legendaDo20', p: 10 },
+          { klic: 'kapacita.legendaDo45', p: 30 },
+          { klic: 'kapacita.legendaDo70', p: 50 },
+          { klic: 'kapacita.legendaDo95', p: 80 },
+          { klic: 'kapacita.legendaPlno', p: 100 },
         ].map((l) => (
-          <span key={l.popis} className="inline-flex items-center gap-1.5">
+          <span key={l.klic} className="inline-flex items-center gap-1.5">
             <span className="w-6 h-3 rounded-[3px] border border-line" style={odstin(l.p)} aria-hidden />
-            {l.popis}
+            {prelozit(jazyk, l.klic)}
           </span>
         ))}
-        <span className="ml-auto max-w-2xl text-right">
-          Kapacita je otevírací doba studia (Administrace → Studia). Dny „jen po domluvě" (obvykle víkendy) kapacitu
-          nemají — natáčení v nich je vidět, ale do procent se nepočítá, proto může měsíc přesáhnout 100 %.
-        </span>
+        <span className="ml-auto max-w-2xl text-right">{prelozit(jazyk, 'kapacita.poznamkaKapacity')}</span>
       </div>
 
       {/* Grafy a data ke stažení - pod mřížkou (zadání 20. 9. 2026). */}
       <Analyzy
+        jazyk={jazyk}
         analyza={analyza}
         studia={prehled.studia.map((s) => ({ id: s.id, nazev: s.nazev, barva: s.barva }))}
         rok={rok}

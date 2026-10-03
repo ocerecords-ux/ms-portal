@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { najdiPlatnou, poleProDruh } from '@/lib/pozvankaUdaju';
 import { FormularUdaju } from './FormularUdaju';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * VEŘEJNÝ FORMULÁŘ NA VYPLNĚNÍ ÚDAJŮ (zadání 16. 9. 2026: „posílat odkaz, na
@@ -18,14 +20,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function StrankaUdaju({ params }: { params: { token: string } }) {
   const pozvanka = await najdiPlatnou(params.token);
+  const jazyk = nactiJazyk();
 
   if (!pozvanka) {
     return (
       <Ramecek>
-        <h1 className="font-display text-3xl text-ink m-0">Odkaz už neplatí</h1>
-        <p className="text-muted font-body mt-3 m-0">
-          Buď jste ho už vyplnil, nebo mu vypršela platnost. Napište nám prosím a pošleme vám nový.
-        </p>
+        <h1 className="font-display text-3xl text-ink m-0">{prelozit(jazyk, 'udaje.odkazNeplati')}</h1>
+        <p className="text-muted font-body mt-3 m-0">{prelozit(jazyk, 'udaje.odkazNeplatiText')}</p>
       </Ramecek>
     );
   }
@@ -33,10 +34,8 @@ export default async function StrankaUdaju({ params }: { params: { token: string
   if (pozvanka.stav === 'VYPLNENA' || pozvanka.stav === 'HOTOVA') {
     return (
       <Ramecek>
-        <h1 className="font-display text-3xl text-ink m-0">Máme to, děkujeme</h1>
-        <p className="text-muted font-body mt-3 m-0">
-          Údaje jsme od vás dostali. Kdyby se něco změnilo, stačí nám napsat.
-        </p>
+        <h1 className="font-display text-3xl text-ink m-0">{prelozit(jazyk, 'udaje.mameTo')}</h1>
+        <p className="text-muted font-body mt-3 m-0">{prelozit(jazyk, 'udaje.mameToText')}</p>
       </Ramecek>
     );
   }
@@ -52,6 +51,7 @@ export default async function StrankaUdaju({ params }: { params: { token: string
         pole={poleProDruh(pozvanka.druh as 'HEREC' | 'FIRMA')}
         vychozi={znameUdaje}
         poznamka={pozvanka.poznamka}
+        jazyk={jazyk}
       />
     </Ramecek>
   );

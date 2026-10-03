@@ -17,6 +17,7 @@ import {
   type Vrstva,
 } from '@/lib/socialni';
 import type { ObrazekRadek, PrispevekDetail } from '@/lib/socialniServer';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * EDITOR PŘÍSPĚVKU (zadání 27. 9. 2026: „aby tam bylo něco jako Canva",
@@ -46,6 +47,7 @@ export function Editor({
   prispevek: PrispevekDetail;
   obrazkyVychozi: ObrazekRadek[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [nazev, setNazev] = useState(prispevek.nazev);
   const [format, setFormat] = useState(prispevek.format);
@@ -199,6 +201,7 @@ export function Editor({
       y: 42,
       sirka: 80,
       vyska: 16,
+      // Text se UKLADA do platna, tedy do databaze - zustava cesky (pravidlo 4).
       text: 'Nový text',
       velikost: 5,
       pismo: 'display',
@@ -270,7 +273,7 @@ export function Editor({
       data.append('vyska', String(zmenseny.vyska));
       const res = await fetch('/api/site/obrazky', { method: 'POST', body: data });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || 'Obrázek se nepodařilo nahrát.');
+      if (!res.ok) throw new Error(telo.error || t('siteEditor.obrazekNenahran'));
       const novy = telo.obrazek as ObrazekRadek;
       setObrazky((p) => [novy, ...p]);
       if (kamPozadi) {
@@ -282,7 +285,7 @@ export function Editor({
         pridejObrazek(novy.id);
       }
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Obrázek se nepodařilo nahrát.');
+      setChyba(err instanceof Error ? err.message : t('siteEditor.obrazekNenahran'));
     }
   }
 
@@ -298,16 +301,16 @@ export function Editor({
           body: JSON.stringify({ nazev, format, platno, popisek, hashtagy, ...dalsi }),
         });
         const telo = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(telo.error || 'Uložení se nepovedlo.');
+        if (!res.ok) throw new Error(telo.error || t('siteEditor.neulozeno'));
         setUlozeno(true);
         router.refresh();
       } catch (err) {
-        setChyba(err instanceof Error ? err.message : 'Uložení se nepovedlo.');
+        setChyba(err instanceof Error ? err.message : t('siteEditor.neulozeno'));
       } finally {
         setUklada(false);
       }
     },
-    [prispevek.id, nazev, format, platno, popisek, hashtagy, router],
+    [prispevek.id, nazev, format, platno, popisek, hashtagy, router, t],
   );
 
   function stahni() {
@@ -319,13 +322,13 @@ export function Editor({
       odkaz.download = nazevSouboru(nazev, format);
       odkaz.click();
     } catch {
-      setChyba('Obrázek se nepodařilo vyexportovat.');
+      setChyba(t('siteEditor.exportNepovedl'));
     }
   }
 
   async function zeptejSeBruna() {
     if (oCem.trim().length < 3) {
-      setChyba('Napište aspoň větu o tom, o čem příspěvek je.');
+      setChyba(t('siteEditor.napisteVetu'));
       return;
     }
     setBrunoPracuje(true);
@@ -341,19 +344,19 @@ export function Editor({
         body: JSON.stringify({ sit: f.sit, oCem, textyNaPlatne }),
       });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || 'Bruno teď neodpovídá.');
+      if (!res.ok) throw new Error(telo.error || t('siteEditor.brunoNeodpovida'));
       setPopisek(telo.popisek || '');
       setHashtagy(telo.hashtagy || '');
       setUlozeno(false);
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Bruno teď neodpovídá.');
+      setChyba(err instanceof Error ? err.message : t('siteEditor.brunoNeodpovida'));
     } finally {
       setBrunoPracuje(false);
     }
   }
 
   async function smazPrispevek() {
-    if (!window.confirm('Smazat celý příspěvek?')) return;
+    if (!window.confirm(t('siteEditor.potvrdSmazani'))) return;
     const res = await fetch(`/api/site/prispevky/${prispevek.id}`, { method: 'DELETE' });
     if (res.ok) router.push('/site');
   }
@@ -414,7 +417,7 @@ export function Editor({
       {/* Hlavička */}
       <div className="flex items-center gap-3 flex-wrap">
         <Link href="/site" className="text-sm font-heading text-muted no-underline hover:text-brand-purple">
-          ← Sítě
+          {t('site.zpetNaSite')}
         </Link>
         <input
           value={nazev}
@@ -422,11 +425,11 @@ export function Editor({
             setNazev(e.target.value);
             setUlozeno(false);
           }}
-          aria-label="Název příspěvku"
+          aria-label={t('siteEditor.nazevPrispevku')}
           className="flex-1 min-w-[160px] max-w-[320px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-display text-xl outline-none hover:border-line focus:border-brand-purple focus:bg-field"
         />
         <span className="text-xs font-body text-muted">
-          {ulozeno ? 'Uloženo' : 'Neuložené změny'}
+          {t(ulozeno ? 'siteEditor.ulozeno' : 'siteEditor.neulozeneZmeny')}
         </span>
         <button
           type="button"
@@ -434,14 +437,14 @@ export function Editor({
           disabled={uklada}
           className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
         >
-          {uklada ? 'Ukládám…' : 'Uložit'}
+          {t(uklada ? 'siteEditor.ukladam' : 'siteEditor.ulozit')}
         </button>
         <button
           type="button"
           onClick={stahni}
           className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-4 py-1.5 hover:bg-brand-purpleDeep transition-colors cursor-pointer"
         >
-          Stáhnout PNG
+          {t('siteEditor.stahnoutPng')}
         </button>
       </div>
 
@@ -456,13 +459,13 @@ export function Editor({
         <div className="flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <button type="button" onClick={pridejText} className={`${pole} cursor-pointer hover:border-brand-purple`}>
-              + Text
+              {t('siteEditor.pridatText')}
             </button>
             <button type="button" onClick={pridejTvar} className={`${pole} cursor-pointer hover:border-brand-purple`}>
-              + Tvar
+              {t('siteEditor.pridatTvar')}
             </button>
             <label className={`${pole} cursor-pointer hover:border-brand-purple`}>
-              + Obrázek
+              {t('siteEditor.pridatObrazek')}
               <input
                 type="file"
                 accept="image/*"
@@ -481,11 +484,16 @@ export function Editor({
                 setUlozeno(false);
               }}
               className={pole}
-              aria-label="Formát"
+              aria-label={t('siteEditor.format')}
             >
               {FORMATY.map((x) => (
                 <option key={x.klic} value={x.klic}>
-                  {x.sit === 'INSTAGRAM' ? 'IG' : 'LI'} · {x.nazev} ({x.sirka}×{x.vyska})
+                  {t('siteEditor.formatVolba', {
+                    sit: x.sit === 'INSTAGRAM' ? 'IG' : 'LI',
+                    nazev: t(`site.format.${x.klic}.nazev`),
+                    sirka: x.sirka,
+                    vyska: x.vyska,
+                  })}
                 </option>
               ))}
             </select>
@@ -527,7 +535,7 @@ export function Editor({
                 {vybrano === v.id && !v.zamceno && (
                   <span
                     onPointerDown={(e) => zacniVelikost(e, v)}
-                    title="Změnit velikost"
+                    title={t('siteEditor.zmenitVelikost')}
                     className="absolute -right-1.5 -bottom-1.5 w-3.5 h-3.5 rounded-sm bg-brand-purple border-2 border-white cursor-nwse-resize"
                   />
                 )}
@@ -537,7 +545,7 @@ export function Editor({
           </div>
 
           <span className="text-xs font-body text-muted text-center">
-            Táhněte myší, rohem měníte velikost. Klávesa Delete smaže vybranou vrstvu, Escape zruší výběr.
+            {t('siteEditor.navodKTazeni')}
           </span>
         </div>
 
@@ -554,7 +562,7 @@ export function Editor({
                   panel === k ? 'border-brand-purple bg-brand-purple/10 text-ink' : 'border-line text-muted hover:text-ink'
                 }`}
               >
-                {k === 'navrh' ? 'Návrh' : 'Popisek'}
+                {t(k === 'navrh' ? 'siteEditor.navrh' : 'siteEditor.popisek')}
               </button>
             ))}
           </div>
@@ -580,9 +588,9 @@ export function Editor({
 
               {/* Vrstvy */}
               <div className="flex flex-col gap-1.5">
-                <span className={popisekPole}>Vrstvy (odspodu nahoru)</span>
+                <span className={popisekPole}>{t('siteEditor.vrstvy')}</span>
                 {platno.vrstvy.length === 0 && (
-                  <span className="text-sm font-body text-muted">Zatím žádná — přidejte text nebo obrázek.</span>
+                  <span className="text-sm font-body text-muted">{t('siteEditor.zadnaVrstva')}</span>
                 )}
                 <ul className="list-none p-0 m-0 flex flex-col gap-1">
                   {[...platno.vrstvy].reverse().map((v) => (
@@ -596,7 +604,9 @@ export function Editor({
                             : 'border-line text-muted hover:text-ink'
                         }`}
                       >
-                        {v.druh === 'text' ? v.text.split('\n')[0] || 'Text' : v.druh === 'obrazek' ? 'Obrázek' : 'Tvar'}
+                        {v.druh === 'text'
+                          ? v.text.split('\n')[0] || t('siteEditor.vrstvaText')
+                          : t(v.druh === 'obrazek' ? 'siteEditor.vrstvaObrazek' : 'siteEditor.vrstvaTvar')}
                       </button>
                     </li>
                   ))}
@@ -605,22 +615,27 @@ export function Editor({
 
               {/* Šablony */}
               <div className="flex flex-col gap-1.5">
-                <span className={popisekPole}>Začít znovu ze šablony</span>
+                <span className={popisekPole}>{t('siteEditor.zacitZnovu')}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {SABLONY.filter((s) => !s.formaty || s.formaty.includes(format)).map((s) => (
                     <button
                       key={s.klic}
                       type="button"
                       onClick={() => {
-                        if (!window.confirm(`Nahradit současný návrh šablonou „${s.nazev}"?`)) return;
+                        if (
+                          !window.confirm(
+                            t('siteEditor.potvrdNahrazeni', { sablona: t(`site.sablona.${s.klic}.nazev`) }),
+                          )
+                        )
+                          return;
                         setPlatno(s.platno());
                         setVybrano(null);
                         setUlozeno(false);
                       }}
-                      title={s.popis}
+                      title={t(`site.sablona.${s.klic}.popis`)}
                       className="rounded-pill border border-line text-muted px-2.5 py-1 text-xs font-heading hover:text-brand-purple hover:border-brand-purple transition-colors"
                     >
-                      {s.nazev}
+                      {t(`site.sablona.${s.klic}.nazev`)}
                     </button>
                   ))}
                 </div>
@@ -631,18 +646,18 @@ export function Editor({
                 onClick={() => void smazPrispevek()}
                 className="self-start text-xs font-heading text-muted hover:text-danger transition-colors bg-transparent border-0 cursor-pointer p-0"
               >
-                Smazat příspěvek
+                {t('siteEditor.smazatPrispevek')}
               </button>
             </div>
           ) : (
             <div className="rounded-card border border-line bg-surface p-4 flex flex-col gap-3">
               <label className="flex flex-col gap-1">
-                <span className={popisekPole}>O čem příspěvek je</span>
+                <span className={popisekPole}>{t('siteEditor.oCemJe')}</span>
                 <textarea
                   value={oCem}
                   onChange={(e) => setOCem(e.target.value)}
                   rows={3}
-                  placeholder="Natočili jsme spot pro Strabag, mluví v něm patnáct herců…"
+                  placeholder={t('siteEditor.oCemJePlaceholder')}
                   className={`${pole} font-body resize-y`}
                 />
               </label>
@@ -652,11 +667,11 @@ export function Editor({
                 disabled={brunoPracuje}
                 className="self-start rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
               >
-                {brunoPracuje ? 'Bruno píše…' : 'Nechat napsat Brunem'}
+                {t(brunoPracuje ? 'siteEditor.brunoPise' : 'siteEditor.nechatNapsat')}
               </button>
 
               <label className="flex flex-col gap-1">
-                <span className={popisekPole}>Popisek</span>
+                <span className={popisekPole}>{t('siteEditor.popisek')}</span>
                 <textarea
                   value={popisek}
                   onChange={(e) => {
@@ -668,7 +683,7 @@ export function Editor({
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className={popisekPole}>Hashtagy</span>
+                <span className={popisekPole}>{t('siteEditor.hashtagy')}</span>
                 <textarea
                   value={hashtagy}
                   onChange={(e) => {
@@ -684,11 +699,11 @@ export function Editor({
                 onClick={() => void navigator.clipboard.writeText([popisek, hashtagy].filter(Boolean).join('\n\n'))}
                 className="self-start text-xs font-heading text-brand-purple bg-transparent border-0 cursor-pointer p-0 hover:underline"
               >
-                Zkopírovat popisek i s hashtagy
+                {t('siteEditor.zkopirovat')}
               </button>
 
               <label className="flex flex-col gap-1 pt-2 border-t border-line">
-                <span className={popisekPole}>Stav</span>
+                <span className={popisekPole}>{t('siteEditor.stav')}</span>
                 <select
                   value={stav}
                   onChange={(e) => {
@@ -697,9 +712,9 @@ export function Editor({
                   }}
                   className={pole}
                 >
-                  <option value="KONCEPT">Rozpracováno</option>
-                  <option value="HOTOVO">Hotovo</option>
-                  <option value="PUBLIKOVANO">Publikováno</option>
+                  <option value="KONCEPT">{t('site.stav.KONCEPT')}</option>
+                  <option value="HOTOVO">{t('site.stav.HOTOVO')}</option>
+                  <option value="PUBLIKOVANO">{t('site.stav.PUBLIKOVANO')}</option>
                 </select>
               </label>
             </div>
@@ -725,16 +740,23 @@ function VlastnostiVrstvy({
   onPosun: (smer: -1 | 1) => void;
   obrazky: ObrazekRadek[];
 }) {
+  const t = usePreklad();
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <span className={popisekPole}>
-          {vrstva.druh === 'text' ? 'Text' : vrstva.druh === 'obrazek' ? 'Obrázek' : 'Tvar'}
+          {t(
+            vrstva.druh === 'text'
+              ? 'siteEditor.vrstvaText'
+              : vrstva.druh === 'obrazek'
+                ? 'siteEditor.vrstvaObrazek'
+                : 'siteEditor.vrstvaTvar',
+          )}
         </span>
         <button
           type="button"
           onClick={() => onPosun(1)}
-          title="Dopředu"
+          title={t('siteEditor.dopredu')}
           className="ml-auto text-xs font-heading text-muted hover:text-brand-purple bg-transparent border-0 cursor-pointer"
         >
           ↑
@@ -742,7 +764,7 @@ function VlastnostiVrstvy({
         <button
           type="button"
           onClick={() => onPosun(-1)}
-          title="Dozadu"
+          title={t('siteEditor.dozadu')}
           className="text-xs font-heading text-muted hover:text-brand-purple bg-transparent border-0 cursor-pointer"
         >
           ↓
@@ -750,7 +772,7 @@ function VlastnostiVrstvy({
         <button
           type="button"
           onClick={onSmaz}
-          title="Smazat vrstvu"
+          title={t('siteEditor.smazatVrstvu')}
           className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer"
         >
           ×
@@ -767,7 +789,7 @@ function VlastnostiVrstvy({
           />
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1">
-              <span className={popisekPole}>Velikost</span>
+              <span className={popisekPole}>{t('siteEditor.velikost')}</span>
               <input
                 type="number"
                 step="0.2"
@@ -777,7 +799,7 @@ function VlastnostiVrstvy({
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className={popisekPole}>Písmo</span>
+              <span className={popisekPole}>{t('siteEditor.pismo')}</span>
               <select
                 value={vrstva.pismo}
                 onChange={(e) => onZmena({ pismo: e.target.value } as Partial<Vrstva>)}
@@ -785,13 +807,13 @@ function VlastnostiVrstvy({
               >
                 {PISMA.map((p) => (
                   <option key={p.klic} value={p.klic}>
-                    {p.nazev}
+                    {t(`site.pismo.${p.klic}`)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className={popisekPole}>Barva</span>
+              <span className={popisekPole}>{t('siteEditor.barva')}</span>
               <input
                 type="color"
                 value={vrstva.barva}
@@ -800,15 +822,15 @@ function VlastnostiVrstvy({
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className={popisekPole}>Zarovnání</span>
+              <span className={popisekPole}>{t('siteEditor.zarovnani')}</span>
               <select
                 value={vrstva.zarovnani}
                 onChange={(e) => onZmena({ zarovnani: e.target.value as 'left' } as Partial<Vrstva>)}
                 className={pole}
               >
-                <option value="left">Vlevo</option>
-                <option value="center">Na střed</option>
-                <option value="right">Vpravo</option>
+                <option value="left">{t('siteEditor.vlevo')}</option>
+                <option value="center">{t('siteEditor.naStred')}</option>
+                <option value="right">{t('siteEditor.vpravo')}</option>
               </select>
             </label>
           </div>
@@ -819,7 +841,7 @@ function VlastnostiVrstvy({
                 checked={vrstva.tucne}
                 onChange={(e) => onZmena({ tucne: e.target.checked } as Partial<Vrstva>)}
               />
-              Tučně
+              {t('siteEditor.tucne')}
             </label>
             <label className="flex items-center gap-1.5 text-sm font-body text-ink">
               <input
@@ -827,7 +849,7 @@ function VlastnostiVrstvy({
                 checked={Boolean(vrstva.velkaPismena)}
                 onChange={(e) => onZmena({ velkaPismena: e.target.checked } as Partial<Vrstva>)}
               />
-              VERZÁLKY
+              {t('siteEditor.verzalky')}
             </label>
           </div>
         </>
@@ -836,7 +858,7 @@ function VlastnostiVrstvy({
       {vrstva.druh === 'tvar' && (
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1">
-            <span className={popisekPole}>Barva</span>
+            <span className={popisekPole}>{t('siteEditor.barva')}</span>
             <input
               type="color"
               value={vrstva.barva}
@@ -845,7 +867,7 @@ function VlastnostiVrstvy({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className={popisekPole}>Zaoblení</span>
+            <span className={popisekPole}>{t('siteEditor.zaobleni')}</span>
             <input
               type="number"
               step="0.5"
@@ -855,7 +877,7 @@ function VlastnostiVrstvy({
             />
           </label>
           <label className="flex flex-col gap-1 col-span-2">
-            <span className={popisekPole}>Průhlednost</span>
+            <span className={popisekPole}>{t('siteEditor.pruhlednost')}</span>
             <input
               type="range"
               min="0"
@@ -871,18 +893,18 @@ function VlastnostiVrstvy({
       {vrstva.druh === 'obrazek' && (
         <div className="flex flex-col gap-2">
           <label className="flex flex-col gap-1">
-            <span className={popisekPole}>Výplň rámečku</span>
+            <span className={popisekPole}>{t('siteEditor.vyplnRamecku')}</span>
             <select
               value={vrstva.vyplneni}
               onChange={(e) => onZmena({ vyplneni: e.target.value as 'cover' } as Partial<Vrstva>)}
               className={pole}
             >
-              <option value="cover">Vyplnit a oříznout</option>
-              <option value="contain">Vejít se celý</option>
+              <option value="cover">{t('siteEditor.vyplnitAOriznout')}</option>
+              <option value="contain">{t('siteEditor.vejitSeCely')}</option>
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            <span className={popisekPole}>Vyměnit za</span>
+            <span className={popisekPole}>{t('siteEditor.vymenitZa')}</span>
             <select
               value=""
               onChange={(e) => {
@@ -890,7 +912,7 @@ function VlastnostiVrstvy({
               }}
               className={pole}
             >
-              <option value="">— vyberte z nahraných —</option>
+              <option value="">{t('siteEditor.vyberteZNahranych')}</option>
               {obrazky.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.nazev}
@@ -913,10 +935,11 @@ function Pozadi({
   onZmena: (p: Platno['pozadi']) => void;
   onObrazek: (soubor: File) => void;
 }) {
+  const t = usePreklad();
   const p = platno.pozadi;
   return (
     <div className="flex flex-col gap-3">
-      <span className={popisekPole}>Pozadí (nic není vybráno)</span>
+      <span className={popisekPole}>{t('siteEditor.pozadiNicVybrano')}</span>
       <div className="flex gap-1.5">
         {(['barva', 'prechod', 'obrazek'] as const).map((d) => (
           <button
@@ -933,7 +956,13 @@ function Pozadi({
               p.druh === d ? 'border-brand-purple bg-brand-purple/10 text-ink' : 'border-line text-muted hover:text-ink'
             }`}
           >
-            {d === 'barva' ? 'Barva' : d === 'prechod' ? 'Přechod' : 'Fotka'}
+            {t(
+              d === 'barva'
+                ? 'siteEditor.barva'
+                : d === 'prechod'
+                  ? 'siteEditor.prechod'
+                  : 'siteEditor.fotka',
+            )}
           </button>
         ))}
       </div>
@@ -950,7 +979,7 @@ function Pozadi({
       {p.druh === 'prechod' && (
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1">
-            <span className={popisekPole}>Od</span>
+            <span className={popisekPole}>{t('siteEditor.od')}</span>
             <input
               type="color"
               value={p.od}
@@ -959,7 +988,7 @@ function Pozadi({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className={popisekPole}>Do</span>
+            <span className={popisekPole}>{t('siteEditor.do')}</span>
             <input
               type="color"
               value={p.do}
@@ -968,7 +997,7 @@ function Pozadi({
             />
           </label>
           <label className="flex flex-col gap-1 col-span-2">
-            <span className={popisekPole}>Úhel</span>
+            <span className={popisekPole}>{t('siteEditor.uhel')}</span>
             <input
               type="range"
               min="0"
@@ -983,7 +1012,7 @@ function Pozadi({
       {p.druh === 'obrazek' && (
         <div className="flex flex-col gap-2">
           <label className={`${pole} cursor-pointer text-center hover:border-brand-purple`}>
-            Nahrát fotku na pozadí
+            {t('siteEditor.nahratFotku')}
             <input
               type="file"
               accept="image/*"
@@ -996,7 +1025,7 @@ function Pozadi({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className={popisekPole}>Ztmavení</span>
+            <span className={popisekPole}>{t('siteEditor.ztmaveni')}</span>
             <input
               type="range"
               min="0"

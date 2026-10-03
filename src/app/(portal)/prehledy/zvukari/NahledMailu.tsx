@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * NÁHLED MAILU VPRAVO (zadání 21. 9. 2026: „ten náhled mailu mi dej někde
@@ -37,6 +38,7 @@ export function NahledMailu({
   prvni: string | null;
   jmena: Record<string, string>;
 }) {
+  const t = usePreklad();
   const [user, setUser] = useState<string | null>(prvni);
   const [nastaveni, setNastaveni] = useState<NastaveniNahledu | null>(null);
   const [neulozene, setNeulozene] = useState(false);
@@ -78,24 +80,27 @@ export function NahledMailu({
   return (
     <section className="bg-surface border border-line rounded-card shadow-sm overflow-hidden flex flex-col">
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
-        <span className="font-heading font-semibold text-sm text-muted uppercase tracking-wide">Náhled mailu</span>
+        <span className="font-heading font-semibold text-sm text-muted uppercase tracking-wide">
+          {t('zvukari.nahledMailu')}
+        </span>
         <span className="text-xs font-body text-muted truncate">
-          {user && jmena[user] ? jmena[user] : 'ukázka'}
-          {neulozene ? ' · neuložené nastavení' : ''}
+          {user && jmena[user] ? jmena[user] : t('zvukari.ukazka')}
+          {neulozene ? t('zvukari.neulozeneNastaveni') : ''}
         </span>
         {src && (
           <a href={src} target="_blank" rel="noreferrer" className="text-xs font-heading font-semibold text-brand-purple no-underline shrink-0">
-            Otevřít ↗
+            {t('zvukari.otevrit')}
           </a>
         )}
       </div>
-      {src && <iframe title="Náhled mailu" src={src} className="w-full h-[70vh] lg:h-[calc(100vh-190px)] bg-white border-0" />}
+      {src && <iframe title={t('zvukari.nahledMailu')} src={src} className="w-full h-[70vh] lg:h-[calc(100vh-190px)] bg-white border-0" />}
     </section>
   );
 }
 
 /** Tlačítko v řádku zvukaře - přepne náhled na něj. */
 export function UkazatNahled({ user }: { user: string }) {
+  const t = usePreklad();
   return (
     <button
       type="button"
@@ -105,7 +110,7 @@ export function UkazatNahled({ user }: { user: string }) {
       }}
       className="text-xs font-heading font-semibold text-brand-purple bg-transparent border-0 cursor-pointer"
     >
-      Náhled mailu →
+      {t('zvukari.nahledMailuOdkaz')}
     </button>
   );
 }

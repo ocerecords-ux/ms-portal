@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr nad přehledem knih. Všechno jde do adresy, takže se dá přehled poslat
@@ -29,6 +30,7 @@ export function KnihyFiltry({
   zvukari: { id: string; jmeno: string }[];
   druh: string;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const cesta = usePathname();
   const parametry = useSearchParams();
@@ -51,34 +53,34 @@ export function KnihyFiltry({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <VyberPole
-        aria-label="Období"
+        aria-label={t('knihy.obdobi')}
         value={obdobi}
         onChange={(e) => jdi({ obdobi: e.target.value })}
         className={`${pole} min-w-[180px]`}
       >
-        <option value="tento">Tento měsíc</option>
-        <option value="minuly">Minulý měsíc</option>
-        <option value="3m">Poslední 3 měsíce</option>
-        <option value="12m">Posledních 12 měsíců</option>
+        <option value="tento">{t('knihy.tentoMesic')}</option>
+        <option value="minuly">{t('knihy.minulyMesic')}</option>
+        <option value="3m">{t('knihy.posledni3')}</option>
+        <option value="12m">{t('knihy.poslednich12')}</option>
         {roky.map((r) => (
           <option key={r} value={String(r)}>
-            Rok {r}
+            {t('knihy.rok', { rok: r })}
           </option>
         ))}
-        <option value="vlastni">Vlastní rozsah…</option>
+        <option value="vlastni">{t('knihy.vlastniRozsah')}</option>
       </VyberPole>
 
       {obdobi === 'vlastni' && (
         <span className="flex items-center gap-2">
           <DatumPole
-            aria-label="Od"
+            aria-label={t('knihy.od')}
             value={od}
             onChange={(e) => jdi({ od: e.target.value })}
             className={`${pole} w-[150px]`}
           />
           <span className="text-muted text-sm">–</span>
           <DatumPole
-            aria-label="Do"
+            aria-label={t('knihy.do')}
             value={doData}
             onChange={(e) => jdi({ do: e.target.value })}
             className={`${pole} w-[150px]`}
@@ -87,12 +89,12 @@ export function KnihyFiltry({
       )}
 
       <VyberPole
-        aria-label="Kdo na tom dělal"
+        aria-label={t('knihy.kdoNaTomDelalFiltr')}
         value={kdo}
         onChange={(e) => jdi({ kdo: e.target.value })}
         className={`${pole} min-w-[170px]`}
       >
-        <option value="">Všichni lidé</option>
+        <option value="">{t('knihy.vsichniLide')}</option>
         {zvukari.map((z) => (
           <option key={z.id} value={z.id}>
             {z.jmeno}
@@ -101,16 +103,16 @@ export function KnihyFiltry({
       </VyberPole>
 
       <VyberPole
-        aria-label="Druh práce"
+        aria-label={t('knihy.druhPraceFiltr')}
         value={druh}
         onChange={(e) => jdi({ druh: e.target.value })}
         className={`${pole} min-w-[150px]`}
       >
-        <option value="">Všechny druhy</option>
-        <option value="RECORDING">Natáčení</option>
-        <option value="EDITING">Střih</option>
-        <option value="REPAIRS">Opravy</option>
-        <option value="OTHER">Ostatní</option>
+        <option value="">{t('knihy.vsechnyDruhy')}</option>
+        <option value="RECORDING">{t('knihy.nataceni')}</option>
+        <option value="EDITING">{t('knihy.strih')}</option>
+        <option value="REPAIRS">{t('knihy.opravy')}</option>
+        <option value="OTHER">{t('knihy.ostatni')}</option>
       </VyberPole>
 
       {(kdo || druh) && (
@@ -119,7 +121,7 @@ export function KnihyFiltry({
           onClick={() => jdi({ kdo: '', druh: '' })}
           className="text-sm font-heading font-semibold text-brand-purple bg-transparent border-0 px-1"
         >
-          Zrušit filtr
+          {t('knihy.zrusitFiltr')}
         </button>
       )}
     </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+
 /**
  * STÁHNOUT NÁVOD JAKO PDF (zadání 20. 9. 2026: „dej mi u těch manuálů
  * i možnost ho stáhnout v pdf").
@@ -11,6 +13,7 @@
  * vytiskne se jen text návodu, bez lišty, doků a tlačítek.
  */
 export function StahnoutPdf({ nazev }: { nazev: string }) {
+  const t = usePreklad();
   function tisk() {
     const puvodni = document.title;
     // Prohlizec pojmenuje soubor podle titulku stranky.
@@ -27,7 +30,7 @@ export function StahnoutPdf({ nazev }: { nazev: string }) {
     <button
       type="button"
       onClick={tisk}
-      title="Otevře tisk, kde zvolíte Uložit jako PDF"
+      title={t('napoveda.stahnoutPdfTitle')}
       className="netisknout inline-flex items-center gap-2 self-start text-sm font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 hover:border-brand-purple"
     >
       <svg
@@ -44,7 +47,7 @@ export function StahnoutPdf({ nazev }: { nazev: string }) {
         <path d="M12 3.5v10m0 0 3.5-3.5M12 13.5 8.5 10" />
         <path d="M4.5 16.5v2a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2" />
       </svg>
-      Stáhnout PDF
+      {t('napoveda.stahnoutPdf')}
     </button>
   );
 }

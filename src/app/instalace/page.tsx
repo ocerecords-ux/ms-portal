@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { APLIKACE, adresaAplikace, type Aplikace } from '@/lib/aplikace';
 import { qrSvg } from '@/lib/qr';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Navod k instalaci obou aplikaci (zadani 10. 9. 2026: "nemuzu dat lidem jen
@@ -14,6 +16,11 @@ import { qrSvg } from '@/lib/qr';
  * QR kody se kresli na serveru pri kazdem otevreni. Je to zlomek milisekundy
  * a odpada tim starost, jestli je predgenerovany obrazek jeste aktualni.
  */
+/**
+ * Titulek a popis v hlavičce zůstávají ČESKY: Next.js je skládá mimo
+ * požadavek, takže se k nim jazyk z cookie nedostane. Je to totéž rozhodnutí
+ * jako u pošty - mimo rozhraní se nepřekládá.
+ */
 export const metadata: Metadata = {
   title: 'Nainstalovat do telefonu — MS Portal',
   description: 'Jak si přidat MS Portal a MS Chat na plochu telefonu.',
@@ -22,6 +29,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function InstalacePage() {
+  const jazyk = nactiJazyk();
   const karty = await Promise.all(
     APLIKACE.map(async (aplikace) => ({
       aplikace,
@@ -41,32 +49,37 @@ export default async function InstalacePage() {
 
       <div className="max-w-4xl mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col gap-8">
         <div>
-          <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Nainstalovat do telefonu</h1>
-          <p className="text-muted font-body m-0 mt-3 max-w-2xl">
-            Namiřte na kód fotoaparát telefonu a otevřete adresu, která se nabídne. Pak už jen dva
-            kroky podle návodu níž a aplikace vám přistane na ploše — s vlastní ikonou, na celou
-            obrazovku, bez adresního řádku prohlížeče. Nic se nestahuje z App Storu ani z Google Play.
-          </p>
+          <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
+            {prelozit(jazyk, 'instalace.nadpis')}
+          </h1>
+          <p className="text-muted font-body m-0 mt-3 max-w-2xl">{prelozit(jazyk, 'instalace.uvod')}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {karty.map(({ aplikace, adresa, svg }) => (
-            <KartaAplikace key={aplikace.klic} aplikace={aplikace} adresa={adresa} svg={svg} />
+            <KartaAplikace key={aplikace.klic} aplikace={aplikace} adresa={adresa} svg={svg} jazyk={jazyk} />
           ))}
         </div>
 
-        <Navod />
+        <Navod jazyk={jazyk} />
 
-        <p className="text-sm text-muted font-body m-0">
-          Aplikace se přihlašuje stejným účtem jako portál v prohlížeči. Kdo účet ještě nemá, ozve se
-          nám a založíme mu ho — bez něj se dovnitř nedostane.
-        </p>
+        <p className="text-sm text-muted font-body m-0">{prelozit(jazyk, 'instalace.ucet')}</p>
       </div>
     </main>
   );
 }
 
-function KartaAplikace({ aplikace, adresa, svg }: { aplikace: Aplikace; adresa: string; svg: string }) {
+function KartaAplikace({
+  aplikace,
+  adresa,
+  svg,
+  jazyk,
+}: {
+  aplikace: Aplikace;
+  adresa: string;
+  svg: string;
+  jazyk: Jazyk;
+}) {
   return (
     <section className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col items-center text-center gap-4">
       <div className="flex items-center gap-3">
@@ -75,7 +88,7 @@ function KartaAplikace({ aplikace, adresa, svg }: { aplikace: Aplikace; adresa: 
         <h2 className="font-heading font-semibold text-xl text-ink m-0">{aplikace.nazev}</h2>
       </div>
 
-      <p className="text-sm text-muted font-body m-0">{aplikace.popis}</p>
+      <p className="text-sm text-muted font-body m-0">{prelozit(jazyk, `aplikace.${aplikace.klic}.popis`)}</p>
 
       {/* Bily ramecek i v tmavem rezimu - ctecky chteji tmavy kod na svetlem. */}
       <div
@@ -91,7 +104,7 @@ function KartaAplikace({ aplikace, adresa, svg }: { aplikace: Aplikace; adresa: 
           href={aplikace.cesta}
           className="text-sm font-heading font-semibold text-brand-purple hover:underline"
         >
-          Otevřít v prohlížeči
+          {prelozit(jazyk, 'instalace.otevritVProhlizeci')}
         </a>
         <span className="w-px h-4 bg-line" aria-hidden="true" />
         <a
@@ -99,43 +112,45 @@ function KartaAplikace({ aplikace, adresa, svg }: { aplikace: Aplikace; adresa: 
           className="text-sm font-heading font-semibold text-brand-purple hover:underline"
           download
         >
-          Stáhnout QR jako obrázek
+          {prelozit(jazyk, 'instalace.stahnoutQr')}
         </a>
       </div>
     </section>
   );
 }
 
-function Navod() {
+function Navod({ jazyk }: { jazyk: Jazyk }) {
+  /** Věta s tučným kusem - celá je jeden klíč (pravidlo 7). */
+  const sTucnym = (klic: string, tucne: string) => {
+    const [pred, za] = prelozitKolem(jazyk, klic, 'tucne');
+    return (
+      <>
+        {pred}
+        <strong className="text-ink">{tucne}</strong>
+        {za}
+      </>
+    );
+  };
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <section className="bg-surface rounded-card border border-line shadow-sm p-6">
-        <h2 className="font-heading font-semibold text-lg text-ink m-0">iPhone a iPad</h2>
+        <h2 className="font-heading font-semibold text-lg text-ink m-0">{prelozit(jazyk, 'instalace.iphone')}</h2>
         <ol className="text-sm font-body text-muted mt-3 mb-0 pl-5 flex flex-col gap-2">
-          <li>Kód načtěte fotoaparátem a stránku otevřete v Safari — v jiném prohlížeči to Apple nedovolí.</li>
-          <li>Dole klepněte na ikonu sdílení (čtvereček se šipkou nahoru).</li>
-          <li>Vyberte <strong className="text-ink">Přidat na plochu</strong> a potvrďte Přidat.</li>
+          <li>{prelozit(jazyk, 'instalace.iphoneKrok1')}</li>
+          <li>{prelozit(jazyk, 'instalace.iphoneKrok2')}</li>
+          <li>{sTucnym('instalace.iphoneKrok3', prelozit(jazyk, 'instalace.iphonePridatNaPlochu'))}</li>
         </ol>
-        <p className="text-xs font-body text-muted mt-3 mb-0">
-          Upozornění na nové zprávy chodí na iPhonu jenom aplikaci přidané na plochu. Zvoneček proto
-          zapínejte až v nainstalovaném MS Chatu, ne v Safari.
-        </p>
+        <p className="text-xs font-body text-muted mt-3 mb-0">{prelozit(jazyk, 'instalace.iphonePozn')}</p>
       </section>
 
       <section className="bg-surface rounded-card border border-line shadow-sm p-6">
-        <h2 className="font-heading font-semibold text-lg text-ink m-0">Android</h2>
+        <h2 className="font-heading font-semibold text-lg text-ink m-0">{prelozit(jazyk, 'instalace.android')}</h2>
         <ol className="text-sm font-body text-muted mt-3 mb-0 pl-5 flex flex-col gap-2">
-          <li>Kód načtěte fotoaparátem a stránku otevřete v Chromu.</li>
-          <li>Vpravo nahoře klepněte na tři tečky.</li>
-          <li>
-            Vyberte <strong className="text-ink">Nainstalovat aplikaci</strong> (někdy se nabídne
-            rovnou jako pruh dole).
-          </li>
+          <li>{prelozit(jazyk, 'instalace.androidKrok1')}</li>
+          <li>{prelozit(jazyk, 'instalace.androidKrok2')}</li>
+          <li>{sTucnym('instalace.androidKrok3', prelozit(jazyk, 'instalace.androidNainstalovat'))}</li>
         </ol>
-        <p className="text-xs font-body text-muted mt-3 mb-0">
-          Obě aplikace jdou nainstalovat vedle sebe. Každá má vlastní ikonu i název, takže se na
-          ploše nepopletou.
-        </p>
+        <p className="text-xs font-body text-muted mt-3 mb-0">{prelozit(jazyk, 'instalace.androidPozn')}</p>
       </section>
     </div>
   );

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { novyKlicTabule } from '@/lib/tabuleServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * TABULE PODLE PŘIHLÁŠENÍ (zadání 22. 9. 2026: „vytvořil bych pro každé
@@ -27,6 +29,7 @@ async function klicStudia(studio: { id: string; tabuleKlic: string | null }): Pr
 export default async function MojeTabule() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login?callbackUrl=/tabule/moje');
+  const jazyk = nactiJazyk();
 
   const ucet = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -60,11 +63,11 @@ export default async function MojeTabule() {
       return (
         <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0f0c17', color: '#f3f0fb', fontFamily: 'system-ui', padding: 24, textAlign: 'center' }}>
           <div>
-            <h1 style={{ fontSize: 32, margin: 0 }}>Tabule vám zatím nikdo nepovolil</h1>
-            <p style={{ opacity: 0.7, fontSize: 18 }}>Napište Mediaspace, které studio chcete vidět - přístup se zapíná na kartě uživatele.</p>
+            <h1 style={{ fontSize: 32, margin: 0 }}>{prelozit(jazyk, 'tabule.nepovoleno')}</h1>
+            <p style={{ opacity: 0.7, fontSize: 18 }}>{prelozit(jazyk, 'tabule.nepovolenoUvod')}</p>
             <p>
               <a href="/projekty" style={{ color: '#b9b2cc', fontSize: 16, textDecoration: 'underline' }}>
-                ← Zpět do portálu
+                {prelozit(jazyk, 'tabule.zpetDoPortalu')}
               </a>
             </p>
           </div>
@@ -78,10 +81,10 @@ export default async function MojeTabule() {
     return (
       <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0f0c17', color: '#f3f0fb', fontFamily: 'system-ui', padding: 24 }}>
         <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: 32, margin: 0 }}>Kterou tabuli otevřít?</h1>
+          <h1 style={{ fontSize: 32, margin: 0 }}>{prelozit(jazyk, 'tabule.kterouOtevrit')}</h1>
           <p style={{ marginTop: 12 }}>
             <a href="/projekty" style={{ color: '#b9b2cc', fontSize: 16, textDecoration: 'underline' }}>
-              ← Zpět do portálu
+              {prelozit(jazyk, 'tabule.zpetDoPortalu')}
             </a>
           </p>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginTop: 24 }}>
@@ -113,8 +116,8 @@ export default async function MojeTabule() {
     return (
       <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0f0c17', color: '#f3f0fb', fontFamily: 'system-ui', padding: 24, textAlign: 'center' }}>
         <div>
-          <h1 style={{ fontSize: 32, margin: 0 }}>Tabule nemá přiřazené studio</h1>
-          <p style={{ opacity: 0.7, fontSize: 18 }}>V portálu otevřete Administrace → Studia a u studia vytvořte účet tabule.</p>
+          <h1 style={{ fontSize: 32, margin: 0 }}>{prelozit(jazyk, 'tabule.bezStudia')}</h1>
+          <p style={{ opacity: 0.7, fontSize: 18 }}>{prelozit(jazyk, 'tabule.bezStudiaUvod')}</p>
         </div>
       </main>
     );

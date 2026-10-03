@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import type { TemaVRezii } from '@/lib/poradaServer';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { prelozitNaKusy } from '@/lib/jazyk';
 
 /**
  * REŽIE TECHNICKÉ PORADY (zadání 28. 9. 2026: „Peter měl ještě někde u sebe
@@ -22,6 +24,8 @@ import type { TemaVRezii } from '@/lib/poradaServer';
  * překážel.
  */
 export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [temata, setTemata] = useState(pocatecni);
   const [novy, setNovy] = useState('');
   const [bezi, setBezi] = useState(false);
@@ -39,13 +43,13 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
       });
       const telo = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(telo?.error || 'Nepodařilo se to uložit.');
+        setChyba(telo?.error || t('porada.neulozeno'));
         return false;
       }
       if (Array.isArray(telo?.temata)) setTemata(telo.temata as TemaVRezii[]);
       return true;
     } catch {
-      setChyba('Nepodařilo se to uložit.');
+      setChyba(t('porada.neulozeno'));
       return false;
     } finally {
       setBezi(false);
@@ -55,7 +59,7 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
   const uprav = (id: string, zmena: Record<string, unknown>) =>
     volej({ method: 'PATCH', body: JSON.stringify({ id, ...zmena }) });
 
-  const hotovych = temata.filter((t) => t.hotovo).length;
+  const hotovych = temata.filter((tema) => tema.hotovo).length;
 
   const pole =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full';
@@ -63,9 +67,9 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-baseline gap-3 flex-wrap">
-        <h1 className="font-display text-3xl text-ink m-0">Režie porady</h1>
+        <h1 className="font-display text-3xl text-ink m-0">{t('porada.nadpis')}</h1>
         <span className="text-sm font-body text-muted">
-          {hotovych} z {temata.length} probráno · poznámky vidíš jen ty
+          {t('porada.probrano', { hotovo: hotovych, celkem: temata.length })}
         </span>
         <Link
           href="/prehledy/knihy?porada=1"
@@ -73,14 +77,20 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
           rel="noopener"
           className="ml-auto text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
         >
-          Otevřít plátno →
+          {t('porada.otevritPlatno')}
         </Link>
       </div>
 
       <p className="text-sm font-body text-muted m-0">
-        Na plátno pusť <strong className="text-ink">Přehledy → Knihy a rozpočty → Pro poradu</strong>{' '}
-        a přepni na celou obrazovku. Tuhle stránku si nech na telefonu nebo na druhé obrazovce -
-        odškrtnutí se na plátně objeví samo do pár vteřin.
+        {prelozitNaKusy(jazyk, 'porada.navodPredTucnym', ['cesta']).map((kus, i) =>
+          kus.znacka ? (
+            <strong key={i} className="text-ink">
+              {t('porada.cesta')}
+            </strong>
+          ) : (
+            <span key={i}>{kus.text}</span>
+          ),
+        )}
       </p>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -90,60 +100,60 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
           disabled={bezi || hotovych === 0}
           className="rounded-pill border border-line bg-surface text-muted font-heading font-semibold text-sm px-4 py-1.5 hover:text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-40"
         >
-          Začít novou poradu
+          {t('porada.zacitNovou')}
         </button>
-        <span className="text-xs font-body text-muted">Odškrtne všechna témata, seznam nechá.</span>
+        <span className="text-xs font-body text-muted">{t('porada.odskrtneVse')}</span>
       </div>
 
       <ul className="list-none m-0 p-0 flex flex-col gap-2">
-        {temata.map((t, i) => (
+        {temata.map((tema, i) => (
           <li
-            key={t.id}
+            key={tema.id}
             className={`bg-surface border rounded-card shadow-sm p-4 flex flex-col gap-3 ${
-              t.hotovo ? 'border-line opacity-60' : 'border-line'
+              tema.hotovo ? 'border-line opacity-60' : 'border-line'
             }`}
           >
             <div className="flex items-start gap-3">
               <button
                 type="button"
-                onClick={() => void uprav(t.id, { hotovo: !t.hotovo })}
-                aria-pressed={t.hotovo}
-                title={t.hotovo ? 'Vrátit mezi neprobraná' : 'Odškrtnout jako probrané'}
+                onClick={() => void uprav(tema.id, { hotovo: !tema.hotovo })}
+                aria-pressed={tema.hotovo}
+                title={t(tema.hotovo ? 'porada.vratitMezi' : 'porada.odskrtnout')}
                 className={`shrink-0 w-7 h-7 rounded-lg border flex items-center justify-center transition-colors ${
-                  t.hotovo
+                  tema.hotovo
                     ? 'bg-status-done border-status-done text-white'
                     : 'border-line text-muted hover:border-brand-purple hover:text-brand-purple'
                 }`}
               >
-                {t.hotovo ? '✓' : ''}
+                {tema.hotovo ? '✓' : ''}
               </button>
 
               <input
-                defaultValue={t.nadpis}
+                defaultValue={tema.nadpis}
                 onBlur={(e) => {
                   const nove = e.target.value.trim();
-                  if (nove && nove !== t.nadpis) void uprav(t.id, { nadpis: nove });
+                  if (nove && nove !== tema.nadpis) void uprav(tema.id, { nadpis: nove });
                 }}
-                className={`${pole} font-heading font-semibold ${t.hotovo ? 'line-through' : ''}`}
+                className={`${pole} font-heading font-semibold ${tema.hotovo ? 'line-through' : ''}`}
               />
 
               <span className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() => void uprav(t.id, { presun: 'nahoru' })}
+                  onClick={() => void uprav(tema.id, { presun: 'nahoru' })}
                   disabled={i === 0 || bezi}
-                  title="Posunout nahoru"
-                  aria-label="Posunout nahoru"
+                  title={t('porada.posunoutNahoru')}
+                  aria-label={t('porada.posunoutNahoru')}
                   className="w-8 h-8 rounded-lg border border-line bg-field text-muted hover:text-ink disabled:opacity-30"
                 >
                   ↑
                 </button>
                 <button
                   type="button"
-                  onClick={() => void uprav(t.id, { presun: 'dolu' })}
+                  onClick={() => void uprav(tema.id, { presun: 'dolu' })}
                   disabled={i === temata.length - 1 || bezi}
-                  title="Posunout dolů"
-                  aria-label="Posunout dolů"
+                  title={t('porada.posunoutDolu')}
+                  aria-label={t('porada.posunoutDolu')}
                   className="w-8 h-8 rounded-lg border border-line bg-field text-muted hover:text-ink disabled:opacity-30"
                 >
                   ↓
@@ -152,11 +162,11 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
                   onSmazat={() =>
                     void volej({
                       method: 'DELETE',
-                      adresa: `/api/porada/temata?id=${encodeURIComponent(t.id)}`,
+                      adresa: `/api/porada/temata?id=${encodeURIComponent(tema.id)}`,
                     })
                   }
-                  otazka="Opravdu smazat?"
-                  popisek="Smazat téma"
+                  otazka={t('porada.opravduSmazat')}
+                  popisek={t('porada.smazatTema')}
                 />
               </span>
             </div>
@@ -164,30 +174,30 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
             <div className="pl-10 flex flex-col gap-1.5">
               <button
                 type="button"
-                onClick={() => setOtevrene((o) => (o === t.id ? null : t.id))}
+                onClick={() => setOtevrene((o) => (o === tema.id ? null : tema.id))}
                 className="self-start text-xs font-heading font-semibold text-brand-purple bg-transparent border-0 px-0"
               >
-                {otevrene === t.id
-                  ? 'Skrýt poznámky'
-                  : t.poznamka
-                    ? 'Poznámky'
-                    : 'Přidat poznámky'}
+                {otevrene === tema.id
+                  ? t('porada.skrytPoznamky')
+                  : tema.poznamka
+                    ? t('porada.poznamky')
+                    : t('porada.pridatPoznamky')}
               </button>
-              {otevrene === t.id ? (
+              {otevrene === tema.id ? (
                 <textarea
-                  defaultValue={t.poznamka ?? ''}
+                  defaultValue={tema.poznamka ?? ''}
                   rows={6}
-                  placeholder="Co k tomuhle tématu říct. Nikdo jiný to neuvidí."
+                  placeholder={t('porada.poznamkaPlaceholder')}
                   onBlur={(e) => {
                     const nove = e.target.value;
-                    if (nove !== (t.poznamka ?? '')) void uprav(t.id, { poznamka: nove });
+                    if (nove !== (tema.poznamka ?? '')) void uprav(tema.id, { poznamka: nove });
                   }}
                   className={pole}
                 />
               ) : (
-                t.poznamka && (
+                tema.poznamka && (
                   <p className="text-sm font-body text-muted m-0 whitespace-pre-line line-clamp-2">
-                    {t.poznamka}
+                    {tema.poznamka}
                   </p>
                 )
               )}
@@ -208,7 +218,7 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
         <input
           value={novy}
           onChange={(e) => setNovy(e.target.value)}
-          placeholder="Nové téma…"
+          placeholder={t('porada.noveTema')}
           className={pole}
         />
         <button
@@ -216,7 +226,7 @@ export function Rezie({ temata: pocatecni }: { temata: TemaVRezii[] }) {
           disabled={bezi || !novy.trim()}
           className="shrink-0 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
         >
-          Přidat
+          {t('porada.pridat')}
         </button>
       </form>
 

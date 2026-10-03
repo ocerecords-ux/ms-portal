@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * HONORÁŘE HERCE (zadání 19. 9. 2026: „uděláme jim tam ještě sekci Honoráře,
@@ -34,28 +36,35 @@ type Polozka = {
   kPodpisu: boolean;
 };
 
-function penize(c: Castka): string {
+function penize(c: Castka, jazyk: Jazyk): string {
   if (!c) return '–';
   const hodnota = c.minor / 100;
-  return new Intl.NumberFormat('cs-CZ', {
+  return new Intl.NumberFormat(kodJazyka(jazyk), {
     style: 'currency',
     currency: c.mena,
     maximumFractionDigits: Number.isInteger(hodnota) ? 0 : 2,
   }).format(hodnota);
 }
 
-function datum(d: Date | null | undefined): string | null {
-  return d ? d.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }) : null;
+function datum(d: Date | null | undefined, jazyk: Jazyk): string | null {
+  return d ? formatDatum(jazyk, d) : null;
 }
 
 /** Součet po měnách - „12 000 Kč + 300 €". */
-function soucet(polozky: Polozka[]): string {
+function soucet(polozky: Polozka[], jazyk: Jazyk): string {
   const mapa = new Map<string, number>();
   for (const p of polozky) if (p.castka) mapa.set(p.castka.mena, (mapa.get(p.castka.mena) ?? 0) + p.castka.minor);
-  if (mapa.size === 0) return polozky.length > 0 ? 'viz smlouvy' : '0 Kč';
+  if (mapa.size === 0)
+    return prelozit(jazyk, polozky.length > 0 ? 'honorare.vizSmlouvy' : 'honorare.nula');
   return Array.from(mapa.entries())
-    .map(([mena, minor]) => penize({ minor, mena }))
+    .map(([mena, minor]) => penize({ minor, mena }, jazyk))
     .join(' + ');
+}
+
+/** Který tvar čísla použít - česky tři, anglicky dva (pravidlo 7). */
+function tvarSmluv(n: number): 'jedna' | 'nekolik' | 'mnoho' {
+  if (n === 1) return 'jedna';
+  return n >= 2 && n <= 4 ? 'nekolik' : 'mnoho';
 }
 
 export default async function HonorarePage() {
@@ -63,6 +72,7 @@ export default async function HonorarePage() {
   if (!session?.user?.id) redirect('/login');
   if (session.user.role !== 'HEREC') redirect('/projekty');
 
+  const jazyk = nactiJazyk();
   const email = session.user.email?.trim();
   const smlouvy = await prisma.contract.findMany({
     where: {
@@ -120,47 +130,47 @@ export default async function HonorarePage() {
     };
 
     if (s.status === 'SENT') {
-      navrhnuto.push({ ...zaklad, datum: datum(s.sentAt) });
+      navrhnuto.push({ ...zaklad, datum: datum(s.sentAt, jazyk) });
     } else if (vydaj?.paid) {
-      zaplaceno.push({ ...zaklad, datum: datum(vydaj.paidAt) });
+      zaplaceno.push({ ...zaklad, datum: datum(vydaj.paidAt, jazyk) });
     } else {
-      ceka.push({ ...zaklad, datum: datum(vydaj?.dueDate ?? null) });
+      ceka.push({ ...zaklad, datum: datum(vydaj?.dueDate ?? null, jazyk) });
     }
   }
 
   const sekce = [
     {
       klic: 'navrhnuto',
-      nadpis: 'Navrhnuto',
-      popis: 'Smlouva vám odešla a čeká na váš podpis.',
-      datumPopis: 'Odesláno',
+      nadpis: prelozit(jazyk, 'honorare.navrhnuto'),
+      popis: prelozit(jazyk, 'honorare.navrhnutoPopis'),
+      datumPopis: prelozit(jazyk, 'honorare.odeslano'),
       polozky: navrhnuto,
       barva: 'text-status-progress',
-      prazdne: 'Nic nečeká na podpis.',
+      prazdne: prelozit(jazyk, 'honorare.navrhnutoPrazdne'),
     },
     {
       klic: 'ceka',
-      nadpis: 'Čeká na proplacení',
-      popis: 'Smlouva je podepsaná, honorář vám pošleme do splatnosti.',
-      datumPopis: 'Splatnost',
+      nadpis: prelozit(jazyk, 'honorare.ceka'),
+      popis: prelozit(jazyk, 'honorare.cekaPopis'),
+      datumPopis: prelozit(jazyk, 'honorare.splatnost'),
       polozky: ceka,
       barva: 'text-brand-purpleDeep dark:text-brand-purpleLight',
-      prazdne: 'Momentálně vám nic nedlužíme.',
+      prazdne: prelozit(jazyk, 'honorare.cekaPrazdne'),
     },
     {
       klic: 'zaplaceno',
-      nadpis: 'Zaplaceno',
-      popis: 'Honoráře, které už odešly na váš účet.',
-      datumPopis: 'Zaplaceno',
+      nadpis: prelozit(jazyk, 'honorare.zaplaceno'),
+      popis: prelozit(jazyk, 'honorare.zaplacenoPopis'),
+      datumPopis: prelozit(jazyk, 'honorare.zaplaceno'),
       polozky: zaplaceno,
       barva: 'text-brand-greenDeep',
-      prazdne: 'Zatím tu nic není.',
+      prazdne: prelozit(jazyk, 'honorare.zaplacenoPrazdne'),
     },
   ];
 
   return (
     <section className="flex flex-col gap-8">
-      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Honoráře</h1>
+      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">{prelozit(jazyk, 'honorare.nadpis')}</h1>
 
       {/* Tri souhrny nahore - na prvni pohled, kolik je v kterem stavu. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -171,9 +181,11 @@ export default async function HonorarePage() {
             className="bg-surface border border-line rounded-card p-4 no-underline hover:bg-surfaceSoft transition-colors"
           >
             <p className="m-0 text-xs font-heading uppercase tracking-wide text-muted">{s.nadpis}</p>
-            <p className={`m-0 mt-1 font-display text-2xl ${s.barva}`}>{soucet(s.polozky)}</p>
+            <p className={`m-0 mt-1 font-display text-2xl ${s.barva}`}>{soucet(s.polozky, jazyk)}</p>
             <p className="m-0 mt-1 text-xs font-body text-muted">
-              {s.polozky.length === 1 ? '1 smlouva' : `${s.polozky.length} smluv${s.polozky.length >= 2 && s.polozky.length <= 4 ? 'y' : ''}`}
+              {prelozitS(jazyk, `honorare.pocetSmluv.${tvarSmluv(s.polozky.length)}`, {
+                pocet: s.polozky.length,
+              })}
             </p>
           </a>
         ))}
@@ -195,13 +207,15 @@ export default async function HonorarePage() {
                   >
                     <div className="min-w-0">
                       <p className="m-0 font-heading font-semibold text-sm text-ink">{p.projekt}</p>
-                      <p className="m-0 text-xs font-body text-muted">Smlouva {p.cislo}</p>
+                      <p className="m-0 text-xs font-body text-muted">
+                        {prelozitS(jazyk, 'honorare.smlouvaCislo', { cislo: p.cislo })}
+                      </p>
                     </div>
                     <p className="m-0 text-right font-heading font-semibold text-sm text-ink tabular-nums">
-                      {p.castka ? penize(p.castka) : p.castkaText || '–'}
+                      {p.castka ? penize(p.castka, jazyk) : p.castkaText || '–'}
                     </p>
                     <p className="m-0 text-xs font-body text-muted sm:text-right">
-                      {p.datum ? `${s.datumPopis} ${p.datum}` : ''}
+                      {p.datum ? prelozitS(jazyk, 'honorare.datumSPopisem', { popis: s.datumPopis, datum: p.datum }) : ''}
                     </p>
                     <div className="text-right">
                       {p.kPodpisu ? (
@@ -209,7 +223,7 @@ export default async function HonorarePage() {
                           href={p.odkaz}
                           className="inline-block text-xs font-heading font-semibold rounded-pill bg-brand-purple text-white px-4 py-2 no-underline"
                         >
-                          Podepsat
+                          {prelozit(jazyk, 'honorare.podepsat')}
                         </Link>
                       ) : (
                         <Link
@@ -217,7 +231,7 @@ export default async function HonorarePage() {
                           target="_blank"
                           className="inline-block text-xs font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 no-underline hover:bg-surfaceSoft"
                         >
-                          Smlouva ↗
+                          {prelozit(jazyk, 'honorare.smlouvaOdkaz')}
                         </Link>
                       )}
                     </div>

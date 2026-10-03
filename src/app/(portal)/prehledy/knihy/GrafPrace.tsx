@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { BARVY, kc, kcKratce } from './format';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import type { Jazyk } from '@/lib/jazyk';
 
 type Mesic = {
   klic: string;
@@ -38,6 +40,8 @@ function osa(max: number): { nahore: number; znacky: number[] } {
  * kde na sebe sedí dva podobné odstíny.
  */
 export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [aktivni, setAktivni] = useState<number | null>(null);
   const [tabulka, setTabulka] = useState(false);
 
@@ -49,16 +53,16 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4 flex-wrap text-xs font-heading text-muted">
-        <Legenda barva={BARVY.nataceni}>Natáčení</Legenda>
-        <Legenda barva={BARVY.strih}>Střih</Legenda>
-        <Legenda barva={BARVY.opravy}>Opravy</Legenda>
-        <Legenda barva={BARVY.ostatni}>Ostatní</Legenda>
+        <Legenda barva={BARVY.nataceni}>{t('knihy.nataceni')}</Legenda>
+        <Legenda barva={BARVY.strih}>{t('knihy.strih')}</Legenda>
+        <Legenda barva={BARVY.opravy}>{t('knihy.opravy')}</Legenda>
+        <Legenda barva={BARVY.ostatni}>{t('knihy.ostatni')}</Legenda>
         <button
           type="button"
           onClick={() => setTabulka((t) => !t)}
           className="ml-auto text-xs font-heading font-semibold text-brand-purple bg-transparent border-0"
         >
-          {tabulka ? 'Zobrazit graf' : 'Zobrazit tabulku'}
+          {t(tabulka ? 'finance.zobrazitGraf' : 'finance.zobrazitTabulku')}
         </button>
       </div>
 
@@ -67,23 +71,23 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
           <table className="w-full text-sm font-body border-collapse">
             <thead>
               <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                <th className="text-left py-2 pr-3">Měsíc</th>
-                <th className="text-right py-2 px-3">Natáčení</th>
-                <th className="text-right py-2 px-3">Střih</th>
-                <th className="text-right py-2 px-3">Opravy</th>
-                <th className="text-right py-2 px-3">Ostatní</th>
-                <th className="text-right py-2 pl-3">Celkem</th>
+                <th className="text-left py-2 pr-3">{t('knihy.mesic')}</th>
+                <th className="text-right py-2 px-3">{t('knihy.nataceni')}</th>
+                <th className="text-right py-2 px-3">{t('knihy.strih')}</th>
+                <th className="text-right py-2 px-3">{t('knihy.opravy')}</th>
+                <th className="text-right py-2 px-3">{t('knihy.ostatni')}</th>
+                <th className="text-right py-2 pl-3">{t('knihy.celkem')}</th>
               </tr>
             </thead>
             <tbody>
               {mesice.map((m) => (
                 <tr key={m.klic} className="border-t border-line">
                   <td className="py-1.5 pr-3 text-ink">{m.popis}</td>
-                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.nataceni)}</td>
-                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.strih)}</td>
-                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.opravy)}</td>
-                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.ostatni)}</td>
-                  <td className="text-right py-1.5 pl-3 tabular-nums font-heading">{kc(soucet(m))}</td>
+                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.nataceni, jazyk)}</td>
+                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.strih, jazyk)}</td>
+                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.opravy, jazyk)}</td>
+                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.ostatni, jazyk)}</td>
+                  <td className="text-right py-1.5 pl-3 tabular-nums font-heading">{kc(soucet(m), jazyk)}</td>
                 </tr>
               ))}
             </tbody>
@@ -98,7 +102,7 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
                 className="absolute right-0 -translate-y-1/2"
                 style={{ top: `${100 - (v / nahore) * 100}%` }}
               >
-                {kcKratce(v)}
+                {kcKratce(v, jazyk)}
               </span>
             ))}
           </div>
@@ -146,11 +150,11 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
                   }
                 >
                   <p className="font-heading font-semibold text-ink m-0 mb-1">{mesice[aktivni].popis}</p>
-                  <Radek barva={BARVY.nataceni} popis="Natáčení" hodnota={mesice[aktivni].nataceni} />
-                  <Radek barva={BARVY.strih} popis="Střih" hodnota={mesice[aktivni].strih} />
-                  <Radek barva={BARVY.opravy} popis="Opravy" hodnota={mesice[aktivni].opravy} />
-                  <Radek barva={BARVY.ostatni} popis="Ostatní" hodnota={mesice[aktivni].ostatni} />
-                  <Radek popis="Celkem" hodnota={soucet(mesice[aktivni])} tucne />
+                  <Radek jazyk={jazyk} barva={BARVY.nataceni} popis={t('knihy.nataceni')} hodnota={mesice[aktivni].nataceni} />
+                  <Radek jazyk={jazyk} barva={BARVY.strih} popis={t('knihy.strih')} hodnota={mesice[aktivni].strih} />
+                  <Radek jazyk={jazyk} barva={BARVY.opravy} popis={t('knihy.opravy')} hodnota={mesice[aktivni].opravy} />
+                  <Radek jazyk={jazyk} barva={BARVY.ostatni} popis={t('knihy.ostatni')} hodnota={mesice[aktivni].ostatni} />
+                  <Radek jazyk={jazyk} popis={t('knihy.celkem')} hodnota={soucet(mesice[aktivni])} tucne />
                 </div>
               )}
             </div>
@@ -200,11 +204,13 @@ function Legenda({ barva, children }: { barva: string; children: React.ReactNode
 }
 
 function Radek({
+  jazyk,
   barva,
   popis,
   hodnota,
   tucne,
 }: {
+  jazyk: Jazyk;
   barva?: string;
   popis: string;
   hodnota: number;
@@ -218,7 +224,7 @@ function Radek({
       />
       <span className="text-muted">{popis}</span>
       <span className={`ml-auto tabular-nums text-ink ${tucne ? 'font-heading font-semibold' : ''}`}>
-        {kc(hodnota)}
+        {kc(hodnota, jazyk)}
       </span>
     </p>
   );

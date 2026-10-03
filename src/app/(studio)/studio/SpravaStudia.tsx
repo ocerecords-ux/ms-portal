@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * SPRÁVA REZERVACÍ PŘÍMO U KALENDÁŘE (zadání 25. 9. 2026: „k té editaci by
@@ -36,6 +37,7 @@ export function SpravaStudia({
   dniDopredu: number;
   klienti: KlientStudia[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [otevreno, setOtevreno] = useState(false);
   const [bezi, setBezi] = useState(false);
@@ -58,7 +60,7 @@ export function SpravaStudia({
       });
       if (!res.ok) {
         const o = await res.json().catch(() => ({}));
-        setChyba(o?.error || 'Nastavení se nepodařilo uložit.');
+        setChyba(o?.error || t('booking.nastaveniNeulozeno'));
         return;
       }
       router.refresh();
@@ -82,11 +84,11 @@ export function SpravaStudia({
       });
       const o = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(o?.error || 'Pozvánku se nepodařilo odeslat.');
+        setChyba(o?.error || t('booking.pozvankaNeodeslana'));
         if (o?.odkaz) setOdkaz(o.odkaz);
         return;
       }
-      setZprava(`Pozvánka odešla na ${o.email}.`);
+      setZprava(t('booking.pozvankaOdesla', { email: o.email }));
       setEmail('');
       setJmeno('');
       router.refresh();
@@ -114,12 +116,14 @@ export function SpravaStudia({
       >
         <span>
           <span className="block font-heading font-semibold text-sm text-ink">
-            Správa rezervací
+            {t('booking.spravaNadpis')}
           </span>
           <span className="block text-xs font-body text-muted">
             {klienti.length === 0
-              ? 'Zatím sem nemá přístup nikdo — pozvěte prvního klienta.'
-              : `${klienti.length} ${klienti.length === 1 ? 'pozvaný klient' : 'pozvaných klientů'}`}
+              ? t('booking.spravaNikdo')
+              : t(klienti.length === 1 ? 'booking.spravaKlientu.jeden' : 'booking.spravaKlientu.vic', {
+                  pocet: klienti.length,
+                })}
           </span>
         </span>
         <span className="text-muted text-sm shrink-0">{otevreno ? '▾' : '▸'}</span>
@@ -134,12 +138,12 @@ export function SpravaStudia({
             href={`/cenik-studia?studio=${encodeURIComponent(studioId)}`}
             className="self-start text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
           >
-            Ceník studia →
+            {t('booking.cenikStudiaOdkaz')}
           </a>
 
           <div className="flex items-end gap-3 flex-wrap">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">Nejkratší rezervace (min)</span>
+              <span className="text-[11px] font-heading text-muted">{t('booking.nejkratsiRezervace')}</span>
               <input
                 type="number"
                 min={15}
@@ -151,7 +155,7 @@ export function SpravaStudia({
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">Dní dopředu (0 = bez limitu)</span>
+              <span className="text-[11px] font-heading text-muted">{t('booking.dniDopredu')}</span>
               <input
                 type="number"
                 min={0}
@@ -165,18 +169,18 @@ export function SpravaStudia({
 
           <form onSubmit={pozvi} className="flex items-end gap-2 flex-wrap">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">E-mail</span>
+              <span className="text-[11px] font-heading text-muted">{t('booking.email')}</span>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="jméno@kapela.co.uk"
+                placeholder={t('booking.emailPlaceholder')}
                 className="w-60 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">Jméno (nepovinné)</span>
+              <span className="text-[11px] font-heading text-muted">{t('booking.jmenoNepovinne')}</span>
               <input
                 value={jmeno}
                 onChange={(e) => setJmeno(e.target.value)}
@@ -188,7 +192,7 @@ export function SpravaStudia({
               disabled={bezi}
               className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-4 py-2 disabled:opacity-50 border-0 cursor-pointer"
             >
-              Poslat pozvánku
+              {t('booking.poslatPozvanku')}
             </button>
           </form>
 
@@ -196,7 +200,7 @@ export function SpravaStudia({
           {chyba && <p className="m-0 text-xs font-body text-status-error">{chyba}</p>}
           {odkaz && (
             <p className="m-0 text-xs font-body text-muted break-all">
-              Odkaz k předání ručně: <span className="text-ink">{odkaz}</span>
+              {t('booking.odkazRucne')} <span className="text-ink">{odkaz}</span>
             </p>
           )}
 
@@ -213,7 +217,7 @@ export function SpravaStudia({
                     </span>
                     <span className="block text-[11px] font-body text-muted truncate">
                       {k.jmeno ? `${k.email} · ` : ''}
-                      {k.hesloNastaveno ? 'aktivní' : 'čeká na nastavení hesla'}
+                      {t(k.hesloNastaveno ? 'booking.klientAktivni' : 'booking.klientCeka')}
                     </span>
                   </span>
                   <button
@@ -222,7 +226,7 @@ export function SpravaStudia({
                     disabled={bezi}
                     className="shrink-0 bg-surface border border-line text-muted hover:text-status-error font-heading text-[11px] rounded-lg px-2.5 py-1 cursor-pointer"
                   >
-                    Odebrat přístup
+                    {t('booking.odebratPristup')}
                   </button>
                 </li>
               ))}
@@ -230,14 +234,14 @@ export function SpravaStudia({
           )}
 
           <p className="m-0 text-[11px] font-body text-muted">
-            Samotné rezervace se posouvají a ruší v Kalendáři — jsou to běžné události studia.{' '}
+            {t('booking.rezervaceVKalendari')}{' '}
             <a
               href="/navody/studio-booking-install.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand-purple no-underline hover:underline"
             >
-              Kartička s QR kódem k vytištění ↗
+              {t('booking.kartickaQr')}
             </a>
           </p>
         </div>

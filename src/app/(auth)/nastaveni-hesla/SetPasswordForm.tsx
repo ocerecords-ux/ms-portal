@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Nastaveni hesla z pozvanky - stejny vzhled jako prihlasovaci stranka.
@@ -15,7 +16,8 @@ import { signIn } from 'next-auth/react';
  * Kdyz se prihlaseni nepovede, nic se neztraci: heslo ulozene je a clovek
  * dostane odkaz na prihlaseni.
  */
-export function SetPasswordForm({ token }: { token: string }) {
+export function SetPasswordForm({ token, jazyk = 'cs' }: { token: string; jazyk?: Jazyk }) {
+  const t = (klic: string) => prelozit(jazyk, klic);
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +30,11 @@ export function SetPasswordForm({ token }: { token: string }) {
     e.preventDefault();
     setError(null);
     if (password.length < 8) {
-      setError('Heslo musí mít alespoň 8 znaků.');
+      setError(t('heslo.kratke'));
       return;
     }
     if (password !== password2) {
-      setError('Hesla se neshodují.');
+      setError(t('heslo.neshoda'));
       return;
     }
     setLoading(true);
@@ -44,7 +46,7 @@ export function SetPasswordForm({ token }: { token: string }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Nastavení hesla se nezdařilo.');
+        setError(data?.error || t('heslo.nezdarilo'));
         return;
       }
       setDone(true);
@@ -64,7 +66,7 @@ export function SetPasswordForm({ token }: { token: string }) {
       }
       setSamoPrihlaseni(false);
     } catch {
-      setError('Nastavení hesla se nezdařilo.');
+      setError(t('heslo.nezdarilo'));
     } finally {
       setLoading(false);
     }
@@ -83,23 +85,20 @@ export function SetPasswordForm({ token }: { token: string }) {
 
           {!token ? (
             <div className="px-8 pb-8">
-              <h1 className="font-display text-2xl text-brand-green m-0 mb-3">Neplatný odkaz</h1>
-              <p className="text-white/90 text-sm font-body m-0">
-                V odkazu chybí ověřovací kód. Otevřete prosím odkaz z pozvánky znovu, nebo si u nás vyžádejte
-                novou pozvánku.
-              </p>
+              <h1 className="font-display text-2xl text-brand-green m-0 mb-3">{t('heslo.neplatnyOdkaz')}</h1>
+              <p className="text-white/90 text-sm font-body m-0">{t('heslo.neplatnyOdkazText')}</p>
             </div>
           ) : done ? (
             <div className="px-8 pb-8">
-              <h1 className="font-display text-2xl text-brand-green m-0 mb-3">Heslo je nastavené</h1>
+              <h1 className="font-display text-2xl text-brand-green m-0 mb-3">{t('heslo.nastaveno')}</h1>
               <p className="text-white/90 text-sm font-body m-0">
                 {samoPrihlaseni ? (
-                  'Přihlašuji vás do portálu…'
+                  t('heslo.prihlasujiVas')
                 ) : (
                   <>
-                    Přihlaste se prosím novým heslem.{' '}
+                    {t('heslo.prihlasteSeNovym')}{' '}
                     <Link href="/login" className="text-brand-green underline">
-                      Přihlásit se
+                      {t('heslo.prihlasitSe')}
                     </Link>
                   </>
                 )}
@@ -107,11 +106,11 @@ export function SetPasswordForm({ token }: { token: string }) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="px-8 pb-8 flex flex-col gap-5">
-              <h1 className="font-display text-2xl text-brand-green m-0">Nastavení hesla</h1>
+              <h1 className="font-display text-2xl text-brand-green m-0">{t('heslo.nastaveniNadpis')}</h1>
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="password" className="text-white text-sm font-body">
-                  Nové heslo
+                  {t('heslo.noveHeslo')}
                 </label>
                 <input
                   id="password"
@@ -122,12 +121,12 @@ export function SetPasswordForm({ token }: { token: string }) {
                   onChange={(e) => setPassword(e.target.value)}
                   className="rounded-lg border-[1.5px] border-brand-green px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-white focus:ring-2 focus:ring-white/40"
                 />
-                <span className="text-white/70 text-xs font-body">Alespoň 8 znaků.</span>
+                <span className="text-white/70 text-xs font-body">{t('heslo.alespon8')}</span>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="password2" className="text-white text-sm font-body">
-                  Heslo znovu
+                  {t('heslo.hesloZnovu')}
                 </label>
                 <input
                   id="password2"
@@ -147,7 +146,7 @@ export function SetPasswordForm({ token }: { token: string }) {
                 disabled={loading}
                 className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
               >
-                {loading ? 'Ukládám…' : 'Nastavit heslo'}
+                {t(loading ? 'heslo.ukladam' : 'heslo.nastavitHeslo')}
               </button>
             </form>
           )}

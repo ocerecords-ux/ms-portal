@@ -1,18 +1,30 @@
 import { kc } from './format';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Vodorovné pruhy „kdo/co kolik" - klienti podle obratu, kategorie podle
  * nákladů. Jedna barva (jde o velikost, ne o rozlišení), u každého pruhu
  * název i částka, takže barva nic nenese sama. Prvních osm, zbytek v „Ostatní".
+ *
+ * Jazyk dostane PROPEM, ne hookem - kresli se ze serverove komponenty.
  */
-export function Pruhy({ radky, barva }: { radky: { nazev: string; castka: number }[]; barva: string }) {
-  if (radky.length === 0) return <p className="text-sm text-muted m-0">Nic za vybrané období.</p>;
+export function Pruhy({
+  radky,
+  barva,
+  jazyk = 'cs',
+}: {
+  radky: { nazev: string; castka: number }[];
+  barva: string;
+  jazyk?: Jazyk;
+}) {
+  if (radky.length === 0)
+    return <p className="text-sm text-muted m-0">{prelozit(jazyk, 'finance.nicZaObdobi')}</p>;
 
   const MAX = 8;
   const zobrazene = radky.slice(0, MAX);
   if (radky.length > MAX) {
     zobrazene.push({
-      nazev: `Ostatní (${radky.length - MAX})`,
+      nazev: prelozitS(jazyk, 'finance.ostatni', { pocet: radky.length - MAX }),
       castka: radky.slice(MAX).reduce((s, r) => s + r.castka, 0),
     });
   }
@@ -26,7 +38,7 @@ export function Pruhy({ radky, barva }: { radky: { nazev: string; castka: number
           <span className="flex items-baseline justify-between gap-3 text-sm font-body">
             <span className="text-ink truncate">{r.nazev}</span>
             <span className="text-ink tabular-nums whitespace-nowrap">
-              {kc(r.castka)}
+              {kc(r.castka, jazyk)}
               <span className="text-muted text-xs ml-1.5">
                 {celkem > 0 ? `${Math.round((r.castka / celkem) * 100)} %` : ''}
               </span>

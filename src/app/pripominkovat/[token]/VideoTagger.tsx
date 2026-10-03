@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { STROP_PRO_KRIVKU, spocitejKrivku, type Peaks } from '@/lib/krivkaZvuku';
 import { NapovedaOtaznik } from '@/app/(portal)/components/NapovedaOtaznik';
 import type { PripominkaKVideu, SpotVeSlozce } from '@/lib/reklamaPripominky';
+import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * TAGGER REKLAMNÍHO SPOTU (zadání 18. 9. 2026, upřesněné tentýž den dvakrát).
@@ -41,6 +42,7 @@ export function SpotTagger({
   pocatecni,
   jsemZTymu,
   vKarteProjektu = false,
+  jazyk = 'cs',
 }: {
   token: string;
   /** Zvuk i video z kořenové složky projektu. */
@@ -48,6 +50,11 @@ export function SpotTagger({
   vybranyId: string;
   pocatecni: PripominkaKVideu[];
   jsemZTymu: boolean;
+  /**
+   * Jazyk PROPEM, ne hookem: tagger se kreslí i na veřejném odkazu pro
+   * klienta, kde JazykProvider není (pravidlo 8).
+   */
+  jazyk?: Jazyk;
   /**
    * Tagger je v kartě projektu u nás, ne na odkazu pro klienta (zadání
    * 19. 9. 2026: „v detailu, v záložce přeposlech… když jde o reklamu, tak
@@ -60,6 +67,8 @@ export function SpotTagger({
    */
   vKarteProjektu?: boolean;
 }) {
+  const t = (klic: string, hodnoty?: Record<string, string | number>) =>
+    hodnoty ? prelozitS(jazyk, klic, hodnoty) : prelozit(jazyk, klic);
   const [aktivniId, setAktivniId] = useState(vybranyId);
   const spot = useMemo(
     () => spoty.find((s) => s.id === aktivniId) ?? spoty[0] ?? null,
@@ -270,14 +279,14 @@ export function SpotTagger({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Připomínku se nepodařilo uložit.');
+        setChyba(data?.error || t('pripominkovat.neulozeno'));
         return;
       }
       setPripominky((c) => [...c, data as PripominkaKVideu].sort((a, b) => a.cas - b.cas));
       setText('');
       setZnacka(null);
     } catch {
-      setChyba('Připomínku se nepodařilo uložit.');
+      setChyba(t('pripominkovat.neulozeno'));
     } finally {
       setPosilam(false);
     }
@@ -291,7 +300,7 @@ export function SpotTagger({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || 'Smazání se nezdařilo.');
+        setChyba(data?.error || t('pripominkovat.nesmazano'));
         await nactiZnovu();
       }
     } catch {
@@ -331,12 +340,12 @@ export function SpotTagger({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Odeslání se nezdařilo.');
+        setChyba(data?.error || t('pripominkovat.neodeslano'));
         return;
       }
       await nactiZnovu();
     } catch {
-      setChyba('Odeslání se nezdařilo.');
+      setChyba(t('pripominkovat.neodeslano'));
     } finally {
       setOdesilam(false);
     }
@@ -344,9 +353,7 @@ export function SpotTagger({
 
   if (!spot) {
     return (
-      <p className="text-sm font-body text-muted m-0">
-        Ve složce projektu zatím není žádný spot k poslechu.
-      </p>
+      <p className="text-sm font-body text-muted m-0">{t('pripominkovat.zadnySpot')}</p>
     );
   }
 
@@ -370,7 +377,7 @@ export function SpotTagger({
         <button
           type="button"
           onClick={prehrajNeboStop}
-          title={hraje ? 'Pozastavit' : 'Přehrát'}
+          title={t(hraje ? 'pripominkovat.pozastavit' : 'pripominkovat.prehrat')}
           className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-brand-green text-onAccent"
         >
           {hraje ? (
@@ -386,7 +393,7 @@ export function SpotTagger({
         <button
           type="button"
           onClick={() => skoc(ted - 5)}
-          title="O pět vteřin zpět"
+          title={t('pripominkovat.oPetZpet')}
           className="h-9 px-3 rounded-lg border border-line text-xs font-heading font-semibold text-muted hover:text-brand-purple"
         >
           −5 s
@@ -399,7 +406,7 @@ export function SpotTagger({
           }}
           className="h-9 px-4 rounded-lg bg-brand-purple text-white font-heading font-semibold text-sm hover:bg-brand-purpleDeep transition-colors"
         >
-          Označit místo ({cas(znacka ?? ted)})
+          {t('pripominkovat.oznacitMisto', { cas: cas(znacka ?? ted) })}
         </button>
         <span className="ml-auto font-heading text-sm text-ink tabular-nums">
           {cas(ted)} {delka > 0 && <span className="text-muted">/ {cas(delka)}</span>}
@@ -418,7 +425,7 @@ export function SpotTagger({
       {vKarteProjektu && (
         <div className="flex items-center gap-2">
           <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-muted">
-            Připomínky ke spotu
+            {t('pripominkovat.napovedaNadpis')}
           </span>
           <NapovedaOtaznik tema="reklamy" tmavy />
         </div>
@@ -428,7 +435,7 @@ export function SpotTagger({
       {spoty.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-muted">
-            Spoty ve složce
+            {t('pripominkovat.spotyVeSlozce')}
           </span>
           {spoty.map((s, i) => (
             <button
@@ -466,13 +473,13 @@ export function SpotTagger({
                 />
               </div>
               <div className="bg-surface rounded-card border border-line shadow-sm p-3 flex flex-col gap-2">
-                <StavKrivky nazev={spot.nazev} stav={krivkaStav} />
+                <StavKrivky nazev={spot.nazev} stav={krivkaStav} jazyk={jazyk} />
                 {krivka}
               </div>
             </>
           ) : (
             <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
-              <StavKrivky nazev={spot.nazev} stav={krivkaStav} />
+              <StavKrivky nazev={spot.nazev} stav={krivkaStav} jazyk={jazyk} />
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <audio ref={mediaRef as React.RefObject<HTMLAudioElement>} src={src} preload="metadata" className="hidden" />
               {krivka}
@@ -487,7 +494,7 @@ export function SpotTagger({
             className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2.5"
           >
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="font-heading font-semibold text-sm text-ink m-0">Nová připomínka</h2>
+              <h2 className="font-heading font-semibold text-sm text-ink m-0">{t('pripominkovat.novaPripominka')}</h2>
               <span className="font-heading text-sm text-brand-purple tabular-nums">
                 {cas(znacka ?? ted)}
               </span>
@@ -496,7 +503,7 @@ export function SpotTagger({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              placeholder="Co je potřeba upravit?"
+              placeholder={t('pripominkovat.placeholder')}
               className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink placeholder:text-muted outline-none focus:border-brand-purple"
             />
             {chyba && <p className="text-xs font-body text-danger m-0">{chyba}</p>}
@@ -505,23 +512,25 @@ export function SpotTagger({
               disabled={posilam || !text.trim()}
               className="font-heading font-semibold text-sm rounded-lg border border-brand-purple px-4 py-2 text-brand-purple hover:bg-brand-purple hover:text-white transition-colors disabled:opacity-50"
             >
-              {posilam ? 'Zapisuji…' : 'Zapsat k času'}
+              {t(posilam ? 'pripominkovat.zapisuji' : 'pripominkovat.zapsatKCasu')}
             </button>
           </form>
 
           <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-baseline justify-between gap-2">
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Připomínky
+                {t('pripominkovat.pripominky')}
               </h2>
               <span className="text-xs font-body text-muted">
-                {pripominky.length === 0 ? 'zatím žádné' : `${pripominky.length} celkem`}
+                {pripominky.length === 0
+                  ? t('pripominkovat.zatimZadne')
+                  : t('pripominkovat.celkem', { pocet: pripominky.length })}
               </span>
             </div>
             <div className="max-h-[46vh] overflow-y-auto divide-y divide-line">
               {pripominky.length === 0 && (
                 <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
-                  Pusťte si spot a v místě, kde něco drhne, dejte „Označit místo".
+                  {t('pripominkovat.navodPrazdne')}
                 </p>
               )}
               {pripominky.map((p) => (
@@ -529,7 +538,7 @@ export function SpotTagger({
                   <button
                     type="button"
                     onClick={() => skoc(p.cas)}
-                    title="Přehrát od tohohle místa"
+                    title={t('pripominkovat.prehratOdMista')}
                     className="shrink-0 font-heading font-semibold text-xs text-brand-purple tabular-nums pt-0.5"
                   >
                     {cas(p.cas)}
@@ -544,7 +553,7 @@ export function SpotTagger({
                     </p>
                     {!p.odeslanoAt && (
                       <span className="block text-[11px] font-body text-status-progress mt-0.5">
-                        zatím neodesláno
+                        {t('pripominkovat.zatimNeodeslano')}
                       </span>
                     )}
                   </div>
@@ -553,16 +562,16 @@ export function SpotTagger({
                       <button
                         type="button"
                         onClick={() => void odskrtni(p)}
-                        title={p.vyrizeno ? 'Vrátit mezi otevřené' : 'Označit jako vyřízené'}
+                        title={t(p.vyrizeno ? 'pripominkovat.vratitMezi' : 'pripominkovat.oznacitVyrizene')}
                         className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
                       >
-                        {p.vyrizeno ? 'Vrátit' : 'Hotovo'}
+                        {t(p.vyrizeno ? 'pripominkovat.vratit' : 'pripominkovat.hotovo')}
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => void smaz(p.id)}
-                      title="Smazat připomínku"
+                      title={t('pripominkovat.smazat')}
                       className="text-[11px] font-heading text-muted hover:text-danger"
                     >
                       Smazat
@@ -580,15 +589,15 @@ export function SpotTagger({
                 className="w-full bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
               >
                 {odesilam
-                  ? 'Odesílám…'
+                  ? t('pripominkovat.odesilam')
                   : neodeslane.length > 0
-                    ? `Odeslat připomínky (${neodeslane.length})`
-                    : 'Vše odesláno'}
+                    ? t('pripominkovat.odeslatPripominky', { pocet: neodeslane.length })
+                    : t('pripominkovat.vseOdeslano')}
               </button>
               {posledniOdeslani && (
                 <span className="text-[11px] font-body text-muted text-center">
-                  Naposledy odesláno{' '}
-                  {new Intl.DateTimeFormat('cs-CZ', {
+                  {t('pripominkovat.naposledyOdeslano')}{' '}
+                  {new Intl.DateTimeFormat(kodJazyka(jazyk), {
                     day: 'numeric',
                     month: 'numeric',
                     hour: '2-digit',
@@ -598,7 +607,7 @@ export function SpotTagger({
               )}
               {spoty.length > 1 && (
                 <span className="text-[11px] font-body text-muted text-center">
-                  Odesílá se to, co je zapsané u tohohle spotu.
+                  {t('pripominkovat.odesilaSeTo')}
                 </span>
               )}
             </div>
@@ -610,17 +619,25 @@ export function SpotTagger({
   );
 }
 
-function StavKrivky({ nazev, stav }: { nazev: string; stav: 'pocita' | 'hotovo' | 'nejde' }) {
+function StavKrivky({
+  nazev,
+  stav,
+  jazyk,
+}: {
+  nazev: string;
+  stav: 'pocita' | 'hotovo' | 'nejde';
+  jazyk: Jazyk;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-3 flex-wrap">
       <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-muted truncate max-w-full">
         {nazev}
       </span>
-      {stav === 'pocita' && <span className="text-[11px] font-body text-muted">kreslím křivku…</span>}
+      {stav === 'pocita' && (
+        <span className="text-[11px] font-body text-muted">{prelozit(jazyk, 'pripominkovat.kreslimKrivku')}</span>
+      )}
       {stav === 'nejde' && (
-        <span className="text-[11px] font-body text-muted">
-          křivku se nepodařilo vykreslit — čas se bere z přehrávače
-        </span>
+        <span className="text-[11px] font-body text-muted">{prelozit(jazyk, 'pripominkovat.krivkaChyba')}</span>
       )}
     </div>
   );

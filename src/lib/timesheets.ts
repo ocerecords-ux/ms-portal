@@ -1,5 +1,5 @@
 import type { WorkType } from '@prisma/client';
-import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Vykazy zvukaru (zadani 6. 9. 2026). Cas drzime jako minuty od pulnoci -
@@ -13,6 +13,17 @@ export const WORK_TYPE_LABELS: Record<WorkType, string> = {
   REPAIRS: 'Opravy',
   OTHER: 'Ostatní',
 };
+
+/**
+ * Nazev druhu prace podle KODU, ne podle ceskeho popisku (vzor nazevMeny
+ * z davky 4). Jazyk je NEPOVINNY - bez nej vraci cestinu, aby PDF a posta
+ * mluvily dal cesky. WORK_TYPE_LABELS zustava: bere si ho vypocet a vykazy
+ * ukladane do databaze.
+ */
+export function nazevDruhuPrace(druh: WorkType, jazyk?: Jazyk): string {
+  if (!jazyk) return WORK_TYPE_LABELS[druh];
+  return prelozit(jazyk, `druhPrace.${druh}`);
+}
 
 /**
  * Poradi ve formulari i ve filtrech. Opravy stoji za strihem, protoze v case

@@ -1,6 +1,8 @@
 'use client';
 
-import { POPIS_STAVU, type Budik as BudikData } from '@/lib/palubovka';
+import { nazevStavuBudiku, type Budik as BudikData } from '@/lib/palubovka';
+import { useJazyk } from '@/app/(portal)/components/JazykProvider';
+import { prelozitS } from '@/lib/jazyk';
 
 /**
  * BUDÍK JAKO V AUTĚ (zadání 27. 9. 2026: „jako jsou budíky - ukazatele v autě,
@@ -57,6 +59,8 @@ export function Budik({
   /** Kde na stupnici je cíl (0-1) - tenká ryska, jako červené pole otáčkoměru. */
   znacka?: number;
 }) {
+  const jazyk = useJazyk();
+  const stavSlovy = nazevStavuBudiku(budik.stav, jazyk);
   const pomer = Math.max(0, Math.min(1, budik.pomer));
   const uhel = OD + (DO - OD) * pomer;
   const barva = BARVY[budik.stav] ?? BARVY.HLIDAT;
@@ -66,7 +70,7 @@ export function Budik({
     <section className="rounded-card border border-line bg-surface p-5 flex flex-col items-center gap-1">
       <h2 className="font-heading font-semibold text-sm text-ink m-0 self-start">{nadpis}</h2>
 
-      <svg viewBox="0 0 200 120" className="w-full max-w-[260px] h-auto" role="img" aria-label={`${nadpis}: ${hodnota}, ${POPIS_STAVU[budik.stav]}`}>
+      <svg viewBox="0 0 200 120" className="w-full max-w-[260px] h-auto" role="img" aria-label={prelozitS(jazyk, 'palubovka.budikPopisek', { nadpis, hodnota, stav: stavSlovy })}>
         {/* Dráha - světlejší stupeň téže barvy, ať stav drží přes celý oblouk. */}
         <path
           d={oblouk(OD, DO, POLOMER - TLOUSTKA / 2)}
@@ -115,7 +119,7 @@ export function Budik({
 
       <span className="font-heading font-semibold text-2xl text-ink leading-none -mt-3">{hodnota}</span>
       <span className={`font-heading font-semibold text-xs ${barva.text}`}>
-        {POPIS_STAVU[budik.stav]}
+        {stavSlovy}
       </span>
       <span className="text-xs font-body text-muted text-center leading-snug mt-1">
         {budik.popis}

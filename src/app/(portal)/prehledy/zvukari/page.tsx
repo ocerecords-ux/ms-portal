@@ -13,6 +13,8 @@ import {
 import { VyberMesice } from './VyberMesice';
 import { NastaveniPrehledu } from './NastaveniPrehledu';
 import { NahledMailu, UkazatNahled } from './NahledMailu';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
  * CO CHODÍ ZVUKAŘŮM (zadání 21. 9. 2026: „chtěl bych někde vidět přehledy, co
@@ -42,11 +44,12 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
   if (!session?.user?.id) redirect('/login');
   if (session.user.role !== 'ADMIN') redirect('/prehledy');
 
+  const jazyk = nactiJazyk();
   const zadany = searchParams?.mesic;
   const mesic = zadany && /^\d{4}-\d{2}$/.test(zadany) ? zadany : minulyMesic();
 
   const [prehledy, nastaveni, zapnuto, odeslane] = await Promise.all([
-    spoctiPrehledy(mesic).catch(() => []),
+    spoctiPrehledy(mesic, jazyk).catch(() => []),
     nactiNastaveniPrehledu(),
     jeZapnuto('MESICNI_PREHLED'),
     prisma.mesicniPrehledOdeslan
@@ -61,7 +64,7 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
   const [rok, cislo] = mesic.split('-').map(Number);
   const denRozeslani = new Date(Date.UTC(rok, cislo, nastaveni.den));
   const uzMelOdejit = denRozeslani.getTime() <= Date.now();
-  const datum = (d: Date) => new Intl.DateTimeFormat('cs-CZ', { timeZone: 'Europe/Prague' }).format(d);
+  const datum = (d: Date) => formatDatum(jazyk, d);
 
   const soucet = prehledy.reduce(
     (s, p) => ({ minut: s.minut + p.minut, castka: s.castka + p.castka, bonus: s.bonus + p.bonusCelkem }),
@@ -71,64 +74,87 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3 flex-wrap">
-        <VyberMesice mesic={mesic} mesice={posledniMesice(13).map((m) => ({ hodnota: m, popis: nazevMesice(m) }))} />
+        <VyberMesice
+          mesic={mesic}
+          mesice={posledniMesice(13).map((m) => ({ hodnota: m, popis: nazevMesice(m, jazyk) }))}
+        />
         <span className="text-sm font-body text-muted">
           {!zapnuto
-            ? 'Rozesílání je vypnuté.'
-            : uzMelOdejit
-              ? `Přehled za tenhle měsíc se rozesílal od ${datum(denRozeslani)}.`
-              : `Přehled odejde ${datum(denRozeslani)} v 8:00.`}
+            ? prelozit(jazyk, 'zvukari.rozesilaniVypnute')
+            : prelozitS(jazyk, uzMelOdejit ? 'zvukari.rozesilalSeOd' : 'zvukari.odejde', {
+                datum: datum(denRozeslani),
+              })}
         </span>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Dlazdice nazev="Zvukařů" hodnota={String(prehledy.length)} />
-        <Dlazdice nazev="Odpracováno" hodnota={formatDuration(soucet.minut)} />
-        <Dlazdice nazev="Za práci" hodnota={formatCzk(soucet.castka)} />
-        <Dlazdice nazev="Celkem s bonusy" hodnota={formatCzk(soucet.castka + soucet.bonus)} />
+        <Dlazdice nazev={prelozit(jazyk, 'zvukari.zvukaru')} hodnota={String(prehledy.length)} />
+        <Dlazdice nazev={prelozit(jazyk, 'zvukari.odpracovano')} hodnota={formatDuration(soucet.minut)} />
+        <Dlazdice nazev={prelozit(jazyk, 'zvukari.zaPraci')} hodnota={formatCzk(soucet.castka, jazyk)} />
+        <Dlazdice
+          nazev={prelozit(jazyk, 'zvukari.celkemSBonusy')}
+          hodnota={formatCzk(soucet.castka + soucet.bonus, jazyk)}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(380px,42%)] gap-5 items-start">
       <div className="flex flex-col gap-5 min-w-0">
       <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          {nazevMesice(mesic)} po zvukařích
+          {prelozitS(jazyk, 'zvukari.mesicPoZvukarich', { mesic: nazevMesice(mesic, jazyk) })}
         </h2>
         {prehledy.length === 0 ? (
-          <p className="text-sm text-muted m-0">V tomhle měsíci žádný zvukař nic nevykázal - nikomu nic nepřijde.</p>
+          <p className="text-sm text-muted m-0">{prelozit(jazyk, 'zvukari.nikdoNevykazal')}</p>
         ) : (
           <div className="flex flex-col divide-y divide-line">
             {prehledy.map((p) => {
               const odeslano = odeslanoKomu.get(p.userId);
               const stav = odeslano
-                ? { text: `Odesláno ${datum(odeslano.odeslanoAt)}`, trida: 'text-status-done' }
+                ? {
+                    text: prelozitS(jazyk, 'zvukari.odeslano', { datum: datum(odeslano.odeslanoAt) }),
+                    trida: 'text-status-done',
+                  }
                 : !p.email
-                  ? { text: 'Nemá e-mail', trida: 'text-danger' }
+                  ? { text: prelozit(jazyk, 'zvukari.nemaEmail'), trida: 'text-danger' }
                   : !zapnuto
-                    ? { text: 'Vypnuto', trida: 'text-muted' }
+                    ? { text: prelozit(jazyk, 'zvukari.vypnuto'), trida: 'text-muted' }
                     : uzMelOdejit
-                      ? { text: 'Zatím neodešlo', trida: 'text-danger' }
-                      : { text: `Odejde ${datum(denRozeslani)}`, trida: 'text-muted' };
+                      ? { text: prelozit(jazyk, 'zvukari.zatimNeodeslo'), trida: 'text-danger' }
+                      : {
+                          text: prelozitS(jazyk, 'zvukari.odejdeKratce', { datum: datum(denRozeslani) }),
+                          trida: 'text-muted',
+                        };
               return (
                 <details key={p.userId} className="group py-3">
                   <summary className="flex items-center gap-3 flex-wrap cursor-pointer list-none">
                     <span className="text-muted text-xs transition-transform group-open:rotate-90">▶</span>
                     <span className="font-heading font-semibold text-ink min-w-[160px]">{p.jmeno}</span>
                     <span className="text-sm tabular-nums text-ink">{formatDuration(p.minut)}</span>
-                    <span className="text-sm tabular-nums text-ink">{formatCzk(p.castka)}</span>
+                    <span className="text-sm tabular-nums text-ink">{formatCzk(p.castka, jazyk)}</span>
                     {p.bonusCelkem > 0 && (
-                      <span className="text-sm tabular-nums text-muted">+ bonusy {formatCzk(p.bonusCelkem)}</span>
+                      <span className="text-sm tabular-nums text-muted">
+                        {prelozitS(jazyk, 'zvukari.bonusyPlus', { castka: formatCzk(p.bonusCelkem, jazyk) })}
+                      </span>
                     )}
                     <span className={`text-xs font-heading ml-auto ${stav.trida}`}>{stav.text}</span>
                     <UkazatNahled user={p.userId} />
                   </summary>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 pl-6 text-sm font-body">
                     <Seznam
-                      nadpis="Podle druhu práce"
-                      radky={p.druhy.map((d) => [d.nazev, `${formatDuration(d.minut)} · ${formatCzk(d.castka)}`])}
+                      nadpis={prelozit(jazyk, 'zvukari.podleDruhu')}
+                      radky={p.druhy.map((d) => [
+                        d.nazev,
+                        `${formatDuration(d.minut)} · ${formatCzk(d.castka, jazyk)}`,
+                      ])}
                     />
-                    <Seznam nadpis="Projekty" radky={p.projekty.map((pr) => [pr.nazev, formatDuration(pr.minut)])} />
-                    <Seznam nadpis="Bonusy" radky={p.bonusy.map((b) => [b.nazev, formatCzk(b.castka)])} />
+                    <Seznam
+                      nadpis={prelozit(jazyk, 'zvukari.projekty')}
+                      radky={p.projekty.map((pr) => [pr.nazev, formatDuration(pr.minut)])}
+                    />
+                    <Seznam
+                      nadpis={prelozit(jazyk, 'zvukari.bonusy')}
+                      radky={p.bonusy.map((b) => [b.nazev, formatCzk(b.castka, jazyk)])}
+                    />
                   </div>
                 </details>
               );
@@ -149,11 +175,14 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
         }}
         zmena={
           nastaveni.zmenenoAt
-            ? `Naposledy změněno ${datum(nastaveni.zmenenoAt)}${nastaveni.zmenilJmeno ? ` (${nastaveni.zmenilJmeno})` : ''}.`
+            ? prelozitS(jazyk, 'zvukari.naposledyZmeneno', {
+                datum: datum(nastaveni.zmenenoAt),
+                kdo: nastaveni.zmenilJmeno ? ` (${nastaveni.zmenilJmeno})` : '',
+              })
             : null
         }
         mesic={mesic}
-        nazevMesice={nazevMesice(mesic)}
+        nazevMesice={nazevMesice(mesic, jazyk)}
         // Rozeslat ručně jde jen měsíc, který už skončil - rozpracovaný měsíc
         // by zvukaři dostali s neúplnými čísly.
         cekaNaOdeslani={

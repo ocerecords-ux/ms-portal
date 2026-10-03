@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nactiBacklog } from '@/lib/backlogServer';
 import { BacklogKlient } from '../../backlog/BacklogKlient';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * BACKLOG (zadání 18. 9. 2026): podařilo se nám projekt odevzdat v termínu,
@@ -20,14 +22,11 @@ export default async function BacklogPrehledPage() {
   if (!session?.user?.id || (role !== 'ADMIN' && role !== 'PRODUKCE')) redirect('/projekty');
 
   const zaznamy = await nactiBacklog();
+  const jazyk = nactiJazyk();
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-sm font-body text-muted m-0">
-        Kdy měl být projekt hotový a kdy se opravdu odevzdal. Za odevzdání se bere okamžik, kdy projekt
-        poprvé přešel do stavu „Dokončeno - ke schválení". Kladné číslo jsou dny k dobru, záporné dny
-        skluzu — stejně jako u data v přehledu projektů.
-      </p>
+      <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'backlog.uvod')}</p>
       <BacklogKlient zaznamy={zaznamy} />
     </div>
   );

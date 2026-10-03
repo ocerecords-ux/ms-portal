@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { NovaPozvankaHerce } from '@/components/NovaPozvankaHerce';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
  * POZVÁNKY HERCŮ (zadání 16. 9. 2026: „tohle tlačítko musí mít zaple
@@ -43,38 +45,33 @@ export default async function PozvankyPage() {
     })
     .catch(() => []);
 
-  const dat = (d: Date | null) =>
-    d ? d.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }) : '—';
+  const jazyk = nactiJazyk();
+  const dat = (d: Date | null) => formatDatum(jazyk, d);
 
   return (
     <section className="flex flex-col gap-8 max-w-3xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Pozvánky herců</h1>
-          <p className="text-sm font-body text-muted m-0 mt-1">
-            Pošlete herci e-mail a zbytek si vyplní sám — jméno, adresu, číslo účtu, kde může
-            natáčet a jestli je plátce DPH.
-          </p>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">
+            {prelozit(jazyk, 'pozvanky.nadpis')}
+          </h1>
+          <p className="text-sm font-body text-muted m-0 mt-1">{prelozit(jazyk, 'pozvanky.uvod')}</p>
         </div>
         <NovaPozvankaHerce />
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-line">
-          <h2 className="font-heading font-semibold text-ink m-0">Rozdělané pozvánky</h2>
-          <p className="text-xs font-body text-muted m-0 mt-1">
-            Kdo si ještě nenastavil heslo nebo nedoplnil údaje. Jakmile to dokončí, ze seznamu zmizí.
-          </p>
+          <h2 className="font-heading font-semibold text-ink m-0">{prelozit(jazyk, 'pozvanky.rozdelane')}</h2>
+          <p className="text-xs font-body text-muted m-0 mt-1">{prelozit(jazyk, 'pozvanky.rozdelanePopis')}</p>
         </div>
 
         {rozdelani.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0 px-5 py-6">
-            Nic nevisí — všichni pozvaní herci jsou hotoví.
-          </p>
+          <p className="text-sm font-body text-muted m-0 px-5 py-6">{prelozit(jazyk, 'pozvanky.nicNevisi')}</p>
         ) : (
           <ul className="m-0 p-0 list-none">
             {rozdelani.map((h) => {
-              const stav = !h.passwordSetAt ? 'Čeká na nastavení hesla' : 'Čeká na doplnění údajů';
+              const stav = prelozit(jazyk, !h.passwordSetAt ? 'pozvanky.cekaHeslo' : 'pozvanky.cekaUdaje');
               return (
                 <li
                   key={h.id}
@@ -88,7 +85,7 @@ export default async function PozvankyPage() {
                     {stav}
                   </span>
                   <span className="text-xs font-body text-muted w-24 text-right">
-                    pozváno {dat(h.invitedAt)}
+                    {prelozitS(jazyk, 'pozvanky.pozvano', { datum: dat(h.invitedAt) })}
                   </span>
                 </li>
               );

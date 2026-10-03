@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { DoplneniUdaju } from './DoplneniUdaju';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * DOPLNĚNÍ ÚDAJŮ HERCE (zadání 16. 9. 2026: „po tom, co si herec nastaví
@@ -55,6 +56,7 @@ export default async function DoplnitUdajePage() {
 
       <div className="max-w-2xl mx-auto px-6 sm:px-10 py-8 sm:py-12">
         <DoplneniUdaju
+          jazyk={nactiJazyk()}
           vychozi={{
             name: ucet.name ?? '',
             addressStreet: ucet.addressStreet ?? '',

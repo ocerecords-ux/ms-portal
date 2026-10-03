@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { POLOZKY_TABULE, type DataTabule } from '@/lib/tabule';
+import { POLOZKY_TABULE, nazevPolozky, type DataTabule } from '@/lib/tabule';
+import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 
 /**
@@ -44,9 +45,12 @@ export function Tabule({
   klic,
   pocatecni,
   zpetOdkaz = null,
+  jazyk = 'cs',
 }: {
   klic: string;
   pocatecni: DataTabule;
+  /** Jazyk PROPEM, ne hookem - tabule stojí mimo JazykProvider (pravidlo 8). */
+  jazyk?: Jazyk;
   /**
    * Cesta zpátky do portálu (zadání 23. 9. 2026: „když se dostanu do sekce
    * Tabule, tak nemám možnost se pak dostat zpět"). Vyplní se jen
@@ -145,9 +149,9 @@ export function Tabule({
   useEffect(() => {
     const t = setInterval(() => {
       const hodina = Number(
-        new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', hourCycle: 'h23' }).format(new Date()),
+        new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: pasmo, hour: 'numeric', hourCycle: 'h23' }).format(new Date()),
       );
-      const minuta = Number(new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, minute: 'numeric' }).format(new Date()));
+      const minuta = Number(new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: pasmo, minute: 'numeric' }).format(new Date()));
       if (hodina === NOCNI_OBNOVA_HODINA && minuta === 0) nactiZnovu('noční start načisto');
     }, 60_000);
     return () => clearInterval(t);
@@ -174,9 +178,15 @@ export function Tabule({
   // Den se na tabuli mění o půlnoci - obnova to chytí do 30 s, ale datum
   // v hlavičce se přepne hned.
   const cas = (iso: string | Date) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
-  const hodinyText = new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(ted);
-  const datumText = new Intl.DateTimeFormat('cs-CZ', {
+    new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(
+      new Date(iso),
+    );
+  const hodinyText = new Intl.DateTimeFormat(kodJazyka(jazyk), {
+    timeZone: pasmo,
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(ted);
+  const datumText = new Intl.DateTimeFormat(kodJazyka(jazyk), {
     timeZone: pasmo,
     weekday: 'long',
     day: 'numeric',
@@ -226,7 +236,7 @@ export function Tabule({
     const min = Math.max(0, Math.round((doMs - tedMs) / 60_000));
     const h = Math.floor(min / 60);
     const m = min % 60;
-    return h > 0 ? `${h} h ${m} min` : `${m} min`;
+    return h > 0 ? prelozitS(jazyk, 'tabule.hodin', { h, m }) : prelozitS(jazyk, 'tabule.minut', { m });
   };
 
   return (
@@ -265,7 +275,7 @@ export function Tabule({
             textDecoration: 'none',
           }}
         >
-          ← Zpět do portálu
+          {prelozit(jazyk, 'tabule.zpetDoPortalu')}
         </a>
       )}
 
@@ -292,11 +302,13 @@ export function Tabule({
             <span style={{ width: 24, height: 24, borderRadius: 6, background: data.studio.barva }} />
             <span style={{ fontFamily: DISPLAY, fontSize: 44, fontWeight: 600 }}>{data.studio.nazev}</span>
             {chybaSite && (
-              <span style={{ fontSize: 20, color: BARVY.sedy, marginLeft: 16 }}>· bez spojení, zkouším znovu…</span>
+              <span style={{ fontSize: 20, color: BARVY.sedy, marginLeft: 16 }}>
+                {prelozit(jazyk, 'tabule.bezSpojeni')}
+              </span>
             )}
             {/* SERVIS se přestěhoval do hlavičky (29. 9. 2026), když z tabule
                 zmizely poznámky a s nimi celý pravý sloupec. */}
-            <TlacitkoServis chybi={data.chybi.length} otevri={() => setServis(true)} />
+            <TlacitkoServis chybi={data.chybi.length} otevri={() => setServis(true)} jazyk={jazyk} />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 28 }}>
             <span style={{ fontSize: 32, fontWeight: 500, color: BARVY.text3 }}>{datumText}</span>
@@ -337,10 +349,11 @@ export function Tabule({
                 }}
               >
                 <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '0.12em', color: BARVY.akcent }}>
-                  PRÁVĚ PROBÍHÁ{probiha.mistnost ? ` · ${probiha.mistnost.toUpperCase()}` : ''}
+                  {prelozit(jazyk, 'tabule.pravecProbiha')}
+                  {probiha.mistnost ? ` · ${probiha.mistnost.toUpperCase()}` : ''}
                 </span>
                 <span style={{ fontFamily: DISPLAY, fontSize: 60, fontWeight: 600, lineHeight: 1.05 }}>{probiha.nazev}</span>
-                <Lide u={probiha} cas={`${cas(probiha.od)} – ${cas(probiha.do)}`} />
+                <Lide u={probiha} cas={`${cas(probiha.od)} – ${cas(probiha.do)}`} jazyk={jazyk} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                   <div style={{ flexGrow: 1, height: 12, borderRadius: 999, background: BARVY.linka, overflow: 'hidden' }}>
                     <div
@@ -352,7 +365,9 @@ export function Tabule({
                       }}
                     />
                   </div>
-                  <span style={{ fontSize: 24, color: BARVY.text3, whiteSpace: 'nowrap' }}>zbývá {zbyva(probiha.doMs)}</span>
+                  <span style={{ fontSize: 24, color: BARVY.text3, whiteSpace: 'nowrap' }}>
+                    {prelozitS(jazyk, 'tabule.zbyva', { kolik: zbyva(probiha.doMs) })}
+                  </span>
                 </div>
                 {/* Další běžící událost (typicky střih vedle natáčení). */}
                 {probihajici.slice(1).map((u) => (
@@ -367,10 +382,12 @@ export function Tabule({
                     }}
                   >
                     <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.12em', color: BARVY.sedy }}>
-                      ZÁROVEŇ{u.mistnost ? ` · ${u.mistnost.toUpperCase()}` : ''} · ZBÝVÁ {zbyva(u.doMs).toUpperCase()}
+                      {prelozit(jazyk, 'tabule.zaroven')}
+                      {u.mistnost ? ` · ${u.mistnost.toUpperCase()}` : ''} ·{' '}
+                      {prelozitS(jazyk, 'tabule.zbyvaVelke', { kolik: zbyva(u.doMs).toUpperCase() })}
                     </span>
                     <span style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 600, lineHeight: 1.1 }}>{u.nazev}</span>
-                    <Lide u={u} cas={`${cas(u.od)} – ${cas(u.do)}`} />
+                    <Lide u={u} cas={`${cas(u.od)} – ${cas(u.do)}`} jazyk={jazyk} />
                   </div>
                 ))}
               </div>
@@ -402,27 +419,37 @@ export function Tabule({
                   }}
                 >
                   <span style={{ width: 14, height: 14, borderRadius: '50%', background: BARVY.akcent }} />
-                  {dalsi ? `STUDIO JE VOLNÉ DO ${cas(dalsi.od)}` : 'STUDIO JE DNES UŽ VOLNÉ'}
+                  {dalsi
+                    ? prelozitS(jazyk, 'tabule.volneDo', { cas: cas(dalsi.od) })
+                    : prelozit(jazyk, 'tabule.volneDnesUz')}
                 </span>
                 {dalsi ? (
                   <>
                     <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>
-                      DALŠÍ V {cas(dalsi.od)} · ZA {zbyva(dalsi.odMs).toUpperCase()}
+                      {prelozitS(jazyk, 'tabule.dalsiV', {
+                        cas: cas(dalsi.od),
+                        kolik: zbyva(dalsi.odMs).toUpperCase(),
+                      })}
                     </span>
                     <span style={{ fontFamily: DISPLAY, fontSize: 60, fontWeight: 600, lineHeight: 1.05 }}>{dalsi.nazev}</span>
-                    <Lide u={dalsi} cas={`${cas(dalsi.od)} – ${cas(dalsi.do)}`} />
+                    <Lide u={dalsi} cas={`${cas(dalsi.od)} – ${cas(dalsi.do)}`} jazyk={jazyk} />
                   </>
                 ) : (
                   <span style={{ fontSize: 30, color: BARVY.text2 }}>
-                    {data.zitra ? `Zítra ${cas(data.zitra.od)}: ${zitraText(data.zitra)}` : 'Zítra zatím nic naplánováno.'}
+                    {data.zitra
+                      ? prelozitS(jazyk, 'tabule.zitraV', {
+                          cas: cas(data.zitra.od),
+                          co: zitraText(data.zitra),
+                        })
+                      : prelozit(jazyk, 'tabule.zitraNic')}
                   </span>
                 )}
               </div>
             )}
 
-            <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>DNES VE STUDIU</span>
+            <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>{prelozit(jazyk, 'tabule.dnesVeStudiu')}</span>
             {viditelne.length === 0 && (
-              <span style={{ fontSize: 28, color: BARVY.sedy }}>Na dnešek není v kalendáři nic zapsané.</span>
+              <span style={{ fontSize: 28, color: BARVY.sedy }}>{prelozit(jazyk, 'tabule.dnesNic')}</span>
             )}
             {viditelne.map((r) =>
               r.typ === 'volno' ? (
@@ -510,7 +537,7 @@ export function Tabule({
                         fontWeight: 800,
                       }}
                     >
-                      TEĎ
+                      {prelozit(jazyk, 'tabule.ted')}
                     </span>
                   )}
                 </div>
@@ -518,12 +545,17 @@ export function Tabule({
             )}
               {(probiha || dalsi) && data.zitra && (
                 <span style={{ marginTop: maOstatni ? 12 : 'auto', fontSize: 24, color: BARVY.sedy }}>
-                  Zítra {cas(data.zitra.od)}: {zitraText(data.zitra)}
+                  {prelozitS(jazyk, 'tabule.zitraV', {
+                    cas: cas(data.zitra.od),
+                    co: zitraText(data.zitra),
+                  })}
                 </span>
               )}
             </div>
 
-            {maOstatni && <OstatniStudia ostatni={ostatni} ted={ted} domaciPasmo={pasmo} />}
+            {maOstatni && (
+              <OstatniStudia ostatni={ostatni} ted={ted} domaciPasmo={pasmo} jazyk={jazyk} />
+            )}
           </div>
 
           {data.instagram && <InstagramOkno ig={data.instagram} />}
@@ -536,6 +568,7 @@ export function Tabule({
             setData={setData}
             obnov={nacti}
             zavri={() => setServis(false)}
+            jazyk={jazyk}
           />
         )}
       </div>
@@ -573,9 +606,11 @@ function ZnackaDruhu({
 function Lide({
   u,
   cas,
+  jazyk,
 }: {
   u: { druh: string; ikona: string | null; herec: string | null; zvukar: string | null };
   cas: string;
+  jazyk: Jazyk;
 }) {
   return (
     <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap', fontSize: 26, color: BARVY.text2 }}>
@@ -584,12 +619,14 @@ function Lide({
       </span>
       {u.herec && (
         <span>
-          Herec: <span style={{ color: BARVY.text, fontWeight: 600 }}>{u.herec}</span>
+          {prelozit(jazyk, 'tabule.herec')}{' '}
+          <span style={{ color: BARVY.text, fontWeight: 600 }}>{u.herec}</span>
         </span>
       )}
       {u.zvukar && (
         <span>
-          Zvukař: <span style={{ color: BARVY.text, fontWeight: 600 }}>{u.zvukar}</span>
+          {prelozit(jazyk, 'tabule.zvukar')}{' '}
+          <span style={{ color: BARVY.text, fontWeight: 600 }}>{u.zvukar}</span>
         </span>
       )}
     </div>
@@ -603,13 +640,17 @@ function Lide({
  * Jinak je tlačítko záměrně nenápadné: na tabuli se lidi dívají kvůli
  * programu, ne kvůli kávě.
  */
-function TlacitkoServis({ chybi, otevri }: { chybi: number; otevri: () => void }) {
+function TlacitkoServis({ chybi, otevri, jazyk }: { chybi: number; otevri: () => void; jazyk: Jazyk }) {
   return (
     <button
       type="button"
       onClick={otevri}
-      title="Nahlásit, co ve studiu došlo"
-      aria-label={chybi > 0 ? `Servis studia — chybí ${chybi}` : 'Servis studia'}
+      title={prelozit(jazyk, 'tabule.servisTitle')}
+      aria-label={
+        chybi > 0
+          ? prelozitS(jazyk, 'tabule.servisPopisekChybi', { pocet: chybi })
+          : prelozit(jazyk, 'tabule.servisPopisek')
+      }
       style={{
         marginLeft: 12,
         display: 'inline-flex',
@@ -686,12 +727,14 @@ function ServisniPanel({
   setData,
   obnov,
   zavri,
+  jazyk,
 }: {
   zaklad: string;
   data: DataTabule;
   setData: (fn: (d: DataTabule) => DataTabule) => void;
   obnov: () => Promise<void>;
   zavri: () => void;
+  jazyk: Jazyk;
 }) {
   const chybi = new Set(data.chybi.map((c) => c.polozka));
 
@@ -742,15 +785,15 @@ function ServisniPanel({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-            <span style={{ fontFamily: DISPLAY, fontSize: 46, fontWeight: 600 }}>Co ve studiu došlo?</span>
-            <span style={{ fontSize: 24, color: BARVY.sedy }}>
-              Ťukněte na to, co chybí. Bára se to dozví hned. Až se to doplní, ťukněte znovu.
+            <span style={{ fontFamily: DISPLAY, fontSize: 46, fontWeight: 600 }}>
+              {prelozit(jazyk, 'tabule.coDoslo')}
             </span>
+            <span style={{ fontSize: 24, color: BARVY.sedy }}>{prelozit(jazyk, 'tabule.coDosloUvod')}</span>
           </div>
           <button
             type="button"
             onClick={zavri}
-            aria-label="Zavřít servisní panel"
+            aria-label={prelozit(jazyk, 'tabule.zavritPanel')}
             style={{
               flexShrink: 0,
               width: 72,
@@ -809,8 +852,14 @@ function ServisniPanel({
                   aria-hidden="true"
                   dangerouslySetInnerHTML={{ __html: p.svg }}
                 />
-                <span style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.15 }}>{p.nazev}</span>
-                {je && <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '0.1em', color: '#ffc861' }}>CHYBÍ</span>}
+                <span style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.15 }}>
+                  {nazevPolozky(p.klic, jazyk)}
+                </span>
+                {je && (
+                  <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '0.1em', color: '#ffc861' }}>
+                    {prelozit(jazyk, 'tabule.chybi')}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -840,14 +889,18 @@ function OstatniStudia({
   ostatni,
   ted,
   domaciPasmo,
+  jazyk,
 }: {
   ostatni: DataTabule['ostatni'];
   ted: Date;
   domaciPasmo: string;
+  jazyk: Jazyk;
 }) {
   const tedMs = ted.getTime();
   const hodina = (iso: string, pasmo: string) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+    new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(
+      new Date(iso),
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
@@ -929,12 +982,12 @@ function OstatniStudia({
                 ? [s.probiha!.nazev, s.probiha!.mistnost, s.probiha!.herec].filter(Boolean).join(' · ')
                 : s.dalsi
                   ? [s.dalsi.nazev, s.dalsi.herec].filter(Boolean).join(' · ')
-                  : 'Dnes volno'}
+                  : prelozit(jazyk, 'tabule.dnesVolno')}
             </span>
             {cas && (
               <span style={{ flexShrink: 0, fontSize: 20, color: BARVY.sedy, whiteSpace: 'nowrap' }}>
                 {cas}
-                {jinePasmo ? ' místního' : ''}
+                {jinePasmo ? prelozit(jazyk, 'tabule.mistniho') : ''}
               </span>
             )}
             <span

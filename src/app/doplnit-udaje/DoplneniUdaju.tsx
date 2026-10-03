@@ -5,6 +5,7 @@ import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { CountrySelect } from '@/app/(admin)/admin/CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { MESTA_PRO_HERCE, mestaZeStudii, studiaZMest } from '@/lib/lokaceHercu';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * PRŮVODCE PRO NOVÉHO HERCE (zadání 16. 9. 2026: „po tom, co si herec nastaví
@@ -43,9 +44,13 @@ type Udaje = {
 
 export function DoplneniUdaju({
   vychozi,
+  jazyk = 'cs',
 }: {
   vychozi: Partial<Omit<Udaje, 'mesta' | 'druhCisla'>> & { studioLocations?: string[] };
+  /** Jazyk PROPEM - stránka stojí mimo (portal), tedy mimo JazykProvider. */
+  jazyk?: Jazyk;
 }) {
+  const t = (klic: string) => prelozit(jazyk, klic);
   const [u, setU] = useState<Udaje>(() => ({
     name: '',
     addressStreet: '',
@@ -81,8 +86,8 @@ export function DoplneniUdaju({
     hotovo: () => string | null;
   }[] = [
     {
-      nadpis: 'Vaše jméno a příjmení',
-      popis: 'Tak, jak má stát ve smlouvě.',
+      nadpis: t('doplneni.jmenoNadpis'),
+      popis: t('doplneni.jmenoPopis'),
       obsah: (
         <input
           value={u.name}
@@ -90,17 +95,17 @@ export function DoplneniUdaju({
           autoComplete="name"
           autoFocus
           className="admin-input text-lg"
-          placeholder="Jan Novák"
+          placeholder={t('doplneni.jmenoPlaceholder')}
         />
       ),
-      hotovo: () => (u.name.trim() ? null : 'Vyplňte prosím jméno a příjmení.'),
+      hotovo: () => (u.name.trim() ? null : t('doplneni.jmenoChyba')),
     },
     {
-      nadpis: 'Adresa trvalého bydliště',
-      popis: 'Patří do smlouvy.',
+      nadpis: t('doplneni.adresaNadpis'),
+      popis: t('doplneni.adresaPopis'),
       obsah: (
         <div className="flex flex-col gap-4">
-          <Popisek text="Ulice a č. p.">
+          <Popisek text={t('doplneni.ulice')}>
             <input
               value={u.addressStreet}
               onChange={(e) => nastav('addressStreet', e.target.value)}
@@ -111,7 +116,7 @@ export function DoplneniUdaju({
           </Popisek>
           <div className="flex gap-4 flex-wrap">
             <div className="flex-1 min-w-[160px]">
-              <Popisek text="Město">
+              <Popisek text={t('doplneni.mesto')}>
                 <input
                   value={u.addressCity}
                   onChange={(e) => nastav('addressCity', e.target.value)}
@@ -121,7 +126,7 @@ export function DoplneniUdaju({
               </Popisek>
             </div>
             <div className="w-32">
-              <Popisek text="PSČ">
+              <Popisek text={t('doplneni.psc')}>
                 <input
                   value={u.addressZip}
                   onChange={(e) => nastav('addressZip', e.target.value)}
@@ -132,13 +137,13 @@ export function DoplneniUdaju({
               </Popisek>
             </div>
           </div>
-          <Popisek text="Země">
+          <Popisek text={t('doplneni.zeme')}>
             <CountrySelect value={u.addressCountry} onChange={(k) => nastav('addressCountry', k)} />
           </Popisek>
         </div>
       ),
       hotovo: () =>
-        u.addressStreet.trim() && u.addressCity.trim() ? null : 'Vyplňte prosím ulici a město.',
+        u.addressStreet.trim() && u.addressCity.trim() ? null : t('doplneni.adresaChyba'),
     },
     {
       /**
@@ -150,12 +155,20 @@ export function DoplneniUdaju({
        * Ptát se, jestli je OSVČ nebo fyzická osoba, nemá smysl: na podobu
        * smlouvy to nemá vliv. Jediné, co se tím mění, je faktura.
        */
-      nadpis: 'Jste plátce DPH?',
-      popis: 'Kdo je plátce, vystavuje nám pak fakturu s DPH.',
+      nadpis: t('doplneni.dphNadpis'),
+      popis: t('doplneni.dphPopis'),
       obsah: (
         <div className="flex gap-2 flex-wrap">
-          <Prepinac aktivni={!u.vatPayer} onClick={() => nastav('vatPayer', false)} text="Nejsem plátce" />
-          <Prepinac aktivni={u.vatPayer} onClick={() => nastav('vatPayer', true)} text="Jsem plátce DPH" />
+          <Prepinac
+            aktivni={!u.vatPayer}
+            onClick={() => nastav('vatPayer', false)}
+            text={t('doplneni.nejsemPlatce')}
+          />
+          <Prepinac
+            aktivni={u.vatPayer}
+            onClick={() => nastav('vatPayer', true)}
+            text={t('doplneni.jsemPlatce')}
+          />
         </div>
       ),
       hotovo: () => null,
@@ -168,24 +181,24 @@ export function DoplneniUdaju({
        *
        * DIČ se ptá jen plátce DPH - bez něj by fakturu s DPH nevystavil.
        */
-      nadpis: 'Rodné číslo, nebo IČ',
-      popis: 'Vyberte, co nám dáte — stačí jedno z toho.',
+      nadpis: t('doplneni.cisloNadpis'),
+      popis: t('doplneni.cisloPopis'),
       obsah: (
         <div className="flex flex-col gap-4">
           <div className="flex gap-2 flex-wrap">
             <Prepinac
               aktivni={u.druhCisla === 'rc'}
               onClick={() => nastav('druhCisla', 'rc')}
-              text="Rodné číslo"
+              text={t('doplneni.rodneCislo')}
             />
             <Prepinac
               aktivni={u.druhCisla === 'ic'}
               onClick={() => nastav('druhCisla', 'ic')}
-              text="IČ"
+              text={t('doplneni.ic')}
             />
           </div>
           {u.druhCisla === 'rc' ? (
-            <Popisek text="Rodné číslo">
+            <Popisek text={t('doplneni.rodneCislo')}>
               <input
                 value={u.birthNumber}
                 onChange={(e) => nastav('birthNumber', e.target.value)}
@@ -195,7 +208,7 @@ export function DoplneniUdaju({
               />
             </Popisek>
           ) : (
-            <Popisek text="IČ">
+            <Popisek text={t('doplneni.ic')}>
               <input
                 value={u.ic}
                 onChange={(e) => nastav('ic', e.target.value)}
@@ -207,7 +220,7 @@ export function DoplneniUdaju({
             </Popisek>
           )}
           {u.vatPayer && (
-            <Popisek text="DIČ">
+            <Popisek text={t('doplneni.dic')}>
               <input
                 value={u.dic}
                 onChange={(e) => nastav('dic', e.target.value)}
@@ -219,15 +232,15 @@ export function DoplneniUdaju({
         </div>
       ),
       hotovo: () => {
-        if (u.druhCisla === 'rc' && !u.birthNumber.trim()) return 'Vyplňte prosím rodné číslo.';
-        if (u.druhCisla === 'ic' && !u.ic.trim()) return 'Vyplňte prosím IČ.';
-        if (u.vatPayer && !u.dic.trim()) return 'Jako plátce DPH vyplňte prosím i DIČ.';
+        if (u.druhCisla === 'rc' && !u.birthNumber.trim()) return t('doplneni.rcChyba');
+        if (u.druhCisla === 'ic' && !u.ic.trim()) return t('doplneni.icChyba');
+        if (u.vatPayer && !u.dic.trim()) return t('doplneni.dicChyba');
         return null;
       },
     },
     {
-      nadpis: 'Kam vám posílat honorář?',
-      popis: 'Číslo účtu i s kódem banky.',
+      nadpis: t('doplneni.ucetNadpis'),
+      popis: t('doplneni.ucetPopis'),
       obsah: (
         <input
           value={u.bankAccount}
@@ -237,7 +250,7 @@ export function DoplneniUdaju({
           placeholder="123456789/0800"
         />
       ),
-      hotovo: () => (u.bankAccount.trim() ? null : 'Vyplňte prosím číslo účtu.'),
+      hotovo: () => (u.bankAccount.trim() ? null : t('doplneni.ucetChyba')),
     },
     {
       /**
@@ -245,8 +258,8 @@ export function DoplneniUdaju({
        * jedno Brno"). Na kartě herce se pak zaškrtnou obě brněnská studia -
        * viz studiaZMest.
        */
-      nadpis: 'Kde můžete natáčet?',
-      popis: 'Zaškrtněte města, kam se dostanete. Dá se to kdykoliv změnit.',
+      nadpis: t('doplneni.mestaNadpis'),
+      popis: t('doplneni.mestaPopis'),
       obsah: (
         <div className="flex flex-wrap gap-2">
           {MESTA_PRO_HERCE.map(({ mesto }) => (
@@ -263,25 +276,32 @@ export function DoplneniUdaju({
       hotovo: () => null,
     },
     {
-      nadpis: 'Rekapitulace',
+      nadpis: t('doplneni.rekapitulace'),
       obsah: (
         <dl className="m-0 flex flex-col gap-2">
-          <Radek popisek="Jméno" hodnota={u.name} />
+          <Radek popisek={t('doplneni.souhrnJmeno')} hodnota={u.name} />
           <Radek
-            popisek="Adresa"
+            popisek={t('doplneni.souhrnAdresa')}
             hodnota={[u.addressStreet, [u.addressZip, u.addressCity].filter(Boolean).join(' ')]
               .filter(Boolean)
               .join(', ')}
           />
-          <Radek popisek="DPH" hodnota={u.vatPayer ? `plátce, DIČ ${u.dic}` : 'nejsem plátce'} />
           <Radek
-            popisek={u.druhCisla === 'rc' ? 'Rodné číslo' : 'IČ'}
+            popisek={t('doplneni.souhrnDph')}
+            hodnota={
+              u.vatPayer
+                ? prelozitS(jazyk, 'doplneni.souhrnPlatce', { dic: u.dic })
+                : t('doplneni.souhrnNeplatce')
+            }
+          />
+          <Radek
+            popisek={t(u.druhCisla === 'rc' ? 'doplneni.rodneCislo' : 'doplneni.souhrnIc')}
             hodnota={u.druhCisla === 'rc' ? u.birthNumber : u.ic}
           />
-          <Radek popisek="Číslo účtu" hodnota={u.bankAccount} />
+          <Radek popisek={t('doplneni.souhrnUcet')} hodnota={u.bankAccount} />
           <Radek
-            popisek="Natáčení"
-            hodnota={u.mesta.length ? u.mesta.join(', ') : 'zatím nevybráno'}
+            popisek={t('doplneni.souhrnNataceni')}
+            hodnota={u.mesta.length ? u.mesta.join(', ') : t('doplneni.souhrnNevybrano')}
           />
         </dl>
       ),
@@ -365,14 +385,14 @@ export function DoplneniUdaju({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Uložení se nepodařilo. Zkuste to prosím znovu.');
+        setChyba(data?.error || t('doplneni.neulozeno'));
         return;
       }
       // Tvrdé načtení, ne router.push: portál si při něm znovu přečte účet
       // a brána na doplnění údajů už herce nikam neodešle.
       window.location.href = '/projekty';
     } catch {
-      setChyba('Uložení se nepodařilo. Zkuste to prosím znovu.');
+      setChyba(t('doplneni.neulozeno'));
     } finally {
       setBezi(false);
     }
@@ -382,7 +402,7 @@ export function DoplneniUdaju({
     <div className="flex flex-col gap-6">
       <div>
         <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
-          Krok {krok + 1} ze {kroky.length}
+          {prelozitS(jazyk, 'doplneni.krokZe', { krok: krok + 1, celkem: kroky.length })}
         </p>
         <div className="h-1 bg-field rounded-pill mt-2 overflow-hidden">
           <div
@@ -418,7 +438,7 @@ export function DoplneniUdaju({
               }}
               className="text-sm font-heading text-muted bg-transparent border-0 p-0 cursor-pointer hover:text-ink"
             >
-              ← Zpět
+              {t('doplneni.zpet')}
             </button>
           )}
           <button
@@ -426,16 +446,17 @@ export function DoplneniUdaju({
             disabled={bezi}
             className="text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-6 py-3 disabled:opacity-60"
           >
-            {bezi ? 'Ukládám…' : posledni ? 'Hotovo, do portálu' : 'Pokračovat'}
+            {bezi
+              ? t('doplneni.ukladam')
+              : posledni
+                ? t('doplneni.hotovoDoPortalu')
+                : t('doplneni.pokracovat')}
           </button>
         </div>
       </form>
 
       {krok === 0 && (
-        <p className="text-xs font-body text-muted m-0">
-          Údaje použijeme jen k uzavření smlouvy, vyplacení honoráře a k plnění zákonných
-          povinností. Nikomu dalšímu je nedáváme a kdykoliv si je změníte v Mém účtu.
-        </p>
+        <p className="text-xs font-body text-muted m-0">{t('doplneni.gdpr')}</p>
       )}
     </div>
   );

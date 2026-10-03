@@ -1,6 +1,8 @@
 import { ZalozkyLista } from '@/components/ZalozkyLista';
 import { poradiZalozek } from '@/lib/zalozkyServer';
 import { ZALOZKY_PREHLEDU } from './zalozky';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * Lišta záložek sekce Přehledy (zadání 20. 9. 2026: „z něj pak uděláme
@@ -18,9 +20,12 @@ export async function ZalozkyPrehledu({
   /** Vidí uživatel Palubovku? Role na ni nestačí - viz zalozky.ts. */
   palubovka?: boolean;
 }) {
+  // Nazev zalozky se bere podle ADRESY, ne podle ceskeho textu - stejne jako
+  // nazvy stranek v horni liste (nazevOdkazu v lib/jazyk.ts).
+  const jazyk = nactiJazyk();
   const zalozky = ZALOZKY_PREHLEDU.filter(
     (z) => (!z.role || (role && z.role.includes(role))) && (z.jenSPriznakem !== 'palubovka' || palubovka),
-  ).map((z) => ({ klic: z.href, href: z.href, nazev: z.label }));
+  ).map((z) => ({ klic: z.href, href: z.href, nazev: prelozit(jazyk, `prehledy.zalozka.${z.href}`) }));
 
   return <ZalozkyLista sekce="prehledy" zalozky={zalozky} poradi={await poradiZalozek('prehledy')} />;
 }

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { smiSpravovatCenik, studiaSCenikem, zajistiCenik } from '@/lib/studioCenikServer';
 import { CenikEditor } from './CenikEditor';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * CENÍK STUDIA (zadání 28. 9. 2026: „potřeboval bych někde v rámci Londýnského
@@ -40,14 +42,15 @@ export default async function CenikStudiaPage({
   }
 
   const cenik = await zajistiCenik(studio.id);
+  const jazyk = nactiJazyk();
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Ceník studia</h1>
-        <p className="text-sm font-body text-muted m-0">
-          Ceny se mění tady; ven jde PDF ve značce Mediaspace, ke stažení nebo rovnou e-mailem.
-        </p>
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'cenikStudia.nadpis')}
+        </h1>
+        <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'cenikStudia.uvod')}</p>
       </div>
       <CenikEditor
         studioId={studio.id}

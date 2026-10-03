@@ -2,12 +2,14 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { WORK_TYPE_LABELS } from '@/lib/timesheets';
+import { nazevDruhuPrace } from '@/lib/timesheets';
 import { nactiKnihyPrehled, prvniRokVykazu, type DruhFiltr, type Kniha } from '@/lib/knihyPrehledServer';
 import { KnihyFiltry } from '../KnihyFiltry';
 import { GrafPrace } from '../GrafPrace';
 import { GrafKnih } from '../GrafKnih';
 import { BARVY, datum, hodiny, kc, pocetKnih } from '../format';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * PODROBNÝ ROZPAD (zadání 28. 9. 2026 pro Petera, zjednodušeno tentýž den:
@@ -69,13 +71,14 @@ export default async function RozpadPage({
   if (!session?.user?.id) redirect('/login');
   if (session.user.role !== 'ADMIN') redirect('/prehledy');
 
+  const jazyk = nactiJazyk();
   const obdobi = searchParams?.obdobi || 'tento';
   const kdo = searchParams?.kdo || '';
   const druh = DRUHY.includes(searchParams?.druh ?? '') ? (searchParams!.druh as string) : '';
   const { od, do: doData } = rozsah(obdobi, searchParams?.od ?? '', searchParams?.do ?? '');
 
   const [data, prvniRok] = await Promise.all([
-    nactiKnihyPrehled({ od, do: doData, kdo: kdo || null, druh: (druh || null) as DruhFiltr }),
+    nactiKnihyPrehled({ od, do: doData, kdo: kdo || null, druh: (druh || null) as DruhFiltr, jazyk }),
     prvniRokVykazu(),
   ]);
 
@@ -94,7 +97,7 @@ export default async function RozpadPage({
         href="/prehledy/knihy"
         className="self-start text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
       >
-        ← Zpět na ukazatele
+        {prelozit(jazyk, 'rozpad.zpetNaUkazatele')}
       </Link>
 
       <KnihyFiltry
@@ -108,33 +111,47 @@ export default async function RozpadPage({
       />
 
       <p className="text-xs font-body text-muted m-0">
-        Období {datum(od)} – {datum(posledniDen)}
-        {vybranyClovek ? ` · jen ${vybranyClovek}` : ''}
-        {druh ? ` · jen ${WORK_TYPE_LABELS[druh as keyof typeof WORK_TYPE_LABELS]}` : ''}
+        {prelozitS(jazyk, 'rozpad.obdobi', { od: datum(od, jazyk), do: datum(posledniDen, jazyk) })}
+        {vybranyClovek ? prelozitS(jazyk, 'rozpad.jenClovek', { jmeno: vybranyClovek }) : ''}
+        {druh
+          ? prelozitS(jazyk, 'rozpad.jenDruh', {
+              druh: nazevDruhuPrace(druh as Parameters<typeof nazevDruhuPrace>[0], jazyk),
+            })
+          : ''}
       </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Dlazdice
-          nazev="Mzdové náklady"
-          hodnota={kc(souhrn.castka)}
-          pozn={`${souhrn.vykazu} ${souhrn.vykazu === 1 ? 'výkaz' : souhrn.vykazu >= 2 && souhrn.vykazu <= 4 ? 'výkazy' : 'výkazů'}`}
+          nazev={prelozit(jazyk, 'rozpad.mzdoveNaklady')}
+          hodnota={kc(souhrn.castka, jazyk)}
+          pozn={prelozitS(jazyk, `rozpad.pocetVykazu.${tvarPoctu(souhrn.vykazu)}`, {
+            pocet: souhrn.vykazu,
+          })}
         />
-        <Dlazdice nazev="Odpracováno" hodnota={hodiny(souhrn.hodiny)} pozn={`${data.lide.length} lidí`} />
         <Dlazdice
-          nazev="Natáčení / střih"
+          nazev={prelozit(jazyk, 'rozpad.odpracovano')}
+          hodnota={hodiny(souhrn.hodiny, jazyk)}
+          pozn={prelozitS(jazyk, 'rozpad.lidi', { pocet: data.lide.length })}
+        />
+        <Dlazdice
+          nazev={prelozit(jazyk, 'rozpad.nataceniStrih')}
           hodnota={`${Math.round(souhrn.nataceni.hodiny)} / ${Math.round(souhrn.strih.hodiny)} h`}
-          pozn={`${kc(souhrn.nataceni.castka)} / ${kc(souhrn.strih.castka)}`}
+          pozn={`${kc(souhrn.nataceni.castka, jazyk)} / ${kc(souhrn.strih.castka, jazyk)}`}
         />
         <Dlazdice
-          nazev="Odevzdané knihy"
+          nazev={prelozit(jazyk, 'rozpad.odevzdaneKnihy')}
           hodnota={String(souhrn.knih)}
-          pozn={souhrn.knih === 0 ? 'za období žádná' : pocetKnih(souhrn.knih)}
+          pozn={
+            souhrn.knih === 0
+              ? prelozit(jazyk, 'rozpad.zaObdobiZadna')
+              : pocetKnih(souhrn.knih, jazyk)
+          }
         />
       </div>
 
       <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Mzdové náklady po měsících
+          {prelozit(jazyk, 'rozpad.mzdyPoMesicich')}
         </h2>
         <GrafPrace mesice={data.mesice} />
       </section>
@@ -142,23 +159,26 @@ export default async function RozpadPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Odevzdané knihy po měsících
+            {prelozit(jazyk, 'rozpad.knihyPoMesicich')}
           </h2>
           <GrafKnih mesice={data.mesice} />
         </section>
 
         <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Co se odevzdalo
+            {prelozit(jazyk, 'rozpad.coSeOdevzdalo')}
           </h2>
           {data.odevzdane.length === 0 ? (
-            <p className="text-sm text-muted m-0">Za vybrané období se neodevzdala žádná kniha.</p>
+            <p className="text-sm text-muted m-0">{prelozit(jazyk, 'rozpad.zadnaKniha')}</p>
           ) : (
             <ul className="list-none m-0 p-0 flex flex-col gap-3">
               {data.odevzdane.map((m) => (
                 <li key={m.klic} className="flex flex-col gap-1">
                   <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">
-                    {m.popis} · {pocetKnih(m.knihy.length)}
+                    {prelozitS(jazyk, 'rozpad.mesicKnih', {
+                      mesic: m.popis,
+                      knih: pocetKnih(m.knihy.length, jazyk),
+                    })}
                   </span>
                   <ul className="list-none m-0 p-0 flex flex-col gap-0.5">
                     {m.knihy.map((k) => (
@@ -170,7 +190,7 @@ export default async function RozpadPage({
                           {k.nazev}
                         </Link>
                         <span className="text-xs text-muted whitespace-nowrap ml-auto">
-                          {datum(k.datum)}
+                          {datum(k.datum, jazyk)}
                           {k.odhad ? ' *' : ''}
                         </span>
                       </li>
@@ -181,32 +201,30 @@ export default async function RozpadPage({
             </ul>
           )}
           {data.odevzdane.some((m) => m.knihy.some((k) => k.odhad)) && (
-            <p className="text-xs text-muted m-0">
-              * Datum z pole Termín dokončení - kniha se odevzdala dřív, než portál vedl historii projektů.
-            </p>
+            <p className="text-xs text-muted m-0">{prelozit(jazyk, 'rozpad.poznamkaOdhadu')}</p>
           )}
         </section>
       </div>
 
       <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Kdo na tom dělal
+          {prelozit(jazyk, 'rozpad.kdoNaTomDelal')}
         </h2>
         {data.lide.length === 0 ? (
-          <p className="text-sm text-muted m-0">Za vybrané období nikdo nic nevykázal.</p>
+          <p className="text-sm text-muted m-0">{prelozit(jazyk, 'rozpad.nikdoNevykazal')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm font-body border-collapse">
               <thead>
                 <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                  <th className="text-left py-2 pr-3">Člověk</th>
-                  <th className="text-right py-2 px-3">Hodin</th>
-                  <th className="text-right py-2 px-3">Natáčení</th>
-                  <th className="text-right py-2 px-3">Střih</th>
-                  <th className="text-right py-2 px-3">Opravy</th>
-                  <th className="text-right py-2 px-3">Ostatní</th>
-                  <th className="text-right py-2 px-3">Projektů</th>
-                  <th className="text-right py-2 pl-3">Celkem</th>
+                  <th className="text-left py-2 pr-3">{prelozit(jazyk, 'rozpad.clovek')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'rozpad.hodin')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'knihy.nataceni')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'knihy.strih')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'knihy.opravy')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'knihy.ostatni')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'rozpad.projektu')}</th>
+                  <th className="text-right py-2 pl-3">{prelozit(jazyk, 'knihy.celkem')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -226,84 +244,80 @@ export default async function RozpadPage({
                         {c.jmeno}
                       </Link>
                     </td>
-                    <td className="text-right py-2 px-3 tabular-nums">{hodiny(c.hodiny)}</td>
-                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.nataceni)}</td>
-                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.strih)}</td>
-                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.opravy)}</td>
-                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.ostatni)}</td>
+                    <td className="text-right py-2 px-3 tabular-nums">{hodiny(c.hodiny, jazyk)}</td>
+                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.nataceni, jazyk)}</td>
+                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.strih, jazyk)}</td>
+                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.opravy, jazyk)}</td>
+                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.ostatni, jazyk)}</td>
                     <td className="text-right py-2 px-3 tabular-nums text-muted">{c.projektu}</td>
-                    <td className="text-right py-2 pl-3 tabular-nums font-heading font-semibold">{kc(c.castka)}</td>
+                    <td className="text-right py-2 pl-3 tabular-nums font-heading font-semibold">{kc(c.castka, jazyk)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        <p className="text-xs text-muted m-0">Kliknutím na jméno se přehled i výkazy zúží jen na něj.</p>
+        <p className="text-xs text-muted m-0">{prelozit(jazyk, 'rozpad.poznamkaJmena')}</p>
       </section>
 
       <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Knihy: rozpočet, čerpání a zisk
+          {prelozit(jazyk, 'rozpad.knihyNadpis')}
         </h2>
         {data.knihy.length === 0 ? (
-          <p className="text-sm text-muted m-0">
-            Za vybrané období se na žádné knize nepracovalo ani se žádná neodevzdala.
-          </p>
+          <p className="text-sm text-muted m-0">{prelozit(jazyk, 'rozpad.knihyPrazdne')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm font-body border-collapse">
               <thead>
                 <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                  <th className="text-left py-2 pr-3">Kniha</th>
-                  <th className="text-right py-2 px-3">NS</th>
-                  <th className="text-right py-2 px-3">Rozpočet</th>
-                  <th className="text-left py-2 px-3 min-w-[120px]">Vyčerpáno</th>
-                  <th className="text-right py-2 px-3">Tržba</th>
-                  <th className="text-right py-2 px-3">Náklady</th>
-                  <th className="text-right py-2 px-3">Zisk</th>
-                  <th className="text-right py-2 pl-3">Marže</th>
+                  <th className="text-left py-2 pr-3">{prelozit(jazyk, 'rozpad.kniha')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'rozpad.ns')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'knihy.rozpocet')}</th>
+                  <th className="text-left py-2 px-3 min-w-[120px]">{prelozit(jazyk, 'knihy.vycerpano')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'knihy.trzba')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'knihy.naklady')}</th>
+                  <th className="text-right py-2 px-3">{prelozit(jazyk, 'finance.zisk')}</th>
+                  <th className="text-right py-2 pl-3">{prelozit(jazyk, 'finance.marze')}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.knihy.map((k) => (
-                  <RadekKnihy key={k.id} kniha={k} />
+                  <RadekKnihy key={k.id} kniha={k} jazyk={jazyk} />
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        <p className="text-xs text-muted m-0">
-          Rozpočet i čerpání jsou za CELOU knihu, ne za období - strop se počítá na knihu, ne na měsíc. Tržba jsou
-          vydané faktury na projekt; kde ještě žádná není, je to odhad z normostran a sazby klienta (označený ~).
-          Náklady = výkazy zvukařů za celou knihu plus zařazené výdaje navázané na projekt.
-        </p>
+        <p className="text-xs text-muted m-0">{prelozit(jazyk, 'rozpad.poznamkaKnih')}</p>
       </section>
 
       {(kdo || druh) && (
         <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Výkazy {vybranyClovek ? `– ${vybranyClovek}` : ''}
+            {vybranyClovek
+              ? prelozitS(jazyk, 'rozpad.vykazyClovek', { jmeno: vybranyClovek })
+              : prelozit(jazyk, 'rozpad.vykazy')}
           </h2>
           {data.vykazy.length === 0 ? (
-            <p className="text-sm text-muted m-0">Za vybrané období tu žádný výkaz není.</p>
+            <p className="text-sm text-muted m-0">{prelozit(jazyk, 'rozpad.zadnyVykaz')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm font-body border-collapse">
                 <thead>
                   <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                    <th className="text-left py-2 pr-3">Datum</th>
-                    {!kdo && <th className="text-left py-2 px-3">Kdo</th>}
-                    <th className="text-left py-2 px-3">Druh</th>
-                    <th className="text-left py-2 px-3">Projekt</th>
-                    <th className="text-right py-2 px-3">Hodin</th>
-                    <th className="text-right py-2 pl-3">Částka</th>
+                    <th className="text-left py-2 pr-3">{prelozit(jazyk, 'rozpad.datum')}</th>
+                    {!kdo && <th className="text-left py-2 px-3">{prelozit(jazyk, 'knihy.kdo')}</th>}
+                    <th className="text-left py-2 px-3">{prelozit(jazyk, 'rozpad.druh')}</th>
+                    <th className="text-left py-2 px-3">{prelozit(jazyk, 'finance.projekt')}</th>
+                    <th className="text-right py-2 px-3">{prelozit(jazyk, 'rozpad.hodin')}</th>
+                    <th className="text-right py-2 pl-3">{prelozit(jazyk, 'rozpad.castka')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.vykazy.slice(0, 200).map((v) => (
                     <tr key={v.id} className="border-t border-line">
-                      <td className="py-1.5 pr-3 whitespace-nowrap">{datum(v.datum)}</td>
+                      <td className="py-1.5 pr-3 whitespace-nowrap">{datum(v.datum, jazyk)}</td>
                       {!kdo && <td className="py-1.5 px-3">{v.jmeno}</td>}
                       <td className="py-1.5 px-3">
                         <span className="inline-flex items-center gap-1.5">
@@ -320,7 +334,7 @@ export default async function RozpadPage({
                                       : BARVY.ostatni,
                             }}
                           />
-                          {WORK_TYPE_LABELS[v.druh]}
+                          {nazevDruhuPrace(v.druh, jazyk)}
                         </span>
                       </td>
                       <td className="py-1.5 px-3 truncate max-w-[280px]">
@@ -335,8 +349,8 @@ export default async function RozpadPage({
                           <span className="text-muted">—</span>
                         )}
                       </td>
-                      <td className="text-right py-1.5 px-3 tabular-nums">{hodiny(v.minut / 60)}</td>
-                      <td className="text-right py-1.5 pl-3 tabular-nums">{kc(v.castka)}</td>
+                      <td className="text-right py-1.5 px-3 tabular-nums">{hodiny(v.minut / 60, jazyk)}</td>
+                      <td className="text-right py-1.5 pl-3 tabular-nums">{kc(v.castka, jazyk)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -345,7 +359,7 @@ export default async function RozpadPage({
           )}
           {data.vykazy.length > 200 && (
             <p className="text-xs text-muted m-0">
-              Zobrazeno prvních 200 výkazů z {data.vykazy.length}. Zužte období nebo druh práce.
+              {prelozitS(jazyk, 'rozpad.prvnich200', { celkem: data.vykazy.length })}
             </p>
           )}
         </section>
@@ -354,7 +368,13 @@ export default async function RozpadPage({
   );
 }
 
-function RadekKnihy({ kniha: k }: { kniha: Kniha }) {
+/** Který tvar čísla použít - česky tři, anglicky dva (pravidlo 7). */
+function tvarPoctu(n: number): 'jedna' | 'nekolik' | 'mnoho' {
+  if (n === 1) return 'jedna';
+  return n >= 2 && n <= 4 ? 'nekolik' : 'mnoho';
+}
+
+function RadekKnihy({ kniha: k, jazyk }: { kniha: Kniha; jazyk: Jazyk }) {
   const procent = k.rozpocet > 0 ? Math.round((k.vycerpano / k.rozpocet) * 100) : null;
   const prekroceno = procent !== null && procent > 100;
   const marze = k.trzba > 0 ? Math.round((k.zisk / k.trzba) * 100) : null;
@@ -371,7 +391,7 @@ function RadekKnihy({ kniha: k }: { kniha: Kniha }) {
         {k.klient && <span className="block text-xs text-muted truncate">{k.klient}</span>}
       </td>
       <td className="text-right py-2 px-3 tabular-nums text-muted">{k.normostran}</td>
-      <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(k.rozpocet)}</td>
+      <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(k.rozpocet, jazyk)}</td>
       <td className="py-2 px-3">
         <span className="flex items-center gap-2">
           <span className="block h-2 flex-1 min-w-[56px] rounded-full bg-field overflow-hidden">
@@ -389,16 +409,16 @@ function RadekKnihy({ kniha: k }: { kniha: Kniha }) {
             {procent === null ? '—' : `${procent} %`}
           </span>
         </span>
-        <span className="block text-xs text-muted tabular-nums">{kc(k.vycerpano)}</span>
+        <span className="block text-xs text-muted tabular-nums">{kc(k.vycerpano, jazyk)}</span>
       </td>
       <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">
-        {k.trzba > 0 ? `${k.trzbaOdhad ? '~' : ''}${kc(k.trzba)}` : '—'}
+        {k.trzba > 0 ? `${k.trzbaOdhad ? '~' : ''}${kc(k.trzba, jazyk)}` : '—'}
       </td>
-      <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(k.naklady)}</td>
+      <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(k.naklady, jazyk)}</td>
       <td
         className={`text-right py-2 px-3 tabular-nums whitespace-nowrap font-heading font-semibold ${k.zisk < 0 ? 'text-danger' : 'text-ink'}`}
       >
-        {k.trzba > 0 ? kc(k.zisk) : '—'}
+        {k.trzba > 0 ? kc(k.zisk, jazyk) : '—'}
       </td>
       <td className="text-right py-2 pl-3 tabular-nums text-muted">{marze === null ? '—' : `${marze} %`}</td>
     </tr>

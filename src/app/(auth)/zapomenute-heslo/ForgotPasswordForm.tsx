@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /** Zapomenute heslo (zadani 5. 9. 2026) - stejny vzhled jako prihlaseni. */
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ jazyk = 'cs' }: { jazyk?: Jazyk }) {
+  const t = (klic: string) => prelozit(jazyk, klic);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -39,27 +41,24 @@ export function ForgotPasswordForm() {
 
           {sent ? (
             <div className="px-8 pb-8">
-              <h1 className="font-display text-2xl text-brand-green m-0 mb-3">Zkontrolujte e-mail</h1>
-              <p className="text-white/90 text-sm font-body m-0">
-                Pokud účet s tímto e-mailem existuje, poslali jsme na něj odkaz pro nastavení nového hesla. Odkaz
-                platí dvě hodiny.
-              </p>
+              <h1 className="font-display text-2xl text-brand-green m-0 mb-3">{t('heslo.zkontrolujteEmail')}</h1>
+              <p className="text-white/90 text-sm font-body m-0">{t('heslo.odkazOdeslan')}</p>
               <p className="text-white/90 text-sm font-body mt-4 m-0">
                 <Link href="/login" className="text-brand-green underline">
-                  Zpět na přihlášení
+                  {t('heslo.zpetNaPrihlaseni')}
                 </Link>
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="px-8 pb-8 flex flex-col gap-5">
-              <h1 className="font-display text-2xl text-brand-green m-0">Zapomenuté heslo</h1>
+              <h1 className="font-display text-2xl text-brand-green m-0">{t('heslo.zapomenuteNadpis')}</h1>
               <p className="text-white/85 text-sm font-body m-0">
-                Zadejte e-mail, kterým se přihlašujete. Pošleme vám odkaz pro nastavení nového hesla.
+                {t('heslo.zapomenuteUvod')}
               </p>
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="email" className="text-white text-sm font-body">
-                  E-mail
+                  {t('heslo.email')}
                 </label>
                 <input
                   id="email"
@@ -77,11 +76,11 @@ export function ForgotPasswordForm() {
                 disabled={loading}
                 className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
               >
-                {loading ? 'Odesílám…' : 'Poslat odkaz'}
+                {t(loading ? 'heslo.odesilam' : 'heslo.poslatOdkaz')}
               </button>
 
               <Link href="/login" className="text-white/80 text-xs font-body text-center hover:text-white">
-                Zpět na přihlášení
+                {t('heslo.zpetNaPrihlaseni')}
               </Link>
             </form>
           )}

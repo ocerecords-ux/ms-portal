@@ -1064,6 +1064,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               pocatecni={pripominky}
               jsemZTymu
               vKarteProjektu
+              jazyk={jazyk}
             />
           )}
         </div>

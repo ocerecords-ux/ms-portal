@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   const co = new URL(request.url).searchParams.get('co') || '';
   const aplikace = najdiAplikaci(co);
   if (!aplikace) {
+    // Hlaska z API zustava ceska - vraci ji routa jako hotovy text (dávka 4).
     return NextResponse.json({ error: 'Neznámá aplikace.' }, { status: 400 });
   }
 

@@ -7,6 +7,8 @@
  * Soubor je bez Prismy - sdílí ho tabule v prohlížeči i server.
  */
 
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
 export type PolozkaTabule = {
   klic: string;
   nazev: string;
@@ -65,8 +67,12 @@ export const POLOZKY_TABULE: PolozkaTabule[] = [
 
 export const KLICE_POLOZEK = POLOZKY_TABULE.map((p) => p.klic);
 
-export function nazevPolozky(klic: string): string {
-  return POLOZKY_TABULE.find((p) => p.klic === klic)?.nazev ?? klic;
+export function nazevPolozky(klic: string, jazyk?: Jazyk): string {
+  const cesky = POLOZKY_TABULE.find((p) => p.klic === klic)?.nazev ?? klic;
+  // Jazyk je NEPOVINNY (vzor nazevMeny z davky 4): bez nej cestina, aby
+  // oznameni ukladane do databaze (notify v tabuleServer) zustalo ceske.
+  if (!jazyk) return cesky;
+  return prelozit(jazyk, `tabule.polozka.${klic}`);
 }
 
 /**

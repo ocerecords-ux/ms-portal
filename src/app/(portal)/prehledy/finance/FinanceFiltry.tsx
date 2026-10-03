@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr nad přehledem obratu - všechno v jedné řadě a v adrese, ať jde
@@ -23,6 +24,7 @@ export function FinanceFiltry({
   zaklad: 'vystaveno' | 'uhrazeno';
   krok: 'mesic' | 'ctvrtleti';
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const cesta = usePathname();
   const parametry = useSearchParams();
@@ -43,27 +45,27 @@ export function FinanceFiltry({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <VyberPole
-        aria-label="Období"
+        aria-label={t('finance.obdobi')}
         value={obdobi}
         onChange={(e) => router.push(adresa({ obdobi: e.target.value }))}
         className={pole}
       >
-        <option value="12m">Posledních 12 měsíců</option>
+        <option value="12m">{t('finance.poslednich12')}</option>
         {roky.map((r) => (
           <option key={r} value={String(r)}>
-            Rok {r}
+            {t('finance.rok', { rok: r })}
           </option>
         ))}
       </VyberPole>
 
       {firmy.length > 1 && (
         <VyberPole
-          aria-label="Firma"
+          aria-label={t('finance.firma')}
           value={firma}
           onChange={(e) => router.push(adresa({ firma: e.target.value }))}
           className={pole}
         >
-          <option value="">Všechny firmy</option>
+          <option value="">{t('finance.vsechnyFirmy')}</option>
           {firmy.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name}
@@ -74,16 +76,16 @@ export function FinanceFiltry({
 
       <Prepinac
         volby={[
-          { hodnota: 'vystaveno', popis: 'Vystaveno', title: 'Faktury a výdaje podle data dokladu' },
-          { hodnota: 'uhrazeno', popis: 'Uhrazeno', title: 'Jen peníze, které opravdu přišly a odešly' },
+          { hodnota: 'vystaveno', popis: t('finance.vystaveno'), title: t('finance.vystavenoTitle') },
+          { hodnota: 'uhrazeno', popis: t('finance.uhrazeno'), title: t('finance.uhrazenoTitle') },
         ]}
         aktivni={zaklad}
         odkaz={(v) => adresa({ zaklad: v === 'vystaveno' ? '' : v })}
       />
       <Prepinac
         volby={[
-          { hodnota: 'mesic', popis: 'Měsíce' },
-          { hodnota: 'ctvrtleti', popis: 'Čtvrtletí' },
+          { hodnota: 'mesic', popis: t('finance.mesice') },
+          { hodnota: 'ctvrtleti', popis: t('finance.ctvrtleti') },
         ]}
         aktivni={krok}
         odkaz={(v) => adresa({ krok: v === 'mesic' ? '' : v })}

@@ -3,10 +3,9 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  MESICE,
   koruny,
+  nazevMesicePalubovky,
   palivomer,
-  popisMesicu,
   prumerPoslednich,
   tachometr,
   zmenaProcent,
@@ -14,6 +13,8 @@ import {
 import type { Cile, PalubovkaData } from '@/lib/palubovkaServer';
 import { Budik } from './Budik';
 import { PrubehMesicu } from './PrubehMesicu';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatum } from '@/lib/jazyk';
 
 /**
  * PALUBOVKA (zadání 27. 9. 2026). Dva budíky, průběh měsíců a co tvoří palivo.
@@ -42,6 +43,8 @@ export function Palubovka({
    */
   vZalozce?: boolean;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [cile, setCile] = useState(cilePocatecni);
   const [otevreno, setOtevreno] = useState(false);
   const [uklada, setUklada] = useState(false);
@@ -56,9 +59,9 @@ export function Palubovka({
   // zůstat prázdný jen proto, že někdo nevyplnil číslo.
   const mesicniCil = cile.mesicniObrat ?? (prumer3 ? Math.round(prumer3) : null);
 
-  const tach = tachometr(tentoMesic.vyfakturovano, mesicniCil, dnes.getDate(), dnuVMesici);
+  const tach = tachometr(tentoMesic.vyfakturovano, mesicniCil, dnes.getDate(), dnuVMesici, jazyk);
   const mesicuVPalivu = mesicniCil && mesicniCil > 0 ? data.palivoCelkem / mesicniCil : 0;
-  const paliv = palivomer(mesicuVPalivu, cile.mesicuKryti);
+  const paliv = palivomer(mesicuVPalivu, cile.mesicuKryti, jazyk);
 
   /**
    * SROVNÁNÍ S LOŇSKEM JEN TEHDY, KDYŽ JE S ČÍM. Faktury jsou v portálu teprve
@@ -83,11 +86,11 @@ export function Palubovka({
         body: JSON.stringify(nove),
       });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || 'Cíle se nepodařilo uložit.');
+      if (!res.ok) throw new Error(telo.error || t('palubovka.cileNeulozeny'));
       setCile(telo.cile as Cile);
       setOtevreno(false);
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Cíle se nepodařilo uložit.');
+      setChyba(err instanceof Error ? err.message : t('palubovka.cileNeulozeny'));
     } finally {
       setUklada(false);
     }
@@ -99,28 +102,28 @@ export function Palubovka({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-baseline gap-3 flex-wrap">
-        {!vZalozce && <h1 className="font-display text-3xl text-ink m-0">Palubovka</h1>}
+        {!vZalozce && <h1 className="font-display text-3xl text-ink m-0">{t('palubovka.nadpis')}</h1>}
         <span className="text-sm font-body text-muted">
-          {MESICE[dnes.getMonth()]} {dnes.getFullYear()} · vidíš jen ty
+          {t('palubovka.mesicRokVidisJenTy', {
+            mesic: nazevMesicePalubovky(dnes.getMonth(), jazyk),
+            rok: dnes.getFullYear(),
+          })}
         </span>
         <button
           type="button"
           onClick={() => setOtevreno((o) => !o)}
           className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer"
         >
-          {otevreno ? 'Zavřít' : 'Cíle'}
+          {t(otevreno ? 'palubovka.zavrit' : 'palubovka.cile')}
         </button>
       </div>
 
       {otevreno && (
         <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
-          <p className="text-sm font-body text-muted m-0 max-w-[70ch]">
-            Proti těmhle číslům se budíky měří. Když měsíční cíl necháš prázdný, bere se průměr
-            posledních tří měsíců — tedy „jedeme jako obvykle".
-          </p>
+          <p className="text-sm font-body text-muted m-0 max-w-[70ch]">{t('palubovka.cileUvod')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-heading text-muted">Měsíční obrat (Kč bez DPH)</span>
+              <span className="text-xs font-heading text-muted">{t('palubovka.mesicniObrat')}</span>
               <input
                 type="number"
                 min={0}
@@ -134,7 +137,7 @@ export function Palubovka({
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-heading text-muted">Roční obrat (Kč bez DPH)</span>
+              <span className="text-xs font-heading text-muted">{t('palubovka.rocniObrat')}</span>
               <input
                 type="number"
                 min={0}
@@ -147,7 +150,7 @@ export function Palubovka({
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-heading text-muted">Chci mít rozjednáno na (měsíců)</span>
+              <span className="text-xs font-heading text-muted">{t('palubovka.mesicuKryti')}</span>
               <input
                 type="number"
                 min={0.5}
@@ -170,7 +173,7 @@ export function Palubovka({
             disabled={uklada}
             className="self-start rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 hover:bg-brand-purpleDeep transition-colors cursor-pointer disabled:opacity-50"
           >
-            {uklada ? 'Ukládám…' : 'Uložit cíle'}
+            {t(uklada ? 'palubovka.ukladam' : 'palubovka.ulozitCile')}
           </button>
         </section>
       )}
@@ -179,13 +182,13 @@ export function Palubovka({
       <section className="rounded-card border border-line bg-surface p-5 flex flex-wrap items-end gap-x-8 gap-y-3">
         <div className="flex flex-col">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">
-            Vyfakturováno v {MESICE[dnes.getMonth()]}u
+            {t('palubovka.vyfakturovanoV', { mesic: nazevMesicePalubovky(dnes.getMonth(), jazyk) })}
           </span>
           <span className="font-heading font-semibold text-[44px] leading-none text-ink">
-            {koruny(tentoMesic.vyfakturovano)}
+            {koruny(tentoMesic.vyfakturovano, jazyk)}
           </span>
           <span className="text-xs font-body text-muted mt-1">
-            z toho uhrazeno {koruny(tentoMesic.uhrazeno)}
+            {t('palubovka.ztohoUhrazeno', { castka: koruny(tentoMesic.uhrazeno, jazyk) })}
           </span>
         </div>
         <div className="flex flex-col gap-1">
@@ -195,7 +198,7 @@ export function Palubovka({
                 {zmenaLoni > 0 ? '+' : ''}
                 {zmenaLoni} %
               </strong>{' '}
-              proti stejnému měsíci loni
+              {t('palubovka.protiLoni')}
             </span>
           )}
           {zmenaPrumer !== null && (
@@ -204,19 +207,23 @@ export function Palubovka({
                 {zmenaPrumer > 0 ? '+' : ''}
                 {zmenaPrumer} %
               </strong>{' '}
-              proti průměru tří měsíců
+              {t('palubovka.protiPrumeru')}
             </span>
           )}
         </div>
         <div className="flex flex-col ml-auto text-right">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">
-            Od ledna
+            {t('palubovka.odLedna')}
           </span>
-          <span className="font-heading font-semibold text-xl text-ink">{koruny(data.odZacatkuRoku)}</span>
+          <span className="font-heading font-semibold text-xl text-ink">
+            {koruny(data.odZacatkuRoku, jazyk)}
+          </span>
           {rocniPomer !== null && (
             <span className="text-xs font-body text-muted">
-              {Math.round(rocniPomer * 100)} % ročního cíle, roku uteklo{' '}
-              {Math.round(rocniOcekavano * 100)} %
+              {t('palubovka.rocniCil', {
+                procenta: Math.round(rocniPomer * 100),
+                uteklo: Math.round(rocniOcekavano * 100),
+              })}
             </span>
           )}
         </div>
@@ -224,22 +231,24 @@ export function Palubovka({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Budik
-          nadpis="Tachometr — tenhle měsíc"
+          nadpis={t('palubovka.tachometr')}
           hodnota={mesicniCil ? `${Math.round((tentoMesic.vyfakturovano / mesicniCil) * 100)} %` : '—'}
           budik={tach}
           znacka={1}
           spodniPopisek={
             mesicniCil
-              ? `Cíl ${koruny(mesicniCil)}${cile.mesicniObrat ? '' : ' (průměr tří měsíců)'}`
-              : 'Zadej si měsíční cíl v Cílech'
+              ? t(cile.mesicniObrat ? 'palubovka.cilKc' : 'palubovka.cilKcPrumer', {
+                  castka: koruny(mesicniCil, jazyk),
+                })
+              : t('palubovka.zadejCil')
           }
         />
         <Budik
-          nadpis="Palivo — co máme rozjednáno"
-          hodnota={koruny(data.palivoCelkem)}
+          nadpis={t('palubovka.palivo')}
+          hodnota={koruny(data.palivoCelkem, jazyk)}
           budik={paliv}
           znacka={cile.mesicuKryti / (cile.mesicuKryti * 2)}
-          spodniPopisek={`${data.projektuVPalivu} rozjednaných projektů`}
+          spodniPopisek={t('palubovka.rozjednanychProjektu', { pocet: data.projektuVPalivu })}
         />
       </div>
 
@@ -247,15 +256,13 @@ export function Palubovka({
 
       <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-3">
         <div className="flex items-baseline gap-3">
-          <h2 className="font-heading font-semibold text-sm text-ink m-0">Z čeho se bude fakturovat</h2>
-          <span className="text-xs font-body text-muted">
-            neukončené projekty, kde ještě není vyfakturováno všechno
-          </span>
+          <h2 className="font-heading font-semibold text-sm text-ink m-0">
+            {t('palubovka.zCehoFakturovat')}
+          </h2>
+          <span className="text-xs font-body text-muted">{t('palubovka.neukonceneProjekty')}</span>
         </div>
         {data.projektyVPalivu.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">
-            Nic rozjednaného — to je ta chvíle, kdy se má přidat na obchodu.
-          </p>
+          <p className="text-sm font-body text-muted m-0">{t('palubovka.nicRozjednaneho')}</p>
         ) : (
           <ul className="list-none p-0 m-0 flex flex-col">
             {data.projektyVPalivu.map((p) => (
@@ -271,20 +278,19 @@ export function Palubovka({
                 </Link>
                 <span className="text-xs font-body text-muted truncate">{p.firma}</span>
                 <span className="ml-auto text-xs font-body text-muted whitespace-nowrap">
-                  {p.termin ? new Date(p.termin).toLocaleDateString('cs-CZ') : 'bez termínu'}
+                  {p.termin ? formatDatum(jazyk, new Date(p.termin)) : t('palubovka.bezTerminu')}
                 </span>
                 <span className="font-heading font-semibold text-sm text-ink tabular-nums whitespace-nowrap">
-                  {koruny(p.zbyva)}
-                  {p.odhad && <span className="text-muted font-body text-[11px]"> odhad</span>}
+                  {koruny(p.zbyva, jazyk)}
+                  {p.odhad && (
+                    <span className="text-muted font-body text-[11px]">{t('palubovka.odhad')}</span>
+                  )}
                 </span>
               </li>
             ))}
           </ul>
         )}
-        <p className="text-[11px] font-body text-muted m-0">
-          Počítá se schválená nebo odeslaná nabídka mínus to, co už je z projektu vyfakturované.
-          Kde nabídka není, bere se u audioknihy odhad z normostran a sazby klienta.
-        </p>
+        <p className="text-[11px] font-body text-muted m-0">{t('palubovka.poznamkaPaliva')}</p>
       </section>
     </div>
   );

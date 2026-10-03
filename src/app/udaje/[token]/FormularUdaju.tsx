@@ -5,7 +5,8 @@ import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { CountrySelect } from '@/app/(admin)/admin/CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { HEREC_STUDIOS } from '@/lib/roles';
-import type { PolePozvanky } from '@/lib/pozvankaUdaju';
+import { popisekPole, type PolePozvanky } from '@/lib/pozvankaUdaju';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Formulář, do kterého herec nebo firma vyplní své údaje (zadání 16. 9. 2026).
@@ -23,13 +24,17 @@ export function FormularUdaju({
   pole,
   vychozi,
   poznamka,
+  jazyk = 'cs',
 }: {
   token: string;
   druh: 'HEREC' | 'FIRMA';
   pole: PolePozvanky[];
   vychozi: Record<string, string | boolean | string[]>;
   poznamka: string | null;
+  /** Jazyk PROPEM - formulář stojí mimo JazykProvider (pravidlo 8). */
+  jazyk?: Jazyk;
 }) {
+  const t = (klic: string) => prelozit(jazyk, klic);
   const [hodnoty, setHodnoty] = useState<Record<string, string | boolean | string[]>>({
     addressCountry: DEFAULT_COUNTRY,
     ...vychozi,
@@ -47,7 +52,7 @@ export function FormularUdaju({
   async function nactiZAresu() {
     const ico = String(hodnoty.ic ?? '').replace(/\D/g, '');
     if (ico.length !== 8) {
-      setAresChyba('IČ má osm číslic.');
+      setAresChyba(t('formularUdaju.icOsmCislic'));
       return;
     }
     setAresBezi(true);
@@ -56,7 +61,7 @@ export function FormularUdaju({
       const res = await fetch(`/api/udaje/${encodeURIComponent(token)}/ares?ico=${ico}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setAresChyba(data?.error || 'Registr se nepodařilo zeptat.');
+        setAresChyba(data?.error || t('formularUdaju.registrChyba'));
         return;
       }
       // Co registr nevi, se nepřepisuje - jinak by se smazalo, co uz clovek napsal.
@@ -72,7 +77,7 @@ export function FormularUdaju({
         addressCountry: data.addressCountry || p.addressCountry || DEFAULT_COUNTRY,
       }));
     } catch {
-      setAresChyba('Registr se nepodařilo zeptat.');
+      setAresChyba(t('formularUdaju.registrChyba'));
     } finally {
       setAresBezi(false);
     }
@@ -85,11 +90,11 @@ export function FormularUdaju({
     const jmeno = String(hodnoty.name ?? '').trim();
     const kontakt = String(hodnoty[druh === 'HEREC' ? 'email' : 'contactEmail'] ?? '').trim();
     if (!jmeno) {
-      setChyba(druh === 'HEREC' ? 'Vyplňte prosím jméno.' : 'Vyplňte prosím název firmy.');
+      setChyba(t(druh === 'HEREC' ? 'formularUdaju.vyplnteJmeno' : 'formularUdaju.vyplnteNazev'));
       return;
     }
     if (!kontakt) {
-      setChyba('Vyplňte prosím e-mail — bez něj vám nemáme kam odpovědět.');
+      setChyba(t('formularUdaju.vyplnteEmail'));
       return;
     }
 
@@ -103,12 +108,12 @@ export function FormularUdaju({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Odeslání se nepodařilo. Zkuste to prosím znovu.');
+        setChyba(data?.error || t('formularUdaju.neodeslano'));
         return;
       }
       setHotovo(true);
     } catch {
-      setChyba('Odeslání se nepodařilo. Zkuste to prosím znovu.');
+      setChyba(t('formularUdaju.neodeslano'));
     } finally {
       setOdesilam(false);
     }
@@ -117,9 +122,9 @@ export function FormularUdaju({
   if (hotovo) {
     return (
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Děkujeme, máme to</h1>
+        <h1 className="font-display text-3xl text-ink m-0">{t('formularUdaju.dekujeme')}</h1>
         <p className="text-muted font-body mt-3 m-0">
-          Údaje jsme dostali. Kdyby k nim bylo potřeba cokoliv doplnit, ozveme se.
+          {t('formularUdaju.dekujemeText')}
         </p>
       </div>
     );
@@ -129,26 +134,24 @@ export function FormularUdaju({
     <form onSubmit={odesli} className="flex flex-col gap-5">
       <div>
         <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
-          {druh === 'HEREC' ? 'Údaje herce' : 'Fakturační údaje'}
+          {t(druh === 'HEREC' ? 'formularUdaju.udajeHerce' : 'formularUdaju.fakturacniUdaje')}
         </p>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0 mt-1">Vyplňte prosím své údaje</h1>
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0 mt-1">{t('formularUdaju.nadpis')}</h1>
         <p className="text-muted text-sm mt-2 font-body m-0">
-          {druh === 'HEREC'
-            ? 'Potřebujeme je do smlouvy a k výplatě honoráře. Přihlašovat se nemusíte.'
-            : 'Stačí zadat IČ a zbytek se doplní z obchodního rejstříku. Přihlašovat se nemusíte.'}
+          {t(druh === 'HEREC' ? 'formularUdaju.uvodHerec' : 'formularUdaju.uvodFirma')}
         </p>
         {poznamka && <p className="text-sm font-body text-ink mt-3 m-0">{poznamka}</p>}
       </div>
 
       {druh === 'FIRMA' && (
         <div className="bg-surface border border-line rounded-card p-4 flex flex-col gap-2">
-          <label className="text-sm font-heading font-semibold text-ink">Načíst z rejstříku</label>
+          <label className="text-sm font-heading font-semibold text-ink">{t('formularUdaju.nacistZRejstriku')}</label>
           <div className="flex gap-2 flex-wrap">
             <input
               value={String(hodnoty.ic ?? '')}
               onChange={(e) => nastav('ic', e.target.value)}
               inputMode="numeric"
-              placeholder="IČ (8 číslic)"
+              placeholder={t('formularUdaju.icPlaceholder')}
               className="admin-input flex-1 min-w-[140px]"
             />
             <button
@@ -157,7 +160,7 @@ export function FormularUdaju({
               disabled={aresBezi}
               className="text-sm font-heading font-semibold rounded-lg border border-brand-purple text-brand-purple px-4 py-2 disabled:opacity-60"
             >
-              {aresBezi ? 'Hledám…' : 'Načíst z ARESu'}
+              {t(aresBezi ? 'formularUdaju.hledam' : 'formularUdaju.nacistZAresu')}
             </button>
           </div>
           {aresChyba && <p className="text-sm font-body text-danger m-0">{aresChyba}</p>}
@@ -166,25 +169,22 @@ export function FormularUdaju({
 
       <div className="flex flex-col gap-4">
         {pole.map((p) => (
-          <Pole key={p.klic} pole={p} hodnota={hodnoty[p.klic]} nastav={nastav} />
+          <Pole key={p.klic} pole={p} hodnota={hodnoty[p.klic]} nastav={nastav} druh={druh} jazyk={jazyk} />
         ))}
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-heading font-semibold text-ink">Vzkaz pro nás (nepovinné)</span>
+        <span className="text-sm font-heading font-semibold text-ink">{t('formularUdaju.vzkaz')}</span>
         <textarea
           value={vzkaz}
           onChange={(e) => setVzkaz(e.target.value)}
           rows={3}
           className="admin-input"
-          placeholder="Cokoliv, co bychom měli vědět."
+          placeholder={t('formularUdaju.vzkazPlaceholder')}
         />
       </label>
 
-      <p className="text-xs font-body text-muted m-0">
-        Údaje použijeme jen k uzavření smlouvy, vyplacení honoráře a k plnění zákonných povinností.
-        Nikomu dalšímu je nedáváme.
-      </p>
+      <p className="text-xs font-body text-muted m-0">{t('formularUdaju.gdpr')}</p>
 
       {chyba && <p className="text-sm font-body text-danger m-0">{chyba}</p>}
 
@@ -193,7 +193,7 @@ export function FormularUdaju({
         disabled={odesilam}
         className="self-start text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-6 py-3 disabled:opacity-60"
       >
-        {odesilam ? 'Odesílám…' : 'Odeslat údaje'}
+        {t(odesilam ? 'formularUdaju.odesilam' : 'formularUdaju.odeslatUdaje')}
       </button>
     </form>
   );
@@ -203,11 +203,17 @@ function Pole({
   pole,
   hodnota,
   nastav,
+  druh,
+  jazyk,
 }: {
   pole: PolePozvanky;
   hodnota: string | boolean | string[] | undefined;
   nastav: (klic: string, hodnota: string | boolean | string[]) => void;
+  druh: 'HEREC' | 'FIRMA';
+  jazyk: Jazyk;
 }) {
+  // Popisek pole se překládá podle KLÍČE pole (popisekPole z dávky 7c).
+  const popisek = popisekPole(pole.klic, druh, jazyk);
   if (pole.typ === 'ano-ne') {
     return (
       <label className="flex items-center gap-2">
@@ -217,7 +223,7 @@ function Pole({
           onChange={(e) => nastav(pole.klic, e.target.checked)}
           className="w-4 h-4 accent-brand-purple"
         />
-        <span className="text-sm font-heading font-semibold text-ink">{pole.popisek}</span>
+        <span className="text-sm font-heading font-semibold text-ink">{popisek}</span>
       </label>
     );
   }
@@ -225,7 +231,7 @@ function Pole({
   if (pole.typ === 'zeme') {
     return (
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-heading font-semibold text-ink">{pole.popisek}</span>
+        <span className="text-sm font-heading font-semibold text-ink">{popisek}</span>
         <CountrySelect
           value={typeof hodnota === 'string' ? hodnota : DEFAULT_COUNTRY}
           onChange={(kod) => nastav(pole.klic, kod)}
@@ -238,7 +244,7 @@ function Pole({
     const vybrano = Array.isArray(hodnota) ? hodnota : [];
     return (
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-heading font-semibold text-ink">{pole.popisek}</span>
+        <span className="text-sm font-heading font-semibold text-ink">{popisek}</span>
         <div className="flex flex-wrap gap-2">
           {HEREC_STUDIOS.map((studio) => (
             <Volba
@@ -256,7 +262,7 @@ function Pole({
 
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-sm font-heading font-semibold text-ink">{pole.popisek}</span>
+      <span className="text-sm font-heading font-semibold text-ink">{popisek}</span>
       <input
         type={pole.typ === 'datum' ? 'date' : 'text'}
         value={typeof hodnota === 'string' ? hodnota : ''}

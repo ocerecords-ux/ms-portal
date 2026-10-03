@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { odpovidaHledani, uryvek } from '@/lib/navody';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Seznam návodů s hledáním (zadání 16. 9. 2026).
@@ -33,6 +34,7 @@ export function SeznamNavodu({
   navody: PolozkaNavodu[];
   jeAdmin: boolean;
 }) {
+  const t = usePreklad();
   const [dotaz, setDotaz] = useState('');
 
   const nalezene = useMemo(
@@ -55,17 +57,15 @@ export function SeznamNavodu({
     <section className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Nápověda</h1>
-          <p className="text-sm font-body text-muted m-0 mt-1">
-            Návody k portálu. Hledá se v celém textu — stačí slovo, které si pamatujete.
-          </p>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{t('napoveda.nadpis')}</h1>
+          <p className="text-sm font-body text-muted m-0 mt-1">{t('napoveda.uvod')}</p>
         </div>
         {jeAdmin && (
           <Link
             href="/admin/navody"
             className="text-sm font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 no-underline hover:border-brand-purple"
           >
-            Spravovat návody
+            {t('napoveda.spravovat')}
           </Link>
         )}
       </div>
@@ -86,7 +86,7 @@ export function SeznamNavodu({
         <input
           value={dotaz}
           onChange={(e) => setDotaz(e.target.value)}
-          placeholder="Hledat v návodech…"
+          placeholder={t('napoveda.hledat')}
           autoComplete="off"
           className="w-full rounded-pill border border-line bg-surface pl-10 pr-4 py-3 text-sm font-body text-ink outline-none focus:border-brand-purple"
         />
@@ -94,12 +94,12 @@ export function SeznamNavodu({
 
       {navody.length === 0 ? (
         <p className="text-sm font-body text-muted m-0">
-          Zatím tu žádný návod není.
-          {jeAdmin ? ' První přidáte přes „Spravovat návody".' : ''}
+          {t('napoveda.zadnyNavod')}
+          {jeAdmin ? t('napoveda.prvniPridate') : ''}
         </p>
       ) : nalezene.length === 0 ? (
         <p className="text-sm font-body text-muted m-0">
-          Nic neodpovídá. Zkuste jedno slovo místo celé věty.
+          {t('napoveda.nicNeodpovida')}
         </p>
       ) : (
         <div className="flex flex-col gap-8">
@@ -121,7 +121,7 @@ export function SeznamNavodu({
                           <span className="font-heading font-semibold text-ink">{n.nazev}</span>
                           {!n.zverejneno && (
                             <span className="text-xs font-heading rounded-pill border border-line text-muted px-2 py-0.5">
-                              rozepsané
+                              {t('napoveda.rozepsane')}
                             </span>
                           )}
                         </span>

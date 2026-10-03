@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { kc, kcKratce } from './format';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import type { Jazyk } from '@/lib/jazyk';
 
 type Usek = { klic: string; popis: string; obrat: number; naklady: number; zisk: number };
 
@@ -24,6 +26,8 @@ function osa(min: number, max: number): { dole: number; nahore: number; znacky: 
  * telefonu) ukáže přesná čísla úseku. Pod grafem jde přepnout na tabulku.
  */
 export function FinanceGraf({ useky }: { useky: Usek[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [aktivni, setAktivni] = useState<number | null>(null);
   const [tabulka, setTabulka] = useState(false);
 
@@ -42,19 +46,19 @@ export function FinanceGraf({ useky }: { useky: Usek[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4 flex-wrap text-xs font-heading text-muted">
-        <Legenda barva="var(--viz-obrat)">Obrat</Legenda>
-        <Legenda barva="var(--viz-naklady)">Náklady</Legenda>
+        <Legenda barva="var(--viz-obrat)">{t('finance.obrat')}</Legenda>
+        <Legenda barva="var(--viz-naklady)">{t('finance.naklady')}</Legenda>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block w-4 h-0.5 rounded bg-ink" />
           <span className="inline-block w-2 h-2 rounded-full bg-ink -ml-3" />
-          Zisk
+          {t('finance.zisk')}
         </span>
         <button
           type="button"
           onClick={() => setTabulka((t) => !t)}
           className="ml-auto text-xs font-heading font-semibold text-brand-purple bg-transparent border-0"
         >
-          {tabulka ? 'Zobrazit graf' : 'Zobrazit tabulku'}
+          {t(tabulka ? 'finance.zobrazitGraf' : 'finance.zobrazitTabulku')}
         </button>
       </div>
 
@@ -63,20 +67,20 @@ export function FinanceGraf({ useky }: { useky: Usek[] }) {
           <table className="w-full text-sm font-body border-collapse">
             <thead>
               <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                <th className="text-left py-2 pr-3">Období</th>
-                <th className="text-right py-2 px-3">Obrat</th>
-                <th className="text-right py-2 px-3">Náklady</th>
-                <th className="text-right py-2 pl-3">Zisk</th>
+                <th className="text-left py-2 pr-3">{t('finance.obdobi')}</th>
+                <th className="text-right py-2 px-3">{t('finance.obrat')}</th>
+                <th className="text-right py-2 px-3">{t('finance.naklady')}</th>
+                <th className="text-right py-2 pl-3">{t('finance.zisk')}</th>
               </tr>
             </thead>
             <tbody>
               {useky.map((u) => (
                 <tr key={u.klic} className="border-t border-line">
                   <td className="py-1.5 pr-3 text-ink">{u.popis}</td>
-                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(u.obrat)}</td>
-                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(u.naklady)}</td>
+                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(u.obrat, jazyk)}</td>
+                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(u.naklady, jazyk)}</td>
                   <td className={`text-right py-1.5 pl-3 tabular-nums font-heading ${u.zisk < 0 ? 'text-danger' : 'text-ink'}`}>
-                    {kc(u.zisk)}
+                    {kc(u.zisk, jazyk)}
                   </td>
                 </tr>
               ))}
@@ -89,7 +93,7 @@ export function FinanceGraf({ useky }: { useky: Usek[] }) {
           <div className="relative w-14 shrink-0 h-64 text-[11px] font-body text-muted tabular-nums">
             {znacky.map((v) => (
               <span key={v} className="absolute right-0 -translate-y-1/2" style={{ top: `${100 - odSpodu(v)}%` }}>
-                {kcKratce(v)}
+                {kcKratce(v, jazyk)}
               </span>
             ))}
           </div>
@@ -166,9 +170,9 @@ export function FinanceGraf({ useky }: { useky: Usek[] }) {
                   }
                 >
                   <p className="font-heading font-semibold text-ink m-0 mb-1">{useky[aktivni].popis}</p>
-                  <Radek barva="var(--viz-obrat)" popis="Obrat" hodnota={useky[aktivni].obrat} />
-                  <Radek barva="var(--viz-naklady)" popis="Náklady" hodnota={useky[aktivni].naklady} />
-                  <Radek barva="rgb(var(--c-ink))" popis="Zisk" hodnota={useky[aktivni].zisk} tucne />
+                  <Radek jazyk={jazyk} barva="var(--viz-obrat)" popis={t('finance.obrat')} hodnota={useky[aktivni].obrat} />
+                  <Radek jazyk={jazyk} barva="var(--viz-naklady)" popis={t('finance.naklady')} hodnota={useky[aktivni].naklady} />
+                  <Radek jazyk={jazyk} barva="rgb(var(--c-ink))" popis={t('finance.zisk')} hodnota={useky[aktivni].zisk} tucne />
                 </div>
               )}
             </div>
@@ -207,13 +211,25 @@ function Legenda({ barva, children }: { barva: string; children: React.ReactNode
   );
 }
 
-function Radek({ barva, popis, hodnota, tucne }: { barva: string; popis: string; hodnota: number; tucne?: boolean }) {
+function Radek({
+  jazyk,
+  barva,
+  popis,
+  hodnota,
+  tucne,
+}: {
+  jazyk: Jazyk;
+  barva: string;
+  popis: string;
+  hodnota: number;
+  tucne?: boolean;
+}) {
   return (
     <p className="flex items-center gap-2 m-0 py-0.5">
       <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: barva }} />
       <span className="text-muted">{popis}</span>
       <span className={`ml-auto tabular-nums ${tucne ? 'font-heading font-semibold' : ''} ${hodnota < 0 ? 'text-danger' : 'text-ink'}`}>
-        {kc(hodnota)}
+        {kc(hodnota, jazyk)}
       </span>
     </p>
   );

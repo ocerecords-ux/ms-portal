@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  POPISKY_DRUHU,
   filtrujDruh,
   omezObdobi,
   poMesicich,
@@ -12,6 +11,8 @@ import {
   type DruhBacklogu,
   type ZaznamBacklogu,
 } from '@/lib/backlog';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatum, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * BACKLOG - PŘEHLED ODEVZDÁVÁNÍ V TERMÍNU (zadání 18. 9. 2026).
@@ -29,13 +30,15 @@ import {
 const BARVA_V_TERMINU = 'bg-[#149E4B] dark:bg-[#2BAE66]';
 const BARVA_PO_TERMINU = 'bg-[#C2410C] dark:bg-[#DB6A2E]';
 
-const OBDOBI: { klic: number | null; popisek: string }[] = [
-  { klic: 6, popisek: '6 měsíců' },
-  { klic: 12, popisek: '12 měsíců' },
-  { klic: null, popisek: 'Vše' },
+const OBDOBI: { klic: number | null; klicTextu: string }[] = [
+  { klic: 6, klicTextu: 'backlog.obdobi6' },
+  { klic: 12, klicTextu: 'backlog.obdobi12' },
+  { klic: null, klicTextu: 'backlog.obdobiVse' },
 ];
 
 export function BacklogKlient({ zaznamy }: { zaznamy: ZaznamBacklogu[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [druh, setDruh] = useState<DruhBacklogu>('VSE');
   const [mesicu, setMesicu] = useState<number | null>(12);
   const [vsechnyRadky, setVsechnyRadky] = useState(false);
@@ -60,59 +63,63 @@ export function BacklogKlient({ zaznamy }: { zaznamy: ZaznamBacklogu[] }) {
         <Prepinac
           volby={(['VSE', 'AUDIOKNIHA', 'REKLAMA'] as DruhBacklogu[]).map((d) => ({
             klic: d,
-            popisek: POPISKY_DRUHU[d],
+            popisek: t(`backlog.druh.${d}`),
           }))}
           vybrano={druh}
           onZmena={setDruh}
         />
         <span className="w-px h-6 bg-line" aria-hidden="true" />
-        <Prepinac volby={OBDOBI} vybrano={mesicu} onZmena={setMesicu} />
+        <Prepinac
+          volby={OBDOBI.map((o) => ({ klic: o.klic, popisek: t(o.klicTextu) }))}
+          vybrano={mesicu}
+          onZmena={setMesicu}
+        />
       </div>
 
       {souhrn.pocet === 0 ? (
-        <p className="text-sm font-body text-muted m-0">
-          Za tohle období tu zatím nic není. Backlog počítá z historie projektu — zná jen projekty,
-          které se do stavu „Dokončeno - ke schválení" dostaly po 10. 9. 2026, a jen ty, které mají
-          vyplněné datum dokončení.
-        </p>
+        <p className="text-sm font-body text-muted m-0">{t('backlog.nicTu')}</p>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Dlazdice popisek="Odevzdaných projektů" hodnota={String(souhrn.pocet)} />
+            <Dlazdice popisek={t('backlog.odevzdanychProjektu')} hodnota={String(souhrn.pocet)} />
             <Dlazdice
-              popisek="V termínu"
+              popisek={t('backlog.vTerminu')}
               hodnota={`${souhrn.procentVTerminu} %`}
-              pod={`${souhrn.vTerminu} z ${souhrn.pocet}`}
+              pod={t('backlog.zCelku', { pocet: souhrn.vTerminu, celkem: souhrn.pocet })}
             />
             <Dlazdice
-              popisek="Celkem dní"
+              popisek={t('backlog.celkemDni')}
               hodnota={znamenkoDni(souhrn.celkem)}
-              pod={`${souhrn.dniPredem} dní k dobru · ${souhrn.dniPoTerminu} dní skluzu`}
+              pod={t('backlog.dniKDobruASkluzu', {
+                kDobru: souhrn.dniPredem,
+                skluz: souhrn.dniPoTerminu,
+              })}
             />
             <Dlazdice
-              popisek="Průměr na projekt"
+              popisek={t('backlog.prumerNaProjekt')}
               hodnota={znamenkoDni(Math.round(souhrn.prumer))}
               pod={
                 souhrn.nejdelsiSkluz > 0
-                  ? `nejdelší skluz ${souhrn.nejdelsiSkluz} dní`
-                  : 'žádný skluz'
+                  ? t('backlog.nejdelsiSkluz', { pocet: souhrn.nejdelsiSkluz })
+                  : t('backlog.zadnySkluz')
               }
             />
           </div>
 
           <PodilVTerminu
+            jazyk={jazyk}
             vTerminu={souhrn.vTerminu}
             poTerminu={souhrn.poTerminu}
             procentVTerminu={souhrn.procentVTerminu}
             procentPoTerminu={souhrn.procentPoTerminu}
           />
 
-          <GrafMesicu mesice={mesice} />
+          <GrafMesicu mesice={mesice} jazyk={jazyk} />
 
           <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-baseline justify-between gap-3 flex-wrap">
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Projekty od největšího skluzu
+                {t('backlog.projektyOdSkluzu')}
               </h2>
               {nejhorsi.length > 12 && (
                 <button
@@ -120,7 +127,9 @@ export function BacklogKlient({ zaznamy }: { zaznamy: ZaznamBacklogu[] }) {
                   onClick={() => setVsechnyRadky((v) => !v)}
                   className="text-xs font-heading font-semibold text-brand-purple"
                 >
-                  {vsechnyRadky ? 'Zkrátit' : `Zobrazit všech ${nejhorsi.length}`}
+                  {vsechnyRadky
+                    ? t('backlog.zkratit')
+                    : t('backlog.zobrazitVsech', { pocet: nejhorsi.length })}
                 </button>
               )}
             </div>
@@ -128,10 +137,10 @@ export function BacklogKlient({ zaznamy }: { zaznamy: ZaznamBacklogu[] }) {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="text-left">
-                    <Th>Projekt</Th>
-                    <Th>Termín</Th>
-                    <Th>Odevzdáno</Th>
-                    <Th trida="text-right">Dní</Th>
+                    <Th>{t('backlog.projekt')}</Th>
+                    <Th>{t('backlog.termin')}</Th>
+                    <Th>{t('backlog.odevzdano')}</Th>
+                    <Th trida="text-right">{t('backlog.dni')}</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,15 +154,15 @@ export function BacklogKlient({ zaznamy }: { zaznamy: ZaznamBacklogu[] }) {
                           {z.nazev}
                         </Link>
                         <span className="block text-xs font-body text-muted">
-                          {z.reklama ? 'Reklama' : 'Audiokniha'}
+                          {t(z.reklama ? 'backlog.reklama' : 'backlog.audiokniha')}
                           {z.typ ? ` · ${z.typ}` : ''}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                        {formatujDen(z.termin)}
+                        {formatujDen(z.termin, jazyk)}
                       </td>
                       <td className="px-4 py-2.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                        {formatujDen(z.odevzdano)}
+                        {formatujDen(z.odevzdano, jazyk)}
                       </td>
                       <td className="px-4 py-2.5 text-right whitespace-nowrap">
                         <span className="inline-flex items-center gap-1.5">
@@ -186,22 +195,24 @@ function PodilVTerminu({
   poTerminu,
   procentVTerminu,
   procentPoTerminu,
+  jazyk,
 }: {
   vTerminu: number;
   poTerminu: number;
   procentVTerminu: number;
   procentPoTerminu: number;
+  jazyk: Jazyk;
 }) {
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Podíl odevzdání
+          {prelozit(jazyk, 'backlog.podilOdevzdani')}
         </h2>
-        <Legenda />
+        <Legenda jazyk={jazyk} />
       </div>
       <div className="flex h-7 w-full rounded-pill overflow-hidden bg-field" role="img"
-        aria-label={`V termínu ${procentVTerminu} procent, po termínu ${procentPoTerminu} procent`}>
+        aria-label={prelozitS(jazyk, 'backlog.podilPopisek', { vTerminu: procentVTerminu, poTerminu: procentPoTerminu })}>
         {vTerminu > 0 && (
           <div
             className={`${BARVA_V_TERMINU} flex items-center justify-center`}
@@ -230,7 +241,7 @@ function PodilVTerminu({
         )}
       </div>
       <p className="text-xs font-body text-muted m-0">
-        {vTerminu} v termínu · {poTerminu} po termínu
+        {prelozitS(jazyk, 'backlog.vTerminuAPo', { vTerminu, poTerminu })}
       </p>
     </div>
   );
@@ -242,8 +253,10 @@ function PodilVTerminu({
  */
 function GrafMesicu({
   mesice,
+  jazyk,
 }: {
   mesice: { klic: string; popisek: string; vTerminu: number; poTerminu: number; dni: number }[];
+  jazyk: Jazyk;
 }) {
   const [najeto, setNajeto] = useState<string | null>(null);
   if (mesice.length === 0) return null;
@@ -255,9 +268,9 @@ function GrafMesicu({
     <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Dny podle měsíce odevzdání
+          {prelozit(jazyk, 'backlog.dnyPodleMesice')}
         </h2>
-        <Legenda />
+        <Legenda jazyk={jazyk} />
       </div>
 
       <div className="relative">
@@ -265,9 +278,14 @@ function GrafMesicu({
           <div className="absolute right-0 -top-1 z-10 rounded-lg border border-line bg-surface shadow-lg px-3 py-2 text-xs font-body text-ink">
             <strong className="font-heading">{detail.popisek}</strong>
             <span className="block text-muted">
-              {detail.vTerminu} v termínu · {detail.poTerminu} po termínu
+              {prelozitS(jazyk, 'backlog.vTerminuAPo', {
+                vTerminu: detail.vTerminu,
+                poTerminu: detail.poTerminu,
+              })}
             </span>
-            <span className="block text-muted">Celkem {znamenkoDni(detail.dni)} dní</span>
+            <span className="block text-muted">
+              {prelozitS(jazyk, 'backlog.celkemDniDetail', { dni: znamenkoDni(detail.dni) })}
+            </span>
           </div>
         )}
 
@@ -283,7 +301,12 @@ function GrafMesicu({
                 onFocus={() => setNajeto(m.klic)}
                 onBlur={() => setNajeto((k) => (k === m.klic ? null : k))}
                 tabIndex={0}
-                title={`${m.popisek}: ${znamenkoDni(m.dni)} dní, ${m.vTerminu} v termínu, ${m.poTerminu} po termínu`}
+                title={prelozitS(jazyk, 'backlog.bublinaMesice', {
+                  mesic: m.popisek,
+                  dni: znamenkoDni(m.dni),
+                  vTerminu: m.vTerminu,
+                  poTerminu: m.poTerminu,
+                })}
                 className={`flex-1 min-w-[26px] flex flex-col items-center rounded-lg outline-none ${
                   najeto === m.klic ? 'bg-field/70' : ''
                 }`}
@@ -320,16 +343,16 @@ function GrafMesicu({
   );
 }
 
-function Legenda() {
+function Legenda({ jazyk }: { jazyk: Jazyk }) {
   return (
     <span className="flex items-center gap-3 text-xs font-body text-muted">
       <span className="inline-flex items-center gap-1.5">
         <span className={`w-2.5 h-2.5 rounded-sm ${BARVA_V_TERMINU}`} aria-hidden="true" />
-        v termínu
+        {prelozit(jazyk, 'backlog.legendaVTerminu')}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className={`w-2.5 h-2.5 rounded-sm ${BARVA_PO_TERMINU}`} aria-hidden="true" />
-        po termínu
+        {prelozit(jazyk, 'backlog.legendaPoTerminu')}
       </span>
     </span>
   );
@@ -387,7 +410,7 @@ function Th({ children, trida = '' }: { children: React.ReactNode; trida?: strin
   );
 }
 
-function formatujDen(iso: string): string {
+function formatujDen(iso: string, jazyk: Jazyk): string {
   const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat('cs-CZ').format(d);
+  return Number.isNaN(d.getTime()) ? iso : formatDatum(jazyk, d);
 }

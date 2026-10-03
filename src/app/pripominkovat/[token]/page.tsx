@@ -8,6 +8,8 @@ import { projektPodleTokenu, zapisOtevreni } from '@/lib/preposlechOdkaz';
 import { stavSchvaleni } from '@/lib/schvaleniKlientem';
 import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { SpotTagger } from './VideoTagger';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * PŘIPOMÍNKOVÁNÍ REKLAMNÍHO SPOTU (zadání 18. 9. 2026).
@@ -44,6 +46,7 @@ export default async function PripominkovatPage({
   params: { token: string };
   searchParams?: { soubor?: string };
 }) {
+  const jazyk = nactiJazyk();
   const zadano = searchParams?.soubor?.trim();
 
   /**
@@ -53,7 +56,7 @@ export default async function PripominkovatPage({
    */
   const pristupProSeznam = zadano ? await pristupKVideu(params.token, zadano) : null;
   if (pristupProSeznam && 'chyba' in pristupProSeznam) {
-    return <Hlaska nadpis="Odkaz nefunguje" text={pristupProSeznam.chyba} />;
+    return <Hlaska nadpis={prelozit(jazyk, 'pripominkovat.odkazNefunguje')} text={pristupProSeznam.chyba} />;
   }
 
   const projektZOdkazu =
@@ -63,8 +66,8 @@ export default async function PripominkovatPage({
   if (!projektZOdkazu) {
     return (
       <Hlaska
-        nadpis="Odkaz už neplatí"
-        text="Tenhle odkaz byl uzavřený nebo nahrazený novým. Napište nám a pošleme vám aktuální."
+        nadpis={prelozit(jazyk, 'pripominkovat.odkazNeplati')}
+        text={prelozit(jazyk, 'pripominkovat.odkazNeplatiText')}
       />
     );
   }
@@ -74,15 +77,15 @@ export default async function PripominkovatPage({
   if (!fileId) {
     return (
       <Hlaska
-        nadpis="Zatím tu není co poslouchat"
-        text="Ve složce projektu není žádný spot ani video. Jakmile tam něco přibude, otevřete odkaz znovu."
+        nadpis={prelozit(jazyk, 'pripominkovat.nicKPoslechu')}
+        text={prelozit(jazyk, 'pripominkovat.nicKPoslechuText')}
       />
     );
   }
 
   const pristup = pristupProSeznam ?? (await pristupKVideu(params.token, fileId));
   if ('chyba' in pristup) {
-    return <Hlaska nadpis="Odkaz nefunguje" text={pristup.chyba} />;
+    return <Hlaska nadpis={prelozit(jazyk, 'pripominkovat.odkazNefunguje')} text={pristup.chyba} />;
   }
 
   const [meta, pripominky, session, schvaleni] = await Promise.all([
@@ -108,7 +111,7 @@ export default async function PripominkovatPage({
           <span className="w-px h-6 bg-white/30 shrink-0" aria-hidden="true" />
           <div className="min-w-0">
             <span className="block font-heading font-semibold text-sm leading-tight">
-              PŘIPOMÍNKOVÁNÍ SPOTU
+              {prelozit(jazyk, 'pripominkovat.hlavicka')}
             </span>
             <span className="block text-xs text-white/80 leading-tight truncate">
               {meta?.name?.trim() || pristup.nazev}
@@ -138,6 +141,7 @@ export default async function PripominkovatPage({
           vybranyId={pristup.fileId}
           pocatecni={pripominky}
           jsemZTymu={jsemZTymu}
+          jazyk={jazyk}
         />
       </div>
     </main>

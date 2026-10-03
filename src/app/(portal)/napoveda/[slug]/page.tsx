@@ -6,6 +6,8 @@ import { prisma } from '@/lib/db';
 import { navodNaHtml, sediDruh, vidiNavod } from '@/lib/navody';
 import { druhyKlienta } from '@/lib/navodyServer';
 import { StahnoutPdf } from './StahnoutPdf';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
  * JEDEN NÁVOD (zadání 16. 9. 2026).
@@ -20,6 +22,7 @@ export default async function NavodPage({ params }: { params: { slug: string } }
   if (!session) redirect('/login');
   const role = session.user.role;
   const jeAdmin = role === 'ADMIN';
+  const jazyk = nactiJazyk();
 
   const navod = await prisma.navod.findUnique({
     where: { slug: params.slug },
@@ -38,7 +41,7 @@ export default async function NavodPage({ params }: { params: { slug: string } }
     <article className="tisk flex flex-col gap-6 max-w-3xl">
       <div>
         <Link href="/napoveda" className="netisknout text-sm font-heading text-muted no-underline">
-          ← Nápověda
+          {prelozit(jazyk, 'napoveda.zpet')}
         </Link>
         <p className="text-xs font-heading text-muted uppercase tracking-wide m-0 mt-3">
           {navod.kategorie}
@@ -46,9 +49,9 @@ export default async function NavodPage({ params }: { params: { slug: string } }
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0 mt-1">{navod.nazev}</h1>
         {navod.perex && <p className="text-muted font-body m-0 mt-2">{navod.perex}</p>}
         <p className="text-xs font-body text-muted m-0 mt-3">
-          Upraveno {navod.updatedAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}
+          {prelozitS(jazyk, 'napoveda.upraveno', { datum: formatDatum(jazyk, navod.updatedAt) })}
           {navod.autor?.name ? ` · ${navod.autor.name}` : ''}
-          {!navod.zverejneno ? ' · rozepsané, ostatní ho nevidí' : ''}
+          {!navod.zverejneno ? prelozit(jazyk, 'napoveda.rozepsaneNevidi') : ''}
         </p>
       </div>
 
@@ -67,7 +70,7 @@ export default async function NavodPage({ params }: { params: { slug: string } }
             href={`/admin/navody/${navod.id}`}
             className="text-sm font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 no-underline hover:border-brand-purple"
           >
-            Upravit návod
+            {prelozit(jazyk, 'napoveda.upravitNavod')}
           </Link>
         )}
       </div>

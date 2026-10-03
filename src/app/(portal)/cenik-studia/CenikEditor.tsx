@@ -7,6 +7,7 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { CURRENCIES, CURRENCY_NAMES, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
 import { cena, platnost, type Cenik, type RadekCeniku } from '@/lib/studioCenik';
 import type { Currency } from '@prisma/client';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * EDITOR CENÍKU STUDIA (zadání 28. 9. 2026: „aby se daly upravovat ceny
@@ -38,6 +39,7 @@ export function CenikEditor({
   studia: { id: string; name: string }[];
   cenik: Cenik;
 }) {
+  const t = usePreklad();
   const [nadpis, setNadpis] = useState(vychozi.nadpis);
   const [podnadpis, setPodnadpis] = useState(vychozi.podnadpis ?? '');
   const [platnostDo, setPlatnostDo] = useState(vychozi.platnostDo);
@@ -95,13 +97,13 @@ export function CenikEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Uložení se nepovedlo.');
+        setChyba(data?.error || t('cenikStudia.neulozeno'));
         return false;
       }
-      setHlaska('Uloženo.');
+      setHlaska(t('cenikStudia.ulozeno'));
       return true;
     } catch {
-      setChyba('Uložení se nepovedlo.');
+      setChyba(t('cenikStudia.neulozeno'));
       return false;
     } finally {
       setBusy(false);
@@ -110,7 +112,7 @@ export function CenikEditor({
 
   async function odesli() {
     if (!komu.trim()) {
-      setChyba('Napište, komu se má ceník poslat.');
+      setChyba(t('cenikStudia.napisteKomu'));
       return;
     }
     // Nejdřív uložit - do přílohy jde to, co je v portálu.
@@ -125,14 +127,14 @@ export function CenikEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Odeslání se nepovedlo.');
+        setChyba(data?.error || t('cenikStudia.odeslaniNepovedlo'));
         return;
       }
-      setHlaska(`Odesláno na ${komu.trim()}.`);
+      setHlaska(t('cenikStudia.odeslanoNa', { komu: komu.trim() }));
       setOdesilam(false);
       setKomu('');
     } catch {
-      setChyba('Odeslání se nepovedlo.');
+      setChyba(t('cenikStudia.odeslaniNepovedlo'));
     } finally {
       setBusy(false);
     }
@@ -159,9 +161,9 @@ export function CenikEditor({
     <div className="flex flex-col gap-5">
       {studia.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={stitek}>Studio</span>
+          <span className={stitek}>{t('cenikStudia.studio')}</span>
           <VyberPole
-            aria-label="Studio"
+            aria-label={t('cenikStudia.studio')}
             value={studioId}
             onChange={(e) => {
               window.location.href = `/cenik-studia?studio=${encodeURIComponent(e.target.value)}`;
@@ -182,14 +184,14 @@ export function CenikEditor({
         <div className="flex flex-col gap-5">
           <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Záhlaví
+              {t('cenikStudia.zahlavi')}
             </h2>
             <label className="flex flex-col gap-1.5">
-              <span className={stitek}>Název v hlavičce</span>
+              <span className={stitek}>{t('cenikStudia.nazevVHlavicce')}</span>
               <input value={nadpis} onChange={(e) => setNadpis(e.target.value)} className={pole} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className={stitek}>Podnadpis</span>
+              <span className={stitek}>{t('cenikStudia.podnadpis')}</span>
               <input
                 value={podnadpis}
                 onChange={(e) => setPodnadpis(e.target.value)}
@@ -199,7 +201,7 @@ export function CenikEditor({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1.5">
-                <span className={stitek}>Platí do</span>
+                <span className={stitek}>{t('cenikStudia.platiDo')}</span>
                 <DatumPole
                   value={platnostDo}
                   onChange={(e) => setPlatnostDo(e.target.value)}
@@ -207,7 +209,7 @@ export function CenikEditor({
                 />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className={stitek}>Měna</span>
+                <span className={stitek}>{t('cenikStudia.mena')}</span>
                 <VyberPole
                   value={mena}
                   onChange={(e) => setMena(e.target.value as Currency)}
@@ -225,16 +227,13 @@ export function CenikEditor({
 
           <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Cenové sloupce
+              {t('cenikStudia.cenoveSloupce')}
             </h2>
-            <p className="text-xs font-body text-muted m-0">
-              Druhý sloupec je dobrovolný. Když ho necháte prázdný, bude mít ceník jen jednu cenu
-              u každé položky.
-            </p>
+            <p className="text-xs font-body text-muted m-0">{t('cenikStudia.druhySloupecVolny')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <label className="flex flex-col gap-1.5">
-                  <span className={stitek}>První sloupec</span>
+                  <span className={stitek}>{t('cenikStudia.prvniSloupec')}</span>
                   <input
                     value={sloupec1}
                     onChange={(e) => setSloupec1(e.target.value)}
@@ -242,7 +241,7 @@ export function CenikEditor({
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                  <span className={stitek}>Popis pod ním</span>
+                  <span className={stitek}>{t('cenikStudia.popisPodNim')}</span>
                   <textarea
                     value={sloupec1Popis}
                     onChange={(e) => setSloupec1Popis(e.target.value)}
@@ -253,7 +252,7 @@ export function CenikEditor({
               </div>
               <div className="flex flex-col gap-3">
                 <label className="flex flex-col gap-1.5">
-                  <span className={stitek}>Druhý sloupec</span>
+                  <span className={stitek}>{t('cenikStudia.druhySloupec')}</span>
                   <input
                     value={sloupec2}
                     onChange={(e) => setSloupec2(e.target.value)}
@@ -261,7 +260,7 @@ export function CenikEditor({
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                  <span className={stitek}>Popis pod ním</span>
+                  <span className={stitek}>{t('cenikStudia.popisPodNim')}</span>
                   <textarea
                     value={sloupec2Popis}
                     onChange={(e) => setSloupec2Popis(e.target.value)}
@@ -276,7 +275,7 @@ export function CenikEditor({
 
           <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Položky
+              {t('cenikStudia.polozky')}
             </h2>
             <ul className="list-none m-0 p-0 flex flex-col gap-3">
               {radky.map((r, i) => (
@@ -292,8 +291,8 @@ export function CenikEditor({
                       type="button"
                       onClick={() => posun(r.klic, -1)}
                       disabled={i === 0}
-                      title="Posunout nahoru"
-                      aria-label="Posunout nahoru"
+                      title={t('cenikStudia.posunoutNahoru')}
+                      aria-label={t('cenikStudia.posunoutNahoru')}
                       className="shrink-0 w-8 h-8 rounded-lg border border-line bg-field text-muted hover:text-ink disabled:opacity-30"
                     >
                       ↑
@@ -302,21 +301,21 @@ export function CenikEditor({
                       type="button"
                       onClick={() => posun(r.klic, 1)}
                       disabled={i === radky.length - 1}
-                      title="Posunout dolů"
-                      aria-label="Posunout dolů"
+                      title={t('cenikStudia.posunoutDolu')}
+                      aria-label={t('cenikStudia.posunoutDolu')}
                       className="shrink-0 w-8 h-8 rounded-lg border border-line bg-field text-muted hover:text-ink disabled:opacity-30"
                     >
                       ↓
                     </button>
                     <TlacitkoSmazat
                       onSmazat={() => setRadky((x) => x.filter((y) => y.klic !== r.klic))}
-                      otazka="Opravdu smazat?"
-                      popisek="Smazat položku"
+                      otazka={t('cenikStudia.opravduSmazat')}
+                      popisek={t('cenikStudia.smazatPolozku')}
                     />
                   </div>
                   <div className={`grid gap-2 ${dvaSloupce ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     <CenaPole
-                      stitek={sloupec1 || 'Cena'}
+                      stitek={sloupec1 || t('cenikStudia.cena')}
                       minor={r.cena1Minor}
                       od={r.od1}
                       mena={mena}
@@ -354,13 +353,13 @@ export function CenikEditor({
               }
               className="self-start text-sm font-heading font-semibold text-brand-purple bg-transparent border-0 px-0"
             >
-              + Přidat položku
+              {t('cenikStudia.pridatPolozku')}
             </button>
           </section>
 
           <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
             <label className="flex flex-col gap-1.5">
-              <span className={stitek}>Poznámka pod tabulkou</span>
+              <span className={stitek}>{t('cenikStudia.poznamkaPodTabulkou')}</span>
               <textarea
                 value={poznamka}
                 onChange={(e) => setPoznamka(e.target.value)}
@@ -394,7 +393,7 @@ export function CenikEditor({
               disabled={busy}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
             >
-              {busy ? 'Ukládám…' : 'Uložit ceník'}
+              {t(busy ? 'cenikStudia.ukladam' : 'cenikStudia.ulozitCenik')}
             </button>
             <a
               href={`/api/studio/cenik/pdf?studio=${encodeURIComponent(studioId)}&nahled=1`}
@@ -402,35 +401,32 @@ export function CenikEditor({
               rel="noopener"
               className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 border border-line bg-field text-ink no-underline hover:border-brand-purple"
             >
-              Náhled PDF
+              {t('cenikStudia.nahledPdf')}
             </a>
             <a
               href={`/api/studio/cenik/pdf?studio=${encodeURIComponent(studioId)}`}
               className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 border border-line bg-field text-ink no-underline hover:border-brand-purple"
             >
-              Stáhnout PDF
+              {t('cenikStudia.stahnoutPdf')}
             </a>
             <button
               type="button"
               onClick={() => setOdesilam((o) => !o)}
               className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 border border-line bg-field text-ink hover:border-brand-purple"
             >
-              Poslat e-mailem
+              {t('cenikStudia.poslatEmailem')}
             </button>
           </div>
 
-          <p className="text-xs text-muted font-body m-0">
-            Náhled PDF i příloha e-mailu se dělají z uloženého ceníku - co není uložené, v nich
-            nebude.
-          </p>
+          <p className="text-xs text-muted font-body m-0">{t('cenikStudia.zUlozeneho')}</p>
 
           {odesilam && (
             <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Poslat ceník
+                {t('cenikStudia.poslatCenik')}
               </h2>
               <label className="flex flex-col gap-1.5">
-                <span className={stitek}>Komu</span>
+                <span className={stitek}>{t('cenikStudia.komu')}</span>
                 <input
                   type="email"
                   value={komu}
@@ -440,11 +436,11 @@ export function CenikEditor({
                 />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className={stitek}>Předmět</span>
+                <span className={stitek}>{t('cenikStudia.predmet')}</span>
                 <input value={predmet} onChange={(e) => setPredmet(e.target.value)} className={pole} />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className={stitek}>Zpráva</span>
+                <span className={stitek}>{t('cenikStudia.zprava')}</span>
                 <textarea
                   value={zprava}
                   onChange={(e) => setZprava(e.target.value)}
@@ -452,16 +448,14 @@ export function CenikEditor({
                   className={pole}
                 />
               </label>
-              <p className="text-xs text-muted font-body m-0">
-                Odejde z adresy portálu za Mediaspace; odpověď přijde vám. PDF ceníku je v příloze.
-              </p>
+              <p className="text-xs text-muted font-body m-0">{t('cenikStudia.odejdeZPortalu')}</p>
               <button
                 type="button"
                 onClick={() => void odesli()}
                 disabled={busy}
                 className="self-start bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
               >
-                {busy ? 'Odesílám…' : 'Uložit a odeslat'}
+                {t(busy ? 'cenikStudia.odesilam' : 'cenikStudia.ulozitAOdeslat')}
               </button>
             </section>
           )}
@@ -497,6 +491,7 @@ function CenaPole({
   onMinor: (v: number | null) => void;
   onOd: (v: boolean) => void;
 }) {
+  const t = usePreklad();
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[11px] font-heading text-muted truncate">{stitek}</span>
@@ -513,10 +508,10 @@ function CenaPole({
         />
         <label
           className="flex items-center gap-1.5 text-xs font-body text-muted whitespace-nowrap"
-          title="Cena je orientační - v ceníku se napíše „from …"
+          title={t('cenikStudia.cenaOdTitle')}
         >
           <input type="checkbox" checked={od} onChange={(e) => onOd(e.target.checked)} />
-          od
+          {t('cenikStudia.cenaOd')}
         </label>
       </div>
       <span className="text-[11px] text-muted tabular-nums">{cena(minor, mena, od)}</span>

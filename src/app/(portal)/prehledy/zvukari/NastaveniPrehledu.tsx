@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
 import { zmenNahled } from './NahledMailu';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type Nastaveni = {
   den: number;
@@ -33,6 +34,7 @@ export function NastaveniPrehledu({
   nazevMesice: string;
   cekaNaOdeslani: number;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [n, setN] = useState(nastaveni);
   const [uklada, setUklada] = useState(false);
@@ -75,33 +77,41 @@ export function NastaveniPrehledu({
         body: JSON.stringify({ ...n, poznamka: n.poznamka.trim() || null }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Nastavení se nepodařilo uložit.');
-      setZprava({ ok: true, text: 'Uloženo.' });
+      if (!res.ok) throw new Error(data?.error || t('zvukari.nastaveniNeulozeno'));
+      setZprava({ ok: true, text: t('zvukari.ulozeno') });
       router.refresh();
     } catch (e) {
-      setZprava({ ok: false, text: e instanceof Error ? e.message : 'Nastavení se nepodařilo uložit.' });
+      setZprava({ ok: false, text: e instanceof Error ? e.message : t('zvukari.nastaveniNeulozeno') });
     } finally {
       setUklada(false);
     }
   }
 
   async function rozesli() {
-    if (!window.confirm(`Rozeslat přehled za ${nazevMesice.toLowerCase()} hned? Dostane ho ${cekaNaOdeslani} zvukařů, kterým ještě neodešel.`)) return;
+    if (
+      !window.confirm(
+        t('zvukari.potvrzeniRozeslani', { mesic: nazevMesice.toLowerCase(), pocet: cekaNaOdeslani }),
+      )
+    )
+      return;
     setRozesila(true);
     setZprava(null);
     try {
       const res = await fetch(`/api/cron/mesicni-prehled?mesic=${mesic}`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Rozeslání se nepodařilo.');
+      if (!res.ok) throw new Error(data?.error || t('zvukari.rozeslaniNepodarilo'));
       setZprava({
         ok: !data.chyby,
         text: data.vypnuto
-          ? 'Rozesílání je vypnuté - nic neodešlo.'
-          : `Odesláno ${data.odeslano}${data.chyby ? `, nepodařilo se ${data.chyby}` : ''}.`,
+          ? t('zvukari.rozesilaniVypnutoNic')
+          : t('zvukari.odeslanoPocet', {
+              pocet: data.odeslano,
+              chyby: data.chyby ? t('zvukari.nepodariloSePocet', { pocet: data.chyby }) : '',
+            }),
       });
       router.refresh();
     } catch (e) {
-      setZprava({ ok: false, text: e instanceof Error ? e.message : 'Rozeslání se nepodařilo.' });
+      setZprava({ ok: false, text: e instanceof Error ? e.message : t('zvukari.rozeslaniNepodarilo') });
     } finally {
       setRozesila(false);
     }
@@ -114,50 +124,54 @@ export function NastaveniPrehledu({
     <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Nastavení měsíčního přehledu
+          {t('zvukari.nastaveniNadpis')}
         </h2>
         {zmena && <span className="text-xs text-muted font-body">{zmena}</span>}
       </div>
 
       <label className="flex items-center gap-2 text-sm font-heading text-ink">
         <input type="checkbox" checked={n.zapnuto} onChange={(e) => set('zapnuto', e.target.checked)} />
-        Posílat zvukařům měsíční přehled výkazů
+        {t('zvukari.posilatPrehled')}
       </label>
 
       <div className="flex items-center gap-2 flex-wrap text-sm font-body text-ink">
-        <span>Chodí</span>
-        <VyberPole aria-label="Den rozeslání" value={n.den} onChange={(e) => set('den', Number(e.target.value))} className={`${pole} w-[90px]`}>
+        <span>{t('zvukari.chodi')}</span>
+        <VyberPole aria-label={t('zvukari.denRozeslani')} value={n.den} onChange={(e) => set('den', Number(e.target.value))} className={`${pole} w-[90px]`}>
           {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
             <option key={d} value={d}>
               {d}.
             </option>
           ))}
         </VyberPole>
-        <span>den v měsíci v 8:00, za měsíc minulý.</span>
+        <span>{t('zvukari.denVMesici')}</span>
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">Co v mailu je</span>
-        <p className="text-sm text-muted m-0">Odpracované hodiny jsou tam vždycky.</p>
-        <Volba checked={n.castky} onChange={(v) => set('castky', v)} popis="Částky v korunách (za práci a celkem)" />
-        <Volba checked={n.druhy} onChange={(v) => set('druhy', v)} popis="Rozpad podle druhu práce (natáčení, střih…)" />
-        <Volba checked={n.projekty} onChange={(v) => set('projekty', v)} popis="Projekty, na kterých dělal" />
+        <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">
+          {t('zvukari.coVMailuJe')}
+        </span>
+        <p className="text-sm text-muted m-0">{t('zvukari.hodinyVzdy')}</p>
+        <Volba checked={n.castky} onChange={(v) => set('castky', v)} popis={t('zvukari.volbaCastky')} />
+        <Volba checked={n.druhy} onChange={(v) => set('druhy', v)} popis={t('zvukari.volbaDruhy')} />
+        <Volba checked={n.projekty} onChange={(v) => set('projekty', v)} popis={t('zvukari.volbaProjekty')} />
         <Volba
           checked={n.bonusy}
           onChange={(v) => set('bonusy', v)}
-          popis="Schválené bonusy"
+          popis={t('zvukari.volbaBonusy')}
           disabled={!n.castky}
-          pozn={!n.castky ? 'bez částek se bonusy neposílají' : undefined}
+          pozn={!n.castky ? t('zvukari.bezCastekBonusy') : undefined}
         />
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">Vlastní vzkaz v mailu</span>
+        <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">
+          {t('zvukari.vlastniVzkaz')}
+        </span>
         <textarea
           value={n.poznamka}
           onChange={(e) => set('poznamka', e.target.value)}
           rows={3}
-          placeholder="Např. Fakturu za tento měsíc prosím pošlete do 10. na uctarna@mediaspace.cz."
+          placeholder={t('zvukari.vzkazPlaceholder')}
           className={`${pole} font-body`}
         />
       </label>
@@ -169,17 +183,22 @@ export function NastaveniPrehledu({
           disabled={uklada || !zmeneno}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
         >
-          {uklada ? 'Ukládám…' : 'Uložit nastavení'}
+          {t(uklada ? 'zvukari.ukladam' : 'zvukari.ulozitNastaveni')}
         </button>
         {cekaNaOdeslani > 0 && (
           <button
             type="button"
             onClick={rozesli}
             disabled={rozesila || zmeneno}
-            title={zmeneno ? 'Nejdřív uložte nastavení' : undefined}
+            title={zmeneno ? t('zvukari.nejdrivUlozte') : undefined}
             className="ml-auto text-sm font-heading font-semibold rounded-lg px-4 py-2 border border-line text-ink hover:border-brand-purple disabled:opacity-50"
           >
-            {rozesila ? 'Rozesílám…' : `Rozeslat teď za ${nazevMesice.toLowerCase()} (${cekaNaOdeslani})`}
+            {rozesila
+              ? t('zvukari.rozesilam')
+              : t('zvukari.rozeslatTed', {
+                  mesic: nazevMesice.toLowerCase(),
+                  pocet: cekaNaOdeslani,
+                })}
           </button>
         )}
         {zprava && <span className={`text-sm font-heading ${zprava.ok ? 'text-status-done' : 'text-danger'}`}>{zprava.text}</span>}

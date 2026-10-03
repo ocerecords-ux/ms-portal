@@ -1,5 +1,6 @@
 import { hodiny } from '@/lib/kapacitaServer';
 import type { AnalyzaRoku } from '@/lib/kapacitaAnalyzy';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * ANALÝZY POD MAPOU (zadání 20. 9. 2026: „ať si můžu kdyžtak udělat nějaké
@@ -14,22 +15,6 @@ import type { AnalyzaRoku } from '@/lib/kapacitaAnalyzy';
  * kalendáře, ať se přehledy nepletou.
  */
 
-const MESICE_KRATCE = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
-const MESICE = [
-  'leden',
-  'únor',
-  'březen',
-  'duben',
-  'květen',
-  'červen',
-  'červenec',
-  'srpen',
-  'září',
-  'říjen',
-  'listopad',
-  'prosinec',
-];
-const DNY = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
 /** Týden začíná pondělím, ne nedělí. */
 const PORADI_DNU = [1, 2, 3, 4, 5, 6, 0];
 
@@ -42,48 +27,56 @@ export function Analyzy({
   analyza,
   studia,
   rok,
+  jazyk = 'cs',
 }: {
   analyza: AnalyzaRoku;
   studia: { id: string; nazev: string; barva: string }[];
   rok: number;
+  /** Jazyk PROPEM, ne hookem - komponenta se kreslí ze serveru (pravidlo 8). */
+  jazyk?: Jazyk;
 }) {
   const maData = analyza.mesice.some((m) => m.natoceno > 0);
+  // Nazvy mesicu a dnu jsou ve slovniku (obecne.mesic.*), ne v poli natvrdo.
+  const mesicNazev = (m: number) => prelozit(jazyk, `obecne.mesic.${m}`);
+  const mesicKratce = (m: number) => prelozit(jazyk, `obecne.mesicKratce.${m}`);
+  const denNazev = (d: number) => prelozit(jazyk, `obecne.den.${d}`);
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 className="font-heading font-semibold text-lg text-ink m-0">Analýzy roku {rok}</h2>
+        <h2 className="font-heading font-semibold text-lg text-ink m-0">
+          {prelozitS(jazyk, 'analyzy.nadpis', { rok })}
+        </h2>
         <a
           href={`/api/prehledy/kapacita-csv?rok=${rok}`}
           className="rounded-pill border border-line px-3.5 py-1.5 text-sm font-heading text-ink no-underline hover:border-brand-purple"
         >
-          Stáhnout data (CSV)
+          {prelozit(jazyk, 'analyzy.stahnoutCsv')}
         </a>
       </div>
 
       {!maData ? (
-        <p className="text-sm font-body text-muted m-0">
-          V roce {rok} zatím není žádné natáčení, ze kterého by se dalo počítat.
-        </p>
+        <p className="text-sm font-body text-muted m-0">{prelozitS(jazyk, 'analyzy.bezDat', { rok })}</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* 1. Vývoj v roce */}
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3 lg:col-span-2">
             <div className="flex items-baseline justify-between gap-3 flex-wrap">
               <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Obsazenost po měsících
+                {prelozit(jazyk, 'analyzy.poMesicich')}
               </h3>
               <span className="text-xs font-body text-muted">
-                {analyza.nejsilnejsiMesic && (
-                  <>
-                    nejvíc {MESICE[analyza.nejsilnejsiMesic.mesic - 1]} ({analyza.nejsilnejsiMesic.procenta} %)
-                  </>
-                )}
-                {analyza.nejslabsiMesic && analyza.nejslabsiMesic.mesic !== analyza.nejsilnejsiMesic?.mesic && (
-                  <>
-                    {' · '}nejmíň {MESICE[analyza.nejslabsiMesic.mesic - 1]} ({analyza.nejslabsiMesic.procenta} %)
-                  </>
-                )}
+                {analyza.nejsilnejsiMesic &&
+                  prelozitS(jazyk, 'analyzy.nejvic', {
+                    mesic: mesicNazev(analyza.nejsilnejsiMesic.mesic),
+                    procenta: analyza.nejsilnejsiMesic.procenta ?? 0,
+                  })}
+                {analyza.nejslabsiMesic &&
+                  analyza.nejslabsiMesic.mesic !== analyza.nejsilnejsiMesic?.mesic &&
+                  ` · ${prelozitS(jazyk, 'analyzy.nejmin', {
+                    mesic: mesicNazev(analyza.nejslabsiMesic.mesic),
+                    procenta: analyza.nejslabsiMesic.procenta ?? 0,
+                  })}`}
               </span>
             </div>
 
@@ -106,9 +99,12 @@ export function Analyzy({
                           key={s.id}
                           className="flex-1 rounded-t-[2px] min-w-[3px]"
                           style={{ height: vyska(s.procenta), background: studia[i]?.barva ?? '#7B55FF' }}
-                          title={`${studia[i]?.nazev} · ${MESICE[m.mesic - 1]}: ${
-                            s.procenta === null ? 'zavřeno' : `${s.procenta} %`
-                          } (${hodiny(s.natoceno)} h)`}
+                          title={prelozitS(jazyk, 'analyzy.bublinaMesice', {
+                            studio: studia[i]?.nazev ?? '',
+                            mesic: mesicNazev(m.mesic),
+                            stav: s.procenta === null ? prelozit(jazyk, 'analyzy.zavreno') : `${s.procenta} %`,
+                            hodin: hodiny(s.natoceno),
+                          })}
                         />
                       ))}
                     </div>
@@ -120,7 +116,7 @@ export function Analyzy({
                       key={m.mesic}
                       className="flex-1 text-center text-[10px] font-heading text-muted tabular-nums"
                     >
-                      {MESICE_KRATCE[m.mesic - 1]}
+                      {mesicKratce(m.mesic)}
                     </span>
                   ))}
                 </div>
@@ -140,7 +136,7 @@ export function Analyzy({
           {/* 2. Dny v týdnu */}
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
             <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Podle dne v týdnu
+              {prelozit(jazyk, 'analyzy.podleDne')}
             </h3>
             <div className="flex flex-col gap-1.5">
               {PORADI_DNU.map((den) => {
@@ -151,7 +147,7 @@ export function Analyzy({
                     <span
                       className={`w-16 shrink-0 text-xs font-heading ${vikend ? 'text-muted' : 'text-ink'}`}
                     >
-                      {DNY[den]}
+                      {denNazev(den)}
                     </span>
                     <span className="flex-1 h-4 rounded bg-field overflow-hidden">
                       <span
@@ -169,16 +165,13 @@ export function Analyzy({
                 );
               })}
             </div>
-            <p className="text-xs font-body text-muted m-0">
-              Průměr za celý rok přes všechna studia. Víkendy mají kapacitu jen po domluvě, takže u nich procenta
-              vycházejí z natočeného času.
-            </p>
+            <p className="text-xs font-body text-muted m-0">{prelozit(jazyk, 'analyzy.poznamkaDny')}</p>
           </div>
 
           {/* 3. Ranní vs odpolední frekvence */}
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
             <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Ranní a odpolední frekvence
+              {prelozit(jazyk, 'analyzy.frekvence')}
             </h3>
             <div className="flex flex-col gap-3">
               {analyza.frekvence.map((f) => (
@@ -206,24 +199,22 @@ export function Analyzy({
                 </div>
               ))}
             </div>
-            <p className="text-xs font-body text-muted m-0">
-              Kolik z okna frekvence se za rok opravdu točilo. Když je jedno okno výrazně slabší, je kde brát.
-            </p>
+            <p className="text-xs font-body text-muted m-0">{prelozit(jazyk, 'analyzy.poznamkaFrekvence')}</p>
           </div>
 
           {/* 4. Jak dopadly otevřené dny */}
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3 lg:col-span-2">
             <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Otevřené dny ve studiích
+              {prelozit(jazyk, 'analyzy.otevreneDny')}
             </h3>
             {(() => {
               const v = analyza.vyuziti;
               const celkem = v.plno + v.castecne + v.volno;
               const dil = (n: number) => (celkem > 0 ? Math.round((n / celkem) * 100) : 0);
               const casti = [
-                { popis: 'plno (od 95 %)', pocet: v.plno, barva: '#5c1fe0' },
-                { popis: 'částečně obsazeno', pocet: v.castecne, barva: 'rgba(123,85,255,0.45)' },
-                { popis: 'volno', pocet: v.volno, barva: 'rgb(var(--c-field))' },
+                { popis: prelozit(jazyk, 'analyzy.plno'), pocet: v.plno, barva: '#5c1fe0' },
+                { popis: prelozit(jazyk, 'analyzy.castecne'), pocet: v.castecne, barva: 'rgba(123,85,255,0.45)' },
+                { popis: prelozit(jazyk, 'analyzy.volno'), pocet: v.volno, barva: 'rgb(var(--c-field))' },
               ];
               return (
                 <>
@@ -232,7 +223,11 @@ export function Analyzy({
                       <span
                         key={c.popis}
                         style={{ width: `${dil(c.pocet)}%`, background: c.barva }}
-                        title={`${c.popis}: ${c.pocet} dnů (${dil(c.pocet)} %)`}
+                        title={prelozitS(jazyk, 'analyzy.bublinaVyuziti', {
+                          popis: c.popis,
+                          pocet: c.pocet,
+                          procenta: dil(c.pocet),
+                        })}
                       />
                     ))}
                   </div>
@@ -246,13 +241,13 @@ export function Analyzy({
                         />
                         {c.popis}
                         <span className="text-ink tabular-nums">
-                          {c.pocet} dnů ({dil(c.pocet)} %)
+                          {prelozitS(jazyk, 'analyzy.dnuProcenta', { pocet: c.pocet, procenta: dil(c.pocet) })}
                         </span>
                       </span>
                     ))}
                   </div>
                   <p className="text-xs font-body text-muted m-0">
-                    Počítá se den × studio, jen dny s otevírací dobou — {celkem} dnů za rok {rok}.
+                    {prelozitS(jazyk, 'analyzy.poznamkaVyuziti', { celkem, rok })}
                   </p>
                 </>
               );

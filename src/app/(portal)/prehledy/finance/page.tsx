@@ -8,6 +8,8 @@ import { FinanceFiltry } from './FinanceFiltry';
 import { FinanceGraf } from './FinanceGraf';
 import { Pruhy } from './Pruhy';
 import { kc } from './format';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * OBRAT A ZISK (zadání 21. 9. 2026: „chci do přehledu novou záložku, kde
@@ -28,6 +30,7 @@ export default async function FinancePage({
   if (!session?.user?.id) redirect('/login');
   if (session.user.role !== 'ADMIN') redirect('/prehledy');
 
+  const jazyk = nactiJazyk();
   const ted = new Date();
   const letos = ted.getUTCFullYear();
   const obdobi = searchParams?.obdobi === '12m' ? '12m' : String(Number(searchParams?.obdobi) || letos);
@@ -53,7 +56,10 @@ export default async function FinancePage({
 
   const { souhrn, predchozi } = data;
   const marze = souhrn.obrat > 0 ? Math.round((souhrn.zisk / souhrn.obrat) * 1000) / 10 : null;
-  const popisPredchozi = obdobi === '12m' ? 'předchozích 12 měsíců' : `rok ${Number(obdobi) - 1}`;
+  const popisPredchozi =
+    obdobi === '12m'
+      ? prelozit(jazyk, 'finance.predchozich12')
+      : prelozitS(jazyk, 'finance.predchoziRok', { rok: Number(obdobi) - 1 });
 
   const nicTu = souhrn.faktur === 0 && souhrn.vydaju === 0;
   /**
@@ -75,29 +81,29 @@ export default async function FinancePage({
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Dlazdice nazev="Obrat" hodnota={souhrn.obrat} minule={predchozi.obrat} popisMinule={popisPredchozi}
-          pozn={`${souhrn.faktur} ${souhrn.faktur === 1 ? 'faktura' : souhrn.faktur >= 2 && souhrn.faktur <= 4 ? 'faktury' : 'faktur'}`} />
-        <Dlazdice nazev="Náklady" hodnota={souhrn.naklady} minule={predchozi.naklady} popisMinule={popisPredchozi}
-          pozn={`${souhrn.vydaju} ${souhrn.vydaju === 1 ? 'výdaj' : souhrn.vydaju >= 2 && souhrn.vydaju <= 4 ? 'výdaje' : 'výdajů'}`} naklad />
-        <Dlazdice nazev="Zisk" hodnota={souhrn.zisk} minule={predchozi.zisk} popisMinule={popisPredchozi} />
+        <Dlazdice jazyk={jazyk} nazev={prelozit(jazyk, 'finance.obrat')} hodnota={souhrn.obrat} minule={predchozi.obrat} popisMinule={popisPredchozi}
+          pozn={prelozitS(jazyk, `finance.pocetFaktur.${tvarPoctu(souhrn.faktur)}`, { pocet: souhrn.faktur })} />
+        <Dlazdice jazyk={jazyk} nazev={prelozit(jazyk, 'finance.naklady')} hodnota={souhrn.naklady} minule={predchozi.naklady} popisMinule={popisPredchozi}
+          pozn={prelozitS(jazyk, `finance.pocetVydaju.${tvarPoctu(souhrn.vydaju)}`, { pocet: souhrn.vydaju })} naklad />
+        <Dlazdice jazyk={jazyk} nazev={prelozit(jazyk, 'finance.zisk')} hodnota={souhrn.zisk} minule={predchozi.zisk} popisMinule={popisPredchozi} />
         <div className="bg-surface border border-line rounded-card shadow-sm p-4 flex flex-col gap-1">
-          <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">Marže</span>
+          <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">{prelozit(jazyk, 'finance.marze')}</span>
           <span className="font-display text-2xl sm:text-3xl text-ink tabular-nums">
-            {marze === null ? '—' : `${marze.toLocaleString('cs-CZ')} %`}
+            {marze === null ? '—' : `${marze.toLocaleString(kodJazyka(jazyk))} %`}
           </span>
-          <span className="text-xs font-body text-muted">zisk z obratu</span>
+          <span className="text-xs font-body text-muted">{prelozit(jazyk, 'finance.ziskZObratu')}</span>
         </div>
       </div>
 
       {nicTu ? (
         <p className="bg-surface border border-line rounded-card p-6 text-sm text-muted m-0">
-          Za vybrané období tu nejsou žádné faktury ani výdaje.
+          {prelozit(jazyk, 'finance.nicTu')}
         </p>
       ) : (
         <>
           <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Obrat, náklady a zisk {krok === 'mesic' ? 'po měsících' : 'po čtvrtletích'}
+              {prelozit(jazyk, krok === 'mesic' ? 'finance.grafNadpis.mesic' : 'finance.grafNadpis.ctvrtleti')}
             </h2>
             <FinanceGraf useky={data.useky} />
           </section>
@@ -106,34 +112,31 @@ export default async function FinancePage({
             <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
               <div className="flex items-baseline gap-3 flex-wrap">
                 <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                  DPH
+                  {prelozit(jazyk, 'finance.dph')}
                 </h2>
                 <span className="text-xs font-body text-muted">
-                  {zaklad === 'vystaveno'
-                    ? 'podle data zdanitelného plnění — tedy tak, jak se podává přiznání'
-                    : 'podle data úhrady — přiznání se ale podává podle data zdanitelného plnění, přepněte nahoře na Vystaveno'}
+                  {prelozit(jazyk, zaklad === 'vystaveno' ? 'finance.dphPodleVystaveni' : 'finance.dphPodleUhrady')}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <DphDlazdice
-                  nazev="Na výstupu"
+                  jazyk={jazyk}
+                  nazev={prelozit(jazyk, 'finance.dphNaVystupu')}
                   hodnota={souhrn.dphVystupni}
-                  popis="daň z vydaných faktur"
+                  popis={prelozit(jazyk, 'finance.dphNaVystupuPopis')}
                 />
                 <DphDlazdice
-                  nazev="Na vstupu"
+                  jazyk={jazyk}
+                  nazev={prelozit(jazyk, 'finance.dphNaVstupu')}
                   hodnota={souhrn.dphVstupni}
-                  popis="daň z výdajů, kterou si odečítáme"
+                  popis={prelozit(jazyk, 'finance.dphNaVstupuPopis')}
                 />
                 <DphDlazdice
-                  nazev={souhrn.dphOdvod < 0 ? 'Nadměrný odpočet' : 'K odvedení'}
+                  jazyk={jazyk}
+                  nazev={prelozit(jazyk, souhrn.dphOdvod < 0 ? 'finance.dphNadmernyOdpocet' : 'finance.dphKOdvedeni')}
                   hodnota={Math.abs(souhrn.dphOdvod)}
-                  popis={
-                    souhrn.dphOdvod < 0
-                      ? 'vyjde zpátky od státu'
-                      : 'na výstupu minus na vstupu'
-                  }
+                  popis={prelozit(jazyk, souhrn.dphOdvod < 0 ? 'finance.dphZpatkyOdStatu' : 'finance.dphRozdil')}
                   hlavni
                 />
               </div>
@@ -143,10 +146,12 @@ export default async function FinancePage({
                 <table className="w-full text-sm font-body border-collapse">
                   <thead>
                     <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                      <th className="text-left py-2 pr-3">{krok === 'mesic' ? 'Měsíc' : 'Čtvrtletí'}</th>
-                      <th className="text-right py-2 px-3">Na výstupu</th>
-                      <th className="text-right py-2 px-3">Na vstupu</th>
-                      <th className="text-right py-2 pl-3">K odvedení</th>
+                      <th className="text-left py-2 pr-3">
+                        {prelozit(jazyk, krok === 'mesic' ? 'finance.mesic' : 'finance.ctvrtletiSloupec')}
+                      </th>
+                      <th className="text-right py-2 px-3">{prelozit(jazyk, 'finance.dphNaVystupu')}</th>
+                      <th className="text-right py-2 px-3">{prelozit(jazyk, 'finance.dphNaVstupu')}</th>
+                      <th className="text-right py-2 pl-3">{prelozit(jazyk, 'finance.dphKOdvedeni')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -155,16 +160,16 @@ export default async function FinancePage({
                       .map((u) => (
                         <tr key={u.klic} className="border-t border-line">
                           <td className="py-2 pr-3 whitespace-nowrap">{u.popis}</td>
-                          <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(u.dphVystupni)}</td>
+                          <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(u.dphVystupni, jazyk)}</td>
                           <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap text-muted">
-                            {kc(u.dphVstupni)}
+                            {kc(u.dphVstupni, jazyk)}
                           </td>
                           <td
                             className={`text-right py-2 pl-3 tabular-nums whitespace-nowrap font-heading ${
                               u.dphOdvod < 0 ? 'text-status-done' : 'text-ink'
                             }`}
                           >
-                            {kc(u.dphOdvod)}
+                            {kc(u.dphOdvod, jazyk)}
                           </td>
                         </tr>
                       ))}
@@ -172,43 +177,39 @@ export default async function FinancePage({
                 </table>
               </div>
 
-              <p className="text-xs text-muted font-body m-0">
-                Je to ukazatel, ne přiznání: portál nezná přenesenou daňovou povinnost, OSS ani
-                krácený odpočet a počítá ze všech zařazených dokladů. Čísla berte jako to, co
-                zhruba čekat, ne jako podklad k odeslání.
-              </p>
+              <p className="text-xs text-muted font-body m-0">{prelozit(jazyk, 'finance.dphPoznamka')}</p>
             </section>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Obrat podle klientů
+                {prelozit(jazyk, 'finance.obratPodleKlientu')}
               </h2>
-              <Pruhy radky={data.klienti.map((k) => ({ nazev: k.nazev, castka: k.obrat }))} barva="var(--viz-obrat)" />
+              <Pruhy jazyk={jazyk} radky={data.klienti.map((k) => ({ nazev: k.nazev, castka: k.obrat }))} barva="var(--viz-obrat)" />
             </section>
             <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Náklady podle kategorií
+                {prelozit(jazyk, 'finance.nakladyPodleKategorii')}
               </h2>
-              <Pruhy radky={data.kategorie} barva="var(--viz-naklady)" />
+              <Pruhy jazyk={jazyk} radky={data.kategorie} barva="var(--viz-naklady)" />
             </section>
           </div>
 
           {data.projekty.length > 0 && (
             <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Projekty
+                {prelozit(jazyk, 'finance.projekty')}
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm font-body border-collapse">
                   <thead>
                     <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                      <th className="text-left py-2 pr-3">Projekt</th>
-                      <th className="text-right py-2 px-3">Obrat</th>
-                      <th className="text-right py-2 px-3">Náklady</th>
-                      <th className="text-right py-2 px-3">Zisk</th>
-                      <th className="text-right py-2 pl-3">Marže</th>
+                      <th className="text-left py-2 pr-3">{prelozit(jazyk, 'finance.projekt')}</th>
+                      <th className="text-right py-2 px-3">{prelozit(jazyk, 'finance.obrat')}</th>
+                      <th className="text-right py-2 px-3">{prelozit(jazyk, 'finance.naklady')}</th>
+                      <th className="text-right py-2 px-3">{prelozit(jazyk, 'finance.zisk')}</th>
+                      <th className="text-right py-2 pl-3">{prelozit(jazyk, 'finance.marze')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -219,10 +220,10 @@ export default async function FinancePage({
                             {p.nazev}
                           </Link>
                         </td>
-                        <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(p.obrat)}</td>
-                        <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(p.naklady)}</td>
+                        <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(p.obrat, jazyk)}</td>
+                        <td className="text-right py-2 px-3 tabular-nums whitespace-nowrap">{kc(p.naklady, jazyk)}</td>
                         <td className={`text-right py-2 px-3 tabular-nums whitespace-nowrap font-heading ${p.zisk < 0 ? 'text-danger' : 'text-ink'}`}>
-                          {kc(p.zisk)}
+                          {kc(p.zisk, jazyk)}
                         </td>
                         <td className="text-right py-2 pl-3 tabular-nums text-muted">
                           {p.obrat > 0 ? `${Math.round((p.zisk / p.obrat) * 100)} %` : '—'}
@@ -233,7 +234,9 @@ export default async function FinancePage({
                 </table>
               </div>
               {data.projekty.length > 15 && (
-                <p className="text-xs text-muted m-0">Zobrazeno 15 projektů s největším obratem z {data.projekty.length}.</p>
+                <p className="text-xs text-muted m-0">
+                  {prelozitS(jazyk, 'finance.zobrazeno15', { celkem: data.projekty.length })}
+                </p>
               )}
             </section>
           )}
@@ -241,22 +244,28 @@ export default async function FinancePage({
       )}
 
       <p className="text-xs text-muted font-body m-0">
-        Vše bez DPH, v korunách (cizí měny kurzem ČNB ze dne dokladu).{' '}
-        {zaklad === 'vystaveno'
-          ? 'Obrat = odeslané a uhrazené faktury podle data zdanitelného plnění; náklady = zařazené výdaje podle data dokladu.'
-          : 'Jen uhrazené faktury a výdaje podle data úhrady - peníze, které opravdu přišly a odešly.'}
+        {prelozit(jazyk, 'finance.poznamkaMena')}{' '}
+        {prelozit(jazyk, zaklad === 'vystaveno' ? 'finance.poznamkaVystaveno' : 'finance.poznamkaUhrazeno')}
       </p>
     </div>
   );
 }
 
+/** Který tvar čísla použít - česky tři, anglicky dva (pravidlo 7). */
+function tvarPoctu(n: number): 'jedna' | 'nekolik' | 'mnoho' {
+  if (n === 1) return 'jedna';
+  return n >= 2 && n <= 4 ? 'nekolik' : 'mnoho';
+}
+
 /** Dlaždice v kartě DPH - bez srovnání s minulým obdobím, jen číslo a věta. */
 function DphDlazdice({
+  jazyk,
   nazev,
   hodnota,
   popis,
   hlavni,
 }: {
+  jazyk: Jazyk;
   nazev: string;
   hodnota: number;
   popis: string;
@@ -269,13 +278,14 @@ function DphDlazdice({
       }`}
     >
       <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">{nazev}</span>
-      <span className="font-display text-2xl text-ink tabular-nums truncate">{kc(hodnota)}</span>
+      <span className="font-display text-2xl text-ink tabular-nums truncate">{kc(hodnota, jazyk)}</span>
       <span className="text-xs font-body text-muted">{popis}</span>
     </div>
   );
 }
 
 function Dlazdice({
+  jazyk,
   nazev,
   hodnota,
   minule,
@@ -283,6 +293,7 @@ function Dlazdice({
   pozn,
   naklad,
 }: {
+  jazyk: Jazyk;
   nazev: string;
   hodnota: number;
   minule: number;
@@ -297,7 +308,7 @@ function Dlazdice({
     <div className="bg-surface border border-line rounded-card shadow-sm p-4 flex flex-col gap-1 min-w-0">
       <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">{nazev}</span>
       <span className={`font-display text-2xl sm:text-3xl tabular-nums truncate ${hodnota < 0 ? 'text-danger' : 'text-ink'}`}>
-        {kc(hodnota)}
+        {kc(hodnota, jazyk)}
       </span>
       <span className="text-xs font-body text-muted">
         {zmena !== null ? (
@@ -305,10 +316,10 @@ function Dlazdice({
             <span className={dobre ? 'text-status-done' : 'text-danger'}>
               {zmena >= 0 ? '▲' : '▼'} {Math.abs(zmena)} %
             </span>{' '}
-            proti {popisMinule}
+            {prelozitS(jazyk, 'finance.protiMinule', { popis: popisMinule })}
           </>
         ) : (
-          `za ${popisMinule} bez dat`
+          prelozitS(jazyk, 'finance.bezDat', { popis: popisMinule })
         )}
         {pozn ? ` · ${pozn}` : ''}
       </span>

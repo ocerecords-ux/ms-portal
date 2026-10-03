@@ -1,5 +1,12 @@
 import { prisma } from '@/lib/db';
-import { durationMinutes, entryAmount, formatCzk, formatDuration } from '@/lib/timesheets';
+import {
+  durationMinutes,
+  entryAmount,
+  formatCzk,
+  formatDuration,
+  nazevDruhuPrace,
+} from '@/lib/timesheets';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { sendMesicniPrehledEmail, type MesicniPrehledInput } from '@/lib/email';
 import { notify } from '@/lib/notifications';
 import { jeZapnuto } from '@/lib/oznameniServer';
@@ -109,10 +116,11 @@ export function minulyMesic(dnes = new Date()): string {
 }
 
 /** „2026-08" → „Srpen 2026". */
-export function nazevMesice(mesic: string): string {
+export function nazevMesice(mesic: string, jazyk?: Jazyk): string {
   const [rok, cislo] = mesic.split('-');
-  const d = new Date(Number(rok), Number(cislo) - 1, 1);
-  const jmeno = new Intl.DateTimeFormat('cs-CZ', { month: 'long' }).format(d);
+  // Jazyk je NEPOVINNY (vzor nazevMeny z davky 4): bez nej cesky, aby posta
+  // mluvila dal jazykem prijemce a ne jazykem listy.
+  const jmeno = prelozit(jazyk ?? 'cs', `obecne.mesic.${Number(cislo)}`);
   return `${jmeno.charAt(0).toUpperCase()}${jmeno.slice(1)} ${rok}`;
 }
 
@@ -130,15 +138,9 @@ export type PrehledZvukare = {
   bonusCelkem: number;
 };
 
-const NAZVY_DRUHU: Record<string, string> = {
-  RECORDING: 'Natáčení',
-  EDITING: 'Střih',
-  REPAIRS: 'Opravy',
-  OTHER: 'Ostatní',
-};
 
 /** Sesbírá, co který zvukař za měsíc udělal. Nic neodesílá. */
-export async function spoctiPrehledy(mesic: string): Promise<PrehledZvukare[]> {
+export async function spoctiPrehledy(mesic: string, jazyk?: Jazyk): Promise<PrehledZvukare[]> {
   const [rok, cislo] = mesic.split('-').map(Number);
   const od = new Date(Date.UTC(rok, cislo - 1, 1));
   const do_ = new Date(Date.UTC(rok, cislo, 1));
@@ -207,7 +209,10 @@ export async function spoctiPrehledy(mesic: string): Promise<PrehledZvukare[]> {
 
   for (const [userId, p] of mapa) {
     p.druhy = Array.from(podleDruhu.get(userId)?.entries() ?? [])
-      .map(([klic, hodnoty]) => ({ nazev: NAZVY_DRUHU[klic] ?? klic, ...hodnoty }))
+      .map(([klic, hodnoty]) => ({
+        nazev: nazevDruhuPrace(klic as Parameters<typeof nazevDruhuPrace>[0], jazyk),
+        ...hodnoty,
+      }))
       .sort((a, b) => b.minut - a.minut);
     p.projekty = Array.from(podleProjektu.get(userId)?.entries() ?? [])
       .map(([nazev, minut]) => ({ nazev, minut }))

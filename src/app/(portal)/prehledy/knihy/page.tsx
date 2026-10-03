@@ -5,6 +5,7 @@ import { nactiCile } from '@/lib/palubovkaServer';
 import { nactiKnihyUkazatele, type KnihyUkazatele } from '@/lib/knihyPrehledServer';
 import { nactiProgram } from '@/lib/poradaServer';
 import { Ukazatele } from './Ukazatele';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * KNIHY A ROZPOČTY (zadání 28. 9. 2026 pro Petera, zjednodušeno tentýž den:
@@ -77,8 +78,12 @@ export default async function KnihyPage({
     zadano === 'minuly' || zadano === 'vse' || /^\d{4}-\d{2}$/.test(zadano) ? zadano : 'tento';
   const porada = searchParams?.porada === '1';
 
+  // Popisky mesicu formatuje server (viz KnihyFiltr.jazyk) - komponenta
+  // dostava hotovy text a nemela by ho jak prelozit.
+  const jazyk = nactiJazyk();
+
   const [data, cile, program] = await Promise.all([
-    nactiKnihyUkazatele(new Date(), obdobi),
+    nactiKnihyUkazatele(new Date(), obdobi, jazyk),
     nactiCile(),
     // Program se tahá jen pro poradu - mimo ni nemá na stránce co dělat.
     porada ? nactiProgram() : Promise.resolve([]),
