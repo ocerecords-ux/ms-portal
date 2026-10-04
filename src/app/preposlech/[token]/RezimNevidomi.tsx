@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
+import { kodJazyka, prelozitS, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * PŘEPOSLECH PRO NEVIDOMÉ (zadání 23. 9. 2026: „dal by se v audiotaggeru
@@ -43,12 +45,20 @@ function cas(s: number): string {
 }
 
 /** Čas do řeči - „4 minuty 12 sekund" se čte líp než „4:12". */
-function casSlovy(s: number): string {
+function casSlovy(jazyk: Jazyk, s: number): string {
   const cele = Math.max(0, Math.floor(s));
   const m = Math.floor(cele / 60);
   const v = cele % 60;
-  if (m === 0) return `${v} sekund`;
-  return `${m} minut ${v} sekund`;
+  if (m === 0) return prelozitS(jazyk, 'nevidomi.casSekundy', { v });
+  return prelozitS(jazyk, 'nevidomi.casMinuty', { m, v });
+}
+
+/**
+ * Rychlost do řeči i na tlačítko. Česky s desetinnou čárkou, anglicky
+ * s tečkou (pravidlo 3 v docs/preklad-portalu.md).
+ */
+function rychlostTextem(jazyk: Jazyk, r: number): string {
+  return jazyk === 'en' ? String(r) : String(r).replace('.', ',');
 }
 
 export function RezimNevidomi({
@@ -62,6 +72,8 @@ export function RezimNevidomi({
   token: string;
   onZpet: () => void;
 }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const zaklad = `/api/projekty/${encodeURIComponent(caflouProjectId)}/preposlech`;
   const sKlicem = useCallback(
     (url: string) => `${url}${url.includes('?') ? '&' : '?'}k=${encodeURIComponent(token)}`,
@@ -89,6 +101,10 @@ export function RezimNevidomi({
   const popisRef = useRef<HTMLTextAreaElement | null>(null);
   const cistRef = useRef(false);
   cistRef.current = cist;
+  /* Čtečka mluví jazykem portálu; `ohlas` je v useCallback bez závislostí,
+     tak si jazyk bere refem, ať se po přepnutí nevyrábí znovu. */
+  const jazykRef = useRef<Jazyk>(jazyk);
+  jazykRef.current = jazyk;
 
   /** Krátké ohlášení do živé oblasti; volitelně i nahlas. */
   const ohlas = useCallback((veta: string) => {
@@ -97,7 +113,7 @@ export function RezimNevidomi({
     try {
       window.speechSynthesis.cancel();
       const rec = new SpeechSynthesisUtterance(veta);
-      rec.lang = 'cs-CZ';
+      rec.lang = kodJazyka(jazykRef.current);
       window.speechSynthesis.speak(rec);
     } catch {
       // Hlas není povinný - ohlášení zůstane aspoň v živé oblasti.
@@ -123,12 +139,12 @@ export function RezimNevidomi({
           error?: string;
         };
         if (!rStopy.ok) {
-          setChybaHlaska(data.error || 'Nahrávky se nepodařilo načíst.');
+          setChybaHlaska(data.error || t('nevidomi.nahravkyNejdou'));
           return;
         }
         setStopy(data.stopy ?? []);
         setTextId(data.text?.id ?? null);
-        ohlas(`Načteno ${data.stopy?.length ?? 0} stop. Mezerníkem přehrajete, klávesou Z zapíšete připomínku.`);
+        ohlas(t('nevidomi.ohlasNacteno', { pocet: data.stopy?.length ?? 0 }));
       } finally {
         setNacitam(false);
       }
@@ -146,21 +162,21 @@ export function RezimNevidomi({
     if (!a) return;
     if (a.paused) {
       void a.play();
-      ohlas('Přehrávám.');
+      ohlas(t('nevidomi.ohlasPrehravam'));
     } else {
       a.pause();
-      ohlas(`Pauza na čase ${casSlovy(a.currentTime)}.`);
+      ohlas(t('nevidomi.ohlasPauza', { cas: casSlovy(jazyk, a.currentTime) }));
     }
-  }, [ohlas]);
+  }, [jazyk, ohlas, t]);
 
   const skoc = useCallback(
     (o: number) => {
       const a = audioRef.current;
       if (!a) return;
       a.currentTime = Math.max(0, Math.min(a.duration || 0, a.currentTime + o));
-      ohlas(`Čas ${casSlovy(a.currentTime)}.`);
+      ohlas(t('nevidomi.ohlasCas', { cas: casSlovy(jazyk, a.currentTime) }));
     },
-    [ohlas],
+    [jazyk, ohlas, t],
   );
 
   const prepniStopu = useCallback(
@@ -169,9 +185,15 @@ export function RezimNevidomi({
       const index = Math.max(0, Math.min(stopy.length - 1, kam));
       setAktivni(index);
       setPozice(0);
-      ohlas(`Stopa ${index + 1} z ${stopy.length}. ${stopy[index]?.name ?? ''}`);
+      ohlas(
+        t('nevidomi.ohlasStopa', {
+          index: index + 1,
+          pocet: stopy.length,
+          nazev: stopy[index]?.name ?? '',
+        }),
+      );
     },
-    [ohlas, stopy],
+    [ohlas, stopy, t],
   );
 
   const zmenRychlost = useCallback(
@@ -180,9 +202,9 @@ export function RezimNevidomi({
       const nova = RYCHLOSTI[Math.max(0, Math.min(RYCHLOSTI.length - 1, (i < 0 ? 1 : i) + smer))];
       setRychlost(nova);
       if (audioRef.current) audioRef.current.playbackRate = nova;
-      ohlas(`Rychlost ${String(nova).replace('.', ',')}.`);
+      ohlas(t('nevidomi.ohlasRychlost', { rychlost: rychlostTextem(jazyk, nova) }));
     },
-    [ohlas, rychlost],
+    [jazyk, ohlas, rychlost, t],
   );
 
   /* ---------- zápis připomínky ---------- */
@@ -207,13 +229,18 @@ export function RezimNevidomi({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setChybaHlaska(data.error || 'Připomínku se nepodařilo uložit.');
-        ohlas('Připomínku se nepodařilo uložit.');
+        setChybaHlaska(data.error || t('nevidomi.pripominkaNejde'));
+        ohlas(t('nevidomi.pripominkaNejde'));
         return;
       }
       setPopis('');
       await nactiChyby();
-      ohlas(`Připomínka uložena. Stopa ${aktivni + 1}, čas ${casSlovy(a?.currentTime ?? pozice)}.`);
+      ohlas(
+        t('nevidomi.ohlasUlozeno', {
+          stopa: aktivni + 1,
+          cas: casSlovy(jazyk, a?.currentTime ?? pozice),
+        }),
+      );
     } finally {
       setUkladam(false);
     }
@@ -224,7 +251,7 @@ export function RezimNevidomi({
   async function nactiText() {
     if (!textId || textStav === 'nacitam') return;
     setTextStav('nacitam');
-    ohlas('Načítám text scénáře.');
+    ohlas(t('nevidomi.ohlasNacitamText'));
     try {
       const pdfjs = await nactiPdfJs();
       await nastavPdfWorker(pdfjs);
@@ -260,11 +287,11 @@ export function RezimNevidomi({
       }
       setText(strany);
       setTextStav('hotovo');
-      ohlas(`Text načten, ${strany.length} stran.`);
+      ohlas(t('nevidomi.ohlasTextNacten', { pocet: strany.length }));
     } catch (err) {
       console.error('Text pro režim pro nevidomé se nepodařilo načíst:', err);
       setTextStav('nejde');
-      ohlas('Text se nepodařilo načíst.');
+      ohlas(t('nevidomi.ohlasTextNejde'));
     }
   }
 
@@ -301,7 +328,7 @@ export function RezimNevidomi({
         e.preventDefault();
         audioRef.current?.pause();
         popisRef.current?.focus();
-        ohlas('Zapište připomínku. Uložíte ji klávesami Ctrl a Enter.');
+        ohlas(t('nevidomi.ohlasZapiste'));
       } else if (e.key === '+' || e.key === '=') {
         e.preventDefault();
         zmenRychlost(1);
@@ -311,9 +338,14 @@ export function RezimNevidomi({
       } else if (e.key === 'i' || e.key === 'I') {
         e.preventDefault();
         ohlas(
-          `Stopa ${aktivni + 1} z ${stopy.length}, ${stopa?.name ?? ''}, čas ${casSlovy(
-            audioRef.current?.currentTime ?? 0,
-          )} z ${casSlovy(delka)}. Zapsaných připomínek ${chyby.length}.`,
+          t('nevidomi.ohlasKdeJsem', {
+            stopa: aktivni + 1,
+            pocet: stopy.length,
+            nazev: stopa?.name ?? '',
+            cas: casSlovy(jazyk, audioRef.current?.currentTime ?? 0),
+            delka: casSlovy(jazyk, delka),
+            pripominky: chyby.length,
+          }),
         );
       }
     }
@@ -337,25 +369,24 @@ export function RezimNevidomi({
       </p>
 
       <header className="flex flex-col gap-2">
-        <h1 className="font-heading font-bold text-2xl m-0">Přeposlech: {projectName}</h1>
-        <p className="text-base m-0">
-          Režim pro nevidomé. Mezerník přehraje a pozastaví, šipky doleva a doprava posouvají o pět vteřin (se Shiftem
-          o třicet), N a P přepínají stopu, Z zapíše připomínku, I ohlásí, kde jste.
-        </p>
+        <h1 className="font-heading font-bold text-2xl m-0">
+          {t('nevidomi.nadpis', { projekt: projectName })}
+        </h1>
+        <p className="text-base m-0">{t('nevidomi.navod')}</p>
         <div className="flex gap-3 flex-wrap">
           <button type="button" onClick={onZpet} className={tlacitko}>
-            Zpět do běžného zobrazení
+            {t('nevidomi.zpet')}
           </button>
           <button
             type="button"
             onClick={() => {
               setCist((c) => !c);
-              setHlaseni(cist ? 'Čtení nahlas vypnuto.' : 'Čtení nahlas zapnuto.');
+              setHlaseni(cist ? t('nevidomi.cteniVypnuto') : t('nevidomi.cteniZapnuto'));
             }}
             aria-pressed={cist}
             className={tlacitko}
           >
-            {cist ? 'Vypnout čtení nahlas' : 'Číst hlášení nahlas'}
+            {cist ? t('nevidomi.vypnoutCteni') : t('nevidomi.cistNahlas')}
           </button>
         </div>
       </header>
@@ -368,16 +399,22 @@ export function RezimNevidomi({
 
       <section aria-labelledby="nadpis-prehravac" className="flex flex-col gap-3">
         <h2 id="nadpis-prehravac" className="font-heading font-semibold text-xl m-0">
-          Nahrávka
+          {t('nevidomi.nahravka')}
         </h2>
         {nacitam ? (
-          <p className="m-0 text-base">Načítám stopy…</p>
+          <p className="m-0 text-base">{t('nevidomi.nacitamStopy')}</p>
         ) : stopy.length === 0 ? (
-          <p className="m-0 text-base">U projektu zatím nejsou žádné nahrávky.</p>
+          <p className="m-0 text-base">{t('nevidomi.zadneNahravky')}</p>
         ) : (
           <>
             <p className="m-0 text-base">
-              Stopa {aktivni + 1} z {stopy.length}: {stopa?.name}. Čas {cas(pozice)} z {cas(delka)}.
+              {t('nevidomi.stav', {
+                index: aktivni + 1,
+                pocet: stopy.length,
+                nazev: stopa?.name ?? '',
+                cas: cas(pozice),
+                delka: cas(delka),
+              })}
             </p>
             {/* Systémový přehrávač - čtečky ho umí ovládat samy. */}
             <audio
@@ -386,7 +423,11 @@ export function RezimNevidomi({
               controls
               preload="metadata"
               className="w-full"
-              aria-label={`Stopa ${aktivni + 1} z ${stopy.length}, ${stopa?.name ?? ''}`}
+              aria-label={t('nevidomi.popisekPrehravace', {
+                index: aktivni + 1,
+                pocet: stopy.length,
+                nazev: stopa?.name ?? '',
+              })}
               onPlay={() => setHraje(true)}
               onPause={() => setHraje(false)}
               onTimeUpdate={(e) => setPozice(e.currentTarget.currentTime)}
@@ -398,22 +439,22 @@ export function RezimNevidomi({
                 if (aktivni + 1 < stopy.length) {
                   prepniStopu(aktivni + 1);
                 } else {
-                  ohlas('Konec poslední stopy.');
+                  ohlas(t('nevidomi.ohlasKonec'));
                 }
               }}
             />
             <div className="flex gap-3 flex-wrap">
               <button type="button" onClick={prehrajNeboPauzni} className={tlacitko}>
-                {hraje ? 'Pozastavit' : 'Přehrát'}
+                {hraje ? t('nevidomi.pozastavit') : t('nevidomi.prehrat')}
               </button>
               <button type="button" onClick={() => skoc(-5)} className={tlacitko}>
-                O pět vteřin zpět
+                {t('nevidomi.petZpet')}
               </button>
               <button type="button" onClick={() => skoc(5)} className={tlacitko}>
-                O pět vteřin vpřed
+                {t('nevidomi.petVpred')}
               </button>
               <button type="button" onClick={() => prepniStopu(aktivni - 1)} disabled={aktivni === 0} className={tlacitko}>
-                Předchozí stopa
+                {t('nevidomi.predchoziStopa')}
               </button>
               <button
                 type="button"
@@ -421,17 +462,17 @@ export function RezimNevidomi({
                 disabled={aktivni + 1 >= stopy.length}
                 className={tlacitko}
               >
-                Další stopa
+                {t('nevidomi.dalsiStopa')}
               </button>
               <button type="button" onClick={() => zmenRychlost(-1)} className={tlacitko}>
-                Pomaleji
+                {t('nevidomi.pomaleji')}
               </button>
               <button type="button" onClick={() => zmenRychlost(1)} className={tlacitko}>
-                Rychleji ({String(rychlost).replace('.', ',')}×)
+                {t('nevidomi.rychleji', { rychlost: rychlostTextem(jazyk, rychlost) })}
               </button>
             </div>
             <label className="flex flex-col gap-1">
-              <span className="text-base font-heading">Vybrat stopu</span>
+              <span className="text-base font-heading">{t('nevidomi.vybratStopu')}</span>
               <select
                 value={aktivni}
                 onChange={(e) => prepniStopu(Number(e.target.value))}
@@ -450,13 +491,13 @@ export function RezimNevidomi({
 
       <section aria-labelledby="nadpis-pripominka" className="flex flex-col gap-3">
         <h2 id="nadpis-pripominka" className="font-heading font-semibold text-xl m-0">
-          Nová připomínka
+          {t('nevidomi.novaPripominka')}
         </h2>
         <p className="m-0 text-base">
-          Uloží se k místu, kde právě stojíte: stopa {aktivni + 1}, čas {cas(pozice)}.
+          {t('nevidomi.ulozíSe', { stopa: aktivni + 1, cas: cas(pozice) })}
         </p>
         <label className="flex flex-col gap-1">
-          <span className="text-base font-heading">Co je špatně</span>
+          <span className="text-base font-heading">{t('nevidomi.coJeSpatne')}</span>
           <textarea
             ref={popisRef}
             value={popis}
@@ -467,27 +508,25 @@ export function RezimNevidomi({
         </label>
         <div className="flex gap-3 flex-wrap items-center">
           <button type="button" onClick={ulozPripominku} disabled={ukladam || !popis.trim()} className={tlacitko}>
-            {ukladam ? 'Ukládám…' : 'Uložit připomínku'}
+            {ukladam ? t('nevidomi.ukladam') : t('nevidomi.ulozit')}
           </button>
-          <span className="text-base">Nebo klávesami Ctrl a Enter.</span>
+          <span className="text-base">{t('nevidomi.neboKlavesami')}</span>
         </div>
       </section>
 
       <section aria-labelledby="nadpis-seznam" className="flex flex-col gap-3">
         <h2 id="nadpis-seznam" className="font-heading font-semibold text-xl m-0">
-          Zapsané připomínky ({mojeChyby.length})
+          {t('nevidomi.zapsanePripominky', { pocet: mojeChyby.length })}
         </h2>
         {mojeChyby.length === 0 ? (
-          <p className="m-0 text-base">Zatím žádné.</p>
+          <p className="m-0 text-base">{t('nevidomi.zatimZadne')}</p>
         ) : (
           <ol className="flex flex-col gap-3 m-0 pl-5">
             {mojeChyby.map((ch) => (
               <li key={ch.id} className="text-base">
-                <strong>
-                  Stopa {ch.trackIndex}, čas {cas(ch.localTime)}
-                </strong>
+                <strong>{t('nevidomi.polozka', { stopa: ch.trackIndex, cas: cas(ch.localTime) })}</strong>
                 : {ch.description}
-                {ch.createdByName ? ` (zapsal ${ch.createdByName})` : ''}{' '}
+                {ch.createdByName ? t('nevidomi.zapsal', { jmeno: ch.createdByName }) : ''}{' '}
                 <button
                   type="button"
                   onClick={() => {
@@ -497,7 +536,12 @@ export function RezimNevidomi({
                       const nastav = () => {
                         a.currentTime = ch.localTime;
                         setPozice(ch.localTime);
-                        ohlas(`Přesunuto na stopu ${ch.trackIndex}, čas ${casSlovy(ch.localTime)}.`);
+                        ohlas(
+                          t('nevidomi.ohlasPresunuto', {
+                            stopa: ch.trackIndex,
+                            cas: casSlovy(jazyk, ch.localTime),
+                          }),
+                        );
                       };
                       if (a.readyState >= 1) nastav();
                       else a.addEventListener('loadedmetadata', nastav, { once: true });
@@ -505,7 +549,7 @@ export function RezimNevidomi({
                   }}
                   className="underline text-brand-purple bg-transparent border-0 cursor-pointer text-base"
                 >
-                  Přejít na místo
+                  {t('nevidomi.prejitNaMisto')}
                 </button>
               </li>
             ))}
@@ -515,26 +559,24 @@ export function RezimNevidomi({
 
       <section aria-labelledby="nadpis-text" className="flex flex-col gap-3">
         <h2 id="nadpis-text" className="font-heading font-semibold text-xl m-0">
-          Text scénáře
+          {t('nevidomi.textScenare')}
         </h2>
-        {!textId && <p className="m-0 text-base">U projektu není nahraný text.</p>}
+        {!textId && <p className="m-0 text-base">{t('nevidomi.neniText')}</p>}
         {textId && textStav !== 'hotovo' && (
           <div className="flex items-center gap-3 flex-wrap">
             <button type="button" onClick={nactiText} disabled={textStav === 'nacitam'} className={tlacitko}>
-              {textStav === 'nacitam' ? 'Načítám text…' : 'Načíst text ke čtení'}
+              {textStav === 'nacitam' ? t('nevidomi.nacitamText') : t('nevidomi.nacistText')}
             </button>
-            {textStav === 'nejde' && (
-              <span className="text-base">
-                Text se nepodařilo převést - bývá to u PDF, které je jen obrázek.
-              </span>
-            )}
+            {textStav === 'nejde' && <span className="text-base">{t('nevidomi.textNejdePrevest')}</span>}
           </div>
         )}
         {text && (
           <article className="flex flex-col gap-4 text-base leading-relaxed">
             {text.map((s) => (
-              <section key={s.strana} aria-label={`Strana ${s.strana}`}>
-                <h3 className="font-heading font-semibold text-lg m-0 mb-1">Strana {s.strana}</h3>
+              <section key={s.strana} aria-label={t('nevidomi.strana', { cislo: s.strana })}>
+                <h3 className="font-heading font-semibold text-lg m-0 mb-1">
+                  {t('nevidomi.strana', { cislo: s.strana })}
+                </h3>
                 {s.odstavce.map((o, i) => (
                   <p key={i} className="m-0 mb-2">
                     {o}

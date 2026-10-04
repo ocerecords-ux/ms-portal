@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DatumPole } from '@/components/DatumPole';
+import { formatDatum, formatDatumCas, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * SMLOUVY OD KLIENTA (zadání 21. 9. 2026: „potřebuju někam do dokladů projektu
@@ -27,19 +29,15 @@ type Smlouva = {
 };
 type Clovek = { id: string; jmeno: string };
 
-const datum = (iso: string, sCasem = false) =>
-  new Intl.DateTimeFormat('cs-CZ', {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    ...(sCasem ? { hour: '2-digit', minute: '2-digit' } : {}),
-  }).format(new Date(iso));
-
 const krestni = (jmeno: string) => jmeno.split(' ')[0];
 
-/** Třetí pád křestního jména pro tlačítko („Báře"). Běžné tvary, jinak jméno. */
-function komu3(jmeno: string): string {
+/**
+ * Třetí pád křestního jména pro tlačítko („Báře"). Běžné tvary, jinak jméno.
+ * Angličtina pády nemá, takže v ní zůstává křestní jméno, jak je.
+ */
+function komu3(jmeno: string, jazyk: Jazyk): string {
   const k = krestni(jmeno);
+  if (jazyk === 'en') return k;
   const vyjimky: Record<string, string> = { Bára: 'Báře', Barbora: 'Barboře', Karolína: 'Karolíně', Helena: 'Heleně', Helca: 'Helce' };
   if (vyjimky[k]) return vyjimky[k];
   if (/ka$/.test(k)) return k.replace(/ka$/, 'ce');
@@ -51,6 +49,10 @@ const pole =
   'rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple';
 
 export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
+  const datum = (iso: string) => formatDatum(jazyk, new Date(iso));
+  const datumCas = (iso: string) => formatDatumCas(jazyk, new Date(iso));
   const adresa = `/api/projekty/${encodeURIComponent(caflouProjectId)}/smlouvy-klienta`;
   const [smlouvy, setSmlouvy] = useState<Smlouva[]>([]);
   const [vychozi, setVychozi] = useState<Clovek | null>(null);
@@ -82,7 +84,7 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
     setChyba(null);
     if (!f) return;
     if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') {
-      setChyba('Nahrát jde jen PDF.');
+      setChyba(t('smlouvyKl.jenPdf'));
       return;
     }
     setSoubor(f);
@@ -100,10 +102,10 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
         body: JSON.stringify({ akce: 'nahrat', nazevSouboru: soubor.name }),
       });
       const d1 = await r1.json().catch(() => ({}));
-      if (!r1.ok) throw new Error(d1?.error || 'Nahrání se nepodařilo připravit.');
+      if (!r1.ok) throw new Error(d1?.error || t('smlouvyKl.nejdePripravit'));
 
       const r2 = await fetch(d1.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf' }, body: soubor });
-      if (!r2.ok) throw new Error('Soubor se nepodařilo nahrát do úložiště.');
+      if (!r2.ok) throw new Error(t('smlouvyKl.nejdeDoUloziste'));
 
       const r3 = await fetch(adresa, {
         method: 'POST',
@@ -117,14 +119,14 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
         }),
       });
       const d3 = await r3.json().catch(() => ({}));
-      if (!r3.ok) throw new Error(d3?.error || 'Smlouvu se nepodařilo uložit.');
+      if (!r3.ok) throw new Error(d3?.error || t('smlouvyKl.nejdeUlozit'));
       setSmlouvy(d3.smlouvy ?? []);
       setSoubor(null);
       setNazev('');
       setPodepsano('');
-      setHlaska('Smlouva je uložená. Tlačítkem u ní dejte vědět, komu je potřeba.');
+      setHlaska(t('smlouvyKl.ulozeno'));
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Nahrání se nepodařilo.');
+      setChyba(err instanceof Error ? err.message : t('smlouvyKl.nejdeNahrat'));
     } finally {
       setBezi(null);
     }
@@ -142,16 +144,16 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
     const d = r ? await r.json().catch(() => ({})) : {};
     setBezi(null);
     if (!r || !r.ok) {
-      setChyba(d?.error || 'Zprávu se nepodařilo poslat.');
+      setChyba(d?.error || t('smlouvyKl.nejdeZprava'));
       return;
     }
     setSmlouvy(d.smlouvy ?? []);
     setVyberKomu(null);
-    setHlaska(`Bruno napsal ${d.komu ? komu3(d.komu) : ''} do chatu.`);
+    setHlaska(t('smlouvyKl.brunoNapsal', { komu: d.komu ? komu3(d.komu, jazyk) : '' }));
   }
 
   async function smaz(id: string) {
-    if (!window.confirm('Odebrat smlouvu z projektu?')) return;
+    if (!window.confirm(t('smlouvyKl.odebratDotaz'))) return;
     const r = await fetch(`${adresa}?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (r?.ok) setSmlouvy(d.smlouvy ?? []);
@@ -160,7 +162,8 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
   return (
     <div className="flex flex-col gap-2 py-4 first:pt-0">
       <h3 className="font-heading font-semibold text-xs text-muted uppercase tracking-wide m-0">
-        Smlouvy od klienta {smlouvy.length > 0 && <span className="tabular-nums opacity-70">({smlouvy.length})</span>}
+        {t('smlouvyKl.nadpis')}{' '}
+        {smlouvy.length > 0 && <span className="tabular-nums opacity-70">({smlouvy.length})</span>}
       </h3>
 
       {smlouvy.length > 0 && (
@@ -175,26 +178,29 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
                 target="_blank"
                 rel="noreferrer"
                 className="min-w-0 flex-1 no-underline"
-                title="Otevřít PDF"
+                title={t('smlouvyKl.otevritPdf')}
               >
                 <span className="block text-sm font-heading font-semibold text-ink truncate">{s.nazev}</span>
                 <span className="block text-xs text-muted font-body">
-                  {s.podepsanoDne ? `podepsaná ${datum(s.podepsanoDne)} · ` : ''}
-                  nahrál(a) {s.nahralJmeno ?? '—'} {datum(s.createdAt)}
+                  {s.podepsanoDne ? t('smlouvyKl.podepsana', { datum: datum(s.podepsanoDne) }) : ''}
+                  {t('smlouvyKl.nahral', { jmeno: s.nahralJmeno ?? '—', datum: datum(s.createdAt) })}
                 </span>
               </a>
               <a
                 href={`${adresa}?soubor=${encodeURIComponent(s.id)}&stahnout=1`}
                 className="text-xs font-heading font-semibold text-brand-purple no-underline hover:underline"
               >
-                Stáhnout
+                {t('smlouvyKl.stahnout')}
               </a>
               {s.oznamenoAt ? (
                 <span
                   className="inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill bg-okTint text-status-done whitespace-nowrap"
-                  title={`Bruno dal vědět ${datum(s.oznamenoAt, true)}`}
+                  title={t('smlouvyKl.daloVedet', { datum: datumCas(s.oznamenoAt) })}
                 >
-                  ✓ {s.oznamenoKomu ? `${krestni(s.oznamenoKomu)} ví` : 'Oznámeno'}
+                  ✓{' '}
+                  {s.oznamenoKomu
+                    ? t('smlouvyKl.kdoVi', { jmeno: krestni(s.oznamenoKomu) })
+                    : t('smlouvyKl.oznameno')}
                 </span>
               ) : null}
               {vyberKomu === s.id ? (
@@ -212,7 +218,7 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
                     onClick={() => void oznam(s.id, komu)}
                     className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
                   >
-                    Poslat
+                    {t('smlouvyKl.poslat')}
                   </button>
                   <button type="button" onClick={() => setVyberKomu(null)} className="text-xs text-muted hover:text-ink">
                     ×
@@ -224,10 +230,18 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
                     type="button"
                     disabled={bezi === s.id || !vychozi}
                     onClick={() => void oznam(s.id)}
-                    title={vychozi ? `Bruno napíše ${vychozi.jmeno} soukromě do chatu, že je tu podepsaná smlouva` : 'Bára Šiblová v portálu není - vyberte, komu napsat'}
+                    title={
+                      vychozi
+                        ? t('smlouvyKl.bublinaBruno', { jmeno: vychozi.jmeno })
+                        : t('smlouvyKl.bublinaNikdo')
+                    }
                     className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 hover:bg-brand-purpleDeep disabled:opacity-50 whitespace-nowrap"
                   >
-                    {bezi === s.id ? 'Posílám…' : `🤖 ${s.oznamenoAt ? 'Znovu dát' : 'Dát'} vědět ${vychozi ? komu3(vychozi.jmeno) : ''}`}
+                    {bezi === s.id
+                      ? t('smlouvyKl.posilam')
+                      : t(s.oznamenoAt ? 'smlouvyKl.znovuDatVedet' : 'smlouvyKl.datVedet', {
+                          komu: vychozi ? komu3(vychozi.jmeno, jazyk) : '',
+                        })}
                   </button>
                   <button
                     type="button"
@@ -235,14 +249,14 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
                       setKomu(vychozi?.id ?? lide[0]?.id ?? '');
                       setVyberKomu(s.id);
                     }}
-                    title="Poslat někomu jinému"
+                    title={t('smlouvyKl.jinemu')}
                     className="text-xs text-muted hover:text-brand-purple px-1"
                   >
                     ▾
                   </button>
                 </span>
               )}
-              <button type="button" onClick={() => void smaz(s.id)} title="Odebrat" className="text-xs text-muted hover:text-danger px-1">
+              <button type="button" onClick={() => void smaz(s.id)} title={t('smlouvyKl.odebrat')} className="text-xs text-muted hover:text-danger px-1">
                 ×
               </button>
             </li>
@@ -253,16 +267,19 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
       {soubor ? (
         <div className="flex flex-col gap-2 rounded-lg border border-brand-purple/40 bg-tint/40 p-3">
           <span className="text-xs font-body text-muted">
-            {soubor.name} · {Math.max(1, Math.round(soubor.size / 1024))} kB
+            {t('smlouvyKl.souborKb', {
+              nazev: soubor.name,
+              kb: Math.max(1, Math.round(soubor.size / 1024)),
+            })}
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_170px] gap-2">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-body text-ink">Název</span>
+              <span className="text-xs font-body text-ink">{t('smlouvyKl.nazev')}</span>
               <input value={nazev} onChange={(e) => setNazev(e.target.value)} className={pole} />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-body text-ink">
-                Podepsaná dne <span className="text-muted">· nepovinné</span>
+                {t('smlouvyKl.podepsanaDne')} <span className="text-muted">{t('smlouvyKl.nepovinne')}</span>
               </span>
               <DatumPole value={podepsano} onChange={(e) => setPodepsano(e.target.value)} className={pole} />
             </label>
@@ -274,10 +291,10 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
               disabled={bezi === 'nahravam'}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 disabled:opacity-50"
             >
-              {bezi === 'nahravam' ? 'Nahrávám…' : 'Uložit smlouvu'}
+              {bezi === 'nahravam' ? t('smlouvyKl.nahravam') : t('smlouvyKl.ulozitSmlouvu')}
             </button>
             <button type="button" onClick={() => setSoubor(null)} className="text-sm font-heading text-muted hover:text-ink">
-              Zrušit
+              {t('smlouvyKl.zrusit')}
             </button>
           </div>
         </div>
@@ -290,7 +307,7 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
           }}
           className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-line px-4 py-3 text-sm font-heading text-muted cursor-pointer hover:border-brand-purple hover:text-brand-purple transition-colors"
         >
-          + Nahrát podepsanou smlouvu od klienta (PDF) — nebo ji sem přetáhněte
+          {t('smlouvyKl.pretahnete')}
           <input
             ref={vstup}
             type="file"

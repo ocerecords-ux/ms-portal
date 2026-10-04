@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { ROLE_LABELS } from '@/lib/roles';
+import { nazevRole } from '@/lib/roles';
 import type { Role } from '@prisma/client';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { kodJazyka, prelozit, prelozitS } from '@/lib/jazyk';
 import { NovyClanekButton } from '../navody/NovyNavodButton';
 import { NacistParametry } from './NacistParametry';
 
@@ -15,6 +17,7 @@ import { NacistParametry } from './NacistParametry';
 export const dynamic = 'force-dynamic';
 
 export default async function ProcesyAdminPage() {
+  const jazyk = nactiJazyk();
   const clanky = (await prisma.navod
     .findMany({
       where: { druh: 'PROCES' },
@@ -43,10 +46,11 @@ export default async function ProcesyAdminPage() {
     <section className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Procesy</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">
+            {prelozit(jazyk, 'procesy.nadpis')}
+          </h1>
           <p className="text-sm font-body text-muted m-0 mt-1 max-w-[60ch]">
-            Pracovní postupy, technické specifikace a návody k programům. U každého článku se
-            zaškrtne, kdo ho uvidí — bez zaškrtnutí ho má celý tým. Čte se v portálu pod Procesy.
+            {prelozit(jazyk, 'procesyAdmin.uvod')}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -54,12 +58,12 @@ export default async function ProcesyAdminPage() {
               „do těch procesů ulož technické parametry") - sada zůstává jedním
               zdrojem pravdy, tohle je její otisk ke čtení. */}
           <NacistParametry />
-          <NovyClanekButton druh="PROCES" popisek="+ Nový proces" />
+          <NovyClanekButton druh="PROCES" popisek={prelozit(jazyk, 'procesyAdmin.novy')} />
         </div>
       </div>
 
       {clanky.length === 0 && (
-        <p className="text-sm font-body text-muted m-0">Zatím tu není žádný postup.</p>
+        <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'procesyAdmin.prazdno')}</p>
       )}
 
       <div className="flex flex-col gap-2">
@@ -74,16 +78,20 @@ export default async function ProcesyAdminPage() {
               <span className="text-xs font-body text-muted">{c.kategorie}</span>
               {!c.zverejneno && (
                 <span className="text-[10px] font-heading uppercase tracking-wide text-muted border border-line rounded-pill px-2 py-0.5">
-                  rozepsané
+                  {prelozit(jazyk, 'procesy.rozepsane')}
                 </span>
               )}
             </span>
             <span className="block text-xs font-body text-muted mt-1">
-              Pro{' '}
+              {prelozit(jazyk, 'procesyAdmin.pro')}
               {(c.proRole ?? []).length
-                ? c.proRole.map((r) => ROLE_LABELS[r as Role] ?? r).join(', ')
-                : 'celý tým'}{' '}
-              · upraveno {c.updatedAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}
+                ? c.proRole.map((r) => nazevRole(r as Role, jazyk)).join(', ')
+                : prelozit(jazyk, 'procesyAdmin.celyTym')}
+              {prelozitS(jazyk, 'procesyAdmin.upraveno', {
+                datum: c.updatedAt.toLocaleDateString(kodJazyka(jazyk), {
+                  timeZone: 'Europe/Prague',
+                }),
+              })}
             </span>
           </Link>
         ))}

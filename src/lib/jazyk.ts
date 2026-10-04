@@ -8821,6 +8821,821 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   'nabidka.stav.CANCELLED': { cs: 'Zrušeno', en: 'Cancelled' },
   'nabidka.stav.COMPLETED': { cs: 'Dokončeno', en: 'Completed' },
+
+  /* --- Režim pro nevidomé v přeposlechu (dávka 7f) ---
+     Hlášení pro čtečku obrazovky; věta je vždy jeden klíč (pravidlo 7). */
+  'nevidomi.nadpis': { cs: 'Přeposlech: {projekt}', en: 'Proof-listening: {projekt}' },
+  'nevidomi.navod': {
+    cs: 'Režim pro nevidomé. Mezerník přehraje a pozastaví, šipky doleva a doprava posouvají o pět vteřin (se Shiftem o třicet), N a P přepínají stopu, Z zapíše připomínku, I ohlásí, kde jste.',
+    en: 'Screen reader mode. The space bar plays and pauses, the left and right arrows move by five seconds (thirty with Shift), N and P switch tracks, Z writes a comment and I announces where you are.',
+  },
+  'nevidomi.zpet': { cs: 'Zpět do běžného zobrazení', en: 'Back to the standard view' },
+  'nevidomi.cistNahlas': { cs: 'Číst hlášení nahlas', en: 'Read announcements aloud' },
+  'nevidomi.vypnoutCteni': { cs: 'Vypnout čtení nahlas', en: 'Turn reading aloud off' },
+  'nevidomi.cteniZapnuto': { cs: 'Čtení nahlas zapnuto.', en: 'Reading aloud is on.' },
+  'nevidomi.cteniVypnuto': { cs: 'Čtení nahlas vypnuto.', en: 'Reading aloud is off.' },
+  'nevidomi.nahravka': { cs: 'Nahrávka', en: 'Recording' },
+  'nevidomi.nacitamStopy': { cs: 'Načítám stopy…', en: 'Loading tracks…' },
+  'nevidomi.zadneNahravky': { cs: 'U projektu zatím nejsou žádné nahrávky.', en: 'There are no recordings for this project yet.' },
+  'nevidomi.stav': {
+    cs: 'Stopa {index} z {pocet}: {nazev}. Čas {cas} z {delka}.',
+    en: 'Track {index} of {pocet}: {nazev}. Time {cas} of {delka}.',
+  },
+  'nevidomi.popisekPrehravace': { cs: 'Stopa {index} z {pocet}, {nazev}', en: 'Track {index} of {pocet}, {nazev}' },
+  'nevidomi.prehrat': { cs: 'Přehrát', en: 'Play' },
+  'nevidomi.pozastavit': { cs: 'Pozastavit', en: 'Pause' },
+  'nevidomi.petZpet': { cs: 'O pět vteřin zpět', en: 'Five seconds back' },
+  'nevidomi.petVpred': { cs: 'O pět vteřin vpřed', en: 'Five seconds forward' },
+  'nevidomi.predchoziStopa': { cs: 'Předchozí stopa', en: 'Previous track' },
+  'nevidomi.dalsiStopa': { cs: 'Další stopa', en: 'Next track' },
+  'nevidomi.pomaleji': { cs: 'Pomaleji', en: 'Slower' },
+  'nevidomi.rychleji': { cs: 'Rychleji ({rychlost}×)', en: 'Faster ({rychlost}×)' },
+  'nevidomi.vybratStopu': { cs: 'Vybrat stopu', en: 'Choose a track' },
+  'nevidomi.novaPripominka': { cs: 'Nová připomínka', en: 'New comment' },
+  'nevidomi.ulozíSe': {
+    cs: 'Uloží se k místu, kde právě stojíte: stopa {stopa}, čas {cas}.',
+    en: 'It will be saved at the point you are at now: track {stopa}, time {cas}.',
+  },
+  'nevidomi.coJeSpatne': { cs: 'Co je špatně', en: 'What is wrong' },
+  'nevidomi.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
+  'nevidomi.ulozit': { cs: 'Uložit připomínku', en: 'Save the comment' },
+  'nevidomi.neboKlavesami': { cs: 'Nebo klávesami Ctrl a Enter.', en: 'Or press Ctrl and Enter.' },
+  'nevidomi.zapsanePripominky': { cs: 'Zapsané připomínky ({pocet})', en: 'Comments written ({pocet})' },
+  'nevidomi.zatimZadne': { cs: 'Zatím žádné.', en: 'None yet.' },
+  'nevidomi.polozka': { cs: 'Stopa {stopa}, čas {cas}', en: 'Track {stopa}, time {cas}' },
+  'nevidomi.zapsal': { cs: ' (zapsal {jmeno})', en: ' (written by {jmeno})' },
+  'nevidomi.prejitNaMisto': { cs: 'Přejít na místo', en: 'Go to that point' },
+  'nevidomi.textScenare': { cs: 'Text scénáře', en: 'Script text' },
+  'nevidomi.neniText': { cs: 'U projektu není nahraný text.', en: 'No text has been uploaded for this project.' },
+  'nevidomi.nacitamText': { cs: 'Načítám text…', en: 'Loading the text…' },
+  'nevidomi.nacistText': { cs: 'Načíst text ke čtení', en: 'Load the text for reading' },
+  'nevidomi.textNejdePrevest': {
+    cs: 'Text se nepodařilo převést - bývá to u PDF, které je jen obrázek.',
+    en: 'The text could not be extracted — that happens with a PDF that is just an image.',
+  },
+  'nevidomi.strana': { cs: 'Strana {cislo}', en: 'Page {cislo}' },
+  /* Hlášení do živé oblasti. */
+  'nevidomi.ohlasNacteno': {
+    cs: 'Načteno {pocet} stop. Mezerníkem přehrajete, klávesou Z zapíšete připomínku.',
+    en: 'Loaded {pocet} tracks. Press the space bar to play and Z to write a comment.',
+  },
+  'nevidomi.ohlasPrehravam': { cs: 'Přehrávám.', en: 'Playing.' },
+  'nevidomi.ohlasPauza': { cs: 'Pauza na čase {cas}.', en: 'Paused at {cas}.' },
+  'nevidomi.ohlasCas': { cs: 'Čas {cas}.', en: 'Time {cas}.' },
+  'nevidomi.ohlasStopa': { cs: 'Stopa {index} z {pocet}. {nazev}', en: 'Track {index} of {pocet}. {nazev}' },
+  'nevidomi.ohlasRychlost': { cs: 'Rychlost {rychlost}.', en: 'Speed {rychlost}.' },
+  'nevidomi.ohlasUlozeno': {
+    cs: 'Připomínka uložena. Stopa {stopa}, čas {cas}.',
+    en: 'Comment saved. Track {stopa}, time {cas}.',
+  },
+  'nevidomi.ohlasZapiste': {
+    cs: 'Zapište připomínku. Uložíte ji klávesami Ctrl a Enter.',
+    en: 'Write your comment. Press Ctrl and Enter to save it.',
+  },
+  'nevidomi.ohlasKdeJsem': {
+    cs: 'Stopa {stopa} z {pocet}, {nazev}, čas {cas} z {delka}. Zapsaných připomínek {pripominky}.',
+    en: 'Track {stopa} of {pocet}, {nazev}, time {cas} of {delka}. Comments written: {pripominky}.',
+  },
+  'nevidomi.ohlasPresunuto': {
+    cs: 'Přesunuto na stopu {stopa}, čas {cas}.',
+    en: 'Moved to track {stopa}, time {cas}.',
+  },
+  'nevidomi.ohlasKonec': { cs: 'Konec poslední stopy.', en: 'End of the last track.' },
+  'nevidomi.ohlasNacitamText': { cs: 'Načítám text scénáře.', en: 'Loading the script text.' },
+  'nevidomi.ohlasTextNacten': { cs: 'Text načten, {pocet} stran.', en: 'Text loaded, {pocet} pages.' },
+  'nevidomi.ohlasTextNejde': { cs: 'Text se nepodařilo načíst.', en: 'The text could not be loaded.' },
+  'nevidomi.nahravkyNejdou': { cs: 'Nahrávky se nepodařilo načíst.', en: 'The recordings could not be loaded.' },
+  'nevidomi.pripominkaNejde': { cs: 'Připomínku se nepodařilo uložit.', en: 'The comment could not be saved.' },
+  /* Čas do řeči - „4 minuty 12 sekund" se čte líp než „4:12".
+     Česká strana zůstává slovo za slovem, jak ji psal původní kód. */
+  'nevidomi.casSekundy': { cs: '{v} sekund', en: '{v} seconds' },
+  'nevidomi.casMinuty': { cs: '{m} minut {v} sekund', en: '{m} minutes {v} seconds' },
+  /* Schovaný přepínač režimu (PrepinacRezimu). */
+  'prepinac.doRezimu': { cs: 'Přepnout do režimu pro nevidomé', en: 'Switch to screen reader mode' },
+  'prepinac.rezim': { cs: 'Režim pro nevidomé', en: 'Screen reader mode' },
+
+
+  /* --- Natáčecí plán na detailu projektu (RecordingSection, dávka 7f) --- */
+  'natacPlan.nadpis': { cs: 'Natáčecí plán', en: 'Recording plan' },
+  /* Tři tvary čísla: česky 1-4 „frekvence" a od pěti „frekvencí",
+     anglicky jednotné číslo jen u jedničky. */
+  'natacPlan.normostranJedna': {
+    cs: '{ns} normostran → {pocet} frekvence',
+    en: '{ns} standard pages → {pocet} recording session',
+  },
+  'natacPlan.normostranMalo': {
+    cs: '{ns} normostran → {pocet} frekvence',
+    en: '{ns} standard pages → {pocet} recording sessions',
+  },
+  'natacPlan.normostranVic': {
+    cs: '{ns} normostran → {pocet} frekvencí',
+    en: '{ns} standard pages → {pocet} recording sessions',
+  },
+  'natacPlan.bezNormostran': {
+    cs: 'Normostrany z Caflou nedorazily — počet frekvencí zadejte ručně.',
+    en: 'The standard pages did not come through from Caflou — enter the number of sessions by hand.',
+  },
+  'natacPlan.hercPodleCaflou': { cs: ' · herec podle Caflou: {jmeno}', en: ' · narrator according to Caflou: {jmeno}' },
+  'natacPlan.vytvorit': { cs: 'Vytvořit nabídku termínů', en: 'Create a session offer' },
+  'natacPlan.odeslano': { cs: 'Nabídka termínů odešla herci e-mailem.', en: 'The session offer has been emailed to the narrator.' },
+  'natacPlan.potvrzeno': { cs: '{pocet} potvrzeno', en: '{pocet} confirmed' },
+  'natacPlan.vybrano': { cs: 'vybráno {pocet} z {potreba}', en: '{pocet} of {potreba} chosen' },
+  'natacPlan.nabidnuto': { cs: 'nabídnuto {pocet} · potřeba {potreba}', en: '{pocet} offered · {potreba} needed' },
+  'natacPlan.zadnaNabidka': { cs: 'K projektu zatím žádná nabídka termínů není.', en: 'There is no session offer for this project yet.' },
+  'natacPlan.herec': { cs: 'Herec', en: 'Narrator' },
+  'natacPlan.vyberteHerce': { cs: '— vyberte herce —', en: '— choose a narrator —' },
+  'natacPlan.hercZapamatuje': {
+    cs: 'Volba se u projektu zapamatuje — v Caflou je herec jen text.',
+    en: 'The choice is remembered with the project — in Caflou the narrator is only text.',
+  },
+  'natacPlan.studia': { cs: 'Studia', en: 'Studios' },
+  'natacPlan.studiaPopis': {
+    cs: 'Herci se nabídnou volná místa ve všech zaškrtnutých studiích.',
+    en: 'The narrator will be offered free slots in every studio ticked.',
+  },
+  'natacPlan.normostranyHerce': { cs: 'Normostrany pro tohoto herce', en: 'Standard pages for this narrator' },
+  'natacPlan.pocetFrekvenci': { cs: 'Počet frekvencí', en: 'Number of sessions' },
+  'natacPlan.prvniNejdrive': { cs: 'První frekvence nejdříve', en: 'Earliest first session' },
+  'natacPlan.posledniNejpozdeji': { cs: 'Poslední frekvence nejpozději', en: 'Latest final session' },
+  'natacPlan.dvaDnyPred': {
+    cs: 'Dva dny před datem dokončení - ať stihneme odevzdat.',
+    en: 'Two days before the completion date — so that we can still deliver on time.',
+  },
+  'natacPlan.bezDataDokonceni': {
+    cs: 'Projekt nemá datum dokončení - zadejte ručně.',
+    en: 'The project has no completion date — enter it by hand.',
+  },
+  'natacPlan.poznamkaProHerce': { cs: 'Poznámka pro herce', en: 'Note for the narrator' },
+  'natacPlan.volnaMista': { cs: 'Volná místa k nabídnutí:', en: 'Free slots to offer:' },
+  'natacPlan.hercVybere': { cs: ' · herec vybere {pocet}', en: ' · the narrator will choose {pocet}' },
+  'natacPlan.pocitam': { cs: 'Počítám…', en: 'Working it out…' },
+  'natacPlan.maloMist': {
+    cs: 'Volných míst je méně, než herec potřebuje. Posuňte období nebo zaškrtněte další studio.',
+    en: 'There are fewer free slots than the narrator needs. Move the period or tick another studio.',
+  },
+  'natacPlan.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'natacPlan.odeslatHerci': { cs: 'Odeslat herci', en: 'Send to the narrator' },
+  'natacPlan.zavrit': { cs: 'Zavřít', en: 'Close' },
+  'natacPlan.nejdeOdeslat': {
+    cs: '{chyba} Nabídka je uložená v seznamu výše.',
+    en: '{chyba} The offer is saved in the list above.',
+  },
+  'natacPlan.nejdeOdeslatZaloha': { cs: 'Nabídku se nepodařilo odeslat.', en: 'The offer could not be sent.' },
+  'natacPlan.nejdeZalozit': { cs: 'Nabídku se nepodařilo založit.', en: 'The offer could not be created.' },
+
+
+  /* --- Smlouvy od klienta na detailu projektu (dávka 7f) --- */
+  'smlouvyKl.nadpis': { cs: 'Smlouvy od klienta', en: 'Contracts from the customer' },
+  'smlouvyKl.jenPdf': { cs: 'Nahrát jde jen PDF.', en: 'Only a PDF can be uploaded.' },
+  'smlouvyKl.nejdePripravit': { cs: 'Nahrání se nepodařilo připravit.', en: 'The upload could not be prepared.' },
+  'smlouvyKl.nejdeDoUloziste': { cs: 'Soubor se nepodařilo nahrát do úložiště.', en: 'The file could not be uploaded to storage.' },
+  'smlouvyKl.nejdeUlozit': { cs: 'Smlouvu se nepodařilo uložit.', en: 'The contract could not be saved.' },
+  'smlouvyKl.nejdeNahrat': { cs: 'Nahrání se nepodařilo.', en: 'The upload failed.' },
+  'smlouvyKl.ulozeno': {
+    cs: 'Smlouva je uložená. Tlačítkem u ní dejte vědět, komu je potřeba.',
+    en: 'The contract is saved. Use the button next to it to let the right person know.',
+  },
+  'smlouvyKl.nejdeZprava': { cs: 'Zprávu se nepodařilo poslat.', en: 'The message could not be sent.' },
+  'smlouvyKl.brunoNapsal': { cs: 'Bruno napsal {komu} do chatu.', en: 'Bruno has written to {komu} in the chat.' },
+  'smlouvyKl.odebratDotaz': { cs: 'Odebrat smlouvu z projektu?', en: 'Remove the contract from the project?' },
+  'smlouvyKl.otevritPdf': { cs: 'Otevřít PDF', en: 'Open the PDF' },
+  'smlouvyKl.podepsana': { cs: 'podepsaná {datum} · ', en: 'signed {datum} · ' },
+  'smlouvyKl.nahral': { cs: 'nahrál(a) {jmeno} {datum}', en: 'uploaded by {jmeno} on {datum}' },
+  'smlouvyKl.stahnout': { cs: 'Stáhnout', en: 'Download' },
+  'smlouvyKl.daloVedet': { cs: 'Bruno dal vědět {datum}', en: 'Bruno let them know on {datum}' },
+  'smlouvyKl.kdoVi': { cs: '{jmeno} ví', en: '{jmeno} knows' },
+  'smlouvyKl.oznameno': { cs: 'Oznámeno', en: 'Announced' },
+  'smlouvyKl.poslat': { cs: 'Poslat', en: 'Send' },
+  'smlouvyKl.bublinaBruno': {
+    cs: 'Bruno napíše {jmeno} soukromě do chatu, že je tu podepsaná smlouva',
+    en: 'Bruno will message {jmeno} privately in the chat that a signed contract is here',
+  },
+  'smlouvyKl.bublinaNikdo': {
+    cs: 'Bára Šiblová v portálu není - vyberte, komu napsat',
+    en: 'Bára Šiblová is not in the portal — choose who to write to',
+  },
+  'smlouvyKl.posilam': { cs: 'Posílám…', en: 'Sending…' },
+  'smlouvyKl.datVedet': { cs: '🤖 Dát vědět {komu}', en: '🤖 Let {komu} know' },
+  'smlouvyKl.znovuDatVedet': { cs: '🤖 Znovu dát vědět {komu}', en: '🤖 Let {komu} know again' },
+  'smlouvyKl.jinemu': { cs: 'Poslat někomu jinému', en: 'Send to someone else' },
+  'smlouvyKl.odebrat': { cs: 'Odebrat', en: 'Remove' },
+  'smlouvyKl.souborKb': { cs: '{nazev} · {kb} kB', en: '{nazev} · {kb} kB' },
+  'smlouvyKl.nazev': { cs: 'Název', en: 'Name' },
+  'smlouvyKl.podepsanaDne': { cs: 'Podepsaná dne', en: 'Signed on' },
+  'smlouvyKl.nepovinne': { cs: '· nepovinné', en: '· optional' },
+  'smlouvyKl.nahravam': { cs: 'Nahrávám…', en: 'Uploading…' },
+  'smlouvyKl.ulozitSmlouvu': { cs: 'Uložit smlouvu', en: 'Save the contract' },
+  'smlouvyKl.zrusit': { cs: 'Zrušit', en: 'Cancel' },
+  'smlouvyKl.pretahnete': {
+    cs: '+ Nahrát podepsanou smlouvu od klienta (PDF) — nebo ji sem přetáhněte',
+    en: '+ Upload a signed contract from the customer (PDF) — or drag it here',
+  },
+
+
+  /* --- Progres natáčení na detailu projektu (dávka 7f) --- */
+  'progresKarta.nadpis': { cs: 'Progres natáčení', en: 'Recording progress' },
+  'progresKarta.zNormostran': {
+    cs: 'Počítáno z {stran} normostran — ve složce projektu není PDF s textem (název končí _RE), tak se bere rozsah projektu',
+    en: 'Worked out from {stran} standard pages — there is no PDF with the text in the project folder (the name ends in _RE), so the project length is used',
+  },
+  /* Tvar čísla: česky „stranu / strany / stran", anglicky jen dva tvary. */
+  'progresKarta.textMaJednu': { cs: 'Text má {stran} stranu (PDF ve složce projektu)', en: 'The text has {stran} page (PDF in the project folder)' },
+  'progresKarta.textMaMalo': { cs: 'Text má {stran} strany (PDF ve složce projektu)', en: 'The text has {stran} pages (PDF in the project folder)' },
+  'progresKarta.textMaVic': { cs: 'Text má {stran} stran (PDF ve složce projektu)', en: 'The text has {stran} pages (PDF in the project folder)' },
+  'progresKarta.bezCehoPocitat': {
+    cs: 'Ve složce projektu není PDF s textem ani zadané normostrany — není proti čemu počítat',
+    en: 'There is neither a PDF with the text nor a page count in the project folder — there is nothing to measure against',
+  },
+  'progresKarta.koeficientPred': {
+    cs: 'Koeficient téhle knihy: {ns} normostran ÷ {stran} stran textu = ',
+    en: 'This book’s ratio: {ns} standard pages ÷ {stran} text pages = ',
+  },
+  'progresKarta.koeficientZa': {
+    cs: ' normostrany na stranu textu. Z něj se dopočítává, kolik normostran komu ještě zbývá.',
+    en: ' standard pages per text page. It is what the remaining standard pages per narrator are worked out from.',
+  },
+  'progresKarta.nedaSpocitat': {
+    cs: 'Zatím se nedá spočítat - chybí text nebo zápis strany.',
+    en: 'It cannot be worked out yet — the text or a page entry is missing.',
+  },
+  'progresKarta.bezZapisu': { cs: 'zatím bez zápisu', en: 'no entry yet' },
+  'progresKarta.zbyvaPred': { cs: 'zbývá natočit ≈ ', en: 'still to record ≈ ' },
+  'progresKarta.zbyvaNs': { cs: '{pocet} normostran', en: '{pocet} standard pages' },
+  'progresKarta.zbyvaZa': { cs: ' z jeho {celkem}', en: ' of their {celkem}' },
+  'progresKarta.bezNormostran': {
+    cs: 'Bez normostran: {jmena}. Bez rozsahu se nedá spočítat, kolik komu zbývá natočit, a projekt se místo váženého součtu počítá jako průměr herců. Doplňte rozsah u herce níž ve Výrobě.',
+    en: 'No standard pages: {jmena}. Without a page count we cannot work out how much each has left to record, and the project is averaged across the narrators instead of weighted. Fill the page count in for the narrator under Production below.',
+  },
+  'progresKarta.nesoulad': {
+    cs: 'Normostrany herců dávají dohromady {soucet}, ale kniha má {kniha}. Jedno z těch čísel je špatně — poměr mezi herci sedí dál, ale zbývající normostrany podle toho nebudou přesné.',
+    en: 'The narrators’ standard pages add up to {soucet}, but the book has {kniha}. One of those numbers is wrong — the ratio between the narrators still holds, but the remaining standard pages will not be exact.',
+  },
+  'progresKarta.zalohaHerce': { cs: 'herec', en: 'narrator' },
+
+  /* --- Technické parametry na detailu projektu (dávka 7f) --- */
+  'technKarta.obecnaSada': { cs: 'obecná sada — firma vlastní nemá', en: 'general set — the company has none of its own' },
+  'technKarta.podleKlienta': { cs: 'podle klienta {firma}', en: 'according to customer {firma}' },
+  'technKarta.podleKlientaBez': { cs: 'podle klienta', en: 'according to the customer' },
+  'technKarta.upravitSady': { cs: 'Upravit sady', en: 'Edit the sets' },
+  'technKarta.vedouSeUFirem': {
+    cs: 'Parametry se vedou jako sady u firem a mění se v Administraci — změna platí pro všechny projekty té firmy naráz.',
+    en: 'The parameters are kept as sets against companies and changed in the administration — a change applies to all of that company’s projects at once.',
+  },
+
+  /* --- Historie projektu (dávka 7f) --- */
+  'historie.prazdno': {
+    cs: 'Zatím se u projektu nic nezměnilo. Historie se začala zapisovat 10. 9. 2026 — co se dělo dřív, tady nenajdete.',
+    en: 'Nothing has changed on this project yet. The history started being recorded on 10/09/2026 — anything earlier is not here.',
+  },
+  'historie.kdy': { cs: 'Kdy', en: 'When' },
+  'historie.co': { cs: 'Co', en: 'What' },
+  'historie.zmena': { cs: 'Změna', en: 'Change' },
+  'historie.kdo': { cs: 'Kdo', en: 'Who' },
+  'historie.portal': { cs: 'portál', en: 'the portal' },
+  'projekt.zalohaHerce': { cs: 'Herec', en: 'Narrator' },
+  /* Druhy událostí v historii (POPISKY_DRUHU v lib/projektLog.ts) - podle KÓDU. */
+  'historie.druh.ZALOZENO': { cs: 'Založení', en: 'Created' },
+  'historie.druh.ZMENA': { cs: 'Změna', en: 'Change' },
+  'historie.druh.NOTIFIKACE': { cs: 'Zpráva', en: 'Message' },
+  'historie.druh.BRUNO': { cs: 'Bruno', en: 'Bruno' },
+
+  /* --- Poslech bez signálu (NaCestu, dávka 7f) --- */
+  'naCestu.offline': { cs: 'Offline', en: 'Offline' },
+  'naCestu.offlineCeka': { cs: 'Offline · {pocet} čeká', en: 'Offline · {pocet} waiting' },
+  'naCestu.stahuji': { cs: 'Stahuji {hotovo}/{celkem}', en: 'Downloading {hotovo}/{celkem}' },
+  'naCestu.stazeno': { cs: '✓ Poslouchat offline', en: '✓ Listen offline' },
+  'naCestu.stahnoutStitek': { cs: '⬇ Poslouchat offline', en: '⬇ Listen offline' },
+  'naCestu.bublina': {
+    cs: 'Stáhnout nahrávky a text do počítače a pracovat bez signálu',
+    en: 'Download the recordings and the text to this computer and work with no signal',
+  },
+  'naCestu.cekaZa': { cs: ' · {pocet} čeká', en: ' · {pocet} waiting' },
+  'naCestu.nadpis': { cs: 'Poslech bez signálu', en: 'Listening with no signal' },
+  'naCestu.zavrit': { cs: 'Zavřít', en: 'Close' },
+  'naCestu.uvod': {
+    cs: 'Než budete mimo signál, stáhněte si nahrávky a text do tohoto prohlížeče. Pak jde poslouchat, číst i psát poznámky offline — odešlou se samy, jakmile bude signál zpátky.',
+    en: 'Before you are out of signal, download the recordings and the text into this browser. You can then listen, read and write notes offline — they will be sent on their own as soon as the signal is back.',
+  },
+  'naCestu.nicKeStazeni': { cs: 'Zatím tu není nic ke stažení.', en: 'There is nothing to download yet.' },
+  'naCestu.vseStazene': { cs: '✓ Všechno je stažené ({pocet} souborů).', en: '✓ Everything is downloaded ({pocet} files).' },
+  'naCestu.keStazeni': { cs: 'Ke stažení: {zbyva} z {celkem} souborů', en: 'To download: {zbyva} of {celkem} files' },
+  'naCestu.asiVelikost': { cs: ' · asi {velikost}', en: ' · about {velikost}' },
+  'naCestu.prubeh': {
+    cs: 'Stahuji {hotovo} z {celkem}… nechte okno otevřené.',
+    en: 'Downloading {hotovo} of {celkem}… leave this window open.',
+  },
+  'naCestu.jsteOffline': { cs: 'Jste offline. ', en: 'You are offline. ' },
+  'naCestu.zapisyCekaji': {
+    cs: '{pocet} zápisů čeká a odejde samo se signálem.',
+    en: '{pocet} entries are waiting and will be sent once the signal is back.',
+  },
+  'naCestu.vseUlozeno': { cs: 'Všechno máte uložené.', en: 'Everything is saved.' },
+  'naCestu.odeslatCekajici': { cs: 'Odeslat {pocet} čekajících zápisů', en: 'Send {pocet} waiting entries' },
+  'naCestu.stahnoutZbytek': { cs: 'Stáhnout zbytek', en: 'Download the rest' },
+  'naCestu.stahnoutProOffline': { cs: 'Stáhnout pro offline', en: 'Download for offline use' },
+  'naCestu.stahnoutProOfflineVel': { cs: 'Stáhnout pro offline ({velikost})', en: 'Download for offline use ({velikost})' },
+  'naCestu.opravduSmazat': { cs: 'Opravdu smazat z počítače?', en: 'Really delete from this computer?' },
+  'naCestu.smazatZPocitace': { cs: 'Smazat z počítače', en: 'Delete from this computer' },
+  'naCestu.nepovedlo': { cs: 'Stažení se nepovedlo.', en: 'The download failed.' },
+  'naCestu.tip': {
+    cs: 'Tip: odkaz si otevřete ještě se signálem a pak ho už nezavírejte. Když přibudou nové stopy, stáhněte zbytek znovu.',
+    en: 'Tip: open the link while you still have signal and then leave it open. When new tracks are added, download the rest again.',
+  },
+
+
+  /* --- Odkaz pro klienta na detailu projektu (dávka 7f) --- */
+  'odkazKl.nadpis': { cs: 'Odkaz pro klienta', en: 'Link for the customer' },
+  'odkazKl.otevreno': {
+    cs: ' · otevřeno {pocet}×, naposledy {datum}',
+    en: ' · opened {pocet}×, last on {datum}',
+  },
+  'odkazKl.neotevreny': { cs: ' · zatím neotevřený', en: ' · not opened yet' },
+  'odkazKl.zadny': {
+    cs: 'Zatím žádný. Pošle se sám ve zprávě o prvních tracích, nebo ho vyrobte tady.',
+    en: 'None yet. It goes out on its own with the message about the first tracks, or you can make one here.',
+  },
+  'odkazKl.zkopirovano': { cs: 'Zkopírováno', en: 'Copied' },
+  'odkazKl.kopirovat': { cs: 'Kopírovat', en: 'Copy' },
+  'odkazKl.novy': { cs: 'Vygenerovat nový', en: 'Generate a new one' },
+  'odkazKl.vyrobit': { cs: 'Vyrobit odkaz', en: 'Make a link' },
+  'odkazKl.zavrit': { cs: 'Zavřít', en: 'Close' },
+  'odkazKl.opravduZavrit': { cs: 'Opravdu zavřít odkaz?', en: 'Really close the link?' },
+  'odkazKl.nepovedlo': { cs: 'Nepodařilo se to.', en: 'It did not work.' },
+  'odkazKl.bezSpojeni': { cs: 'Nepodařilo se spojit se serverem.', en: 'The server could not be reached.' },
+  'odkazKl.kopirovaniNejde': {
+    cs: 'Kopírování prohlížeč nepovolil — odkaz je vidět vedle, dá se označit ručně.',
+    en: 'The browser would not allow copying — the link is shown next to it and can be selected by hand.',
+  },
+
+  /* --- Natáčecí protokol (dávka 7f) --- */
+  'protokol.prazdny': {
+    cs: 'Zatím prázdný. Strany sem zapisuje Bruno podle toho, co se napíše do chatu projektu — stačí číslo, třeba „str. 33".',
+    en: 'Empty so far. Bruno writes the pages in here from what is said in the project chat — a number is enough, such as “p. 33”.',
+  },
+  'protokol.uvod': {
+    cs: 'Kam se doteklo natáčení — zapisuje Bruno z chatu projektu, od nejnovějšího.',
+    en: 'How far the recording has got — written in by Bruno from the project chat, newest first.',
+  },
+  'protokol.natacStrih': { cs: 'Natáčení/střih', en: 'Recording/editing' },
+  'protokol.herec': { cs: 'Herec', en: 'Narrator' },
+  'protokol.datum': { cs: 'Datum', en: 'Date' },
+  'protokol.casZapisu': { cs: 'Čas zápisu', en: 'Time written' },
+  'protokol.zapsal': { cs: 'Zapsal', en: 'Written by' },
+  'protokol.strana': { cs: 'Strana', en: 'Page' },
+  'protokol.ukon.nataceni': { cs: 'Natáčení', en: 'Recording' },
+
+  /* --- Poznámky u projektu (dávka 7f) --- */
+  'poznamky.nova': { cs: 'Nová poznámka', en: 'New note' },
+  'poznamky.placeholder': { cs: 'Co je u téhle zakázky potřeba vědět…', en: 'What there is to know about this job…' },
+  'poznamky.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
+  'poznamky.pridat': { cs: 'Přidat poznámku', en: 'Add the note' },
+  'poznamky.kdoVidi': { cs: 'Vidí je jen Žůžo-labůžo a produkce.', en: 'Only Admin and production can see them.' },
+  'poznamky.prazdno': {
+    cs: 'Zatím tu nic není. Poznámka z objednávky se sem propíše sama, jakmile nějaká přijde.',
+    en: 'Nothing here yet. A note from an order will appear here on its own as soon as one comes in.',
+  },
+  'poznamky.zObjednavky': { cs: 'Z objednávky', en: 'From the order' },
+  'poznamky.smazat': { cs: 'Smazat', en: 'Delete' },
+  'poznamky.nejdeUlozit': { cs: 'Poznámku se nepodařilo uložit.', en: 'The note could not be saved.' },
+  'poznamky.nejdeSmazat': { cs: 'Poznámku se nepodařilo smazat.', en: 'The note could not be deleted.' },
+
+
+  /* --- Čerpání po druzích práce na detailu projektu (dávka 7f) --- */
+  'cerpani.nadpis': { cs: 'Čerpání', en: 'Spend' },
+  'cerpani.sloupce': { cs: 'Sloupce', en: 'Bars' },
+  'cerpani.kolac': { cs: 'Koláč', en: 'Pie' },
+  'cerpani.druh.nataceni': { cs: 'Natáčení', en: 'Recording' },
+  'cerpani.druh.strih': { cs: 'Střih', en: 'Editing' },
+  'cerpani.druh.opravy': { cs: 'Opravy', en: 'Retakes' },
+  'cerpani.poznamka': {
+    cs: 'Proti rozpočtu stojí výkazy zvukařů. Bonus se nezapočítává — je to odměna za dokončenou knihu, ne odpracované hodiny.',
+    en: 'The budget is set against the sound engineers’ timesheets. The bonus is left out — it is a reward for finishing the book, not hours worked.',
+  },
+  'cerpani.poznamkaOpravy': {
+    cs: ' Opravy vlastní rozpočet nemají, ale čerpají ten společný.',
+    en: ' Retakes have no budget of their own, but they draw on the shared one.',
+  },
+  'cerpani.bublinaBezRozpoctu': {
+    cs: '{druh}: vykázáno {vykazano}, vlastní rozpočet nemají',
+    en: '{druh}: {vykazano} on timesheets, no budget of its own',
+  },
+  'cerpani.bublina': {
+    cs: '{druh}: vykázáno {vykazano} z rozpočtu {rozpocet} ({procent} %)',
+    en: '{druh}: {vykazano} on timesheets out of a {rozpocet} budget ({procent}%)',
+  },
+  'cerpani.bezRozpoctu': { cs: 'bez rozpočtu', en: 'no budget' },
+  'cerpani.zRozpoctu': { cs: 'z {rozpocet}', en: 'of {rozpocet}' },
+  'cerpani.vysvetlivka': {
+    cs: 'Světlý obrys je rozpočet, barevná výplň vykázané peníze.',
+    en: 'The light outline is the budget, the coloured fill is what is on timesheets.',
+  },
+  'cerpani.bezVykazu': {
+    cs: 'Zatím nejsou žádné výkazy, takže není co rozdělit.',
+    en: 'There are no timesheets yet, so there is nothing to split up.',
+  },
+  'cerpani.popisekKolace': {
+    cs: 'Podíl jednotlivých druhů práce na vykázaných penězích',
+    en: 'The share of each kind of work in the money on timesheets',
+  },
+  'cerpani.bublinaKolace': { cs: '{druh}: {castka} ({procent} %)', en: '{druh}: {castka} ({procent}%)' },
+  'cerpani.vykazano': { cs: 'vykázáno', en: 'on timesheets' },
+
+
+  /* --- Výkazy k projektu (dávka 7f) --- */
+  'vykazyProj.nadpis': { cs: 'Výkazy', en: 'Timesheets' },
+  'vykazyProj.prazdno': {
+    cs: 'K tomuhle projektu zatím nikdo nevykázal žádnou práci.',
+    en: 'Nobody has put any work against this project yet.',
+  },
+  /* Tři tvary čísla: záznam / záznamy / záznamů. */
+  'vykazyProj.zaznamJeden': { cs: '({pocet} záznam)', en: '({pocet} entry)' },
+  'vykazyProj.zaznamMalo': { cs: '({pocet} záznamy)', en: '({pocet} entries)' },
+  'vykazyProj.zaznamVic': { cs: '({pocet} záznamů)', en: '({pocet} entries)' },
+  'vykazyProj.vse': { cs: 'Vše', en: 'All' },
+  'vykazyProj.datum': { cs: 'Datum', en: 'Date' },
+  'vykazyProj.druh': { cs: 'Druh', en: 'Kind' },
+  'vykazyProj.zvukar': { cs: 'Zvukař', en: 'Sound engineer' },
+  'vykazyProj.odDo': { cs: 'Od–do', en: 'From–to' },
+  'vykazyProj.hodin': { cs: 'Hodin', en: 'Hours' },
+  'vykazyProj.castka': { cs: 'Částka', en: 'Amount' },
+  'vykazyProj.bonusy': { cs: 'Schválené bonusy', en: 'Approved bonuses' },
+  'vykazyProj.schvaleno': { cs: ' · schváleno {datum}', en: ' · approved {datum}' },
+  'vykazyProj.bonusPoznamka': {
+    cs: 'Bonus je jednorázová odměna nad rámec výkazu — do odpracovaných hodin ani do čerpání rozpočtu se nezapočítává.',
+    en: 'A bonus is a one-off reward on top of the timesheet — it counts towards neither the hours worked nor the budget spend.',
+  },
+
+  /* --- Hledání v PDF v AudioTaggeru (dávka 7f) --- */
+  'hledaniPdf.placeholder': { cs: 'Hledat v textu (Ctrl+F)', en: 'Search the text (Ctrl+F)' },
+  'hledaniPdf.popisekPole': { cs: 'Hledat v textu', en: 'Search the text' },
+  'hledaniPdf.nic': { cs: 'nic', en: 'none' },
+  'hledaniPdf.pripravuji': {
+    cs: 'Připravuji text celé knihy pro hledání…',
+    en: 'Preparing the whole book’s text for searching…',
+  },
+  'hledaniPdf.predchozi': { cs: 'Předchozí (Shift+Enter)', en: 'Previous (Shift+Enter)' },
+  'hledaniPdf.dalsi': { cs: 'Další (Enter)', en: 'Next (Enter)' },
+  'hledaniPdf.seznamNalezu': { cs: 'Seznam všech nálezů', en: 'List of all matches' },
+  'hledaniPdf.jakHledat': { cs: 'Jak hledat', en: 'How to search' },
+  'hledaniPdf.celaSlova': { cs: 'Jen celá slova', en: 'Whole words only' },
+  'hledaniPdf.celaSlovaPopis': { cs: '„les" nenajde „lesník"', en: '“wood” will not find “woodland”' },
+  'hledaniPdf.pribizne': { cs: 'Přibližně', en: 'Roughly' },
+  'hledaniPdf.pribiznePopis': {
+    cs: 'najde i překlep a jiný tvar: „Novak" → „Nováka"',
+    en: 'finds a typo or a different form too: “Novak” → “Nováka”',
+  },
+  'hledaniPdf.presne': { cs: 'Přesně', en: 'Exactly' },
+  'hledaniPdf.presnePopis': {
+    cs: 'rozlišuje diakritiku a velká písmena',
+    en: 'tells accents and capital letters apart',
+  },
+  'hledaniPdf.bezVoleb': {
+    cs: 'Bez voleb se hledá bez ohledu na diakritiku a velikost písmen („prilis" najde „Příliš"), i přes rozdělení slova na konci řádku.',
+    en: 'With nothing ticked the search ignores accents and letter case (“prilis” finds “Příliš”), and reads across a word split at the end of a line.',
+  },
+  'hledaniPdf.pocetNalezu': { cs: '{pocet} nálezů', en: '{pocet} matches' },
+  'hledaniPdf.strana': { cs: 'str. {cislo}', en: 'p. {cislo}' },
+
+
+  /* --- Úprava údajů přímo v přehledu projektů (dávka 7f) --- */
+  'bunka.nejdeUlozit': { cs: 'Uložení se nezdařilo.', en: 'It could not be saved.' },
+  'bunka.upravitKlepnutim': { cs: 'Upravit klepnutím', en: 'Tap to edit' },
+  'bunka.vyberteDatum': { cs: 'Vyberte datum z kalendáře', en: 'Choose a date from the calendar' },
+
+  /* --- Herci v přehledu projektů (dávka 7f) --- */
+  'herciBunka.dotoceno': { cs: ' — dotočeno', en: ' — recording finished' },
+  'herciBunka.schovat': { cs: 'Schovat zbylé herce', en: 'Hide the remaining narrators' },
+  'herciBunka.ukazat': { cs: 'Ukázat další herce ({pocet})', en: 'Show more narrators ({pocet})' },
+  'herciBunka.skryt': { cs: 'skrýt', en: 'hide' },
+
+
+  /* --- Výběr herce v přehledu projektů (dávka 7f) --- */
+  'vyberHerce.hledatSCaflou': { cs: 'hledat herce (v Caflou: {text})', en: 'search for a narrator (in Caflou: {text})' },
+  'vyberHerce.zacnetePsat': { cs: 'začněte psát jméno herce', en: 'start typing the narrator’s name' },
+  'vyberHerce.zadnyHerec': {
+    cs: 'V portálu zatím není žádný herec — nejdřív ho založte mezi uživateli.',
+    en: 'There is no narrator in the portal yet — add one under Users first.',
+  },
+  'vyberHerce.niktoTakovy': { cs: 'Nikdo takový tu není.', en: 'There is nobody like that here.' },
+  'vyberHerce.dotocenoDatum': { cs: 'Dotočeno {datum}', en: 'Recording finished {datum}' },
+  'vyberHerce.dotoceno': { cs: ' — dotočeno', en: ' — recording finished' },
+  'vyberHerce.vybratJineho': { cs: 'Vybrat jiného herce', en: 'Choose a different narrator' },
+  'vyberHerce.odebrat': { cs: 'Odebrat herce', en: 'Remove the narrator' },
+
+  /* --- Pořadí stavů v přehledu projektů (dávka 7f) --- */
+  'poradiStavu.tlacitko': { cs: 'Pořadí stavů', en: 'Status order' },
+  'poradiStavu.bublina': {
+    cs: 'V jakém pořadí se mají stavy řadit v tabulce',
+    en: 'The order the statuses are sorted in within the table',
+  },
+  'poradiStavu.popisMenit': {
+    cs: 'Přetažením (nebo šipkami) nastavíte, v jakém pořadí se stavy řadí v tabulce. Platí pro celý tým.',
+    en: 'Drag (or use the arrows) to set the order the statuses are sorted in within the table. It applies to the whole team.',
+  },
+  'poradiStavu.popisCteni': {
+    cs: 'V tomhle pořadí se stavy řadí v tabulce. Měnit ho smí Žůžo-labůžo a produkce.',
+    en: 'This is the order the statuses are sorted in within the table. Only Admin and production can change it.',
+  },
+  'poradiStavu.vys': { cs: 'Posunout {nazev} výš', en: 'Move {nazev} up' },
+  'poradiStavu.niz': { cs: 'Posunout {nazev} níž', en: 'Move {nazev} down' },
+  'poradiStavu.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
+  'poradiStavu.ulozit': { cs: 'Uložit pořadí', en: 'Save the order' },
+  'poradiStavu.zrusit': { cs: 'Zrušit', en: 'Cancel' },
+  'poradiStavu.nejdeUlozit': { cs: 'Uložení se nezdařilo.', en: 'It could not be saved.' },
+
+
+  /* --- Procesy v portálu (dávka 7f) --- */
+  'procesy.nadpis': { cs: 'Procesy', en: 'Procedures' },
+  'procesy.ozubene': { cs: 'Psaní a správa procesů', en: 'Writing and managing procedures' },
+  'procesy.uvod': {
+    cs: 'Jak u nás děláme práci - pracovní postupy, technické specifikace a návody k programům. U každého článku je napsané, pro koho je.',
+    en: 'How we do the work here — working procedures, technical specifications and software guides. Each article says who it is for.',
+  },
+  'procesy.prazdno': { cs: 'Zatím tu nic není.', en: 'There is nothing here yet.' },
+  'procesy.napsatPrvni': { cs: 'Napsat první postup', en: 'Write the first procedure' },
+  'procesy.pribudou': { cs: 'Postupy sem přibudou.', en: 'Procedures will be added here.' },
+  'procesy.rozepsane': { cs: 'rozepsané', en: 'draft' },
+
+  /* --- Správa procesů v administraci (dávka 7f) --- */
+  'procesyAdmin.uvod': {
+    cs: 'Pracovní postupy, technické specifikace a návody k programům. U každého článku se zaškrtne, kdo ho uvidí — bez zaškrtnutí ho má celý tým. Čte se v portálu pod Procesy.',
+    en: 'Working procedures, technical specifications and software guides. Each article has a tick for who will see it — with nothing ticked, the whole team has it. It is read in the portal under Procedures.',
+  },
+  'procesyAdmin.novy': { cs: '+ Nový proces', en: '+ New procedure' },
+  'procesyAdmin.prazdno': { cs: 'Zatím tu není žádný postup.', en: 'There is no procedure here yet.' },
+  'procesyAdmin.pro': { cs: 'Pro ', en: 'For ' },
+  'procesyAdmin.celyTym': { cs: 'celý tým', en: 'the whole team' },
+  'procesyAdmin.upraveno': { cs: ' · upraveno {datum}', en: ' · edited {datum}' },
+  'procesyAdmin.nacitam': { cs: 'Načítám…', en: 'Loading…' },
+  'procesyAdmin.nacistParametry': { cs: 'Načíst technické parametry', en: 'Load the technical parameters' },
+  'procesyAdmin.bublinaParametry': {
+    cs: 'Ze sad v Administraci složí jeden dokument Technické parametry výroby, uvnitř rozdělený po nakladatelstvích. Existující dokument přepíše.',
+    en: 'Builds a single Production technical parameters document from the sets in the administration, split up by publisher inside. It overwrites any existing document.',
+  },
+  'procesyAdmin.parametryNejdou': { cs: 'Parametry se nepodařilo načíst.', en: 'The parameters could not be loaded.' },
+  'procesyAdmin.hotovoZalozen': {
+    cs: 'Hotovo — dokument založen, {celkem} sad',
+    en: 'Done — document created, {celkem} sets',
+  },
+  'procesyAdmin.hotovoPrepsan': {
+    cs: 'Hotovo — dokument přepsán, {celkem} sad',
+    en: 'Done — document overwritten, {celkem} sets',
+  },
+  'procesyAdmin.uklizeno': { cs: ', uklizeno {pocet} starých článků', en: ', {pocet} old articles tidied away' },
+
+
+  /* --- Složky na Disku v administraci (dávka 7f) --- */
+  'slozky.nadpis': { cs: 'Složky na Disku', en: 'Folders on the Drive' },
+  'slozky.uvodPred': { cs: 'Složky, které portál nabízí v Nahrávkách. Komu se která ukáže, se zaškrtává na ', en: 'The folders the portal offers under Recordings. Who sees which one is ticked on the ' },
+  'slozky.uvodOdkaz': { cs: 'kartě účtu', en: 'account card' },
+  'slozky.uvodZa': { cs: '.', en: '.' },
+  'slozky.varovaniPred': { cs: 'Tohle rozhoduje jen o tom, co ukáže ', en: 'This decides only what the ' },
+  'slozky.varovaniTucne': { cs: 'portál', en: 'portal' },
+  'slozky.varovaniZa': {
+    cs: '. Práva na samotném Google Disku se tím nemění - kdo si složku otevře přímo v Googlu pod účtem, který ji má nasdílenou, uvidí ji dál.',
+    en: ' shows. It does not change the permissions on Google Drive itself — anyone who opens the folder in Google directly, under an account it is shared with, will still see it.',
+  },
+  'slozky.prazdno': { cs: 'Zatím tu není žádná složka.', en: 'There is no folder here yet.' },
+  'slozky.vypnuta': { cs: ' · vypnutá', en: ' · switched off' },
+  'slozky.odkazNesedi': {
+    cs: 'Z tohohle odkazu nejde vyčíst složka - nikomu se neukáže. Otevřete složku na Disku a zkopírujte adresu z řádku prohlížeče.',
+    en: 'No folder can be read out of this link — nobody will see it. Open the folder on the Drive and copy the address from the browser bar.',
+  },
+  'slozky.nikdo': { cs: 'Zatím ji nemá nikdo přidělenou.', en: 'Nobody has it assigned yet.' },
+  'slozky.jeden': { cs: 'Přidělená jednomu člověku.', en: 'Assigned to one person.' },
+  'slozky.vice': { cs: 'Přidělená {pocet} lidem.', en: 'Assigned to {pocet} people.' },
+  'slozky.vypnout': { cs: 'Vypnout', en: 'Switch off' },
+  'slozky.zapnout': { cs: 'Zapnout', en: 'Switch on' },
+  'slozky.nova': { cs: 'Nová složka', en: 'New folder' },
+  'slozky.nazev': { cs: 'Název', en: 'Name' },
+  'slozky.odkaz': { cs: 'Odkaz na složku', en: 'Link to the folder' },
+  'slozky.odkazNapoveda': {
+    cs: 'Otevřete složku na Google Disku a zkopírujte adresu z řádku prohlížeče.',
+    en: 'Open the folder on Google Drive and copy the address from the browser bar.',
+  },
+  'slozky.popis': { cs: 'Popis', en: 'Description' },
+  'slozky.popisNapoveda': {
+    cs: 'Nepovinný. Ukáže se jako bublina u zaškrtávátka.',
+    en: 'Optional. It shows as a tooltip next to the tick box.',
+  },
+  'slozky.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
+  'slozky.zalozit': { cs: 'Založit složku', en: 'Create the folder' },
+  'slozky.nejdeUlozit': { cs: 'Uložení se nezdařilo.', en: 'It could not be saved.' },
+
+
+  /* --- Doplnit dotočeno zpětně (dávka 7f) --- */
+  'doplnit.zpet': { cs: '← Zpět do administrace', en: '← Back to the administration' },
+  'doplnit.nadpis': { cs: 'Doplnit dotočeno zpětně', en: 'Fill in finished recordings retrospectively' },
+  'doplnit.uvodPred': {
+    cs: 'Pro projekty přenesené z Caflou, u kterých se dotočilo dřív, než tlačítko „Dotočeno" vzniklo. Zaškrtnutí uloží fajfku a u projektu v „Natáčíme" nebo „Natáčíme/stříháme" překlopí stav na „Dotočeno" / „Dotočeno\u00A0/\u00A0stříháme" — ',
+    en: 'For projects brought over from Caflou whose recording finished before the “Recording finished” button existed. Ticking saves the tick and, on a project at “Recording” or “Recording/editing”, flips the status to “Recording finished” / “Recording finished\u00A0/\u00A0editing” — ',
+  },
+  'doplnit.uvodTucne': { cs: 'bez jediné odeslané zprávy', en: 'with not a single message sent' },
+  'doplnit.uvodZa': {
+    cs: ', ani Heleně, ani klientovi. Do historie projektu se zápis udělá.',
+    en: ', neither to Helena nor to the customer. An entry is made in the project history.',
+  },
+  'doplnit.zalohaNazvu': { cs: 'Projekt {id}', en: 'Project {id}' },
+  'doplnit.neniCo': {
+    cs: 'Není co doplňovat — u všech projektů s herci má fajfku každý.',
+    en: 'There is nothing to fill in — on every project with narrators, everyone has their tick.',
+  },
+  'doplnit.zapsanoJeden': { cs: 'Zapsáno: {pocet} herec', en: 'Recorded: {pocet} narrator' },
+  'doplnit.zapsanoVic': { cs: 'Zapsáno: {pocet} herců', en: 'Recorded: {pocet} narrators' },
+  'doplnit.prehozenStav': { cs: ', přehozen stav u {pocet} projektů', en: ', status changed on {pocet} projects' },
+  'doplnit.zadnaZprava': { cs: '. Žádná zpráva neodešla.', en: '. No message was sent.' },
+  'doplnit.zapiseSe': { cs: 'Zapíše se tohle', en: 'This is what will be recorded' },
+  'doplnit.stavPred': { cs: ' · stav ', en: ' · status ' },
+  'doplnit.stavZustava': { cs: ' · stav zůstává', en: ' · status stays as it is' },
+  'doplnit.zapisuji': { cs: 'Zapisuji…', en: 'Recording…' },
+  'doplnit.zapsatBezZprav': { cs: 'Zapsat bez zpráv', en: 'Record with no messages' },
+  'doplnit.zpetKVyberu': { cs: 'Zpět k výběru', en: 'Back to the selection' },
+  'doplnit.ukazat': { cs: 'Ukázat, co se zapíše', en: 'Show what will be recorded' },
+  'doplnit.ukazatPocet': { cs: 'Ukázat, co se zapíše ({pocet})', en: 'Show what will be recorded ({pocet})' },
+  'doplnit.nicSeNeulozi': { cs: 'Nic se neuloží, dokud to nepotvrdíte.', en: 'Nothing is saved until you confirm it.' },
+  'doplnit.bezStavu': { cs: 'bez stavu', en: 'no status' },
+  'doplnit.preklopiSe': {
+    cs: 'překlopí se na {stav}, až budou všichni',
+    en: 'will flip to {stav} once everyone is in',
+  },
+  'doplnit.uzMa': { cs: 'už má', en: 'already has it' },
+  'doplnit.nejdeUlozit': { cs: 'Nepodařilo se to uložit.', en: 'It could not be saved.' },
+
+
+  /* --- Bruno v administraci (dávka 7f) --- */
+  'brunoAdmin.nadpis': { cs: 'Bruno', en: 'Bruno' },
+  'brunoAdmin.uvod': {
+    cs: 'Co Bruno ví o naší práci, než se rozhodne, jestli něco zapíše.',
+    en: 'What Bruno knows about our work before he decides whether to write something down.',
+  },
+  'brunoAdmin.pametNadpis': { cs: 'Co si Bruno všiml sám', en: 'What Bruno has noticed by himself' },
+  'brunoAdmin.pametUvod': {
+    cs: 'Zvyklosti, které si po rozhodnutích uložil z chatu. Tohle nepíšeme my — je to jeho poznámkový blok a je tu jen ke čtení. Když je v něm něco špatně, napište pravidlo do příručky výš; ta má přednost.',
+    en: 'Habits he has saved from the chat after his decisions. We do not write this — it is his notebook and it is here to read only. If something in it is wrong, write a rule into the handbook above; that takes precedence.',
+  },
+  'brunoAdmin.pametPrazdno': { cs: 'Zatím si nic nepoznamenal.', en: 'He has not noted anything down yet.' },
+  'brunoAdmin.zalohaProjektu': { cs: 'projekt {id}', en: 'project {id}' },
+  'brunoAdmin.projektPred': { cs: '{nazev} · ', en: '{nazev} · ' },
+  'brunoAdmin.platiVsude': { cs: 'platí všude · ', en: 'applies everywhere · ' },
+  'brunoAdmin.prirukaNadpis': { cs: 'Jak to u nás chodí', en: 'How things work here' },
+  'brunoAdmin.prirukaUvod': {
+    cs: 'Tenhle text dostane Bruno k přečtení pokaždé, než se rozhodne, jestli něco zapíše — i v soukromé zprávě. Piš normálně, jako bys zaučoval nového kolegu: co který stav projektu znamená, kdo co dělá, co u nás znamenají naše slova. Platí mu to víc než to, co si přečte v chatu.',
+    en: 'Bruno is given this text to read every time before he decides whether to write something down — in a private message too. Write it plainly, as if you were training a new colleague: what each project status means, who does what, what our own words mean here. It counts for more with him than anything he reads in the chat.',
+  },
+  'brunoAdmin.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
+  'brunoAdmin.ulozit': { cs: 'Uložit', en: 'Save' },
+  'brunoAdmin.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'brunoAdmin.vychozi': {
+    cs: 'Zatím to nikdo neupravoval — tohle je výchozí znění.',
+    en: 'Nobody has edited it yet — this is the default wording.',
+  },
+  /* Česky má „uložil / uložila" dva tvary, anglicky stačí jeden. */
+  'brunoAdmin.naposledyKdo': { cs: 'Naposledy uložil {kdo} {kdy}.', en: 'Last saved by {kdo} on {kdy}.' },
+  'brunoAdmin.naposledy': { cs: 'Naposledy uložila {kdy}.', en: 'Last saved on {kdy}.' },
+  'brunoAdmin.nejdeUlozit': { cs: 'Uložení se nezdařilo.', en: 'It could not be saved.' },
+
+
+  /* --- Zprávy portálu v administraci (dávka 7f) --- */
+  'zpravyPortalu.zpet': { cs: '← Zpět do administrace', en: '← Back to the administration' },
+  'zpravyPortalu.nadpis': { cs: 'Zprávy portálu', en: 'Portal messages' },
+  'zpravyPortalu.uvod': {
+    cs: 'Maily a oznámení, která portál posílá nám — zvukařům o bonusu a o měsíčním přehledu výkazů. Zprávy klientovi se píšou jinde, ve Vzorech zpráv.',
+    en: 'The emails and notices the portal sends us — to the sound engineers about a bonus and about the monthly timesheet summary. Messages to the customer are written elsewhere, under Message templates.',
+  },
+  'zpravyPortalu.smazanyUcet': { cs: 'Smazaný účet', en: 'Deleted account' },
+  'zpravyPortalu.zapnuto': { cs: 'Zapnuto', en: 'On' },
+  'zpravyPortalu.vypnuto': { cs: 'Vypnuto', en: 'Off' },
+  'zpravyPortalu.kdy': { cs: 'Kdy', en: 'When' },
+  'zpravyPortalu.komu': { cs: 'Komu', en: 'To whom' },
+  'zpravyPortalu.nahled': { cs: 'Ukázat, jak mail vypadá', en: 'Show what the email looks like' },
+  'zpravyPortalu.rozesilam': { cs: 'Rozesílám…', en: 'Sending…' },
+  'zpravyPortalu.rozeslatTed': { cs: 'Rozeslat teď', en: 'Send now' },
+  'zpravyPortalu.podruheNe': {
+    cs: 'Komu už přehled za daný měsíc odešel, ho podruhé nedostane.',
+    en: 'Anyone who has already had that month’s summary will not get it a second time.',
+  },
+  'zpravyPortalu.posledni': {
+    cs: 'Poslední odeslané měsíční přehledy',
+    en: 'The latest monthly summaries sent',
+  },
+  'zpravyPortalu.zadnyNeodesel': { cs: 'Zatím žádný přehled neodešel.', en: 'No summary has been sent yet.' },
+  'zpravyPortalu.nejdeUlozit': { cs: 'Nepodařilo se to uložit.', en: 'It could not be saved.' },
+  'zpravyPortalu.bezSpojeni': { cs: 'Nepodařilo se spojit se serverem.', en: 'The server could not be reached.' },
+  'zpravyPortalu.rozeslaniNejde': { cs: 'Rozeslání se nepodařilo.', en: 'Sending failed.' },
+  'zpravyPortalu.vypnutaZprava': {
+    cs: 'Zpráva je vypnutá, nic se nerozeslalo.',
+    en: 'The message is switched off, nothing was sent.',
+  },
+  'zpravyPortalu.odeslano': {
+    cs: 'Odesláno {odeslano}, přeskočeno {preskoceno}.',
+    en: '{odeslano} sent, {preskoceno} skipped.',
+  },
+  'zpravyPortalu.odeslanoSChybami': {
+    cs: 'Odesláno {odeslano}, přeskočeno {preskoceno}, chyb {chyby}.',
+    en: '{odeslano} sent, {preskoceno} skipped, {chyby} failed.',
+  },
+  /* Popisy jednotlivých zpráv (OZNAMENI v lib/oznameni.ts) - podle KÓDU. */
+  'oznameni.BONUS_SCHVALEN.nazev': { cs: 'Schválený bonus', en: 'Approved bonus' },
+  'oznameni.BONUS_SCHVALEN.popis': {
+    cs: 'Částka, kniha, podíl na střihu (nebo za co bonus je) a kdo ho schválil.',
+    en: 'The amount, the book, the share of the editing (or whatever the bonus is for) and who approved it.',
+  },
+  'oznameni.BONUS_SCHVALEN.kdy': {
+    cs: 'Hned po schválení návrhu nebo po ručním přidání bonusu.',
+    en: 'As soon as the proposal is approved or a bonus is added by hand.',
+  },
+  'oznameni.BONUS_SCHVALEN.komu': { cs: 'Zvukaři, kterému bonus patří.', en: 'The sound engineer the bonus belongs to.' },
+  'oznameni.MESICNI_PREHLED.nazev': { cs: 'Měsíční přehled výkazů', en: 'Monthly timesheet summary' },
+  'oznameni.MESICNI_PREHLED.popis': {
+    cs: 'Odpracované hodiny a částka, rozpad podle druhu práce, projekty a schválené bonusy.',
+    en: 'Hours worked and the amount, a breakdown by kind of work, the projects and any approved bonuses.',
+  },
+  'oznameni.MESICNI_PREHLED.kdy': {
+    cs: 'Za měsíc minulý, v den nastavený v Přehledy → Zvukaři (výchozí šestého).',
+    en: 'For the previous month, on the day set under Overviews → Sound engineers (the sixth by default).',
+  },
+  'oznameni.MESICNI_PREHLED.komu': {
+    cs: 'Každému zvukaři, který v tom měsíci něco vykázal.',
+    en: 'Every sound engineer who put anything on a timesheet that month.',
+  },
+
+
+  /* --- Nastavení sekcí (NASTAVENI_SEKCI v lib/nastaveniSekci.ts, dávka 7f) ---
+     Překládá se podle KÓDU sekce, česká strana zůstává zdrojem pravdy. */
+  'nastaveniSekce.PROJEKTY.nadpis': { cs: 'Nastavení projektů', en: 'Project settings' },
+  'nastaveniSekce.PROJEKTY.popis': {
+    cs: 'Zprávy, které z portálu chodí klientovi, když projekt přejde do dalšího stavu - znění pro audioknihy i pro reklamy a za jak dlouho po změně stavu odejdou. Komu a jestli vůbec se posílá, se nastavuje na kartě konkrétní firmy pod Notifikacemi.',
+    en: 'The messages the portal sends the customer when a project moves to the next status — the wording for audiobooks and for adverts, and how long after the status change they go out. Who they go to, and whether at all, is set on the individual company’s card under Notifications.',
+  },
+  'nastaveniSekce.DOKLADY.nadpis': { cs: 'Nastavení dokladů', en: 'Invoicing settings' },
+  'nastaveniSekce.DOKLADY.popis': {
+    cs: 'E-maily, které z portálu odcházejí k dokladům - kdy se upomíná a co se v upomínce píše, a údaje firem, ze kterých vystavujeme.',
+    en: 'The emails the portal sends out with documents — when a reminder goes, what it says, and the details of the companies we invoice from.',
+  },
+  'nastaveniSekce.PROCESY.nadpis': { cs: 'Správa procesů', en: 'Managing procedures' },
+  'nastaveniSekce.PROCESY.popis': {
+    cs: 'Psaní pracovních postupů a technických specifikací. U každého článku se zaškrtne, kdo ho uvidí - bez zaškrtnutí ho má celý tým.',
+    en: 'Writing working procedures and technical specifications. Each article has a tick for who will see it — with nothing ticked, the whole team has it.',
+  },
+  'nastaveniSekce.FIRMY.nadpis': { cs: 'Nastavení firem', en: 'Company settings' },
+  'nastaveniSekce.FIRMY.popis': {
+    cs: 'Co portál rozesílá kolem firem a zakázek - zprávy, které chodí nám, ceníky, ze kterých se počítají sazby, a vzory natáčecích textů.',
+    en: 'What the portal sends out around companies and jobs — the messages that come to us, the price lists the rates are worked out from, and the recording text templates.',
+  },
+
+  /* Záložky v nastavení - podle ADRESY, ne podle českého názvu (vzor z dávky 7d). */
+  'nastaveni.zalozka./admin/nastaveni/doklady': { cs: 'Přehled', en: 'Overview' },
+  'nastaveni.zalozka./admin/nastaveni/doklady/upominky': { cs: 'Upomínky', en: 'Reminders' },
+  'nastaveni.zalozka./admin/nastaveni/doklady/moje-firmy': { cs: 'Naše firmy', en: 'Our companies' },
+  'nastaveni.zalozka./admin/nastaveni/doklady/vzory-smluv': { cs: 'Vzory smluv', en: 'Contract templates' },
+  'nastaveni.zalozka./admin/nastaveni/firmy': { cs: 'Přehled', en: 'Overview' },
+  'nastaveni.zalozka./admin/nastaveni/firmy/zpravy-portalu': { cs: 'Zprávy z portálu', en: 'Messages from the portal' },
+  'nastaveni.zalozka./admin/nastaveni/firmy/ceniky': { cs: 'Ceníky', en: 'Price lists' },
+  'nastaveni.zalozka./admin/nastaveni/firmy/vzory-nataceni': { cs: 'Vzory natáčení', en: 'Recording templates' },
+
+  'nastaveni.zpetDoDokladu': { cs: '← Zpět do dokladů', en: '← Back to invoicing' },
+  'nastaveni.zpetNaFirmy': { cs: '← Zpět na firmy', en: '← Back to companies' },
+  'nastaveni.zpetNaProjekty': { cs: '← Zpět na projekty', en: '← Back to projects' },
+  'nastaveni.technickeParametry': { cs: 'Technické parametry výroby →', en: 'Production technical parameters →' },
+
+  /* Rozcestník nastavení dokladů. */
+  'nastaveniDoklady.upominky': { cs: 'Upomínky', en: 'Reminders' },
+  'nastaveniDoklady.upominkyPopis': {
+    cs: 'Kolik dní po splatnosti se upomíná, předmět a text upomínky - i s náhledem mailu, jaký klientovi opravdu odejde.',
+    en: 'How many days after the due date a reminder goes, its subject and text — with a preview of the email the customer really gets.',
+  },
+  'nastaveniDoklady.mojeFirmy': { cs: 'Naše firmy', en: 'Our companies' },
+  'nastaveniDoklady.mojeFirmyPopis': {
+    cs: 'Fakturační údaje firem, ze kterých vystavujeme - hlavička dokladů, bankovní spojení a podpis pod mailem.',
+    en: 'The invoicing details of the companies we invoice from — the document header, the bank details and the signature under the email.',
+  },
+  'nastaveniDoklady.vzorySmluv': { cs: 'Vzory smluv', en: 'Contract templates' },
+  'nastaveniDoklady.vzorySmluvPopis': {
+    cs: 'Znění smluv s herci, ze kterých se skládá to, co jde k podpisu.',
+    en: 'The wording of the narrators’ contracts that what goes out for signature is built from.',
+  },
+  'nastaveniDoklady.pruvodniTexty': {
+    cs: 'Průvodní texty mailů u nabídky, faktury a smlouvy zatím žijí v kódu a mění se nasazením - do nastavení se přesunou, až se rozhodne, které z nich má smysl přepisovat.',
+    en: 'The covering text of the quote, invoice and contract emails still lives in the code and changes with a deployment — it will move into the settings once we decide which of them is worth rewriting.',
+  },
+
+  /* Rozcestník nastavení firem. */
+  'nastaveniFirmy.zpravy': { cs: 'Zprávy z portálu', en: 'Messages from the portal' },
+  'nastaveniFirmy.zpravyPopis': {
+    cs: 'Co portál posílá nám - bonusy ke schválení a měsíční přehled výkazů zvukařům. Dá se zapnout, vypnout a je vidět, co už odešlo.',
+    en: 'What the portal sends us — bonuses for approval and the monthly timesheet summary for the sound engineers. It can be switched on or off, and you can see what has gone out.',
+  },
+  'nastaveniFirmy.ceniky': { cs: 'Ceníky', en: 'Price lists' },
+  'nastaveniFirmy.cenikyPopis': {
+    cs: 'Sazby za normostranu a položky, ze kterých se skládají nabídky a rozpočty.',
+    en: 'The rates per standard page and the items that quotes and budgets are built from.',
+  },
+  'nastaveniFirmy.vzoryNataceni': { cs: 'Vzory natáčení', en: 'Recording templates' },
+  'nastaveniFirmy.vzoryNataceniPopis': {
+    cs: 'Předlohy natáčecích textů, ze kterých se skládá dokument k natáčení.',
+    en: 'The recording text templates the recording document is built from.',
+  },
+
 };
 
 /**

@@ -80,7 +80,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7c | další večer | Zapomenuté obrazovky II — administrace: firmy a `CompanyForm`, caflou-firmy, údaje (žádosti), vzory zpráv i natáčení, wikipedie, technické parametry, návody, přenos projektu | [x] |
 | 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [x] |
 | 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [x] |
-| 7f | další večer | Obrazovky, které nebyly v žádné dávce — Procesy, Složky na Disku, Bruno, Nastavení, Zprávy portálu, Doplnit dotočeno, zbylé karty na detailu projektu a režim pro nevidomé v přeposlechu | [ ] |
+| 7f | 4. 10. | Obrazovky, které nebyly v žádné dávce — Procesy, Složky na Disku, Bruno, Nastavení, Zprávy portálu, Doplnit dotočeno, zbylé karty na detailu projektu a režim pro nevidomé v přeposlechu | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -686,6 +686,108 @@ done | sort -rn
 **Zůstává k rozhodnutí:** `napoveda/page.tsx` pořád řadí kategorie porovnáním
 s českým `'Začínáme'`. Kategorie návodu je obsah z databáze (jako stavy před
 touhle dávkou), takže to drží — ale je to poslední místo toho druhu.
+
+### Dávka 7f je HOTOVÁ (4. 10. 2026)
+
+Obrazovky, které nebyly v žádné dávce: Procesy (portál i administrace),
+Složky na Disku, Bruno, Nastavení sekcí, Zprávy portálu, Doplnit dotočeno,
+zbylé karty na detailu projektu a režim pro nevidomé v přeposlechu.
+**36 obrazovek, slovník +435 klíčů (4 507 → 4 942)**, 35 souborů v `src/app`
+a čtyři v `src/lib`. **Tím je kontrola „soubory bez jediného volání překladu"
+prázdná** — zbývá jedině `kalendar/CaraTed.tsx`, a tam je česky jen komentář.
+
+**Režim pro nevidomé** (`preposlech/[token]/RezimNevidomi.tsx`) je z dávky to
+nejcitlivější: všechno, co v něm portál říká, jde do živé oblasti pro čtečku
+obrazovky. Hlášení jsou proto každé vlastním klíčem a navíc:
+
+- `casSlovy(jazyk, s)` — „4 minuty 12 sekund" se čte líp než „4:12". Česká
+  strana zůstala slovo za slovem, jak ji psal původní kód (čeština je zdroj
+  pravdy, i když u jedniček a dvojek skloňuje natvrdo).
+- **čtečka mluví jazykem portálu**: `SpeechSynthesisUtterance.lang` bral
+  natvrdo `cs-CZ`, teď `kodJazyka()`. Jazyk si `ohlas()` bere refem — je
+  v `useCallback` bez závislostí a po přepnutí se nemá vyrábět znovu.
+- rychlost přehrávání se česky píše s desetinnou čárkou, anglicky s tečkou
+  (`rychlostTextem`, pravidlo 3).
+
+**Jazyk PROPEM, ne hookem** (pravidlo 8) u čtyř karet na detailu projektu,
+které kreslí serverová stránka: `ProgresNataceniKarta`,
+`TechnickeParametryKarta`, `HistorieProjektu` a `ProtokolNataceni`.
+`page.tsx` jim ho podává stejně jako `ProjectDocuments` v dávce 7b.
+
+**Číselníky a formátovače dostaly funkci s NEPOVINNÝM jazykem** (vzor
+`nazevMeny` z dávky 4 — bez jazyka vrací češtinu, takže pošta a zápis do
+databáze mluví dál česky):
+
+- `lib/projektLog.ts` — `formatujCas(kdy, jazyk?)` (lístek z dávky 5, kde
+  byla natvrdo `'cs-CZ'`) a nová `nazevDruhuUdalosti()` podle KÓDU druhu.
+  `POPISKY_DRUHU` i `POPISKY_POLI` zůstávají českým zdrojem pravdy: do
+  historie se zapisuje hotový text do databáze a ten se nepřekládá.
+- `lib/oznameni.ts` — `popisekOznameni(o, cast, jazyk?)`: názvy, popisy a věty
+  „kdy / komu" u zpráv portálu se překládají podle KÓDU zprávy.
+- `lib/nastaveniSekci.ts` — `textSekce(n, cast, jazyk?)` pro nadpis a popis
+  nastavení sekce.
+
+**Záložky v Nastavení se překládají podle ADRESY** (`nastaveni.zalozka./admin/…`)
+— stejný vzor jako lišta Přehledů z dávky 7d. `nazev` v `ZALOZKY` zůstává
+českým zdrojem pravdy; **nová záložka potřebuje i klíč ve slovníku**.
+
+**Splacené lístky z dřívějších dávek:**
+
+- `VykazyProjektu.tsx` — poslední volající `WORK_TYPE_LABELS` bez jazyka
+  (lístek z dávek 5 a 7d). Teď jde přes `nazevDruhuPrace()` a částky přes
+  `formatCzk(…, jazyk)`.
+- `nazevStavuNabidky()` místo `RECORDING_STATUS_LABELS` v `RecordingSection`.
+- `OdznakStrany` dostává jazyk propem i z `HerciBunka` a `VyberHerce`
+  v přehledu projektů — dávka 7b je nechala mluvit česky.
+- bublinka „Dotočeno {datum}" u jména herce (`BublinaHerce`) měla natvrdo
+  `'cs-CZ'`; dávka 7b si ji napsala na lístek jako obrazovku dávky 1.
+
+**Tři tvary čísla** jako v dávkách 7b–7d: frekvence u natáčecího plánu
+(„{pocet} frekvence / frekvencí", anglicky jednotné číslo jen u jedničky),
+strany textu u progresu („{stran} stranu / strany / stran"), záznamy ve
+výkazech a herci v Doplnit dotočeno. Každý tvar je vlastní klíč a vybírá ho
+krátká funkce u komponenty.
+
+**Dvoutvarová čeština u „uložil / uložila"** v Brunově příručce: věta
+„Naposledy uložil Ondřej …" a „Naposledy uložila …" jsou dva klíče, anglicky
+je to jedno „Last saved by …".
+
+**Česky zůstává schválně:**
+
+- **stavy projektů jako HODNOTY** v `PREKLOPI_SE` v `DoplnitPanel.tsx` —
+  mapa se porovnává s tím, co leží v `ProjectMeta.statusName` (dávka 7e,
+  databáze je česky). Na obrazovku jdou přes `nazevStavu(…, jazyk)`.
+- **ukázka „Klientská zóna"** v políčku názvu u Složek na Disku. Složky na
+  Google Disku se tak opravdu jmenují a anglická ukázka by radila založit
+  něco jiného — stejné rozhodnutí jako u „Úvod audioknihy" v dávce 7b a ukázek
+  na wikipedii v 7c.
+- **kategorie článků** v Procesech. `'Ostatní'` se drží na konci seznamu
+  porovnáním s českým textem, ale kategorie je obsah z databáze (pravidlo 4),
+  takže to drží; řazení už jde podle jazyka portálu (`localeCompare` dostal
+  `kodJazyka`). Je to tentýž vzor jako `'Začínáme'` v nápovědě — viz níž.
+- **`ZAPSAL = 'Bruno'`** v natáčecím protokolu: je to jméno, ne text rozhraní.
+- **`citelnaHodnota()`** v `lib/projektLog.ts` — formátuje hodnotu, která se
+  ukládá do historie, tedy do databáze.
+
+**Texty z API, které komponenta nemá jak přeložit** (stejná škatulka jako
+`/api/admin/upominky` z dávky 4): `error` z `/api/admin/doplnit-dotoceno`,
+`/api/admin/slozky`, `/api/admin/bruno/prirucka`, `/api/admin/oznameni`
+a `/api/admin/procesy/z-parametru`. Před hláškou je přeložená jen věta kolem.
+
+**Poznámky, které si Bruno ukládá sám** (`BrunoPamet.poznamka`), se
+nepřekládají vůbec — je to jeho text v databázi.
+
+**Zůstává k rozhodnutí:** `napoveda/page.tsx` pořád řadí kategorie
+porovnáním s českým `'Začínáme'` a `procesy/page.tsx` s `'Ostatní'`.
+Oboje drží proto, že kategorie je obsah z databáze; správně má mít kód,
+jako dostaly stavy projektů v dávce 7e. **Je to poslední tikající bomba
+toho druhu v portálu.**
+
+**Zámky v `.git` jsou pořád tam a zdrželi i tuhle dávku.** Dnes jich bylo 61
+a před commitem musel jít živý `index.lock` pryč přejmenováním — sdílená složka
+mazat nesmí. Lístek je otevřený od dávky 7b. **Chce to smazat z počítače**
+(`rm .git/*.lock.*`). Platí i `git rm --cached stubs/prisma-client.d.ts`
+(viz dávka 7a).
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

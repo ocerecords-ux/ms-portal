@@ -3,14 +3,24 @@
 import { useMemo, useState } from 'react';
 import type { WorkType } from '@prisma/client';
 import {
-  WORK_TYPE_LABELS,
   WORK_TYPE_OPTIONS,
   durationMinutes,
   entryAmount,
+  formatCzk,
   formatDuration,
   formatTime,
+  nazevDruhuPrace,
   toHours,
 } from '@/lib/timesheets';
+import { kodJazyka } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+
+/** Tvar čísla u záznamů: česky tři, anglicky dva (pravidlo 7). */
+function klicZaznamu(pocet: number): string {
+  if (pocet === 1) return 'vykazyProj.zaznamJeden';
+  if (pocet < 5) return 'vykazyProj.zaznamMalo';
+  return 'vykazyProj.zaznamVic';
+}
 
 /**
  * VÝKAZY K PROJEKTU pod rozpočtem (zadání 13. 9. 2026: „u těch rozpočtů by
@@ -60,9 +70,11 @@ export type VykazRadek = {
   kdo: string;
 };
 
-const czk = (v: number) => `${v.toLocaleString('cs-CZ')} Kč`;
-
 export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; bonusy?: BonusRadek[] }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
+  /* Částky jdou přes `formatCzk` s jazykem - lístek z dávky 7d. */
+  const czk = (v: number) => formatCzk(v, jazyk);
   const [filtr, setFiltr] = useState<WorkType | 'VSE'>('VSE');
 
   /** Druhy práce, které u projektu skutečně jsou - v pořadí natáčení, střih, opravy. */
@@ -88,11 +100,9 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
     return (
       <div className="bg-surface rounded-card border border-line shadow-sm p-6">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 mb-2">
-          Výkazy
+          {t('vykazyProj.nadpis')}
         </h2>
-        <p className="text-sm font-body text-muted m-0">
-          K tomuhle projektu zatím nikdo nevykázal žádnou práci.
-        </p>
+        <p className="text-sm font-body text-muted m-0">{t('vykazyProj.prazdno')}</p>
       </div>
     );
   }
@@ -100,13 +110,15 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Výkazy</h2>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+          {t('vykazyProj.nadpis')}
+        </h2>
         {/* Souhrn se ridi filtrem - viz poznamka na zacatku souboru. */}
         <span className="text-sm font-heading text-ink tabular-nums">
           {formatDuration(souhrn.minut)} · {czk(souhrn.castka)}
           <span className="text-muted font-body text-xs">
             {' '}
-            ({videt.length} {videt.length === 1 ? 'záznam' : videt.length < 5 ? 'záznamy' : 'záznamů'})
+            {t(klicZaznamu(videt.length), { pocet: videt.length })}
           </span>
         </span>
       </div>
@@ -116,11 +128,11 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
       {druhy.length > 1 && (
         <div className="flex items-center gap-1.5 flex-wrap">
           <Prepinac aktivni={filtr === 'VSE'} onClick={() => setFiltr('VSE')}>
-            Vše
+            {t('vykazyProj.vse')}
           </Prepinac>
           {druhy.map((d) => (
             <Prepinac key={d} aktivni={filtr === d} onClick={() => setFiltr(d)}>
-              {WORK_TYPE_LABELS[d]}
+              {nazevDruhuPrace(d, jazyk)}
             </Prepinac>
           ))}
         </div>
@@ -131,12 +143,12 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-field">
-              <th className={TRIDA_ZAHLAVI}>Datum</th>
-              <th className={TRIDA_ZAHLAVI}>Druh</th>
-              <th className={TRIDA_ZAHLAVI}>Zvukař</th>
-              <th className={TRIDA_ZAHLAVI}>Od–do</th>
-              <th className={`${TRIDA_ZAHLAVI} text-right`}>Hodin</th>
-              <th className={`${TRIDA_ZAHLAVI} text-right`}>Částka</th>
+              <th className={TRIDA_ZAHLAVI}>{t('vykazyProj.datum')}</th>
+              <th className={TRIDA_ZAHLAVI}>{t('vykazyProj.druh')}</th>
+              <th className={TRIDA_ZAHLAVI}>{t('vykazyProj.zvukar')}</th>
+              <th className={TRIDA_ZAHLAVI}>{t('vykazyProj.odDo')}</th>
+              <th className={`${TRIDA_ZAHLAVI} text-right`}>{t('vykazyProj.hodin')}</th>
+              <th className={`${TRIDA_ZAHLAVI} text-right`}>{t('vykazyProj.castka')}</th>
             </tr>
           </thead>
           <tbody>
@@ -145,10 +157,10 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
               return (
                 <tr key={v.id} className="border-t border-line">
                   <td className="px-3 py-2 text-[13px] font-heading text-ink tabular-nums whitespace-nowrap">
-                    {new Date(v.den).toLocaleDateString('cs-CZ')}
+                    {new Date(v.den).toLocaleDateString(kodJazyka(jazyk))}
                   </td>
                   <td className="px-3 py-2 text-[13px] font-heading text-muted whitespace-nowrap">
-                    {WORK_TYPE_LABELS[v.druh]}
+                    {nazevDruhuPrace(v.druh, jazyk)}
                   </td>
                   {/* Poznamka z vykazu jde do bublinky, ne do sloupce - bez ni
                       se tabulka cte, s ni by se rozpadla na ruzne vysoke radky. */}
@@ -163,7 +175,7 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
                     {formatTime(v.odMinut)}–{formatTime(v.doMinut)}
                   </td>
                   <td className="px-3 py-2 text-[13px] font-heading text-muted tabular-nums text-right whitespace-nowrap">
-                    {toHours(minut).toLocaleString('cs-CZ', { maximumFractionDigits: 1 })}
+                    {toHours(minut).toLocaleString(kodJazyka(jazyk), { maximumFractionDigits: 1 })}
                   </td>
                   <td className="px-3 py-2 text-[13px] font-heading text-ink tabular-nums text-right whitespace-nowrap">
                     {czk(entryAmount(v.odMinut, v.doMinut, v.sazba))}
@@ -181,7 +193,7 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
         <div className="border-t border-line pt-4 flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
             <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Schválené bonusy
+              {t('vykazyProj.bonusy')}
             </h3>
             <span className="text-sm font-heading text-ink tabular-nums">{czk(bonusCelkem)}</span>
           </div>
@@ -193,7 +205,9 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
                   {b.schvalenoDen && (
                     <span className="text-muted font-body">
                       {' '}
-                      · schváleno {new Date(b.schvalenoDen).toLocaleDateString('cs-CZ')}
+                      {t('vykazyProj.schvaleno', {
+                        datum: new Date(b.schvalenoDen).toLocaleDateString(kodJazyka(jazyk)),
+                      })}
                     </span>
                   )}
                   {b.poznamka && <span className="text-muted font-body"> · {b.poznamka}</span>}
@@ -203,8 +217,7 @@ export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; 
             ))}
           </ul>
           <p className="text-xs font-body text-muted m-0">
-            Bonus je jednorázová odměna nad rámec výkazu — do odpracovaných hodin ani do čerpání
-            rozpočtu se nezapočítává.
+            {t('vykazyProj.bonusPoznamka')}
           </p>
         </div>
       )}

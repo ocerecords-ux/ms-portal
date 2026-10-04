@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * ČERPÁNÍ ROZPOČTU ZVLÁŠŤ U NATÁČENÍ A ZVLÁŠŤ U STŘIHU (zadání 14. 9. 2026:
@@ -41,13 +43,16 @@ const BARVY = {
   opravy: { svetla: '#0891B2', tmava: '#22D3EE' },
 };
 
-const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
+/** Částka v korunách podle jazyka - anglicky `1,234 Kč`, česky `1 234 Kč`. */
+const czk = (v: number, jazyk: Jazyk) => `${Math.round(v).toLocaleString(kodJazyka(jazyk))} Kč`;
 
 type KlicDruhu = 'nataceni' | 'strih' | 'opravy';
 
+/** Název druhu práce se bere podle KLÍČE, ne podle českého názvu. */
+const nazevDruhu = (klic: KlicDruhu, jazyk: Jazyk) => prelozit(jazyk, `cerpani.druh.${klic}`);
+
 type Druh = {
   klic: KlicDruhu;
-  nazev: string;
   /** Kolik je na tenhle druh práce v rozpočtu. U oprav 0 — vlastní kapsu nemají. */
   rozpocet: number;
   vykazano: number;
@@ -69,18 +74,18 @@ export function CerpaniPoDruzich({
   /** Opravy a přetáčky (zadání 30. 9. 2026). Vlastní rozpočet nemají. */
   vykazanoOpravy?: number;
 }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [podoba, setPodoba] = useState<'sloupce' | 'kolac'>('sloupce');
 
   const druhy: Druh[] = [
     {
       klic: 'nataceni',
-      nazev: 'Natáčení',
       rozpocet: rozpocetNataceni,
       vykazano: vykazanoNataceni,
     },
     {
       klic: 'strih',
-      nazev: 'Střih',
       rozpocet: rozpocetStrih,
       vykazano: vykazanoStrih,
     },
@@ -88,7 +93,6 @@ export function CerpaniPoDruzich({
   if (vykazanoOpravy > 0) {
     druhy.push({
       klic: 'opravy',
-      nazev: 'Opravy',
       rozpocet: 0,
       vykazano: vykazanoOpravy,
       bezRozpoctu: true,
@@ -101,14 +105,14 @@ export function CerpaniPoDruzich({
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Čerpání
+          {t('cerpani.nadpis')}
         </h2>
         <div className="flex items-center gap-1">
           <Prepinac aktivni={podoba === 'sloupce'} onClick={() => setPodoba('sloupce')}>
-            Sloupce
+            {t('cerpani.sloupce')}
           </Prepinac>
           <Prepinac aktivni={podoba === 'kolac'} onClick={() => setPodoba('kolac')}>
-            Koláč
+            {t('cerpani.kolac')}
           </Prepinac>
         </div>
       </div>
@@ -126,8 +130,8 @@ export function CerpaniPoDruzich({
           {druhy.map((d) => (
             <span key={d.klic} className="inline-flex items-center gap-2 text-xs font-heading text-muted">
               <Puntik klic={d.klic} />
-              {d.nazev}
-              <span className="text-ink tabular-nums">{czk(d.vykazano)}</span>
+              {nazevDruhu(d.klic, jazyk)}
+              <span className="text-ink tabular-nums">{czk(d.vykazano, jazyk)}</span>
             </span>
           ))}
         </div>
@@ -137,9 +141,8 @@ export function CerpaniPoDruzich({
           Dve odstavce pod sebou delaly z teto karty o hlavu vyssi ramecek nez
           rozpocet vedle. */}
       <p className="text-xs font-body text-muted m-0 mt-auto">
-        Proti rozpočtu stojí výkazy zvukařů. Bonus se nezapočítává — je to odměna za dokončenou
-        knihu, ne odpracované hodiny.
-        {vykazanoOpravy > 0 && ' Opravy vlastní rozpočet nemají, ale čerpají ten společný.'}
+        {t('cerpani.poznamka')}
+        {vykazanoOpravy > 0 && t('cerpani.poznamkaOpravy')}
       </p>
     </div>
   );
@@ -178,6 +181,8 @@ function meritkoOsy(nejvic: number): { strop: number; krok: number } {
  * tvářící se jako jeden — a přesně tak vzniká většina lživých grafů.
  */
 function Sloupce({ druhy }: { druhy: Druh[] }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const nejvic = Math.max(...druhy.map((d) => Math.max(d.rozpocet, d.vykazano)), 1);
   const { strop, krok } = meritkoOsy(nejvic);
   const VYSKA = 190;
@@ -199,7 +204,11 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
             >
               {/* „tis." jen kdyz je z ceho - u malych castek by z 500 Kc
                   bylo „1 tis." a z 250 Kc dokonce „0 tis.". */}
-              {v === 0 ? '0' : strop >= 4000 ? `${Math.round(v / 1000)} tis.` : v.toLocaleString('cs-CZ')}
+              {v === 0
+                ? '0'
+                : strop >= 4000
+                  ? `${Math.round(v / 1000)} ${t('format.tisic')}`
+                  : v.toLocaleString(kodJazyka(jazyk))}
             </span>
           ))}
         </div>
@@ -235,8 +244,16 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
                   <span
                     title={
                       d.bezRozpoctu
-                        ? `${d.nazev}: vykázáno ${czk(d.vykazano)}, vlastní rozpočet nemají`
-                        : `${d.nazev}: vykázáno ${czk(d.vykazano)} z rozpočtu ${czk(d.rozpocet)} (${procent} %)`
+                        ? t('cerpani.bublinaBezRozpoctu', {
+                            druh: nazevDruhu(d.klic, jazyk),
+                            vykazano: czk(d.vykazano, jazyk),
+                          })
+                        : t('cerpani.bublina', {
+                            druh: nazevDruhu(d.klic, jazyk),
+                            vykazano: czk(d.vykazano, jazyk),
+                            rozpocet: czk(d.rozpocet, jazyk),
+                            procent,
+                          })
                     }
                     className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-md ${pres ? 'bg-danger' : ''}`}
                     style={{
@@ -253,7 +270,7 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
                     }`}
                     style={{ bottom: `calc(${Math.max((d.rozpocet / strop) * 100, (d.vykazano / strop) * 100)}% + 6px)` }}
                   >
-                    {d.bezRozpoctu ? czk(d.vykazano) : `${procent} %`}
+                    {d.bezRozpoctu ? czk(d.vykazano, jazyk) : `${procent} %`}
                   </span>
                 </div>
               );
@@ -270,11 +287,15 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
             <div key={d.klic} className="flex-1 max-w-[96px] flex flex-col items-center gap-0.5 text-center">
               <span className="inline-flex items-center gap-1.5 text-xs font-heading text-ink">
                 <Puntik klic={d.klic} />
-                {d.nazev}
+                {nazevDruhu(d.klic, jazyk)}
               </span>
-              <span className="text-[11px] font-heading tabular-nums text-ink">{czk(d.vykazano)}</span>
+              <span className="text-[11px] font-heading tabular-nums text-ink">
+                {czk(d.vykazano, jazyk)}
+              </span>
               <span className="text-[10px] font-body text-muted tabular-nums">
-                {d.bezRozpoctu ? 'bez rozpočtu' : `z ${czk(d.rozpocet)}`}
+                {d.bezRozpoctu
+                  ? t('cerpani.bezRozpoctu')
+                  : t('cerpani.zRozpoctu', { rozpocet: czk(d.rozpocet, jazyk) })}
               </span>
             </div>
           ))}
@@ -282,7 +303,7 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
       </div>
 
       <p className="text-[11px] font-body text-muted m-0 text-center">
-        Světlý obrys je rozpočet, barevná výplň vykázané peníze.
+        {t('cerpani.vysvetlivka')}
       </p>
 
 
@@ -298,12 +319,10 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
  * v legendě, takže se nic nečte jen z barvy.
  */
 function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   if (celkem <= 0) {
-    return (
-      <p className="text-sm font-body text-muted m-0">
-        Zatím nejsou žádné výkazy, takže není co rozdělit.
-      </p>
-    );
+    return <p className="text-sm font-body text-muted m-0">{t('cerpani.bezVykazu')}</p>;
   }
 
   const R = 54;
@@ -312,7 +331,12 @@ function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
 
   return (
     <div className="flex items-center justify-center gap-6 flex-wrap">
-      <svg viewBox="0 0 140 140" className="w-[140px] h-[140px] shrink-0" role="img" aria-label="Podíl jednotlivých druhů práce na vykázaných penězích">
+      <svg
+        viewBox="0 0 140 140"
+        className="w-[140px] h-[140px] shrink-0"
+        role="img"
+        aria-label={t('cerpani.popisekKolace')}
+      >
         <g transform="translate(70,70) rotate(-90)">
           {druhy.map((d) => {
             const podil = d.vykazano / celkem;
@@ -328,7 +352,13 @@ function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
                 strokeDasharray={`${Math.max(0, delka - 2)} ${OBVOD - Math.max(0, delka - 2)}`}
                 strokeDashoffset={-posun}
               >
-                <title>{`${d.nazev}: ${czk(d.vykazano)} (${Math.round(podil * 100)} %)`}</title>
+                <title>
+                  {t('cerpani.bublinaKolace', {
+                    druh: nazevDruhu(d.klic, jazyk),
+                    castka: czk(d.vykazano, jazyk),
+                    procent: Math.round(podil * 100),
+                  })}
+                </title>
               </circle>
             );
             posun += delka;
@@ -336,10 +366,10 @@ function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
           })}
         </g>
         <text x="70" y="66" textAnchor="middle" className="fill-ink font-heading" style={{ fontSize: 15, fontWeight: 600 }}>
-          {czk(celkem)}
+          {czk(celkem, jazyk)}
         </text>
         <text x="70" y="82" textAnchor="middle" className="fill-muted font-body" style={{ fontSize: 10 }}>
-          vykázáno
+          {t('cerpani.vykazano')}
         </text>
       </svg>
 
@@ -348,7 +378,7 @@ function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
           <span key={d.klic} className="flex items-baseline gap-2 text-sm font-heading text-ink">
             <Puntik klic={d.klic} />
             <span className="tabular-nums">{Math.round((d.vykazano / celkem) * 100)} %</span>
-            <span className="text-muted font-body text-xs">{d.nazev}</span>
+            <span className="text-muted font-body text-xs">{nazevDruhu(d.klic, jazyk)}</span>
           </span>
         ))}
       </div>

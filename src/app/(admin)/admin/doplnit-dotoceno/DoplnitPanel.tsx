@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { nazevStavu } from '@/lib/stavyProjektu';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 export type ProjektKDoplneni = {
   caflouProjectId: string;
@@ -11,7 +13,14 @@ export type ProjektKDoplneni = {
   herci: { id: string; jmeno: string; dotoceno: boolean }[];
 };
 
-/** Stavy, ze kterých se stav překlopí - musí sedět s PREKLOPENI v dotoceniStavServer.ts. */
+/**
+ * Stavy, ze kterých se stav překlopí - musí sedět s PREKLOPENI
+ * v dotoceniStavServer.ts.
+ *
+ * ZŮSTÁVÁ ČESKY SCHVÁLNĚ: stavy projektů leží v databázi česky (dávka 7e),
+ * takže se podle nich porovnává i ukládá. Na obrazovku jdou přes
+ * `nazevStavu(…, jazyk)`, který je přeloží podle kódu.
+ */
 const PREKLOPI_SE: Record<string, string> = {
   'Natáčíme': 'Dotočeno',
   'Natáčíme/stříháme': 'Dotočeno/stříháme',
@@ -28,6 +37,8 @@ const PREKLOPI_SE: Record<string, string> = {
  */
 export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
   const router = useRouter();
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [vybrano, setVybrano] = useState<Record<string, Set<string>>>({});
   const [soupis, setSoupis] = useState(false);
   const [ukladam, setUkladam] = useState(false);
@@ -81,7 +92,7 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
+        setChyba((data as { error?: string })?.error || t('doplnit.nejdeUlozit'));
         return;
       }
       setHotovo({ hercu: (data as { hercu: number }).hercu, stavu: (data as { stavu: number }).stavu });
@@ -89,7 +100,7 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
       setSoupis(false);
       router.refresh();
     } catch {
-      setChyba('Nepodařilo se to uložit.');
+      setChyba(t('doplnit.nejdeUlozit'));
     } finally {
       setUkladam(false);
     }
@@ -98,7 +109,7 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
   if (projekty.length === 0) {
     return (
       <p className="text-sm font-body text-muted m-0">
-        Není co doplňovat — u všech projektů s herci má fajfku každý.
+        {t('doplnit.neniCo')}
       </p>
     );
   }
@@ -107,8 +118,11 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
     <div className="flex flex-col gap-4">
       {hotovo && (
         <p className="text-sm font-heading text-status-done bg-okTint rounded-lg px-4 py-3 m-0">
-          Zapsáno: {hotovo.hercu} {hotovo.hercu === 1 ? 'herec' : 'herců'}
-          {hotovo.stavu > 0 && `, přehozen stav u ${hotovo.stavu} projektů`}. Žádná zpráva neodešla.
+          {t(hotovo.hercu === 1 ? 'doplnit.zapsanoJeden' : 'doplnit.zapsanoVic', {
+            pocet: hotovo.hercu,
+          })}
+          {hotovo.stavu > 0 && t('doplnit.prehozenStav', { pocet: hotovo.stavu })}
+          {t('doplnit.zadnaZprava')}
         </p>
       )}
       {chyba && (
@@ -118,7 +132,7 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
       {soupis ? (
         <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Zapíše se tohle
+            {t('doplnit.zapiseSe')}
           </h2>
           <ul className="list-none p-0 m-0 flex flex-col gap-3">
             {davka.map((d) => (
@@ -128,13 +142,13 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
                   {d.herci.map((h) => h.jmeno).join(', ')}
                   {d.novyStav ? (
                     <>
-                      {' · stav '}
+                      {t('doplnit.stavPred')}
                       <span className="text-ink font-heading">
-                        {d.projekt.stav} → {d.novyStav}
+                        {nazevStavu(d.projekt.stav, jazyk)} → {nazevStavu(d.novyStav, jazyk)}
                       </span>
                     </>
                   ) : (
-                    ' · stav zůstává'
+                    t('doplnit.stavZustava')
                   )}
                 </span>
               </li>
@@ -147,7 +161,7 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
               onClick={() => void zapis()}
               className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2.5 disabled:opacity-60"
             >
-              {ukladam ? 'Zapisuji…' : 'Zapsat bez zpráv'}
+              {ukladam ? t('doplnit.zapisuji') : t('doplnit.zapsatBezZprav')}
             </button>
             <button
               type="button"
@@ -155,7 +169,7 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
               onClick={() => setSoupis(false)}
               className="text-sm font-heading font-semibold text-muted hover:text-ink"
             >
-              Zpět k výběru
+              {t('doplnit.zpetKVyberu')}
             </button>
           </div>
         </div>
@@ -167,9 +181,11 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
             onClick={() => setSoupis(true)}
             className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2.5 disabled:opacity-40"
           >
-            Ukázat, co se zapíše{hercuCelkem > 0 ? ` (${hercuCelkem})` : ''}
+            {hercuCelkem > 0
+              ? t('doplnit.ukazatPocet', { pocet: hercuCelkem })
+              : t('doplnit.ukazat')}
           </button>
-          <span className="text-xs font-body text-muted">Nic se neuloží, dokud to nepotvrdíte.</span>
+          <span className="text-xs font-body text-muted">{t('doplnit.nicSeNeulozi')}</span>
         </div>
       )}
 
@@ -179,10 +195,12 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className="text-sm font-heading font-semibold text-ink">{p.nazev}</span>
               {p.firma && <span className="text-xs font-body text-muted">{p.firma}</span>}
-              <span className="text-xs font-heading text-muted">· {p.stav || 'bez stavu'}</span>
+              <span className="text-xs font-heading text-muted">
+                · {nazevStavu(p.stav, jazyk) || t('doplnit.bezStavu')}
+              </span>
               {PREKLOPI_SE[p.stav] && (
                 <span className="text-[11px] font-heading text-brand-purple">
-                  překlopí se na {PREKLOPI_SE[p.stav]}, až budou všichni
+                  {t('doplnit.preklopiSe', { stav: nazevStavu(PREKLOPI_SE[p.stav], jazyk) })}
                 </span>
               )}
             </div>
@@ -206,7 +224,7 @@ export function DoplnitPanel({ projekty }: { projekty: ProjektKDoplneni[] }) {
                     className="accent-brand-purple"
                   />
                   {h.jmeno}
-                  {h.dotoceno && <span className="text-xs">už má</span>}
+                  {h.dotoceno && <span className="text-xs">{t('doplnit.uzMa')}</span>}
                 </label>
               ))}
             </div>

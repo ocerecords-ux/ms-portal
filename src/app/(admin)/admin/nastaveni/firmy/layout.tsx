@@ -2,8 +2,10 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { nastaveniSekce } from '@/lib/nastaveniSekci';
+import { nastaveniSekce, textSekce } from '@/lib/nastaveniSekci';
 import { ZalozkyNastaveni } from '@/components/ZalozkyNastaveni';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * NASTAVENÍ FIREM - SPOLEČNÁ HLAVIČKA A ZÁLOŽKY (oprava 28. 9. 2026: „když
@@ -30,18 +32,29 @@ const ZALOZKY = [
 export default async function NastaveniFiremLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'ADMIN') redirect('/projekty');
+  const jazyk = nactiJazyk();
   const nastaveni = nastaveniSekce('FIRMY');
 
   return (
     <div className="flex flex-col gap-5">
       <Link href="/admin" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na firmy
+        {prelozit(jazyk, 'nastaveni.zpetNaFirmy')}
       </Link>
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{nastaveni?.nadpis}</h1>
-        <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">{nastaveni?.popis}</p>
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
+          {nastaveni ? textSekce(nastaveni, 'nadpis', jazyk) : ''}
+        </h1>
+        <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">
+          {nastaveni ? textSekce(nastaveni, 'popis', jazyk) : ''}
+        </p>
       </div>
-      <ZalozkyNastaveni sekce="nastaveni-firmy" zalozky={ZALOZKY} />
+      <ZalozkyNastaveni
+        sekce="nastaveni-firmy"
+        zalozky={ZALOZKY.map((z) => ({
+          ...z,
+          nazev: prelozit(jazyk, `nastaveni.zalozka.${z.href}`),
+        }))}
+      />
       {children}
     </div>
   );

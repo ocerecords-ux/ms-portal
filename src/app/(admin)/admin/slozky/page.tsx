@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { extractDriveFolderId } from '@/lib/googleDrive';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 import { SlozkyManager } from './SlozkyManager';
 
 /**
@@ -14,6 +16,7 @@ import { SlozkyManager } from './SlozkyManager';
 export const dynamic = 'force-dynamic';
 
 export default async function SlozkyPage() {
+  const jazyk = nactiJazyk();
   const slozky = await prisma.diskovaSlozka.findMany({
     orderBy: [{ poradi: 'asc' }, { nazev: 'asc' }],
     select: {
@@ -40,13 +43,13 @@ export default async function SlozkyPage() {
   return (
     <section className="flex flex-col gap-6 max-w-3xl">
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Složky na Disku</h1>
+        <h1 className="font-display text-3xl text-ink m-0">{prelozit(jazyk, 'slozky.nadpis')}</h1>
         <p className="text-sm font-body text-muted m-0 mt-2">
-          Složky, které portál nabízí v Nahrávkách. Komu se která ukáže, se zaškrtává na{' '}
+          {prelozit(jazyk, 'slozky.uvodPred')}
           <Link href="/admin/users" className="text-brand-purple underline">
-            kartě účtu
+            {prelozit(jazyk, 'slozky.uvodOdkaz')}
           </Link>
-          .
+          {prelozit(jazyk, 'slozky.uvodZa')}
         </p>
       </div>
 
@@ -56,9 +59,9 @@ export default async function SlozkyPage() {
           Googlu rozlišit vůbec a musí mít každý účet vlastní. */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-5">
         <p className="text-sm font-body text-ink m-0">
-          Tohle rozhoduje jen o tom, co ukáže <strong>portál</strong>. Práva na samotném Google Disku se
-          tím nemění - kdo si složku otevře přímo v Googlu pod účtem, který ji má nasdílenou, uvidí ji
-          dál.
+          {prelozit(jazyk, 'slozky.varovaniPred')}
+          <strong>{prelozit(jazyk, 'slozky.varovaniTucne')}</strong>
+          {prelozit(jazyk, 'slozky.varovaniZa')}
         </p>
       </div>
 

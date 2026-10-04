@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * PŘEHLED NASTAVENÍ FIREM.
@@ -12,26 +14,26 @@ import Link from 'next/link';
  */
 export const dynamic = 'force-dynamic';
 
-const POPISY: { nazev: string; popis: string; cesta: string }[] = [
+const POPISY: { klicNazvu: string; klicPopisu: string; cesta: string }[] = [
   {
-    nazev: 'Zprávy z portálu',
-    popis:
-      'Co portál posílá nám - bonusy ke schválení a měsíční přehled výkazů zvukařům. Dá se zapnout, vypnout a je vidět, co už odešlo.',
+    klicNazvu: 'nastaveniFirmy.zpravy',
+    klicPopisu: 'nastaveniFirmy.zpravyPopis',
     cesta: '/admin/nastaveni/firmy/zpravy-portalu',
   },
   {
-    nazev: 'Ceníky',
-    popis: 'Sazby za normostranu a položky, ze kterých se skládají nabídky a rozpočty.',
+    klicNazvu: 'nastaveniFirmy.ceniky',
+    klicPopisu: 'nastaveniFirmy.cenikyPopis',
     cesta: '/admin/nastaveni/firmy/ceniky',
   },
   {
-    nazev: 'Vzory natáčení',
-    popis: 'Předlohy natáčecích textů, ze kterých se skládá dokument k natáčení.',
+    klicNazvu: 'nastaveniFirmy.vzoryNataceni',
+    klicPopisu: 'nastaveniFirmy.vzoryNataceniPopis',
     cesta: '/admin/nastaveni/firmy/vzory-nataceni',
   },
 ];
 
 export default function NastaveniFiremPrehled() {
+  const jazyk = nactiJazyk();
   return (
     <div className="flex flex-col gap-2 max-w-3xl">
       {POPISY.map((p) => (
@@ -40,8 +42,12 @@ export default function NastaveniFiremPrehled() {
           href={p.cesta}
           className="rounded-card border border-line bg-surface p-4 no-underline transition-colors hover:border-brand-purple"
         >
-          <span className="block font-heading font-semibold text-sm text-ink">{p.nazev}</span>
-          <span className="block text-xs font-body text-muted mt-1">{p.popis}</span>
+          <span className="block font-heading font-semibold text-sm text-ink">
+            {prelozit(jazyk, p.klicNazvu)}
+          </span>
+          <span className="block text-xs font-body text-muted mt-1">
+            {prelozit(jazyk, p.klicPopisu)}
+          </span>
         </Link>
       ))}
     </div>

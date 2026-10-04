@@ -6,7 +6,9 @@ import { nactiVzory } from '@/lib/vzoryZpravServer';
 import { VzoryEditor } from '../../vzory-zprav/VzoryEditor';
 import { ProdlevaNotifikaci } from '../../vzory-zprav/ProdlevaNotifikaci';
 import { MAX_PRODLEVA_S, nactiProdlevu } from '@/lib/prodlevaNotifikaciServer';
-import { nastaveniSekce } from '@/lib/nastaveniSekci';
+import { nastaveniSekce, textSekce } from '@/lib/nastaveniSekci';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * NASTAVENÍ SEKCE PROJEKTY (zadání 28. 9. 2026: „Projekty - notifikace na
@@ -22,16 +24,21 @@ export default async function NastaveniProjektuPage() {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'ADMIN') redirect('/projekty');
 
+  const jazyk = nactiJazyk();
   const nastaveni = nastaveniSekce('PROJEKTY');
 
   return (
     <div className="flex flex-col gap-6">
       <Link href="/projekty" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na projekty
+        {prelozit(jazyk, 'nastaveni.zpetNaProjekty')}
       </Link>
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{nastaveni?.nadpis}</h1>
-        <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">{nastaveni?.popis}</p>
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
+          {nastaveni ? textSekce(nastaveni, 'nadpis', jazyk) : ''}
+        </h1>
+        <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">
+          {nastaveni ? textSekce(nastaveni, 'popis', jazyk) : ''}
+        </p>
       </div>
       {/* Technické parametry výroby patří k projektům (28. 9. 2026) - z hlavičky
           Firem zmizely, tady je na ně proklik. */}
@@ -39,7 +46,7 @@ export default async function NastaveniProjektuPage() {
         href="/admin/technicke-parametry"
         className="self-start text-sm font-heading font-semibold rounded-pill border border-line bg-surface px-4 py-2 text-brand-purple no-underline hover:border-brand-purple"
       >
-        Technické parametry výroby →
+        {prelozit(jazyk, 'nastaveni.technickeParametry')}
       </Link>
       <ProdlevaNotifikaci pocatecni={await nactiProdlevu()} max={MAX_PRODLEVA_S} />
       <VzoryEditor pocatecni={[...(await nactiVzory('AUDIOKNIHA')), ...(await nactiVzory('REKLAMA'))]} />

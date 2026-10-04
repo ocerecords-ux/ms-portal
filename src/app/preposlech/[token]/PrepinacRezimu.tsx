@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { RezimNevidomi } from './RezimNevidomi';
 
 /**
@@ -28,6 +29,7 @@ export function PrepinacRezimu({
   /** Běžný AudioTagger - vykreslí se, dokud je režim vypnutý. */
   children: React.ReactNode;
 }) {
+  const t = usePreklad();
   const [nevidomi, setNevidomi] = useState(false);
   const [nacteno, setNacteno] = useState(false);
 
@@ -69,7 +71,7 @@ export function PrepinacRezimu({
         onClick={() => prepni(true)}
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:border focus:border-line focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-heading focus:font-semibold focus:text-ink focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-purple"
       >
-        Přepnout do režimu pro nevidomé
+        {t('prepinac.doRezimu')}
       </button>
 
       {/* Dokud nevíme, co je uložené, obsah se vykreslí normálně - stránka
@@ -83,7 +85,7 @@ export function PrepinacRezimu({
           onClick={() => prepni(true)}
           className="text-[11px] font-body text-muted/60 underline underline-offset-2 hover:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
         >
-          Režim pro nevidomé
+          {t('prepinac.rezim')}
         </button>
       </p>
     </>

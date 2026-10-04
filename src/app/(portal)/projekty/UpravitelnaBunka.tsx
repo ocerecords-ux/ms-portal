@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import type { ProjectPriority } from '@prisma/client';
 import { DatumPole } from '@/components/DatumPole';
 import { VyberPriority } from '@/components/IkonaPriority';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Úprava údajů projektu přímo v přehledu (zadání 10. 9. 2026: "věci, které
@@ -23,8 +25,16 @@ import { VyberPriority } from '@/components/IkonaPriority';
  * Tabulka nikdy nesmí ukazovat něco jiného, než co je v databázi.
  */
 
-/** Uloží jedno pole projektu. Vrací chybu, nebo null když se povedlo. */
-async function uloz(caflouProjectId: string, pole: string, hodnota: string): Promise<string | null> {
+/**
+ * Uloží jedno pole projektu. Vrací chybu, nebo null když se povedlo.
+ * Jazyk se předává, protože funkce stojí mimo komponentu - hook by tu spadl.
+ */
+async function uloz(
+  caflouProjectId: string,
+  pole: string,
+  hodnota: string,
+  jazyk: Jazyk,
+): Promise<string | null> {
   try {
     const res = await fetch(`/api/projects/${caflouProjectId}/meta`, {
       method: 'PATCH',
@@ -33,9 +43,9 @@ async function uloz(caflouProjectId: string, pole: string, hodnota: string): Pro
     });
     if (res.ok) return null;
     const data = await res.json().catch(() => ({}));
-    return data?.error || 'Uložení se nezdařilo.';
+    return data?.error || prelozit(jazyk, 'bunka.nejdeUlozit');
   } catch {
-    return 'Uložení se nezdařilo.';
+    return prelozit(jazyk, 'bunka.nejdeUlozit');
   }
 }
 
@@ -75,6 +85,7 @@ export function UpravitelnaPriorita({
   priorita: ProjectPriority | null;
 }) {
   const router = useRouter();
+  const jazyk = useJazyk();
   const [zobrazena, setZobrazena] = useState<ProjectPriority | null>(priorita);
   const [chyba, setChyba] = useState<string | null>(null);
   /** Co je naposledy potvrzeně v databázi - na to se vrací při chybě. */
@@ -101,7 +112,7 @@ export function UpravitelnaPriorita({
     casovac.current = setTimeout(async () => {
       casovac.current = null;
       if (nova === ulozena.current) return;
-      const problem = await uloz(caflouProjectId, 'priority', nova);
+      const problem = await uloz(caflouProjectId, 'priority', nova, jazyk);
       if (problem) {
         setChyba(problem);
         setZobrazena(ulozena.current);
@@ -138,6 +149,8 @@ export function UpravitelnyVyber({
   deti?: React.ReactNode;
 }) {
   const router = useRouter();
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [upravuje, setUpravuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [uklada, setUklada] = useState(false);
@@ -146,7 +159,7 @@ export function UpravitelnyVyber({
     setUpravuje(false);
     if (nova === hodnota) return;
     setUklada(true);
-    const problem = await uloz(caflouProjectId, pole, nova);
+    const problem = await uloz(caflouProjectId, pole, nova, jazyk);
     setUklada(false);
     if (problem) {
       setChyba(problem);
@@ -162,7 +175,7 @@ export function UpravitelnyVyber({
         <button
           type="button"
           onClick={() => setUpravuje(true)}
-          title="Upravit klepnutím"
+          title={t('bunka.upravitKlepnutim')}
           className={`text-left hover:opacity-80 transition-opacity ${uklada ? 'opacity-60' : ''}`}
         >
           {deti ?? moznosti.find((m) => m.hodnota === hodnota)?.popisek ?? prazdnyPopisek}
@@ -218,6 +231,8 @@ export function UpravitelneDatum({
   popisek: React.ReactNode;
 }) {
   const router = useRouter();
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [upravuje, setUpravuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [uklada, setUklada] = useState(false);
@@ -228,7 +243,7 @@ export function UpravitelneDatum({
     setUpravuje(false);
     if (nove === hodnota) return;
     setUklada(true);
-    const problem = await uloz(caflouProjectId, pole, nove);
+    const problem = await uloz(caflouProjectId, pole, nove, jazyk);
     setUklada(false);
     if (problem) {
       setChyba(problem);
@@ -244,7 +259,7 @@ export function UpravitelneDatum({
         <button
           type="button"
           onClick={() => setUpravuje(true)}
-          title="Upravit klepnutím"
+          title={t('bunka.upravitKlepnutim')}
           className={`text-left hover:text-brand-purple transition-colors ${uklada ? 'opacity-60' : ''}`}
         >
           {popisek}
@@ -270,7 +285,7 @@ export function UpravitelneDatum({
           void zmen(e.target.value);
         }}
         onBlur={() => setUpravuje(false)}
-        title="Vyberte datum z kalendáře"
+        title={t('bunka.vyberteDatum')}
         /* Pevná šířka na celé „dd.mm.rrrr" - v úzkém sloupci se políčko jinak
            zmáčkne a ukousne rok (16. 9. 2026). Radši ať přeteče přes buňku,
            než aby člověk psal do něčeho, co nevidí celé.

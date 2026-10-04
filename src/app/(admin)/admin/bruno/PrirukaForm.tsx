@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { kodJazyka } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Příručka pro Bruna — „jak to u nás chodí" (zadání 16. 9. 2026).
@@ -24,6 +26,8 @@ export function PrirukaForm({
   ulozenoKdy: string | null;
 }) {
   const router = useRouter();
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [text, setText] = useState(pocatecni);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -41,13 +45,13 @@ export function PrirukaForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError((data as { error?: string })?.error || 'Uložení se nezdařilo.');
+        setError((data as { error?: string })?.error || t('brunoAdmin.nejdeUlozit'));
         return;
       }
       setSaved(true);
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('brunoAdmin.nejdeUlozit'));
     } finally {
       setSaving(false);
     }
@@ -56,13 +60,10 @@ export function PrirukaForm({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div>
-        <h2 className="font-heading font-semibold text-ink m-0">Jak to u nás chodí</h2>
-        <p className="text-sm font-body text-muted m-0 mt-1">
-          Tenhle text dostane Bruno k přečtení pokaždé, než se rozhodne, jestli něco zapíše —
-          i v soukromé zprávě. Piš normálně, jako bys zaučoval nového kolegu: co který stav
-          projektu znamená, kdo co dělá, co u nás znamenají naše slova. Platí mu to víc než
-          to, co si přečte v chatu.
-        </p>
+        <h2 className="font-heading font-semibold text-ink m-0">
+          {t('brunoAdmin.prirukaNadpis')}
+        </h2>
+        <p className="text-sm font-body text-muted m-0 mt-1">{t('brunoAdmin.prirukaUvod')}</p>
       </div>
 
       <textarea
@@ -80,15 +81,20 @@ export function PrirukaForm({
           disabled={saving || !text.trim()}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {saving ? 'Ukládám…' : 'Uložit'}
+          {saving ? t('brunoAdmin.ukladam') : t('brunoAdmin.ulozit')}
         </button>
-        {saved && <span className="text-sm font-body text-brand-greenDeep">Uloženo.</span>}
+        {saved && (
+          <span className="text-sm font-body text-brand-greenDeep">{t('brunoAdmin.ulozeno')}</span>
+        )}
         {error && <span className="text-sm font-body text-danger">{error}</span>}
         <span className="text-xs font-body text-muted">
           {vychozi
-            ? 'Zatím to nikdo neupravoval — tohle je výchozí znění.'
+            ? t('brunoAdmin.vychozi')
             : ulozenoKdy
-              ? `Naposledy uložil${ulozilKdo ? ` ${ulozilKdo}` : 'a'} ${new Date(ulozenoKdy).toLocaleString('cs-CZ')}.`
+              ? t(ulozilKdo ? 'brunoAdmin.naposledyKdo' : 'brunoAdmin.naposledy', {
+                  kdo: ulozilKdo ?? '',
+                  kdy: new Date(ulozenoKdy).toLocaleString(kodJazyka(jazyk)),
+                })
               : ''}
         </span>
       </div>

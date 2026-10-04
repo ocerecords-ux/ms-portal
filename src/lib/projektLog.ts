@@ -1,5 +1,6 @@
 import type { DruhUdalosti } from '@prisma/client';
 import { PRIORITY_LABELS } from '@/lib/projectTypes';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Historie projektu (zadání 10. 9. 2026: „něco jako LOG u každého projektu —
@@ -78,13 +79,29 @@ export function citelnaHodnota(pole: string, hodnota: unknown): string {
   return String(hodnota);
 }
 
-/** Datum a čas události - u historie má smysl i čas, na rozdíl od termínů. */
-export function formatujCas(kdy: Date): string {
-  return new Intl.DateTimeFormat('cs-CZ', {
+/**
+ * Datum a čas události - u historie má smysl i čas, na rozdíl od termínů.
+ * Jazyk je NEPOVINNÝ: bez něj čeština, takže pošta a zápis do databáze
+ * mluví dál česky (vzor `nazevMeny` z dávky 4).
+ */
+export function formatujCas(kdy: Date, jazyk?: Jazyk): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk ?? 'cs'), {
     day: 'numeric',
     month: 'numeric',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   }).format(kdy);
+}
+
+/**
+ * Druh události v historii - překládá se podle KÓDU, ne podle českého názvu.
+ * `POPISKY_DRUHU` zůstává českým zdrojem pravdy.
+ */
+export function nazevDruhuUdalosti(druh: DruhUdalosti, jazyk?: Jazyk): string {
+  if (!jazyk || jazyk === 'cs') return POPISKY_DRUHU[druh] ?? druh;
+  const klic = `historie.druh.${druh}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? (POPISKY_DRUHU[druh] ?? druh) : text;
 }

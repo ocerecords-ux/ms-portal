@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { DoplnitPanel, type ProjektKDoplneni } from './DoplnitPanel';
 import { bezTitulu } from '@/lib/jmena';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
  * Doplnění „Dotočeno" zpětně (zadání 13. 9. 2026: „ve chvíli, kdy jsme
@@ -22,6 +24,7 @@ export const dynamic = 'force-dynamic';
 export default async function DoplnitDotocenoPage() {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'ADMIN') redirect('/projekty');
+  const jazyk = nactiJazyk();
 
   const projekty = await prisma.projectMeta.findMany({
     where: { herci: { some: {} } },
@@ -46,7 +49,7 @@ export default async function DoplnitDotocenoPage() {
   const data: ProjektKDoplneni[] = projekty
     .map((p) => ({
       caflouProjectId: p.caflouProjectId,
-      nazev: p.name || `Projekt ${p.caflouProjectId}`,
+      nazev: p.name || prelozitS(jazyk, 'doplnit.zalohaNazvu', { id: p.caflouProjectId }),
       firma: p.company?.name ?? p.companyName ?? null,
       stav: p.statusName ?? '',
       herci: p.herci.map((h) => ({
@@ -60,16 +63,16 @@ export default async function DoplnitDotocenoPage() {
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin" className="text-muted text-sm font-heading no-underline">
-        ← Zpět do administrace
+        {prelozit(jazyk, 'doplnit.zpet')}
       </Link>
       <div className="flex flex-col gap-2">
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Doplnit dotočeno zpětně</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'doplnit.nadpis')}
+        </h1>
         <p className="text-sm font-body text-muted m-0 max-w-[70ch]">
-          Pro projekty přenesené z Caflou, u kterých se dotočilo dřív, než tlačítko „Dotočeno"
-          vzniklo. Zaškrtnutí uloží fajfku a u projektu v „Natáčíme" nebo „Natáčíme/stříháme"
-          překlopí stav na „Dotočeno" / „Dotočeno&nbsp;/&nbsp;stříháme" — <strong>bez jediné
-          odeslané zprávy</strong>, ani Heleně, ani klientovi. Do historie projektu se zápis
-          udělá.
+          {prelozit(jazyk, 'doplnit.uvodPred')}
+          <strong>{prelozit(jazyk, 'doplnit.uvodTucne')}</strong>
+          {prelozit(jazyk, 'doplnit.uvodZa')}
         </p>
       </div>
       <DoplnitPanel projekty={data} />

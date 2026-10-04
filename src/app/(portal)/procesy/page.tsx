@@ -6,6 +6,8 @@ import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { vidiNavod } from '@/lib/navody';
 import { OzubeneKolo } from '@/components/OzubeneKolo';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { kodJazyka, prelozit } from '@/lib/jazyk';
 
 /**
  * PROCESY - naše pracovní postupy (zadání 28. 9. 2026: „udělejme novou sekci
@@ -28,6 +30,7 @@ export const dynamic = 'force-dynamic';
 export default async function ProcesyPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
+  const jazyk = nactiJazyk();
   const role = session.user.role;
   if (!isInternalRole(role)) redirect('/projekty');
   const jeAdmin = role === 'ADMIN';
@@ -62,29 +65,34 @@ export default async function ProcesyPage() {
 
   // Seskupení po kategoriích - „Ostatní" na konec, ať nezůstane uprostřed.
   const kategorie = [...new Set(moje.map((c) => c.kategorie))].sort((a, b) =>
-    a === 'Ostatní' ? 1 : b === 'Ostatní' ? -1 : a.localeCompare(b, 'cs'),
+    // Kategorie je obsah z databáze a ten se nepřekládá (pravidlo 4), takže
+    // „Ostatní" zůstává česky; řadí se ale podle jazyka portálu.
+    a === 'Ostatní' ? 1 : b === 'Ostatní' ? -1 : a.localeCompare(b, kodJazyka(jazyk)),
   );
 
   return (
     <section className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-center gap-3 flex-wrap">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Procesy</h1>
-        {jeAdmin && <OzubeneKolo cesta="/admin/procesy" popis="Psaní a správa procesů" />}
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'procesy.nadpis')}
+        </h1>
+        {jeAdmin && (
+          <OzubeneKolo cesta="/admin/procesy" popis={prelozit(jazyk, 'procesy.ozubene')} />
+        )}
       </div>
       <p className="text-sm font-body text-muted m-0 -mt-3 max-w-[70ch]">
-        Jak u nás děláme práci - pracovní postupy, technické specifikace a návody k programům.
-        U každého článku je napsané, pro koho je.
+        {prelozit(jazyk, 'procesy.uvod')}
       </p>
 
       {moje.length === 0 && (
         <p className="text-sm font-body text-muted m-0">
-          Zatím tu nic není.{' '}
+          {prelozit(jazyk, 'procesy.prazdno')}{' '}
           {jeAdmin ? (
             <Link href="/admin/procesy" className="text-brand-purple no-underline hover:underline">
-              Napsat první postup
+              {prelozit(jazyk, 'procesy.napsatPrvni')}
             </Link>
           ) : (
-            'Postupy sem přibudou.'
+            prelozit(jazyk, 'procesy.pribudou')
           )}
         </p>
       )}
@@ -107,7 +115,7 @@ export default async function ProcesyPage() {
                     <span className="font-heading font-semibold text-sm text-ink">{c.nazev}</span>
                     {!c.zverejneno && (
                       <span className="text-[10px] font-heading uppercase tracking-wide text-muted border border-line rounded-pill px-2 py-0.5">
-                        rozepsané
+                        {prelozit(jazyk, 'procesy.rozepsane')}
                       </span>
                     )}
                   </span>

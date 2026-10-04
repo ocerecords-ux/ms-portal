@@ -3,11 +3,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime, sessionsForPages } from '@/lib/calendar';
+import { RECORDING_STATUS_CLASSES, formatDateTime, nazevStavuNabidky, sessionsForPages } from '@/lib/calendar';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { mestoStudia, posledniDenFrekvence, prvniDenFrekvence } from '@/lib/volnaMista';
 import { VyberStudii } from '@/components/VyberStudii';
+import { kodJazyka } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+
+/**
+ * Tvar čísla u frekvencí. Česky se do čtyř píše „frekvence" a od pěti
+ * „frekvencí", anglicky se jednotné číslo týká jen jedničky - proto tři klíče
+ * a ne skládání věty z kousků (pravidlo 7 v docs/preklad-portalu.md).
+ */
+function klicFrekvenci(pocet: number): string {
+  if (pocet === 1) return 'natacPlan.normostranJedna';
+  if (pocet < 5) return 'natacPlan.normostranMalo';
+  return 'natacPlan.normostranVic';
+}
 
 type Nabidka = {
   id: string;
@@ -71,6 +84,8 @@ export function RecordingSection({
   canManage: boolean;
 }) {
   const router = useRouter();
+  const jazyk = useJazyk();
+  const t = usePreklad();
   /**
    * Období začíná za týden (zadání 30. 9. 2026: „nastavit defaultně první
    * možný termín frekvence za 7 dní"). Herec musí nabídku dostat, otevřít ji
@@ -180,7 +195,12 @@ export function RecordingSection({
 
   const casMista = (m: Misto) => {
     const f = (iso: string) =>
-      new Intl.DateTimeFormat('cs-CZ', { timeZone: m.timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+      new Intl.DateTimeFormat(kodJazyka(jazyk), {
+        timeZone: m.timezone,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date(iso));
     return `${f(m.start)}–${f(m.end)}`;
   };
   const kratkeStudio = (nazev: string) => (nazev.split(' - ').pop() ?? nazev).trim();
@@ -215,17 +235,19 @@ export function RecordingSection({
       if (!res.ok) {
         setError(
           data?.id
-            ? `${data.error || 'Nabídku se nepodařilo odeslat.'} Nabídka je uložená v seznamu výše.`
-            : data?.error || 'Nabídku se nepodařilo založit.',
+            ? t('natacPlan.nejdeOdeslat', {
+                chyba: data.error || t('natacPlan.nejdeOdeslatZaloha'),
+              })
+            : data?.error || t('natacPlan.nejdeZalozit'),
         );
         if (data?.id) router.refresh();
         return;
       }
       setOpen(false);
-      setInfo('Nabídka termínů odešla herci e-mailem.');
+      setInfo(t('natacPlan.odeslano'));
       router.refresh();
     } catch {
-      setError('Nabídku se nepodařilo založit.');
+      setError(t('natacPlan.nejdeZalozit'));
     } finally {
       setBusy(false);
     }
@@ -239,13 +261,13 @@ export function RecordingSection({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Natáčecí plán
+            {t('natacPlan.nadpis')}
           </h2>
           <p className="text-sm font-body text-muted m-0 mt-1">
             {pageCount != null && pageCount > 0
-              ? `${pageCount} normostran → ${sessionsFromPages} ${sessionsFromPages === 1 ? 'frekvence' : sessionsFromPages < 5 ? 'frekvence' : 'frekvencí'}`
-              : 'Normostrany z Caflou nedorazily — počet frekvencí zadejte ručně.'}
-            {narratorFromCaflou ? ` · herec podle Caflou: ${narratorFromCaflou}` : ''}
+              ? t(klicFrekvenci(sessionsFromPages), { ns: pageCount, pocet: sessionsFromPages })
+              : t('natacPlan.bezNormostran')}
+            {narratorFromCaflou ? t('natacPlan.hercPodleCaflou', { jmeno: narratorFromCaflou }) : ''}
           </p>
         </div>
         {canManage && !open && (
@@ -254,7 +276,7 @@ export function RecordingSection({
             onClick={() => setOpen(true)}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors"
           >
-            Vytvořit nabídku termínů
+            {t('natacPlan.vytvorit')}
           </button>
         )}
       </div>
@@ -275,23 +297,23 @@ export function RecordingSection({
                   {r.actorName}
                 </Link>
                 <span className="block text-xs font-body text-muted">
-                  {r.studioName} · {formatDateTime(r.createdAt)}
+                  {r.studioName} · {formatDateTime(r.createdAt, undefined, jazyk)}
                 </span>
               </span>
               <span className="flex items-center gap-4 shrink-0">
                 <span className="text-xs font-body text-muted tabular-nums">
                   {r.confirmedCount > 0
-                    ? `${r.confirmedCount} potvrzeno`
+                    ? t('natacPlan.potvrzeno', { pocet: r.confirmedCount })
                     : r.selectedCount > 0
-                      ? `vybráno ${r.selectedCount} z ${r.requiredSessions}`
-                      : `nabídnuto ${r.offeredCount} · potřeba ${r.requiredSessions}`}
+                      ? t('natacPlan.vybrano', { pocet: r.selectedCount, potreba: r.requiredSessions })
+                      : t('natacPlan.nabidnuto', { pocet: r.offeredCount, potreba: r.requiredSessions })}
                 </span>
                 <span
                   className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
                     RECORDING_STATUS_CLASSES[r.status] ?? 'bg-field text-muted'
                   }`}
                 >
-                  {RECORDING_STATUS_LABELS[r.status] ?? r.status}
+                  {nazevStavuNabidky(r.status, jazyk)}
                 </span>
               </span>
             </li>
@@ -301,7 +323,7 @@ export function RecordingSection({
 
       {requests.length === 0 && !open && (
         <p className="text-sm font-body text-muted m-0">
-          K projektu zatím žádná nabídka termínů není.
+          {t('natacPlan.zadnaNabidka')}
         </p>
       )}
 
@@ -309,14 +331,14 @@ export function RecordingSection({
         <form onSubmit={zaloz} className="flex flex-col gap-4 border-t border-line pt-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Herec</span>
+              <span className="text-sm font-body text-ink">{t('natacPlan.herec')}</span>
               <VyberPole
                 required
                 value={form.actorUserId}
                 onChange={(e) => vyberHerce(e.target.value)}
                 className={inputClass}
               >
-                <option value="">— vyberte herce —</option>
+                <option value="">{t('natacPlan.vyberteHerce')}</option>
                 {herci.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.label}
@@ -324,18 +346,18 @@ export function RecordingSection({
                 ))}
               </VyberPole>
               <span className="text-xs font-body text-muted">
-                Volba se u projektu zapamatuje — v Caflou je herec jen text.
+                {t('natacPlan.hercZapamatuje')}
               </span>
             </label>
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Studia</span>
+              <span className="text-sm font-body text-ink">{t('natacPlan.studia')}</span>
               <VyberStudii studia={studios} vybrana={studioIds} onZmena={setStudioIds} />
               <span className="text-xs font-body text-muted">
-                Herci se nabídnou volná místa ve všech zaškrtnutých studiích.
+                {t('natacPlan.studiaPopis')}
               </span>
             </div>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Normostrany pro tohoto herce</span>
+              <span className="text-sm font-body text-ink">{t('natacPlan.normostranyHerce')}</span>
               <input
                 type="number"
                 min={0}
@@ -353,7 +375,7 @@ export function RecordingSection({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Počet frekvencí</span>
+              <span className="text-sm font-body text-ink">{t('natacPlan.pocetFrekvenci')}</span>
               <input
                 type="number"
                 min={1}
@@ -364,7 +386,7 @@ export function RecordingSection({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">První frekvence nejdříve</span>
+              <span className="text-sm font-body text-ink">{t('natacPlan.prvniNejdrive')}</span>
               <DatumPole
                 required
                 value={form.periodFrom}
@@ -373,7 +395,7 @@ export function RecordingSection({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Poslední frekvence nejpozději</span>
+              <span className="text-sm font-body text-ink">{t('natacPlan.posledniNejpozdeji')}</span>
               <DatumPole
                 required
                 value={form.periodTo}
@@ -381,15 +403,13 @@ export function RecordingSection({
                 className={inputClass}
               />
               <span className="text-xs font-body text-muted">
-                {datumOdevzdani
-                  ? 'Dva dny před datem dokončení - ať stihneme odevzdat.'
-                  : 'Projekt nemá datum dokončení - zadejte ručně.'}
+                {datumOdevzdani ? t('natacPlan.dvaDnyPred') : t('natacPlan.bezDataDokonceni')}
               </span>
             </label>
           </div>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Poznámka pro herce</span>
+            <span className="text-sm font-body text-ink">{t('natacPlan.poznamkaProHerce')}</span>
             <input value={form.note} onChange={(e) => set('note', e.target.value)} className={inputClass} />
           </label>
 
@@ -397,17 +417,19 @@ export function RecordingSection({
           <div className="rounded-card border border-line bg-field p-4 flex flex-col gap-3">
             <div className="flex items-baseline justify-between gap-3 flex-wrap">
               <span className="text-sm font-heading font-semibold text-ink">
-                Volná místa k nabídnutí:{' '}
+                {t('natacPlan.volnaMista')}{' '}
                 <span className={`tabular-nums ${malo ? 'text-status-progress' : 'text-status-done'}`}>
                   {nacitaNahled && !nahled ? '…' : (nahled?.pocet ?? 0)}
                 </span>
-                <span className="text-muted font-body font-normal"> · herec vybere {form.requiredSessions}</span>
+                <span className="text-muted font-body font-normal">
+                  {t('natacPlan.hercVybere', { pocet: form.requiredSessions })}
+                </span>
               </span>
-              {nacitaNahled && <span className="text-xs font-body text-muted">Počítám…</span>}
+              {nacitaNahled && <span className="text-xs font-body text-muted">{t('natacPlan.pocitam')}</span>}
             </div>
             {malo && (
               <p className="text-sm font-body text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
-                Volných míst je méně, než herec potřebuje. Posuňte období nebo zaškrtněte další studio.
+                {t('natacPlan.maloMist')}
               </p>
             )}
             {podleDnu.length > 0 && (
@@ -415,9 +437,11 @@ export function RecordingSection({
                 {podleDnu.map(([den, mista]) => (
                   <div key={den} className="flex items-baseline gap-3 text-xs font-body">
                     <span className="w-24 shrink-0 font-heading font-semibold text-ink capitalize tabular-nums">
-                      {new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(
-                        new Date(`${den}T12:00:00.000Z`),
-                      )}
+                      {new Intl.DateTimeFormat(kodJazyka(jazyk), {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'numeric',
+                      }).format(new Date(`${den}T12:00:00.000Z`))}
                     </span>
                     <span className="flex flex-wrap gap-1.5">
                       {mista.map((m) => (
@@ -444,10 +468,10 @@ export function RecordingSection({
               disabled={busy || malo || !form.actorUserId || studioIds.length === 0}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {busy ? 'Odesílám…' : 'Odeslat herci'}
+              {busy ? t('natacPlan.odesilam') : t('natacPlan.odeslatHerci')}
             </button>
             <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
-              Zavřít
+              {t('natacPlan.zavrit')}
             </button>
           </div>
         </form>

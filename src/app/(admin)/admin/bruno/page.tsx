@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
 import { nactiPrirukuProUpravy } from '@/lib/brunoPrirucka';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { kodJazyka, prelozit, prelozitS } from '@/lib/jazyk';
 import { PrirukaForm } from './PrirukaForm';
 
 /**
@@ -20,6 +22,7 @@ import { PrirukaForm } from './PrirukaForm';
 export const dynamic = 'force-dynamic';
 
 export default async function BrunoPage() {
+  const jazyk = nactiJazyk();
   const [prirucka, poznamky] = await Promise.all([
     nactiPrirukuProUpravy(),
     prisma.brunoPamet
@@ -48,9 +51,11 @@ export default async function BrunoPage() {
   return (
     <section className="flex flex-col gap-8 max-w-4xl">
       <div>
-        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Bruno</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">
+          {prelozit(jazyk, 'brunoAdmin.nadpis')}
+        </h1>
         <p className="text-sm font-body text-muted m-0 mt-1">
-          Co Bruno ví o naší práci, než se rozhodne, jestli něco zapíše.
+          {prelozit(jazyk, 'brunoAdmin.uvod')}
         </p>
       </div>
 
@@ -63,16 +68,18 @@ export default async function BrunoPage() {
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
         <div>
-          <h2 className="font-heading font-semibold text-ink m-0">Co si Bruno všiml sám</h2>
+          <h2 className="font-heading font-semibold text-ink m-0">
+            {prelozit(jazyk, 'brunoAdmin.pametNadpis')}
+          </h2>
           <p className="text-sm font-body text-muted m-0 mt-1">
-            Zvyklosti, které si po rozhodnutích uložil z chatu. Tohle nepíšeme my — je to jeho
-            poznámkový blok a je tu jen ke čtení. Když je v něm něco špatně, napište pravidlo do
-            příručky výš; ta má přednost.
+            {prelozit(jazyk, 'brunoAdmin.pametUvod')}
           </p>
         </div>
 
         {poznamky.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">Zatím si nic nepoznamenal.</p>
+          <p className="text-sm font-body text-muted m-0">
+            {prelozit(jazyk, 'brunoAdmin.pametPrazdno')}
+          </p>
         ) : (
           <ul className="flex flex-col gap-2 m-0 p-0 list-none">
             {poznamky.map((p) => (
@@ -80,9 +87,13 @@ export default async function BrunoPage() {
                 {p.poznamka}
                 <span className="block text-xs text-muted mt-0.5">
                   {p.caflouProjectId
-                    ? `${nazevProjektu.get(p.caflouProjectId) || `projekt ${p.caflouProjectId}`} · `
-                    : 'platí všude · '}
-                  {p.createdAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}
+                    ? prelozitS(jazyk, 'brunoAdmin.projektPred', {
+                        nazev:
+                          nazevProjektu.get(p.caflouProjectId) ||
+                          prelozitS(jazyk, 'brunoAdmin.zalohaProjektu', { id: p.caflouProjectId }),
+                      })
+                    : prelozit(jazyk, 'brunoAdmin.platiVsude')}
+                  {p.createdAt.toLocaleDateString(kodJazyka(jazyk), { timeZone: 'Europe/Prague' })}
                 </span>
               </li>
             ))}

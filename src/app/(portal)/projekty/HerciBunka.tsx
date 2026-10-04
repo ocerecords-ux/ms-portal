@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { OdznakStrany } from './OdznakStrany';
 
 /**
@@ -25,6 +26,8 @@ export function HerciBunka({
 }: {
   herci: { jmeno: string; dotoceno: boolean; strana?: number | null }[];
 }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [rozbaleno, setRozbaleno] = useState(false);
   const VIDITELNYCH = 2;
   const zobrazeni = rozbaleno ? herci : herci.slice(0, VIDITELNYCH);
@@ -52,7 +55,7 @@ export function HerciBunka({
             {h.jmeno}
             {/* Zelena linka kolem bubliny znamena dotoceno; pro ctecky obrazovky,
                 ktere barvu nevidi, zustava popisek. */}
-            {h.dotoceno && <span className="sr-only"> — dotočeno</span>}
+            {h.dotoceno && <span className="sr-only">{t('herciBunka.dotoceno')}</span>}
           </span>
           {/* Strana z natacecího protokolu - jen cislo, at prehled zustane
               prehledem (zadani 13. 9. 2026: „mohlo by se to objevit i v tom
@@ -62,7 +65,9 @@ export function HerciBunka({
               POSAZENY NA ROH BUBLINY jako index (upresneni 13. 9. 2026) -
               vzhled i posuny resi OdznakStrany, at je to v prehledu i
               v detailu tataz vec. */}
-          {!h.dotoceno && typeof h.strana === 'number' && <OdznakStrany strana={h.strana} />}
+          {!h.dotoceno && typeof h.strana === 'number' && (
+            <OdznakStrany strana={h.strana} jazyk={jazyk} />
+          )}
         </span>
       ))}
 
@@ -70,13 +75,19 @@ export function HerciBunka({
         <button
           type="button"
           onClick={() => setRozbaleno((r) => !r)}
-          title={rozbaleno ? 'Schovat zbylé herce' : `Ukázat další herce (${skryto})`}
-          aria-label={rozbaleno ? 'Schovat zbylé herce' : `Ukázat další herce (${skryto})`}
+          title={
+            rozbaleno ? t('herciBunka.schovat') : t('herciBunka.ukazat', { pocet: skryto })
+          }
+          aria-label={
+            rozbaleno ? t('herciBunka.schovat') : t('herciBunka.ukazat', { pocet: skryto })
+          }
           aria-expanded={rozbaleno}
           className="inline-flex flex-col items-center justify-center gap-[3px] px-2 py-1 rounded-pill text-muted hover:text-brand-purple hover:bg-brand-purple/10 transition-colors"
         >
           {rozbaleno ? (
-            <span className="text-[11px] font-heading font-semibold leading-none">skrýt</span>
+            <span className="text-[11px] font-heading font-semibold leading-none">
+              {t('herciBunka.skryt')}
+            </span>
           ) : (
             <>
               <span className="block w-[3px] h-[3px] rounded-full bg-current" />

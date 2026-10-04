@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { nactiZapnuti } from '@/lib/oznameniServer';
 import { minulyMesic, nazevMesice } from '@/lib/mesicniPrehledServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { kodJazyka, prelozit } from '@/lib/jazyk';
 import { ZpravyPanel, type Odeslany } from './ZpravyPanel';
 
 /**
@@ -19,6 +21,7 @@ export const dynamic = 'force-dynamic';
 export default async function ZpravyPortaluPage() {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'ADMIN') redirect('/projekty');
+  const jazyk = nactiJazyk();
 
   const [zapnuti, odeslaneRaw] = await Promise.all([
     nactiZapnuti(),
@@ -38,22 +41,23 @@ export default async function ZpravyPortaluPage() {
   const jmena = new Map(uzivatele.map((u) => [u.id, u.name || u.email]));
 
   const odeslane: Odeslany[] = odeslaneRaw.map((o) => ({
-    mesic: nazevMesice(o.mesic),
-    komu: jmena.get(o.userId) ?? 'Smazaný účet',
+    mesic: nazevMesice(o.mesic, jazyk),
+    komu: jmena.get(o.userId) ?? prelozit(jazyk, 'zpravyPortalu.smazanyUcet'),
     prijemce: o.prijemce,
-    kdy: new Intl.DateTimeFormat('cs-CZ').format(o.odeslanoAt),
+    kdy: new Intl.DateTimeFormat(kodJazyka(jazyk)).format(o.odeslanoAt),
   }));
 
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin" className="text-muted text-sm font-heading no-underline">
-        ← Zpět do administrace
+        {prelozit(jazyk, 'zpravyPortalu.zpet')}
       </Link>
       <div>
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Zprávy portálu</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'zpravyPortalu.nadpis')}
+        </h1>
         <p className="text-sm font-body text-muted m-0 mt-2 max-w-[80ch]">
-          Maily a oznámení, která portál posílá nám — zvukařům o bonusu a o měsíčním přehledu výkazů.
-          Zprávy klientovi se píšou jinde, ve Vzorech zpráv.
+          {prelozit(jazyk, 'zpravyPortalu.uvod')}
         </p>
       </div>
       <ZpravyPanel zapnuti={zapnuti} odeslane={odeslane} minulyMesic={minulyMesic()} />

@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { hledej, pripravStranu, type MoznostiHledani, type Nalez, type StrankaTextu } from '@/lib/hledaniVPdf';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * HLEDÁNÍ V PDF (zadání 21. 9. 2026: „v PDF bych chtěl sofistikovanější
@@ -27,6 +28,7 @@ export function HledaniVPdf({
   /** Obal stránek, ve kterém jsou rámečky `[data-strana]`. */
   obalRef: { current: HTMLDivElement | null };
 }) {
+  const t = usePreklad();
   const [dotaz, setDotaz] = useState('');
   const [moznosti, setMoznosti] = useState<MoznostiHledani>({});
   const [strany, setStrany] = useState<StrankaTextu[] | null>(null);
@@ -146,7 +148,7 @@ export function HledaniVPdf({
     ? `${Math.round((indexuji.hotovo / Math.max(1, indexuji.celkem)) * 100)} %`
     : dotaz.trim() && strany
       ? nalezy.length === 0
-        ? 'nic'
+        ? t('hledaniPdf.nic')
         : `${aktualni + 1} / ${nalezy.length}${vic ? '+' : ''}`
       : '';
 
@@ -160,8 +162,8 @@ export function HledaniVPdf({
           ref={policko}
           type="search"
           value={dotaz}
-          placeholder="Hledat v textu (Ctrl+F)"
-          aria-label="Hledat v textu"
+          placeholder={t('hledaniPdf.placeholder')}
+          aria-label={t('hledaniPdf.popisekPole')}
           onFocus={() => void indexuj()}
           onChange={(e) => {
             setDotaz(e.target.value);
@@ -183,25 +185,25 @@ export function HledaniVPdf({
         {pocet && (
           <span
             className={`pr-2 text-[11px] font-heading tabular-nums whitespace-nowrap ${
-              pocet === 'nic' ? 'text-danger' : 'text-muted'
+              pocet === t('hledaniPdf.nic') ? 'text-danger' : 'text-muted'
             }`}
-            title={indexuji ? 'Připravuji text celé knihy pro hledání…' : undefined}
+            title={indexuji ? t('hledaniPdf.pripravuji') : undefined}
           >
             {pocet}
           </span>
         )}
       </span>
-      <button type="button" onClick={() => posun(-1)} disabled={nalezy.length === 0} title="Předchozí (Shift+Enter)" className="text-muted hover:text-brand-purple px-1 disabled:opacity-30">
+      <button type="button" onClick={() => posun(-1)} disabled={nalezy.length === 0} title={t('hledaniPdf.predchozi')} className="text-muted hover:text-brand-purple px-1 disabled:opacity-30">
         ▲
       </button>
-      <button type="button" onClick={() => posun(1)} disabled={nalezy.length === 0} title="Další (Enter)" className="text-muted hover:text-brand-purple px-1 disabled:opacity-30">
+      <button type="button" onClick={() => posun(1)} disabled={nalezy.length === 0} title={t('hledaniPdf.dalsi')} className="text-muted hover:text-brand-purple px-1 disabled:opacity-30">
         ▼
       </button>
       <button
         type="button"
         onClick={() => setSeznam((v) => !v)}
         disabled={nalezy.length === 0}
-        title="Seznam všech nálezů"
+        title={t('hledaniPdf.seznamNalezu')}
         className={`text-xs font-heading rounded-md px-1.5 py-0.5 disabled:opacity-30 ${seznam ? 'bg-tint text-brand-purple' : 'text-muted hover:text-brand-purple'}`}
       >
         ☰
@@ -209,7 +211,7 @@ export function HledaniVPdf({
       <button
         type="button"
         onClick={() => setNastaveni((v) => !v)}
-        title="Jak hledat"
+        title={t('hledaniPdf.jakHledat')}
         className={`text-xs font-heading rounded-md px-1.5 py-0.5 ${
           nastaveni || moznosti.celaSlova || moznosti.presne || moznosti.pribizne
             ? 'bg-tint text-brand-purple'
@@ -223,22 +225,21 @@ export function HledaniVPdf({
         <div className="absolute left-0 top-full mt-2 z-[60] w-[290px] bg-surface rounded-card border border-line shadow-xl p-3 flex flex-col gap-2 text-left">
           {(
             [
-              ['celaSlova', 'Jen celá slova', '„les" nenajde „lesník"'],
-              ['pribizne', 'Přibližně', 'najde i překlep a jiný tvar: „Novak" → „Nováka"'],
-              ['presne', 'Přesně', 'rozlišuje diakritiku a velká písmena'],
+              ['celaSlova', 'hledaniPdf.celaSlova', 'hledaniPdf.celaSlovaPopis'],
+              ['pribizne', 'hledaniPdf.pribizne', 'hledaniPdf.pribiznePopis'],
+              ['presne', 'hledaniPdf.presne', 'hledaniPdf.presnePopis'],
             ] as [keyof MoznostiHledani, string, string][]
-          ).map(([k, nazev, popis]) => (
+          ).map(([k, klicNazvu, klicPopisu]) => (
             <label key={k} className="flex items-start gap-2 cursor-pointer">
               <input type="checkbox" checked={Boolean(moznosti[k])} onChange={() => prepni(k)} className="mt-0.5 accent-brand-purple" />
               <span className="flex flex-col">
-                <span className="text-sm font-body text-ink">{nazev}</span>
-                <span className="text-[11px] font-body text-muted">{popis}</span>
+                <span className="text-sm font-body text-ink">{t(klicNazvu)}</span>
+                <span className="text-[11px] font-body text-muted">{t(klicPopisu)}</span>
               </span>
             </label>
           ))}
           <span className="text-[11px] font-body text-muted border-t border-line pt-2">
-            Bez voleb se hledá bez ohledu na diakritiku a velikost písmen („prilis" najde „Příliš"), i přes
-            rozdělení slova na konci řádku.
+            {t('hledaniPdf.bezVoleb')}
           </span>
         </div>
       )}
@@ -246,10 +247,7 @@ export function HledaniVPdf({
       {seznam && nalezy.length > 0 && (
         <div className="absolute left-0 top-full mt-2 z-[60] w-[420px] max-w-[80vw] max-h-[50vh] overflow-y-auto bg-surface rounded-card border border-line shadow-xl py-1 text-left">
           <div className="px-3 py-1.5 text-[11px] font-heading font-semibold uppercase tracking-wide text-muted flex justify-between">
-            <span>
-              {nalezy.length}
-              {vic ? '+' : ''} nálezů
-            </span>
+            <span>{t('hledaniPdf.pocetNalezu', { pocet: `${nalezy.length}${vic ? '+' : ''}` })}</span>
             <button type="button" onClick={() => setSeznam(false)} className="text-muted hover:text-ink normal-case">
               ×
             </button>
@@ -262,7 +260,9 @@ export function HledaniVPdf({
                   onClick={() => setAktualni(i)}
                   className={`w-full text-left px-3 py-1.5 flex gap-2 items-baseline hover:bg-field ${i === aktualni ? 'bg-tint' : ''}`}
                 >
-                  <span className="shrink-0 text-[11px] font-heading text-muted tabular-nums w-10">str. {n.strana}</span>
+                  <span className="shrink-0 text-[11px] font-heading text-muted tabular-nums w-10">
+                    {t('hledaniPdf.strana', { cislo: n.strana })}
+                  </span>
                   <span className="text-xs font-body text-ink break-words">
                     {n.pred}
                     <mark className="bg-status-progress/40 text-ink rounded px-0.5">{n.nalez}</mark>

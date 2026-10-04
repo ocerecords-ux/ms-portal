@@ -19,6 +19,8 @@
  * je to jediné, co je rozliší.
  */
 
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
+
 /**
  * Druh úkonu. Bruno zatím zapisuje jen strany z natáčení, takže je to
  * konstanta — ale stojí ve vlastním sloupci, protože se chystá i střih
@@ -26,7 +28,7 @@
  * i střih"). Až přibude, přečte se z dat a zbytek tabulky zůstane, jak je;
  * model `brunoNatoceno` k tomu zatím pole nemá.
  */
-const UKON = 'Natáčení';
+const KLIC_UKONU = 'protokol.ukon.nataceni';
 
 /**
  * Kdo zápis pořídil. Taky konstanta: do protokolu píše jedině Bruno, který
@@ -36,8 +38,12 @@ const UKON = 'Natáčení';
 const ZAPSAL = 'Bruno';
 
 /** Čas zápisu ve 24h tvaru — vteřiny by v protokolu nic nepřidaly. */
-function cas(kdy: string): string {
-  return new Date(kdy).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+function cas(kdy: string, jazyk: Jazyk): string {
+  return new Date(kdy).toLocaleTimeString(kodJazyka(jazyk), {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 }
 
 const TRIDA_ZAHLAVI =
@@ -45,50 +51,50 @@ const TRIDA_ZAHLAVI =
 
 export function ProtokolNataceni({
   zaznamy,
+  jazyk,
 }: {
   zaznamy?: { id: string; strana: number; kdy: string; userId: string | null; jmeno: string | null }[];
+  /** Jazyk PROPEM - protokol kreslí serverová stránka (pravidlo 8). */
+  jazyk: Jazyk;
 }) {
   if (!zaznamy || zaznamy.length === 0) {
-    return (
-      <p className="text-sm font-body text-muted m-0">
-        Zatím prázdný. Strany sem zapisuje Bruno podle toho, co se napíše do chatu projektu —
-        stačí číslo, třeba „str. 33".
-      </p>
-    );
+    return <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'protokol.prazdny')}</p>;
   }
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm font-body text-muted m-0">
-        Kam se doteklo natáčení — zapisuje Bruno z chatu projektu, od nejnovějšího.
+        {prelozit(jazyk, 'protokol.uvod')}
       </p>
       {/* Sest sloupcu se na uzkem okne nevejde - tabulka se posune, stranka ne. */}
       <div className="rounded-card border border-line overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-field">
-              <th className={TRIDA_ZAHLAVI}>Natáčení/střih</th>
-              <th className={TRIDA_ZAHLAVI}>Herec</th>
-              <th className={TRIDA_ZAHLAVI}>Datum</th>
-              <th className={TRIDA_ZAHLAVI}>Čas zápisu</th>
-              <th className={TRIDA_ZAHLAVI}>Zapsal</th>
-              <th className={`${TRIDA_ZAHLAVI} text-right`}>Strana</th>
+              <th className={TRIDA_ZAHLAVI}>{prelozit(jazyk, 'protokol.natacStrih')}</th>
+              <th className={TRIDA_ZAHLAVI}>{prelozit(jazyk, 'protokol.herec')}</th>
+              <th className={TRIDA_ZAHLAVI}>{prelozit(jazyk, 'protokol.datum')}</th>
+              <th className={TRIDA_ZAHLAVI}>{prelozit(jazyk, 'protokol.casZapisu')}</th>
+              <th className={TRIDA_ZAHLAVI}>{prelozit(jazyk, 'protokol.zapsal')}</th>
+              <th className={`${TRIDA_ZAHLAVI} text-right`}>{prelozit(jazyk, 'protokol.strana')}</th>
             </tr>
           </thead>
           <tbody>
             {zaznamy.map((z) => (
               <tr key={z.id} className="border-t border-line">
-                <td className="px-4 py-2 text-sm font-heading text-ink whitespace-nowrap">{UKON}</td>
+                <td className="px-4 py-2 text-sm font-heading text-ink whitespace-nowrap">
+                  {prelozit(jazyk, KLIC_UKONU)}
+                </td>
                 {/* Herec chybi, kdyz se ve zprave nevyjasnilo, koho se strana
                     tyka - u projektu s jedinym hercem to nikdo psat nemusel. */}
                 <td className="px-4 py-2 text-sm font-heading text-ink whitespace-nowrap">
                   {z.jmeno ?? <span className="text-muted">—</span>}
                 </td>
                 <td className="px-4 py-2 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {new Date(z.kdy).toLocaleDateString('cs-CZ')}
+                  {new Date(z.kdy).toLocaleDateString(kodJazyka(jazyk))}
                 </td>
                 <td className="px-4 py-2 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {cas(z.kdy)}
+                  {cas(z.kdy, jazyk)}
                 </td>
                 <td className="px-4 py-2 text-sm font-heading text-muted whitespace-nowrap">{ZAPSAL}</td>
                 {/* Cislo zelene stejne jako odznak u herce - at je to na obou

@@ -1,4 +1,5 @@
 import type { KlicSekce } from '@/lib/pristupy';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * NASTAVENÍ SEKCE POD OZUBENÝM KOLEM (zadání 28. 9. 2026: „pojďme udělat
@@ -59,6 +60,21 @@ export const NASTAVENI_SEKCI: NastaveniSekce[] = [
 ];
 
 const PODLE_KLICE = new Map(NASTAVENI_SEKCI.map((n) => [n.klic, n]));
+
+/**
+ * Nadpis a popis sekce podle KÓDU, ne podle českého názvu (vzor `nazevMeny`
+ * z dávky 4). Jazyk je NEPOVINNÝ - bez něj zůstává čeština jako zdroj pravdy.
+ */
+export function textSekce(
+  n: NastaveniSekce,
+  cast: 'nadpis' | 'popis',
+  jazyk?: Jazyk,
+): string {
+  if (!jazyk || jazyk === 'cs') return n[cast];
+  const klic = `nastaveniSekce.${n.klic}.${cast}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? n[cast] : text;
+}
 
 /** Nastavení té sekce, nebo null, když ho zatím nemá. */
 export function nastaveniSekce(klic: KlicSekce): NastaveniSekce | null {

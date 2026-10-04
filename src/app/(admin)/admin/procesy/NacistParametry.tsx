@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * NAČTENÍ TECHNICKÝCH PARAMETRŮ DO PROCESŮ (zadání 28. 9. 2026).
@@ -12,6 +13,7 @@ import { useRouter } from 'next/navigation';
  */
 export function NacistParametry() {
   const router = useRouter();
+  const t = usePreklad();
   const [bezi, setBezi] = useState(false);
   const [zprava, setZprava] = useState<string | null>(null);
 
@@ -23,17 +25,19 @@ export function NacistParametry() {
       const res = await fetch('/api/admin/procesy/z-parametru', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setZprava(data?.error || 'Parametry se nepodařilo načíst.');
+        setZprava(data?.error || t('procesyAdmin.parametryNejdou'));
         return;
       }
       setZprava(
-        `Hotovo — dokument ${data.zalozeno ? 'založen' : 'přepsán'}, ${data.celkem} sad` +
-          (data.uklizeno ? `, uklizeno ${data.uklizeno} starých článků` : '') +
+        t(data.zalozeno ? 'procesyAdmin.hotovoZalozen' : 'procesyAdmin.hotovoPrepsan', {
+          celkem: data.celkem,
+        }) +
+          (data.uklizeno ? t('procesyAdmin.uklizeno', { pocet: data.uklizeno }) : '') +
           '.',
       );
       router.refresh();
     } catch {
-      setZprava('Parametry se nepodařilo načíst.');
+      setZprava(t('procesyAdmin.parametryNejdou'));
     } finally {
       setBezi(false);
     }
@@ -46,10 +50,10 @@ export function NacistParametry() {
         type="button"
         onClick={() => void nacti()}
         disabled={bezi}
-        title="Ze sad v Administraci složí jeden dokument Technické parametry výroby, uvnitř rozdělený po nakladatelstvích. Existující dokument přepíše."
+        title={t('procesyAdmin.bublinaParametry')}
         className="text-sm font-heading font-semibold rounded-pill border border-line bg-surface px-4 py-2 text-brand-purple disabled:opacity-60 hover:border-brand-purple"
       >
-        {bezi ? 'Načítám…' : 'Načíst technické parametry'}
+        {bezi ? t('procesyAdmin.nacitam') : t('procesyAdmin.nacistParametry')}
       </button>
     </span>
   );

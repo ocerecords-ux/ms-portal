@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { formatDatum } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { OdznakStrany } from './OdznakStrany';
 
 /**
@@ -48,6 +50,7 @@ export function VyberHerce({
   puvodniText?: string | null;
   disabled?: boolean;
 }) {
+  const t = usePreklad();
   const vybrany = herci.find((h) => h.id === hodnota) ?? null;
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -95,7 +98,11 @@ export function VyberHerce({
             setOtevreno(true);
           }}
           onFocus={() => setOtevreno(true)}
-          placeholder={puvodniText ? `hledat herce (v Caflou: ${puvodniText})` : 'začněte psát jméno herce'}
+          placeholder={
+            puvodniText
+              ? t('vyberHerce.hledatSCaflou', { text: puvodniText })
+              : t('vyberHerce.zacnetePsat')
+          }
           className={tridaPole}
         />
       )}
@@ -104,9 +111,7 @@ export function VyberHerce({
         <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
           {nalezeni.length === 0 ? (
             <p className="px-3 py-2.5 text-sm font-body text-muted m-0">
-              {herci.length === 0
-                ? 'V portálu zatím není žádný herec — nejdřív ho založte mezi uživateli.'
-                : 'Nikdo takový tu není.'}
+              {herci.length === 0 ? t('vyberHerce.zadnyHerec') : t('vyberHerce.niktoTakovy')}
             </p>
           ) : (
             nalezeni.map((h) => (
@@ -161,9 +166,15 @@ export function BublinaHerce({
   /** Co klepnutí na jméno udělá - bublinka nad bublinou. */
   popisek?: string;
 }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   return (
     <span
-      title={dotoceno ? `Dotočeno ${new Date(dotoceno).toLocaleDateString('cs-CZ')}` : undefined}
+      title={
+        dotoceno
+          ? t('vyberHerce.dotocenoDatum', { datum: formatDatum(jazyk, new Date(dotoceno)) })
+          : undefined
+      }
       // relative: odznak se stranou se kotvi k rohu TETO bubliny.
       className={`relative inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${
         dotoceno ? `whitespace-nowrap ${TRIDA_BUBLINY_DOTOCENO}` : `whitespace-nowrap ${TRIDA_BUBLINY_HERCE}`
@@ -173,25 +184,25 @@ export function BublinaHerce({
         type="button"
         disabled={disabled}
         onClick={(e) => onZmenit(e.currentTarget)}
-        title={popisek ?? 'Vybrat jiného herce'}
+        title={popisek ?? t('vyberHerce.vybratJineho')}
         className="text-sm font-heading font-semibold truncate disabled:opacity-60"
       >
         {jmeno}
       </button>
       {/* Dotoceno rika zelena linka kolem bubliny (zadani 12. 9. 2026:
           „dej pryc tu fajfku"). Pro ctecky obrazovky zustava popisek. */}
-      {dotoceno && <span className="sr-only"> — dotočeno</span>}
+      {dotoceno && <span className="sr-only">{t('vyberHerce.dotoceno')}</span>}
       {/* Stejny odznak jako v prehledu projektu (zadani 13. 9. 2026). Lezi na
           rohu bubliny a ma pointer-events-none, takze krizek pod nim zustava
           klikaci. */}
-      {!dotoceno && typeof strana === 'number' && <OdznakStrany strana={strana} />}
+      {!dotoceno && typeof strana === 'number' && <OdznakStrany strana={strana} jazyk={jazyk} />}
       {onOdebrat && (
         <button
           type="button"
           disabled={disabled}
           onClick={onOdebrat}
-          title="Odebrat herce"
-          aria-label="Odebrat herce"
+          title={t('vyberHerce.odebrat')}
+          aria-label={t('vyberHerce.odebrat')}
           className="shrink-0 grid place-items-center w-5 h-5 rounded-pill text-current/70 hover:text-danger hover:bg-surface disabled:opacity-50"
         >
           ×

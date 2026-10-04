@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { VypisParametru } from '@/app/(portal)/components/VypisParametru';
 import type { ParametryProjektu } from '@/lib/technickeParametryServer';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * ZÁLOŽKA TECHNICKÉ PARAMETRY (zadání 27. 9. 2026: „dej mi to jako záložku
@@ -16,9 +17,12 @@ import type { ParametryProjektu } from '@/lib/technickeParametryServer';
 export function TechnickeParametryKarta({
   parametry,
   smiMenit,
+  jazyk,
 }: {
   parametry: ParametryProjektu;
   smiMenit: boolean;
+  /** Jazyk PROPEM - kartu kreslí serverová stránka (pravidlo 8). */
+  jazyk: Jazyk;
 }) {
   return (
     <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
@@ -28,17 +32,17 @@ export function TechnickeParametryKarta({
         </h2>
         <span className="text-xs font-body text-muted">
           {parametry.vychoziSada
-            ? 'obecná sada — firma vlastní nemá'
+            ? prelozit(jazyk, 'technKarta.obecnaSada')
             : parametry.firmaName
-              ? `podle klienta ${parametry.firmaName}`
-              : 'podle klienta'}
+              ? prelozitS(jazyk, 'technKarta.podleKlienta', { firma: parametry.firmaName })
+              : prelozit(jazyk, 'technKarta.podleKlientaBez')}
         </span>
         {smiMenit && (
           <Link
             href="/admin/technicke-parametry"
             className="ml-auto text-xs font-heading text-brand-purple no-underline hover:underline"
           >
-            Upravit sady
+            {prelozit(jazyk, 'technKarta.upravitSady')}
           </Link>
         )}
       </div>
@@ -47,8 +51,7 @@ export function TechnickeParametryKarta({
       )}
       <VypisParametru sekce={parametry.sekce} sloupce />
       <p className="text-xs font-body text-muted m-0 pt-2 border-t border-line">
-        Parametry se vedou jako sady u firem a mění se v Administraci — změna platí pro všechny
-        projekty té firmy naráz.
+        {prelozit(jazyk, 'technKarta.vedouSeUFirem')}
       </p>
     </section>
   );

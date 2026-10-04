@@ -10,6 +10,8 @@
  * Čtení a zápis do databáze je v lib/oznameniServer.ts.
  */
 
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
 export type KlicOznameni = 'BONUS_SCHVALEN' | 'MESICNI_PREHLED';
 
 export type PopisOznameni = {
@@ -45,3 +47,19 @@ export const OZNAMENI: PopisOznameni[] = [
 ];
 
 export const KLICE_OZNAMENI: KlicOznameni[] = OZNAMENI.map((o) => o.klic);
+
+/**
+ * Popisek zprávy podle KÓDU, ne podle českého názvu (vzor `nazevMeny`
+ * z dávky 4). Jazyk je NEPOVINNÝ - bez něj zůstává česká strana jako zdroj
+ * pravdy, takže si texty výš může vzít i pošta.
+ */
+export function popisekOznameni(
+  o: PopisOznameni,
+  cast: 'nazev' | 'popis' | 'kdy' | 'komu',
+  jazyk?: Jazyk,
+): string {
+  if (!jazyk || jazyk === 'cs') return o[cast];
+  const klic = `oznameni.${o.klic}.${cast}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? o[cast] : text;
+}

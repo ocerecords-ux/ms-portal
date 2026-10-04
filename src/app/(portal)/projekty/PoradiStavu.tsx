@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { barvaStavu, nazevStavu } from '@/lib/stavyProjektu';
-import { useJazyk } from '../components/JazykProvider';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 /**
  * POŘADÍ STAVŮ V PŘEHLEDU (zadání 24. 9. 2026: „potřebuju, abych si mohl
@@ -28,6 +28,7 @@ export function PoradiStavu({
   muzeMenit: boolean;
 }) {
   const jazyk = useJazyk();
+  const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
   const [draft, setDraft] = useState<string[]>(poradi);
   const [taheny, setTaheny] = useState<number | null>(null);
@@ -72,11 +73,11 @@ export function PoradiStavu({
         body: JSON.stringify({ nazvy: draft }),
       });
       const data = await odpoved.json().catch(() => null);
-      if (!odpoved.ok) throw new Error(data?.error || 'Uložení se nezdařilo.');
+      if (!odpoved.ok) throw new Error(data?.error || t('poradiStavu.nejdeUlozit'));
       onZmena(Array.isArray(data?.poradi) ? data.poradi : draft);
       setOtevreno(false);
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
+      setChyba(err instanceof Error ? err.message : t('poradiStavu.nejdeUlozit'));
     } finally {
       setUklada(false);
     }
@@ -87,7 +88,7 @@ export function PoradiStavu({
       <button
         type="button"
         onClick={() => (otevreno ? setOtevreno(false) : otevri())}
-        title="V jakém pořadí se mají stavy řadit v tabulce"
+        title={t('poradiStavu.bublina')}
         className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-heading text-muted hover:text-ink hover:border-brand-purple transition-colors"
       >
         <svg
@@ -103,15 +104,13 @@ export function PoradiStavu({
           <path d="M4 7h10M4 12h7M4 17h4" />
           <path d="M17 5v14M17 19l-2.5-2.5M17 19l2.5-2.5" />
         </svg>
-        Pořadí stavů
+        {t('poradiStavu.tlacitko')}
       </button>
 
       {otevreno && (
         <span className="absolute left-0 top-full mt-2 z-40 w-[min(92vw,340px)] max-h-[70vh] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-3 flex flex-col gap-2">
           <span className="text-[11px] font-body text-muted">
-            {muzeMenit
-              ? 'Přetažením (nebo šipkami) nastavíte, v jakém pořadí se stavy řadí v tabulce. Platí pro celý tým.'
-              : 'V tomhle pořadí se stavy řadí v tabulce. Měnit ho smí Žůžo-labůžo a produkce.'}
+            {muzeMenit ? t('poradiStavu.popisMenit') : t('poradiStavu.popisCteni')}
           </span>
 
           {draft.map((nazev, i) => (
@@ -140,7 +139,7 @@ export function PoradiStavu({
                     type="button"
                     onClick={() => posun(i, -1)}
                     disabled={i === 0}
-                    aria-label={`Posunout ${nazev} výš`}
+                    aria-label={t('poradiStavu.vys', { nazev: nazevStavu(nazev, jazyk) })}
                     className="w-6 h-6 rounded text-muted hover:text-ink disabled:opacity-30"
                   >
                     ↑
@@ -149,7 +148,7 @@ export function PoradiStavu({
                     type="button"
                     onClick={() => posun(i, 1)}
                     disabled={i === draft.length - 1}
-                    aria-label={`Posunout ${nazev} níž`}
+                    aria-label={t('poradiStavu.niz', { nazev: nazevStavu(nazev, jazyk) })}
                     className="w-6 h-6 rounded text-muted hover:text-ink disabled:opacity-30"
                   >
                     ↓
@@ -169,14 +168,14 @@ export function PoradiStavu({
                 disabled={uklada}
                 className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-4 py-1.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
               >
-                {uklada ? 'Ukládám…' : 'Uložit pořadí'}
+                {uklada ? t('poradiStavu.ukladam') : t('poradiStavu.ulozit')}
               </button>
               <button
                 type="button"
                 onClick={() => setOtevreno(false)}
                 className="text-xs font-heading text-muted hover:text-ink"
               >
-                Zrušit
+                {t('poradiStavu.zrusit')}
               </button>
             </span>
           )}

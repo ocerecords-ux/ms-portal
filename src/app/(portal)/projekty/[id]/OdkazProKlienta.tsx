@@ -2,6 +2,8 @@
 
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
+import { kodJazyka } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Odkaz do AudioTaggeru pro klienta (zadání 11. 9. 2026).
@@ -16,12 +18,13 @@ import { useState } from 'react';
 
 export type StavOdkazu = { url: string | null; otevrenoAt: string | null; pocetOtevreni: number };
 
-function datum(iso: string): string {
-  return new Date(iso).toLocaleString('cs-CZ', {
+function datum(iso: string, jazyk: 'cs' | 'en'): string {
+  return new Date(iso).toLocaleString(kodJazyka(jazyk), {
     day: 'numeric',
     month: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 
@@ -32,6 +35,8 @@ export function OdkazProKlienta({
   caflouProjectId: string;
   pocatecni: StavOdkazu;
 }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [stav, setStav] = useState<StavOdkazu>(pocatecni);
   const [pracuje, setPracuje] = useState(false);
   const [zkopirovano, setZkopirovano] = useState(false);
@@ -46,12 +51,12 @@ export function OdkazProKlienta({
       const res = await fetch(url, init);
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Nepodařilo se to.');
+        setChyba((data as { error?: string })?.error || t('odkazKl.nepovedlo'));
         return;
       }
       setStav(data as StavOdkazu);
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('odkazKl.bezSpojeni'));
     } finally {
       setPracuje(false);
     }
@@ -64,7 +69,7 @@ export function OdkazProKlienta({
       setZkopirovano(true);
       window.setTimeout(() => setZkopirovano(false), 2000);
     } catch {
-      setChyba('Kopírování prohlížeč nepovolil — odkaz je vidět vedle, dá se označit ručně.');
+      setChyba(t('odkazKl.kopirovaniNejde'));
     }
   }
 
@@ -72,20 +77,23 @@ export function OdkazProKlienta({
     <div className="bg-surface rounded-card border border-line shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">
-          Odkaz pro klienta
+          {t('odkazKl.nadpis')}
         </p>
         {stav.url ? (
           <p className="text-xs font-body text-ink m-0 mt-1 break-all">
             {stav.url}
             <span className="text-muted">
               {stav.pocetOtevreni > 0 && stav.otevrenoAt
-                ? ` · otevřeno ${stav.pocetOtevreni}×, naposledy ${datum(stav.otevrenoAt)}`
-                : ' · zatím neotevřený'}
+                ? t('odkazKl.otevreno', {
+                    pocet: stav.pocetOtevreni,
+                    datum: datum(stav.otevrenoAt, jazyk),
+                  })
+                : t('odkazKl.neotevreny')}
             </span>
           </p>
         ) : (
           <p className="text-xs font-body text-muted m-0 mt-1">
-            Zatím žádný. Pošle se sám ve zprávě o prvních tracích, nebo ho vyrobte tady.
+            {t('odkazKl.zadny')}
           </p>
         )}
         {chyba && <p className="text-xs font-body text-danger m-0 mt-1">{chyba}</p>}
@@ -98,7 +106,7 @@ export function OdkazProKlienta({
             onClick={() => void zkopiruj()}
             className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 bg-brand-purple text-white hover:bg-brand-purpleDeep transition-colors"
           >
-            {zkopirovano ? 'Zkopírováno' : 'Kopírovat'}
+            {zkopirovano ? t('odkazKl.zkopirovano') : t('odkazKl.kopirovat')}
           </button>
         )}
         <button
@@ -107,7 +115,7 @@ export function OdkazProKlienta({
           onClick={() => void posli(`${zaklad}${stav.url ? '?novy=1' : ''}`, { method: 'POST' })}
           className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 border border-line text-ink hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-50"
         >
-          {stav.url ? 'Vygenerovat nový' : 'Vyrobit odkaz'}
+          {stav.url ? t('odkazKl.novy') : t('odkazKl.vyrobit')}
         </button>
         {/* Zavřením odkaz přestane fungovat i tomu, komu ho klient přeposlal -
             proto se portál ptá podruhé (18. 9. 2026). */}
@@ -115,8 +123,8 @@ export function OdkazProKlienta({
           <TlacitkoSmazat
             onSmazat={() => posli(zaklad, { method: 'DELETE' })}
             disabled={pracuje}
-            popisek="Zavřít"
-            otazka="Opravdu zavřít odkaz?"
+            popisek={t('odkazKl.zavrit')}
+            otazka={t('odkazKl.opravduZavrit')}
             trida="text-xs"
           />
         )}

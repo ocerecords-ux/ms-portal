@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { OZNAMENI, type KlicOznameni } from '@/lib/oznameni';
+import { OZNAMENI, popisekOznameni, type KlicOznameni } from '@/lib/oznameni';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * ADMINISTRACE AUTOMATICKÝCH ZPRÁV (zadání 15. 9. 2026: „udělejme pro tyhle
@@ -27,6 +28,8 @@ export function ZpravyPanel({
   minulyMesic: string;
 }) {
   const router = useRouter();
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [stav, setStav] = useState(zapnuti);
   const [busy, setBusy] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -48,12 +51,12 @@ export function ZpravyPanel({
         zapnuti?: Record<string, boolean>;
       };
       if (!res.ok) {
-        setChyba(data?.error || 'Nepodařilo se to uložit.');
+        setChyba(data?.error || t('zpravyPortalu.nejdeUlozit'));
         return;
       }
       if (data.zapnuti) setStav(data.zapnuti);
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('zpravyPortalu.bezSpojeni'));
     } finally {
       setBusy(null);
     }
@@ -75,19 +78,21 @@ export function ZpravyPanel({
         vypnuto?: boolean;
       };
       if (!res.ok) {
-        setChyba(data?.error || 'Rozeslání se nepodařilo.');
+        setChyba(data?.error || t('zpravyPortalu.rozeslaniNejde'));
         return;
       }
       setHlaska(
         data.vypnuto
-          ? 'Zpráva je vypnutá, nic se nerozeslalo.'
-          : `Odesláno ${data.odeslano ?? 0}, přeskočeno ${data.preskoceno ?? 0}${
-              data.chyby ? `, chyb ${data.chyby}` : ''
-            }.`,
+          ? t('zpravyPortalu.vypnutaZprava')
+          : t(data.chyby ? 'zpravyPortalu.odeslanoSChybami' : 'zpravyPortalu.odeslano', {
+              odeslano: data.odeslano ?? 0,
+              preskoceno: data.preskoceno ?? 0,
+              chyby: data.chyby ?? 0,
+            }),
       );
       router.refresh();
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('zpravyPortalu.bezSpojeni'));
     } finally {
       setBusy(null);
     }
@@ -108,8 +113,12 @@ export function ZpravyPanel({
           <div key={o.klic} className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="min-w-0">
-                <h2 className="font-heading font-semibold text-base text-ink m-0">{o.nazev}</h2>
-                <p className="text-sm font-body text-muted m-0 mt-1 max-w-[70ch]">{o.popis}</p>
+                <h2 className="font-heading font-semibold text-base text-ink m-0">
+                  {popisekOznameni(o, 'nazev', jazyk)}
+                </h2>
+                <p className="text-sm font-body text-muted m-0 mt-1 max-w-[70ch]">
+                  {popisekOznameni(o, 'popis', jazyk)}
+                </p>
               </div>
               <label className="flex items-center gap-2 text-sm font-heading text-ink whitespace-nowrap">
                 <input
@@ -118,7 +127,7 @@ export function ZpravyPanel({
                   disabled={busy === o.klic}
                   onChange={(e) => void prepni(o.klic, e.target.checked)}
                 />
-                {zapnuto ? 'Zapnuto' : 'Vypnuto'}
+                {zapnuto ? t('zpravyPortalu.zapnuto') : t('zpravyPortalu.vypnuto')}
               </label>
             </div>
 
@@ -126,15 +135,19 @@ export function ZpravyPanel({
               <tbody>
                 <tr className="border-t border-line">
                   <td className="py-2 pr-4 text-xs font-heading text-muted uppercase tracking-wide align-top w-32">
-                    Kdy
+                    {t('zpravyPortalu.kdy')}
                   </td>
-                  <td className="py-2 text-sm font-body text-ink">{o.kdy}</td>
+                  <td className="py-2 text-sm font-body text-ink">
+                    {popisekOznameni(o, 'kdy', jazyk)}
+                  </td>
                 </tr>
                 <tr className="border-t border-line">
                   <td className="py-2 pr-4 text-xs font-heading text-muted uppercase tracking-wide align-top">
-                    Komu
+                    {t('zpravyPortalu.komu')}
                   </td>
-                  <td className="py-2 text-sm font-body text-ink">{o.komu}</td>
+                  <td className="py-2 text-sm font-body text-ink">
+                    {popisekOznameni(o, 'komu', jazyk)}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -146,7 +159,7 @@ export function ZpravyPanel({
                 rel="noreferrer"
                 className="font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-ink no-underline hover:border-brand-purple transition-colors"
               >
-                Ukázat, jak mail vypadá
+                {t('zpravyPortalu.nahled')}
               </a>
 
               {/* Rucni rozeslani ma smysl jen u te mesicni - bonus odchazi
@@ -165,10 +178,10 @@ export function ZpravyPanel({
                     disabled={busy === 'rozeslani' || !mesic}
                     className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
                   >
-                    {busy === 'rozeslani' ? 'Rozesílám…' : 'Rozeslat teď'}
+                    {busy === 'rozeslani' ? t('zpravyPortalu.rozesilam') : t('zpravyPortalu.rozeslatTed')}
                   </button>
                   <span className="text-xs font-body text-muted">
-                    Komu už přehled za daný měsíc odešel, ho podruhé nedostane.
+                    {t('zpravyPortalu.podruheNe')}
                   </span>
                 </span>
               )}
@@ -180,7 +193,7 @@ export function ZpravyPanel({
       <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-line">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Poslední odeslané měsíční přehledy
+            {t('zpravyPortalu.posledni')}
           </h2>
         </div>
         <div className="overflow-x-auto">
@@ -189,7 +202,7 @@ export function ZpravyPanel({
               {odeslane.length === 0 && (
                 <tr>
                   <td className="px-4 py-6 text-center text-sm font-body text-muted">
-                    Zatím žádný přehled neodešel.
+                    {t('zpravyPortalu.zadnyNeodesel')}
                   </td>
                 </tr>
               )}

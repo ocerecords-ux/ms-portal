@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import type { PoznamkaProjektu } from '@/lib/poznamkyProjektuServer';
+import { formatDatumCas, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * POZNÁMKY U PROJEKTU (zadání 23. 9. 2026: „udělal bych u projektu taky
@@ -15,14 +17,8 @@ import type { PoznamkaProjektu } from '@/lib/poznamkyProjektuServer';
  * Vidí to Žůžo-labůžo a produkce, zvukař ne - záložka se mu vůbec neukáže.
  */
 
-function kdyText(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ', {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(iso));
+function kdyText(iso: string, jazyk: Jazyk): string {
+  return formatDatumCas(jazyk, new Date(iso));
 }
 
 export function PoznamkyProjektu({
@@ -36,6 +32,8 @@ export function PoznamkyProjektu({
   jaId: string;
   jsemAdmin: boolean;
 }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [poznamky, setPoznamky] = useState<PoznamkaProjektu[]>(pocatecni);
   const [text, setText] = useState('');
   const [uklada, setUklada] = useState(false);
@@ -55,11 +53,11 @@ export function PoznamkyProjektu({
         body: JSON.stringify({ text: cisty }),
       });
       const data = await odpoved.json().catch(() => null);
-      if (!odpoved.ok) throw new Error(data?.error || 'Poznámku se nepodařilo uložit.');
+      if (!odpoved.ok) throw new Error(data?.error || t('poznamky.nejdeUlozit'));
       setPoznamky(data.poznamky ?? []);
       setText('');
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Poznámku se nepodařilo uložit.');
+      setChyba(err instanceof Error ? err.message : t('poznamky.nejdeUlozit'));
     } finally {
       setUklada(false);
     }
@@ -72,10 +70,10 @@ export function PoznamkyProjektu({
         method: 'DELETE',
       });
       const data = await odpoved.json().catch(() => null);
-      if (!odpoved.ok) throw new Error(data?.error || 'Poznámku se nepodařilo smazat.');
+      if (!odpoved.ok) throw new Error(data?.error || t('poznamky.nejdeSmazat'));
       setPoznamky(data.poznamky ?? []);
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Poznámku se nepodařilo smazat.');
+      setChyba(err instanceof Error ? err.message : t('poznamky.nejdeSmazat'));
     }
   }
 
@@ -83,7 +81,7 @@ export function PoznamkyProjektu({
     <div className="flex flex-col gap-4">
       <div className="rounded-card border border-line bg-surface p-4 flex flex-col gap-2.5">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Nová poznámka</span>
+          <span className="text-sm font-body text-ink">{t('poznamky.nova')}</span>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -96,7 +94,7 @@ export function PoznamkyProjektu({
               }
             }}
             rows={3}
-            placeholder="Co je u téhle zakázky potřeba vědět…"
+            placeholder={t('poznamky.placeholder')}
             className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
           />
         </label>
@@ -107,10 +105,10 @@ export function PoznamkyProjektu({
             disabled={uklada || text.trim().length === 0}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
           >
-            {uklada ? 'Ukládám…' : 'Přidat poznámku'}
+            {uklada ? t('poznamky.ukladam') : t('poznamky.pridat')}
           </button>
           <span className="text-xs font-body text-muted">
-            Vidí je jen Žůžo-labůžo a produkce.
+            {t('poznamky.kdoVidi')}
           </span>
         </div>
         {chyba && <p className="text-sm font-body text-danger m-0">{chyba}</p>}
@@ -118,7 +116,7 @@ export function PoznamkyProjektu({
 
       {poznamky.length === 0 ? (
         <p className="text-sm font-body text-muted m-0">
-          Zatím tu nic není. Poznámka z objednávky se sem propíše sama, jakmile nějaká přijde.
+          {t('poznamky.prazdno')}
         </p>
       ) : (
         <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
@@ -131,10 +129,10 @@ export function PoznamkyProjektu({
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-heading font-semibold text-sm text-ink">{p.autorJmeno}</span>
-                <span className="text-xs font-body text-muted">{kdyText(p.kdy)}</span>
+                <span className="text-xs font-body text-muted">{kdyText(p.kdy, jazyk)}</span>
                 {p.zObjednavky && (
                   <span className="text-[11px] font-heading uppercase tracking-[0.1em] text-brand-purple">
-                    Z objednávky
+                    {t('poznamky.zObjednavky')}
                   </span>
                 )}
                 {!p.zObjednavky && (p.autorId === jaId || jsemAdmin) && (
@@ -143,7 +141,7 @@ export function PoznamkyProjektu({
                     onClick={() => void smaz(p.id)}
                     className="ml-auto text-xs font-heading text-muted hover:text-danger transition-colors"
                   >
-                    Smazat
+                    {t('poznamky.smazat')}
                   </button>
                 )}
               </div>

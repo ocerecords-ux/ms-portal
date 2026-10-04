@@ -443,7 +443,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       {ukazatProgres && (
         <ProgresNataceniKarta
           progres={progresNataceni}
-          herci={herciProjektu.map((id) => ({ id, jmeno: jmenoHerce.get(id) ?? 'Herec' }))}
+          herci={herciProjektu.map((id) => ({
+            id,
+            jmeno: jmenoHerce.get(id) ?? prelozit(jazyk, 'projekt.zalohaHerce'),
+          }))}
+          jazyk={jazyk}
         />
       )}
       {/* Karta "Z Caflou" je od 10. 9. 2026 pryc (zadani). Ukazovala tytez
@@ -845,7 +849,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       key: 'technicke-parametry',
       label: prelozit(jazyk, 'projekt.zalozka.technickeParametry'),
       content: (
-        <TechnickeParametryKarta parametry={technickeParametry} smiMenit={smiMenitParametry} />
+        <TechnickeParametryKarta
+          parametry={technickeParametry}
+          smiMenit={smiMenitParametry}
+          jazyk={jazyk}
+        />
       ),
     });
   }
@@ -1108,7 +1116,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       key: 'protokol',
       label: prelozit(jazyk, 'projekt.zalozka.protokol'),
       count: zaznamyNatoceni.length,
-      content: <ProtokolNataceni zaznamy={zaznamyNatoceni} />,
+      content: <ProtokolNataceni zaznamy={zaznamyNatoceni} jazyk={jazyk} />,
     });
   }
   /**
@@ -1143,7 +1151,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       key: 'historie',
       label: prelozit(jazyk, 'projekt.zalozka.historie'),
       count: historie.length,
-      content: <HistorieProjektu udalosti={historie} />,
+      content: <HistorieProjektu udalosti={historie} jazyk={jazyk} />,
     });
   }
   // DOKLADY ZUSTAVAJI JEN ZUZO-LABUZO (zadani 16. 9. 2026: „nemela by videt

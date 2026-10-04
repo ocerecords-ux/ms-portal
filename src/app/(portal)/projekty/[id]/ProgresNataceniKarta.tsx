@@ -1,5 +1,17 @@
 import { ValecProgresu } from '@/components/ValecProgresu';
 import type { ProgresProjektu } from '@/lib/progresNataceniServer';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+
+/**
+ * Tvar čísla u stran textu. Česky „stranu / strany / stran", anglicky stačí
+ * jednotné a množné číslo - proto tři klíče a ne skládání z kousků
+ * (pravidlo 7 v docs/preklad-portalu.md).
+ */
+function klicStran(pocet: number): string {
+  if (pocet === 1) return 'progresKarta.textMaJednu';
+  if (pocet <= 4) return 'progresKarta.textMaMalo';
+  return 'progresKarta.textMaVic';
+}
 
 /**
  * PROGRES NATÁČENÍ V DETAILU PROJEKTU (zadání 19. 9. 2026: „hlavně my
@@ -18,15 +30,18 @@ import type { ProgresProjektu } from '@/lib/progresNataceniServer';
 export function ProgresNataceniKarta({
   progres,
   herci,
+  jazyk,
 }: {
   progres: ProgresProjektu | null;
   herci: { id: string; jmeno: string }[];
+  /** Jazyk PROPEM - kartu kreslí serverová stránka (pravidlo 8). */
+  jazyk: Jazyk;
 }) {
   const stran = progres?.stranTextu ?? null;
   const zNormostran = progres?.zdrojCelku === 'ns';
-  const tvar = (n: number) => (n === 1 ? 'stranu' : n <= 4 ? 'strany' : 'stran');
 
-  const jmeno = (id: string) => herci.find((h) => h.id === id)?.jmeno ?? 'herec';
+  const jmeno = (id: string) =>
+    herci.find((h) => h.id === id)?.jmeno ?? prelozit(jazyk, 'progresKarta.zalohaHerce');
   const chybiNs = (progres?.bezNormostran ?? []).map(jmeno);
   const nesoulad = progres?.nesoulad ?? null;
   const koef = progres?.koeficient ?? null;
@@ -35,14 +50,14 @@ export function ProgresNataceniKarta({
     <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Progres natáčení
+          {prelozit(jazyk, 'progresKarta.nadpis')}
         </h2>
         <span className="text-xs font-body text-muted">
           {stran
             ? zNormostran
-              ? `Počítáno z ${stran} normostran — ve složce projektu není PDF s textem (název končí _RE), tak se bere rozsah projektu`
-              : `Text má ${stran} ${tvar(stran)} (PDF ve složce projektu)`
-            : 'Ve složce projektu není PDF s textem ani zadané normostrany — není proti čemu počítat'}
+              ? prelozitS(jazyk, 'progresKarta.zNormostran', { stran })
+              : prelozitS(jazyk, klicStran(stran), { stran })
+            : prelozit(jazyk, 'progresKarta.bezCehoPocitat')}
         </span>
       </div>
 
@@ -53,15 +68,22 @@ export function ProgresNataceniKarta({
           frekvence. */}
       {koef && !zNormostran && (
         <p className="text-xs font-body text-muted m-0 -mt-2">
-          Koeficient téhle knihy: {koef.normostrany} normostran ÷ {koef.stranPdf} stran textu ={' '}
+          {prelozitS(jazyk, 'progresKarta.koeficientPred', {
+            ns: koef.normostrany,
+            stran: koef.stranPdf,
+          })}
           <strong className="font-heading font-semibold text-ink">
             {koef.nsNaStranu.toFixed(2)}
-          </strong>{' '}
-          normostrany na stranu textu. Z něj se dopočítává, kolik normostran komu ještě zbývá.
+          </strong>
+          {prelozit(jazyk, 'progresKarta.koeficientZa')}
         </p>
       )}
 
-      <ValecProgresu velky progres={progres?.celkem ?? null} prazdne="Zatím se nedá spočítat - chybí text nebo zápis strany." />
+      <ValecProgresu
+        velky
+        progres={progres?.celkem ?? null}
+        prazdne={prelozit(jazyk, 'progresKarta.nedaSpocitat')}
+      />
 
       {herci.length > 1 && (
         <ul className="list-none m-0 p-0 flex flex-col gap-3 border-t border-line pt-4">
@@ -71,16 +93,16 @@ export function ProgresNataceniKarta({
               <li key={h.id} className="grid grid-cols-1 sm:grid-cols-[12rem_1fr] items-center gap-x-4 gap-y-1">
                 <span className="font-heading font-semibold text-sm text-ink truncate">{h.jmeno}</span>
                 <div className="flex flex-col gap-0.5">
-                  <ValecProgresu progres={svuj} prazdne="zatím bez zápisu" />
+                  <ValecProgresu progres={svuj} prazdne={prelozit(jazyk, 'progresKarta.bezZapisu')} />
                   {/* Jediné číslo, které se u herců liší a k něčemu je: kolik
                       normostran mu zbývá, tedy kolik frekvencí mu naplánovat. */}
                   {svuj && svuj.zbyvaNs !== null && svuj.vahaNs !== null && !svuj.dotoceno && (
                     <span className="text-xs font-body text-muted tabular-nums">
-                      zbývá natočit ≈{' '}
+                      {prelozit(jazyk, 'progresKarta.zbyvaPred')}
                       <strong className="font-heading font-semibold text-ink">
-                        {svuj.zbyvaNs} normostran
-                      </strong>{' '}
-                      z jeho {svuj.vahaNs}
+                        {prelozitS(jazyk, 'progresKarta.zbyvaNs', { pocet: svuj.zbyvaNs })}
+                      </strong>
+                      {prelozitS(jazyk, 'progresKarta.zbyvaZa', { celkem: svuj.vahaNs })}
                     </span>
                   )}
                 </div>
@@ -94,16 +116,15 @@ export function ProgresNataceniKarta({
         <div className="border-t border-line pt-4 flex flex-col gap-2">
           {chybiNs.length > 0 && (
             <p className="text-xs font-body text-danger m-0">
-              Bez normostran: {chybiNs.join(', ')}. Bez rozsahu se nedá spočítat, kolik komu zbývá
-              natočit, a projekt se místo váženého součtu počítá jako průměr herců. Doplňte rozsah
-              u herce níž ve Výrobě.
+              {prelozitS(jazyk, 'progresKarta.bezNormostran', { jmena: chybiNs.join(', ') })}
             </p>
           )}
           {nesoulad && (
             <p className="text-xs font-body text-danger m-0">
-              Normostrany herců dávají dohromady {nesoulad.soucetHercu}, ale kniha má{' '}
-              {nesoulad.kniha}. Jedno z těch čísel je špatně — poměr mezi herci sedí dál, ale
-              zbývající normostrany podle toho nebudou přesné.
+              {prelozitS(jazyk, 'progresKarta.nesoulad', {
+                soucet: nesoulad.soucetHercu,
+                kniha: nesoulad.kniha,
+              })}
             </p>
           )}
         </div>
