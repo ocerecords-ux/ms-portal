@@ -96,12 +96,29 @@ export function RecordingSection({
   const zaMesic = new Date();
   zaMesic.setMonth(zaMesic.getMonth() + 1);
 
+  /**
+   * NORMOSTRANY PŘEDVYPLNĚNÉHO HERCE (připomínka Heleny 2. 10. 2026: „když
+   * chci poslat nabídku termínů u projektu, kde je více herců, automaticky mi
+   * to tam dá prvního herce v seznamu (což je ok), ale k němu celkový počet NS
+   * celé knihy. Když si tam pak kliknu další herce, už je to správně").
+   *
+   * Přepnutí herce si jeho díl bralo už od 23. 9. 2026, ale PRVNÍ otevření
+   * okna ne - do formuláře se vepsal rozsah celého projektu. U knihy dělené
+   * mezi víc herců z toho vyšel dvojnásobek frekvencí a nabídka se posílala
+   * špatná, dokud produkce herce nepřeklikla a zpátky.
+   *
+   * Kdo svůj díl vyplněný nemá, dostane rozsah celého projektu jako dřív -
+   * stejné pravidlo jako ve vyberHerce níž.
+   */
+  const nsVychozihoHerce =
+    (defaultActorUserId ? normostranyHercu?.[defaultActorUserId] : undefined) ?? pageCount ?? 0;
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     actorUserId: defaultActorUserId ?? '',
     studioId: studios[0]?.id ?? '',
-    requiredSessions: Math.max(1, sessionsFromPages),
-    pageCount: pageCount ?? 0,
+    requiredSessions: Math.max(1, sessionsForPages(nsVychozihoHerce, stranNaFrekvenci)),
+    pageCount: nsVychozihoHerce,
     periodFrom: prvniMozny,
     // Posledni mozna frekvence = dva dny pred dokoncenim. Bez data
     // dokonceni mesic dopredu.
@@ -253,6 +270,40 @@ export function RecordingSection({
     }
   }
 
+  /**
+   * UPOMÍNKA HERCI PŘÍMO Z PROJEKTU (připomínka Heleny 2. 10. 2026: „tlačítko
+   * na upomenutí herce, aby si naklikal termíny").
+   *
+   * Je i v detailu nabídky, ale produkce kouká na projekt - a odtud je vidět,
+   * na koho se čeká. Posílá krátkou připomínku s odkazem; stavu nabídky se
+   * nedotkne, takže se dá zmáčknout i víckrát.
+   */
+  const [upominam, setUpominam] = useState<string | null>(null);
+
+  async function upomen(id: string) {
+    setUpominam(id);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/kalendar/nabidky/${id}/upomenout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || t('natacPlan.chybaUpominky'));
+        return;
+      }
+      setInfo(t('natacPlan.upomenuto'));
+      router.refresh();
+    } catch {
+      setError(t('natacPlan.chybaUpominky'));
+    } finally {
+      setUpominam(null);
+    }
+  }
+
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
 
@@ -283,6 +334,10 @@ export function RecordingSection({
 
       {info && (
         <p className="text-sm font-body text-ink bg-okTint border border-line rounded-lg px-3 py-2 m-0">{info}</p>
+      )}
+      {/* Chyba upomínky - formulář bývá zavřený, tak se hlásí i tady. */}
+      {error && !open && (
+        <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
       )}
 
       {requests.length > 0 && (
@@ -315,6 +370,18 @@ export function RecordingSection({
                 >
                   {nazevStavuNabidky(r.status, jazyk)}
                 </span>
+                {/* Upomínka jen tam, kde se opravdu čeká na herce. */}
+                {canManage && ['SENT', 'PICKING', 'RETURNED'].includes(r.status) && (
+                  <button
+                    type="button"
+                    disabled={upominam !== null}
+                    onClick={() => void upomen(r.id)}
+                    title={t('natacPlan.upomenoutPopis')}
+                    className="rounded-lg border border-line px-3 py-1 text-xs font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
+                  >
+                    {upominam === r.id ? t('natacPlan.upominam') : t('natacPlan.upomenout')}
+                  </button>
+                )}
               </span>
             </li>
           ))}

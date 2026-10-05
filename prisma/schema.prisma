@@ -318,6 +318,18 @@ model User {
   /// ktery o to nepozadal, by dostaval mail po kazdem drobnem srovnani planu.
   dostavaZmenuTerminuKlient Boolean @default(false)
 
+  /// PRODUKCE chce vedet mailem, ze si herec naklikal terminy (pripominka
+  /// Heleny 5. 10. 2026: „potrebuju dostavat mailem notifikace o vyplneni
+  /// terminu").
+  ///
+  /// V portalu to zvoneni bylo uz driv, ale jen jako notifikace pro toho, kdo
+  /// nabidku zalozil. Mail chodi KAZDEMU ZAPNUTEMU z tymu - nabidku casto
+  /// zaklada nekdo jiny, nez kdo plan hlida, a vysledek potrebuji oba.
+  ///
+  /// Stejny princip jako dostavaDotoceno: priznak u uctu, ne adresa v kodu.
+  /// Prepina se na karte uzivatele i v „Muj ucet".
+  dostavaVyberTerminu Boolean @default(false)
+
   /// RANNÍ PŘEHLED OD BRUNA (zadani 23. 9. 2026: „chtel bych, aby mi Bruno
   /// sesumiroval udalosti na danny den. Vzdycky at mi to posle v sedm rano
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").

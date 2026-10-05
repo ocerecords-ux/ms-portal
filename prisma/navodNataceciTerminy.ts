@@ -31,7 +31,7 @@ V detailu projektu v záložce **Natáčecí plán** klikněte na **Vytvořit na
 ![Okno Vytvořit nabídku termínů s očíslovanými částmi](/navody/terminy-1.png)
 
 1. **Studia** — kliknutím zapnete nebo vypnete studio, ze kterého se nabízí. Zapnuté je fialové s fajfkou. Předvybere se studio a všechna ve stejném městě (v Brně tedy Brno I i Brno II rovnou). **Herec** nad tím je předvyplněný podle projektu.
-2. **Normostrany a Počet frekvencí** — počet se spočítá z normostran (40 NS na frekvenci), dá se přepsat. Když má projekt **víc herců**, vyplňte každému jeho normostrany rovnou v detailu projektu (políčko **NS** vedle jména) — přepnutím herce v tomhle okně se pak předvyplní jeho díl knihy, ne rozsah celé; kdo díl vyplněný nemá, dostane rozsah projektu jako dřív. **První frekvence nejdříve** je zítřek — dnešek se nenabízí.
+2. **Normostrany a Počet frekvencí** — počet se spočítá z normostran (40 NS na frekvenci), dá se přepsat. Když má projekt **víc herců**, vyplňte každému jeho normostrany rovnou v detailu projektu (políčko **NS** vedle jména) — do okna se pak předvyplní díl toho herce, který je navrchu, a stejně tak po přepnutí na jiného; kdo díl vyplněný nemá, dostane rozsah celého projektu jako dřív. **První frekvence nejdříve** je zítřek — dnešek se nenabízí.
 3. **Poslední frekvence nejpozději** — sama se nastaví na **dva dny před datem dokončení projektu**, ať stihneme stříhat a odevzdat. Když projekt datum dokončení nemá, je tu měsíc dopředu a je potřeba ho upravit ručně. Vedle je **Poznámka pro herce** — přijde mu v e-mailu i na stránce s výběrem.
 4. **Živý náhled** — kolik volných míst herec dostane a jejich přehled po dnech. Přepočítá se hned, jak změníte studia, období nebo herce.
 
@@ -59,11 +59,15 @@ Vidí jen **dny a časy za město** — ne studio. Kliknutím na termín ho zaš
 3. **Vybrat vlastní čas** — u každého termínu. Když herci čas nesedí, posune nebo zkrátí ho (třeba 14–18, nebo jen tři hodiny).
 4. **Použít tento čas** — portál ověří, že je v tu dobu ve studiu volno (v Brně zkusí obě studia). Vlastní čas nahradí původní termín a rovnou se zaškrtne. Produkce ho pak vidí označený jako **Návrh herce**.
 
-Po odeslání se vybrané termíny **drží** (délka držení je v Cenících). Produkci přijde oznámení.
+Po odeslání se vybrané termíny **drží** (délka držení je v Cenících). Produkci přijde oznámení pod zvonečkem a **mailem každému, kdo si to zapnul** v **Můj účet → Upozornění** (*Chci vědět, když si herec naklikal termíny*) — zapnout se to dá i na kartě uživatele v Administraci. Mail nese vybrané termíny, do kdy se drží a případnou poznámku herce; chodí u všech projektů, ne jen u vašich.
+
+**Když herec nic neklikne**, pošlete mu připomínku: tlačítko **Upomenout herce** je na stránce nabídky vedle *Poslat znovu* a taky u každé nabídky v záložce **Natáčecí plán** v detailu projektu (**Upomenout**). Na rozdíl od *Poslat znovu* se nabídky ani jejího stavu nedotkne — pošle krátký mail s odkazem a zazvoní hercovi v portálu. Zmáčknout to jde opakovaně, v **Historii** nabídky je vidět kdy a od koho. Tlačítko se ukazuje jen tam, kde se na herce opravdu čeká.
 
 # 4. Potvrzení (produkce)
 
 Oznámení vede na stránku nabídky. Nahoře vidíte, kolik frekvencí je potřeba, kolik herec vybral a do kdy se termíny drží. Pod tím je jeho výběr.
+
+**Potřeba frekvencí** je nahoře rovnou **políčko** — číslo přepište a odklikněte, uloží se samo (dřív se to dalo měnit jen dole v **Parametrech**). Hodí se to při odesílání: je vidět, kolik je volných míst, a když jich je méně než frekvencí, odeslání je zamčené — po snížení počtu se rozsvítí. U potvrzené a zrušené nabídky je to zas jen číslo.
 
 ![Stránka nabídky s výběrem herce a tlačítky pro rozhodnutí](/navody/terminy-3.png)
 

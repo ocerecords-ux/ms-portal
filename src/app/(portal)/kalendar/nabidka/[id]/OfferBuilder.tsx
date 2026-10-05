@@ -242,6 +242,77 @@ export function OfferBuilder({
   }
 
   /**
+   * POČET FREKVENCÍ ROVNOU U ODESÍLÁNÍ (připomínka Heleny 2. 10. 2026:
+   * „možnost editovat počet frekvencí při odesílání nabídky termínů").
+   *
+   * Políčko bylo jen dole v Parametrech, přes celou stránku od tlačítka
+   * „Odeslat herci" - a právě při odesílání se to mění nejčastěji: produkce
+   * vidí, kolik je volných míst, a podle toho počet doladí. Ukládá se po
+   * odkliknutí z políčka, ne dalším tlačítkem.
+   */
+  async function ulozFrekvence() {
+    const pocet = Math.min(60, Math.max(1, form.requiredSessions));
+    if (pocet !== form.requiredSessions) setForm((f) => ({ ...f, requiredSessions: pocet }));
+    if (pocet === request.requiredSessions) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/kalendar/nabidky/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requiredSessions: pocet }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || t('nabidkaTerminu.chybaUlozeni'));
+        // Zpatky na ulozenou hodnotu - at na obrazovce nesviti cislo,
+        // ktere v nabidce neplati.
+        setForm((f) => ({ ...f, requiredSessions: request.requiredSessions }));
+        return;
+      }
+      setInfo(t('nabidkaTerminu.ulozeno'));
+      router.refresh();
+    } catch {
+      setError(t('nabidkaTerminu.chybaUlozeni'));
+      setForm((f) => ({ ...f, requiredSessions: request.requiredSessions }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * UPOMÍNKA HERCI (připomínka Heleny 2. 10. 2026: „tlačítko na upomenutí
+   * herce, aby si naklikal termíny").
+   *
+   * Není to „Poslat znovu" - ta posílá celou nabídku a přepisuje čas odeslání.
+   * Tohle pošle krátkou připomínku s odkazem, zazvoní hercovi v portálu
+   * a zapíše se do historie nabídky. Dá se zmáčknout i víckrát.
+   */
+  async function upomen() {
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/kalendar/nabidky/${request.id}/upomenout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || t('nabidkaTerminu.chybaUpominky'));
+        return;
+      }
+      setInfo(t('nabidkaTerminu.upomenutoNa', { email: request.actorEmail }));
+      router.refresh();
+    } catch {
+      setError(t('nabidkaTerminu.chybaUpominky'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
    * Rozhodnutí o výběru herce. Potvrzení je zároveň schválení — mezikrok
    * jsme vypustili (rozhodnuto 8. 9. 2026).
    */
@@ -373,6 +444,18 @@ export function OfferBuilder({
                 {request.sentAt ? t('nabidkaTerminu.poslatZnovu') : t('nabidkaTerminu.odeslatHerci')}
               </button>
             )}
+            {/* Upomínka jen když se na herce opravdu čeká (2. 10. 2026). */}
+            {request.sentAt && ['SENT', 'PICKING', 'RETURNED'].includes(request.status) && (
+              <button
+                type="button"
+                onClick={upomen}
+                disabled={busy}
+                title={t('nabidkaTerminu.upomenoutPopis')}
+                className="rounded-lg border border-line px-4 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
+              >
+                {t('nabidkaTerminu.upomenout')}
+              </button>
+            )}
             {!locked && (
               <button type="button" onClick={zrus} disabled={busy} className="text-muted text-sm font-heading px-2">
                 {t('nabidkaTerminu.zrusitNabidku')}
@@ -387,7 +470,21 @@ export function OfferBuilder({
             <span className="text-xs font-heading text-muted uppercase tracking-wide">
               {t('nabidkaTerminu.potrebaFrekvenci')}
             </span>
-            <span className="font-display text-2xl text-ink tabular-nums">{form.requiredSessions}</span>
+            {locked ? (
+              <span className="font-display text-2xl text-ink tabular-nums">{form.requiredSessions}</span>
+            ) : (
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={form.requiredSessions}
+                disabled={busy}
+                onChange={(e) => set('requiredSessions', Number(e.target.value) || 1)}
+                onBlur={() => void ulozFrekvence()}
+                title={t('nabidkaTerminu.frekvenceRovnou')}
+                className="font-display text-2xl text-ink tabular-nums w-16 rounded-lg border border-line bg-field px-2 py-0.5 outline-none focus:border-brand-purple disabled:opacity-60"
+              />
+            )}
           </span>
           <span className="flex items-baseline gap-2">
             <span className="text-xs font-heading text-muted uppercase tracking-wide">

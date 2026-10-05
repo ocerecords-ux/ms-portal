@@ -3330,3 +3330,205 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
 
   return { sent: true as const };
 }
+
+
+// ===========================================================================
+// HEREC SI VYBRAL TERMINY - ZPRAVA PRODUKCI (pripominka Heleny 5. 10. 2026)
+//
+// „Potrebuju dostavat mailem notifikace o vyplneni terminu."
+//
+// V portalu uz to zvonilo (notifikace RECORDING_SUBMITTED), ale jen tomu, kdo
+// nabidku zalozil, a kdo portal nema cely den otevreny, se o vyberu dozvedel
+// az pozde - mezitim bezi lhuta, po kterou se terminy drzi. Mail jde kazdemu
+// z tymu, kdo ma na karte zaskrtnute „Dostava vyber terminu".
+// ===========================================================================
+
+type VyberTerminuProdukciInput = {
+  /** Adresy clenu tymu se zapnutym upozornenim. Prazdne pole = neposila se. */
+  prijemci: string[];
+  actorName: string;
+  projectName: string;
+  studioName: string;
+  /** Vybrane terminy, uz hotove popisky („pá 10. 10. · 9:00–13:00"). */
+  terminy: string[];
+  requiredSessions: number;
+  /** Dokdy se terminy drzi, nez je produkce potvrdi. */
+  drzenoDo: string | null;
+  actorNote: string | null;
+  odkazNaNabidku: string;
+  /** Jazyk prijemcu (pravidlo 5). Bez neho cestina. */
+  jazyk?: Jazyk;
+};
+
+export function buildVyberTerminuProdukciHtml(input: VyberTerminuProdukciInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.vyberTerminu.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.vyberTerminu.preheader', {
+      herec: input.actorName,
+      projekt: input.projectName,
+    }),
+    body: `
+    <span class="badge">${prelozitEmail(jazyk, 'mail.vyberTerminu.odznak')}</span>
+    <h2>${prelozitEmailS(jazyk, 'mail.vyberTerminu.nadpis', { herec: escapeHtml(input.actorName) })}</h2>
+    <table role="presentation" class="field-table">
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.vyberTerminu.projekt')}</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.vyberTerminu.studio')}</td><td class="value regular">${escapeHtml(input.studioName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.vyberTerminu.vybral')}</td><td class="value">${prelozitEmailS(jazyk, 'mail.vyberTerminu.vybralHodnota', {
+        pocet: input.terminy.length,
+        potreba: input.requiredSessions,
+      })}</td></tr>
+      ${
+        input.terminy.length
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.vyberTerminu.terminy')}</td><td class="value regular">${input.terminy
+              .map((r) => escapeHtml(r))
+              .join('<br />')}</td></tr>`
+          : ''
+      }
+      ${input.drzenoDo ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.vyberTerminu.drzenoDo')}</td><td class="value regular">${escapeHtml(input.drzenoDo)}</td></tr>` : ''}
+    </table>
+
+    ${input.actorNote ? `<p class="small"><strong>${prelozitEmail(jazyk, 'mail.vyberTerminu.poznamkaHerce')}</strong> ${escapeHtml(input.actorNote)}</p>` : ''}
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkazNaNabidku)}" class="cta">${prelozitEmail(jazyk, 'mail.vyberTerminu.tlacitko')}</a>
+    </div>
+
+    <p class="small">${prelozitEmail(jazyk, 'mail.vyberTerminu.komuChodi')}</p>
+`,
+  });
+}
+
+export async function sendVyberTerminuProdukciEmail(input: VyberTerminuProdukciInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  const jazyk = input.jazyk ?? 'cs';
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.prijemci.join(', '),
+    subject: prelozitEmailS(jazyk, 'mail.vyberTerminu.predmet', {
+      herec: input.actorName,
+      projekt: input.projectName,
+    }),
+    text: [
+      prelozitEmailS(jazyk, 'mail.vyberTerminu.textNadpis', {
+        herec: input.actorName,
+        projekt: input.projectName,
+      }),
+      '',
+      prelozitEmailS(jazyk, 'mail.vyberTerminu.textVybral', {
+        pocet: input.terminy.length,
+        potreba: input.requiredSessions,
+      }),
+      ...input.terminy.map((r) => `  ${r}`),
+      input.drzenoDo ? prelozitEmailS(jazyk, 'mail.vyberTerminu.textDrzenoDo', { datum: input.drzenoDo }) : '',
+      input.actorNote ? prelozitEmailS(jazyk, 'mail.vyberTerminu.textPoznamka', { poznamka: input.actorNote }) : '',
+      '',
+      prelozitEmail(jazyk, 'mail.vyberTerminu.textOdkaz'),
+      input.odkazNaNabidku,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildVyberTerminuProdukciHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}
+
+
+// ===========================================================================
+// UPOMINKA HERCI, AT SI NAKLIKA TERMINY (pripominka Heleny 2. 10. 2026)
+//
+// „Tlacitko na upomenuti herce, aby si naklikal terminy."
+//
+// Schvalne JINY mail nez nabidka samotna: herec uz ji dostal, takze nepotrebuje
+// znovu cely rozpis, ale pripomenuti a odkaz. „Poslat znovu" u nabidky posila
+// nabidku a prepisuje cas odeslani - upominka se do stavu nabidky neplete.
+// ===========================================================================
+
+type UpominkaTerminuInput = {
+  to: string;
+  actorName: string;
+  projectName: string;
+  requiredSessions: number;
+  offeredCount: number;
+  /** Poslední možná frekvence - dokdy ma smysl vybirat. */
+  periodTo: Date;
+  /** Vzkaz produkce k upomince (nepovinny). */
+  vzkaz: string | null;
+  offerUrl: string;
+  /** Jazyk herce (pravidlo 5). Bez neho cestina. */
+  jazyk?: Jazyk;
+};
+
+export function buildUpominkaTerminuHtml(input: UpominkaTerminuInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  const pocet = pocetTerminu(input.requiredSessions, jazyk);
+  const den = new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: 'Europe/Prague' });
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.upominkaTerminu.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.upominkaTerminu.preheader', { projekt: input.projectName }),
+    body: `
+    <span class="badge">${prelozitEmail(jazyk, 'mail.upominkaTerminu.odznak')}</span>
+    <h2>${escapeHtml(input.projectName)}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.actorName))}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.upominkaTerminu.uvod', {
+      pocet: `<strong>${escapeHtml(pocet)}</strong>`,
+      celkem: input.offeredCount,
+    })}</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.upominkaTerminu.projekt')}</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.upominkaTerminu.dokdy')}</td><td class="value regular">${escapeHtml(den.format(input.periodTo))}</td></tr>
+    </table>
+
+    ${input.vzkaz ? `<p class="small"><strong>${prelozitEmail(jazyk, 'mail.upominkaTerminu.vzkaz')}</strong> ${escapeHtml(input.vzkaz)}</p>` : ''}
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.offerUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.upominkaTerminu.tlacitko')}</a>
+    </div>
+
+    <p class="small">${prelozitEmail(jazyk, 'mail.upominkaTerminu.patka')}</p>
+  `,
+  });
+}
+
+export async function sendUpominkaTerminuEmail(input: UpominkaTerminuInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+
+  const jazyk = input.jazyk ?? 'cs';
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: prelozitEmailS(jazyk, 'mail.upominkaTerminu.predmet', { projekt: input.projectName }),
+    text: [
+      pozdravPosty(jazyk, input.actorName),
+      '',
+      prelozitEmailS(jazyk, 'mail.upominkaTerminu.textUvod', {
+        projekt: input.projectName,
+        pocet: input.requiredSessions,
+        celkem: input.offeredCount,
+      }),
+      prelozitEmailS(jazyk, 'mail.upominkaTerminu.textDokdy', {
+        datum: new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: 'Europe/Prague' }).format(input.periodTo),
+      }),
+      input.vzkaz ? prelozitEmailS(jazyk, 'mail.upominkaTerminu.textVzkaz', { vzkaz: input.vzkaz }) : '',
+      '',
+      prelozitEmail(jazyk, 'mail.upominkaTerminu.textOdkaz'),
+      input.offerUrl,
+      '',
+      prelozitEmail(jazyk, 'mail.upominkaTerminu.textPatka'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildUpominkaTerminuHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}

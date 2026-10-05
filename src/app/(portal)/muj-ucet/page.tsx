@@ -121,9 +121,24 @@ export default async function MyAccountPage() {
           i herci mame upozorneni jinde a jinak. */}
       {user.role === 'CLIENT' && (
         <UpozorneniKarta
+          komu="KLIENT"
           initial={{
             dotoceno: user.dostavaDotocenoKlient,
             zmenaTerminu: user.dostavaZmenuTerminuKlient,
+          }}
+        />
+      )}
+
+      {/* Co má chodit NÁM (připomínka Heleny 5. 10. 2026: „potřebuju dostávat
+          mailem notifikace o vyplnění termínů" - poslala ji odsud, kde si to
+          chtěla zapnout a nenašla to). Dřív to zapínala jen administrace na
+          kartě uživatele; teď si to každý přepne u sebe. */}
+      {internal && (
+        <UpozorneniKarta
+          komu="TYM"
+          initial={{
+            tymVyberTerminu: user.dostavaVyberTerminu,
+            tymDotoceno: user.dostavaDotoceno,
           }}
         />
       )}

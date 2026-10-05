@@ -904,6 +904,86 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     cs: 'Ve Vykazech ho najdete tady:',
     en: 'You can find it in Timesheets here:',
   },
+
+  // --- herec si vybral termíny: zpráva produkci (5. 10. 2026) ---
+  'mail.vyberTerminu.stitek': { cs: 'Výběr termínů', en: 'Chosen sessions' },
+  'mail.vyberTerminu.odznak': { cs: 'Herec vybral', en: 'Actor has chosen' },
+  'mail.vyberTerminu.preheader': {
+    cs: '{herec} si vybral natáčecí termíny — {projekt}',
+    en: '{herec} has chosen their recording sessions — {projekt}',
+  },
+  'mail.vyberTerminu.nadpis': {
+    cs: '{herec} si vybral termíny',
+    en: '{herec} has chosen their sessions',
+  },
+  'mail.vyberTerminu.projekt': { cs: 'Projekt', en: 'Project' },
+  'mail.vyberTerminu.studio': { cs: 'Studio', en: 'Studio' },
+  'mail.vyberTerminu.vybral': { cs: 'Vybráno', en: 'Chosen' },
+  'mail.vyberTerminu.vybralHodnota': {
+    cs: '{pocet} z {potreba} potřebných',
+    en: '{pocet} of the {potreba} needed',
+  },
+  'mail.vyberTerminu.terminy': { cs: 'Termíny', en: 'Sessions' },
+  'mail.vyberTerminu.drzenoDo': { cs: 'Drženo do', en: 'Held until' },
+  'mail.vyberTerminu.poznamkaHerce': { cs: 'Poznámka herce:', en: 'Actor’s note:' },
+  'mail.vyberTerminu.tlacitko': { cs: 'Potvrdit termíny', en: 'Confirm the sessions' },
+  'mail.vyberTerminu.komuChodi': {
+    cs: 'Tuhle zprávu dostává každý, kdo má na své kartě zapnuté „Dostává výběr termínů". Vypnout si ji můžete v Můj účet.',
+    en: 'This message goes to everyone with „Receives chosen sessions" switched on. You can turn it off in My account.',
+  },
+  'mail.vyberTerminu.predmet': {
+    cs: '{herec} vybral termíny — {projekt}',
+    en: '{herec} has chosen sessions — {projekt}',
+  },
+  'mail.vyberTerminu.textNadpis': {
+    cs: '{herec} si vybral natáčecí termíny u projektu {projekt}.',
+    en: '{herec} has chosen recording sessions for {projekt}.',
+  },
+  'mail.vyberTerminu.textVybral': {
+    cs: 'Vybráno {pocet} z {potreba} potřebných:',
+    en: 'Chosen {pocet} of the {potreba} needed:',
+  },
+  'mail.vyberTerminu.textDrzenoDo': { cs: 'Terminy se drzi do {datum}.', en: 'The sessions are held until {datum}.' },
+  'mail.vyberTerminu.textPoznamka': { cs: 'Poznamka herce: {poznamka}', en: 'Actor’s note: {poznamka}' },
+  'mail.vyberTerminu.textOdkaz': { cs: 'Potvrdit terminy:', en: 'Confirm the sessions:' },
+
+  // --- upomínka herci, ať si naklikne termíny (2. 10. 2026) ---
+  'mail.upominkaTerminu.stitek': { cs: 'Natáčecí termíny', en: 'Recording sessions' },
+  'mail.upominkaTerminu.odznak': { cs: 'Připomínka', en: 'Reminder' },
+  'mail.upominkaTerminu.preheader': {
+    cs: 'Čekáme na váš výběr termínů — {projekt}',
+    en: 'We are waiting for your choice of sessions — {projekt}',
+  },
+  'mail.upominkaTerminu.uvod': {
+    cs: 'připomínáme se s nabídkou natáčecích termínů — pořád čekáme na váš výběr. Vybrat si máte {pocet} z {celkem} nabídnutých.',
+    en: 'just a reminder about the recording sessions we offered you — we are still waiting for your choice. You are to pick {pocet} out of the {celkem} offered.',
+  },
+  'mail.upominkaTerminu.projekt': { cs: 'Projekt', en: 'Project' },
+  'mail.upominkaTerminu.dokdy': { cs: 'Nejpozdější frekvence', en: 'Last possible session' },
+  'mail.upominkaTerminu.vzkaz': { cs: 'Vzkaz produkce:', en: 'Production note:' },
+  'mail.upominkaTerminu.tlacitko': { cs: 'Vybrat termíny', en: 'Choose sessions' },
+  'mail.upominkaTerminu.patka': {
+    cs: 'Odkaz patří jen vám, neposílejte ho dál. Čím dřív si vyberete, tím víc máte z čeho — místa ve studiu obsazují i jiné projekty.',
+    en: 'The link is yours alone, please do not forward it. The sooner you choose, the more you can choose from — other projects book the studio too.',
+  },
+  'mail.upominkaTerminu.predmet': {
+    cs: 'Připomínka: vyberte si natáčecí termíny — {projekt}',
+    en: 'Reminder: choose your recording sessions — {projekt}',
+  },
+  'mail.upominkaTerminu.textUvod': {
+    cs: 'pripominame se s nabidkou nataceich terminu u projektu {projekt} - vybrat si mate {pocet} z {celkem} nabidnutych.',
+    en: 'a reminder about the recording sessions for {projekt} - you are to pick {pocet} out of the {celkem} offered.',
+  },
+  'mail.upominkaTerminu.textDokdy': {
+    cs: 'Nejpozdejsi mozna frekvence: {datum}.',
+    en: 'Last possible session: {datum}.',
+  },
+  'mail.upominkaTerminu.textVzkaz': { cs: 'Vzkaz produkce: {vzkaz}', en: 'Production note: {vzkaz}' },
+  'mail.upominkaTerminu.textOdkaz': { cs: 'Vyber terminu:', en: 'Choose your sessions:' },
+  'mail.upominkaTerminu.textPatka': {
+    cs: 'Odkaz patri jen vam, neposilejte ho dal.',
+    en: 'The link is yours alone, please do not forward it.',
+  },
 };
 
 /** Přeloží klíč pošty. Co ve slovníku není, projde česky - a je to vidět. */

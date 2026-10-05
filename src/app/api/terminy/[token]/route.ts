@@ -5,6 +5,7 @@ import { checkSlot, loadCalendarSettings, recordEvent } from '@/lib/calendarServ
 import { notify } from '@/lib/notifications';
 import { POZNAMKA_NAVRH_HERCE } from '@/lib/volnaMista';
 import { mestoStudia, studiaNabidky } from '@/lib/volnaMistaServer';
+import { oznamProdukciVyberTerminu } from '@/lib/nabidkaTerminuServer';
 
 /**
  * Výběr termínů hercem (zadani 8. 9. 2026). VEŘEJNÝ endpoint — nabídka se
@@ -255,6 +256,13 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       body: `${request.projectName} · ${vybrane.length} termínů čeká na potvrzení`,
       url: `/kalendar/nabidka/${request.id}`,
     });
+
+    // A MAILEM KAZDEMU, KDO SI TO ZAPNUL (pripominka Heleny 5. 10. 2026:
+    // „potrebuju dostavat mailem notifikace o vyplneni terminu"). Zvoneni vys
+    // vidi jen ten, kdo nabidku zalozil, a jen kdyz ma portal otevreny -
+    // mezitim bezi lhuta, po kterou se vybrane terminy drzi. Funkce si chybu
+    // podrzi u sebe: vyber herce se nesmi pokazit kvuli poste.
+    await oznamProdukciVyberTerminu(request.id);
 
     return NextResponse.json({ ok: true, holdUntil: drzetDo.toISOString() });
   } catch (err) {

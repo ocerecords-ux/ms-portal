@@ -220,6 +220,7 @@ async function main() {
   await matejCernyVedeLondyn();
   await notifikaceReklamnichFirem();
   await audiotaggerUCekameNaOpravy();
+  await vyberTerminuTomuKdoHlidaPlan();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
@@ -509,6 +510,29 @@ async function audiotaggerUCekameNaOpravy() {
     data: { audiotagger: true },
   });
   if (zmeneno.count > 0) console.log(`  vzor „Čekáme na opravy": AudioTagger zapnut (${zmeneno.count})`);
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * MAIL O VÝBĚRU TERMÍNŮ TOMU, KDO PLÁN HLÍDÁ (připomínka Heleny 5. 10. 2026:
+ * „potřebuju dostávat mailem notifikace o vyplnění termínů").
+ *
+ * Nový přepínač je standardně vypnutý, takže by si ho Helena musela nejdřív
+ * najít — a právě proto, že ho nenašla, tu připomínku poslala. Zapne se proto
+ * jednorázově každému z týmu, kdo už dostává zprávy o dotočení: to je přesně
+ * ten, kdo natáčecí plán hlídá. Kdo o to nestojí, odškrtne si to v Můj účet.
+ */
+async function vyberTerminuTomuKdoHlidaPlan() {
+  const ZNAMKA = 'notifikace-vyber-terminu-2026-10-05';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const zmeneno = await prisma.user.updateMany({
+    where: { active: true, dostavaDotoceno: true, role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
+    data: { dostavaVyberTerminu: true },
+  });
+  if (zmeneno.count > 0) console.log(`  notifikace o vyberu terminu zapnuta (${zmeneno.count})`);
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
 }

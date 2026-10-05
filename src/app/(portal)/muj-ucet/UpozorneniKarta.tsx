@@ -19,37 +19,66 @@ import { usePreklad } from '../components/JazykProvider';
  * notifikace pri zmene terminu nataceci frekvence"), proto je karta napsaná na
  * seznam a ne na jeden přepínač. Další se přidá řádkem v `PREPINACE` a polem
  * v /api/me/upozorneni — nikam jinam se nesahá.
+ *
+ * KARTU MÁ UŽ I TÝM (připomínka Heleny 5. 10. 2026: „potřebuju dostávat mailem
+ * notifikace o vyplnění termínů" — poslala ji z „Můj účet", kde si to chtěla
+ * zapnout a nenašla to). Přepínače se nemíchají: `komu` vybere, které se
+ * ukážou. Klientské nesou jen jeho projekty, týmové všechny.
  */
 
-type Klic = 'dotoceno' | 'zmenaTerminu';
+type Klic = 'dotoceno' | 'zmenaTerminu' | 'tymVyberTerminu' | 'tymDotoceno';
+
+/** Komu přepínač patří - klientovi, nebo nám. */
+type Komu = 'KLIENT' | 'TYM';
 
 /** Pole v databázi a texty ke každému přepínači. */
-const PREPINACE: { klic: Klic; pole: string; nazev: string; popis: string }[] = [
+const PREPINACE: { klic: Klic; komu: Komu; pole: string; nazev: string; popis: string }[] = [
   {
     klic: 'dotoceno',
+    komu: 'KLIENT',
     pole: 'dostavaDotocenoKlient',
     nazev: 'mujUcet.dotoceno',
     popis: 'mujUcet.dotocenoPopis',
   },
   {
     klic: 'zmenaTerminu',
+    komu: 'KLIENT',
     pole: 'dostavaZmenuTerminuKlient',
     nazev: 'mujUcet.zmenaTerminu',
     popis: 'mujUcet.zmenaTerminuPopis',
   },
+  {
+    klic: 'tymVyberTerminu',
+    komu: 'TYM',
+    pole: 'dostavaVyberTerminu',
+    nazev: 'mujUcet.vyberTerminu',
+    popis: 'mujUcet.vyberTerminuPopis',
+  },
+  {
+    klic: 'tymDotoceno',
+    komu: 'TYM',
+    pole: 'dostavaDotoceno',
+    nazev: 'mujUcet.tymDotoceno',
+    popis: 'mujUcet.tymDotocenoPopis',
+  },
 ];
 
 export function UpozorneniKarta({
+  komu,
   initial,
 }: {
-  initial: { dotoceno: boolean; zmenaTerminu: boolean };
+  komu: Komu;
+  /** Jen přepínače dané skupiny; co nepřijde, je vypnuté. */
+  initial: Partial<Record<Klic, boolean>>;
 }) {
   const t = usePreklad();
   const router = useRouter();
-  const [stav, setStav] = useState<Record<Klic, boolean>>({
-    dotoceno: initial.dotoceno,
-    zmenaTerminu: initial.zmenaTerminu,
-  });
+  /** Přepínače téhle skupiny - ostatní se na kartě vůbec neukážou. */
+  const nase = PREPINACE.filter((p) => p.komu === komu);
+  const [stav, setStav] = useState<Record<Klic, boolean>>(
+    () =>
+      Object.fromEntries(PREPINACE.map((p) => [p.klic, initial[p.klic] ?? false])) as Record<Klic, boolean>,
+  );
   const [uklada, setUklada] = useState<Klic | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,11 +115,13 @@ export function UpozorneniKarta({
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div>
         <h2 className="font-heading font-semibold text-ink m-0">{t('mujUcet.upozorneni')}</h2>
-        <p className="text-sm font-body text-muted m-0 mt-1">{t('mujUcet.upozorneniPopis')}</p>
+        <p className="text-sm font-body text-muted m-0 mt-1">
+          {t(komu === 'TYM' ? 'mujUcet.upozorneniPopisTym' : 'mujUcet.upozorneniPopis')}
+        </p>
       </div>
 
       <div className="flex flex-col gap-3">
-        {PREPINACE.map((p) => (
+        {nase.map((p) => (
           <label key={p.klic} className="flex items-start gap-2 text-sm font-heading text-ink">
             <input
               type="checkbox"

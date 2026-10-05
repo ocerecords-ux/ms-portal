@@ -9636,6 +9636,57 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The recording text templates the recording document is built from.',
   },
 
+  // --- připomínky Heleny k plánování s herci (2. a 5. 10. 2026) ---
+  'nabidkaTerminu.upomenout': { cs: 'Upomenout herce', en: 'Remind the actor' },
+  'nabidkaTerminu.upomenoutPopis': {
+    cs: 'Pošle hercovi připomínku s odkazem. Nabídku to nijak nezmění, poslat se dá i víckrát.',
+    en: 'Sends the actor a reminder with the link. It changes nothing about the offer and can be sent more than once.',
+  },
+  'nabidkaTerminu.upomenutoNa': { cs: 'Upomínka odešla na {email}.', en: 'The reminder has gone to {email}.' },
+  'nabidkaTerminu.chybaUpominky': {
+    cs: 'Upomínku se nepodařilo poslat.',
+    en: 'The reminder could not be sent.',
+  },
+  'nabidkaTerminu.frekvenceRovnou': {
+    cs: 'Počet frekvencí jde přepsat rovnou tady - uloží se po odkliknutí.',
+    en: 'You can change the number of sessions right here — it saves when you click away.',
+  },
+  'natacPlan.upomenout': { cs: 'Upomenout', en: 'Remind' },
+  'natacPlan.upominam': { cs: 'Posílám…', en: 'Sending…' },
+  'natacPlan.upomenoutPopis': {
+    cs: 'Pošle hercovi připomínku, ať si naklikne termíny.',
+    en: 'Sends the actor a reminder to pick their sessions.',
+  },
+  'natacPlan.upomenuto': { cs: 'Upomínka hercovi odešla.', en: 'The reminder has gone to the actor.' },
+  'natacPlan.chybaUpominky': {
+    cs: 'Upomínku se nepodařilo poslat.',
+    en: 'The reminder could not be sent.',
+  },
+  'mujUcet.upozorneniPopisTym': {
+    cs: 'Co vám z portálu chodí mailem. Přepnete si to sami, kdykoliv.',
+    en: 'What the portal emails you. You can switch it yourself, any time.',
+  },
+  'mujUcet.vyberTerminu': {
+    cs: 'Chci vědět, když si herec naklikal termíny',
+    en: 'Tell me when an actor has picked their sessions',
+  },
+  'mujUcet.vyberTerminuPopis': {
+    cs: 'Mail hned, jak herec odešle svůj výběr natáčecích termínů - u všech projektů, ne jen u těch vašich. Vybrané termíny se drží jen do konce lhůty, pak se místa ve studiu uvolní.',
+    en: 'An email as soon as an actor submits their choice of recording sessions — for every project, not only yours. The chosen sessions are held only until the deadline, after which the studio slots are released.',
+  },
+  'mujUcet.tymDotoceno': {
+    cs: 'Chci vědět, když je herec dotočený',
+    en: 'Tell me when an actor is finished recording',
+  },
+  'mujUcet.tymDotocenoPopis': {
+    cs: 'Mail, jak se u projektu odškrtne dotočeno s hercem - u všech projektů.',
+    en: 'An email when a project is ticked off as finished with an actor — for every project.',
+  },
+  'uzivatel.pravoDostavaVyberTerminu': { cs: 'Dostává výběr termínů', en: 'Receives chosen sessions' },
+  'uzivatel.pravoDostavaVyberTerminuPopis': {
+    cs: 'Mail, jak si herec naklikal natáčecí termíny. Přepnout si to umí i sám v Můj účet.',
+    en: 'An email when an actor has picked their recording sessions. They can also switch it themselves in My account.',
+  },
 };
 
 /**

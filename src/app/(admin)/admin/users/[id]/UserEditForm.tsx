@@ -64,6 +64,7 @@ type EditableUser = {
   /** Účet jen na prohlížení portálu z různých rolí (zadání 18. 9. 2026). */
   jenNahled: boolean;
   dostavaDotoceno: boolean;
+  dostavaVyberTerminu: boolean;
   /** Zvonek, kdyz klient schvali reklamu (23. 9. 2026). */
   schvaleniReklam: boolean;
   planovaniTerminu: boolean;
@@ -143,6 +144,7 @@ export function UserEditForm({
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
+  const [dostavaVyberTerminu, setDostavaVyberTerminu] = useState(user.dostavaVyberTerminu);
   const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
   const [planovaniTerminu, setPlanovaniTerminu] = useState(user.planovaniTerminu);
   const [strihaExterne, setStrihaExterne] = useState(user.strihaExterne);
@@ -271,6 +273,7 @@ export function UserEditForm({
         }
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
+        if (isMediaspace) fd.set('dostavaVyberTerminu', dostavaVyberTerminu ? '1' : '0');
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
         if (isMediaspace) fd.set('planovaniTerminu', planovaniTerminu ? '1' : '0');
         if (isMediaspace) fd.set('strihaExterne', strihaExterne ? '1' : '0');
@@ -802,6 +805,28 @@ export function UserEditForm({
                 {t('uzivatel.pravoDostavaDotoceno')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.pravoDostavaDotocenoPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Mail, kdyz si herec naklika terminy (pripominka Heleny 5. 10. 2026:
+            „potrebuju dostavat mailem notifikace o vyplneni terminu").
+            Prepnout si to kazdy umi i sam v „Muj ucet". */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dostavaVyberTerminu}
+                onChange={(e) => setDostavaVyberTerminu(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.pravoDostavaVyberTerminu')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.pravoDostavaVyberTerminuPopis')}
                 </span>
               </span>
             </label>
