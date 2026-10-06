@@ -76,6 +76,15 @@ export const ACTIVE_PROJECT_STATUSES: string[] = [
   'Plánujeme',
   'Natáčíme',
   'Natáčíme/stříháme',
+  // Dotoceno a Dotoceno/strihame (doplneno 6. 10. 2026) - natoceno je, ale
+  // strih a odevzdani teprve budou. Bez techto dvou radku se klientovi
+  // uprostred prace zaviral kanal dotazu.
+  'Dotočeno',
+  'Dotočeno/stříháme',
+  // Dokonceno - ke schvaleni (doplneno 6. 10. 2026): prave tady klient
+  // nahravku posloucha a ma k ni nejvic otazek. Zavreny kanal dotazu je
+  // v tuhle chvili to posledni, co potrebuje; projekt konci az fakturou.
+  'Dokončeno - ke schválení',
   'Čekáme na opravy',
   // Opravujeme (27. 9. 2026) - klient přeposlech dokončil, my zapracováváme
   // připomínky. Práce běží dál, takže projekt patří mezi aktivní.

@@ -221,6 +221,7 @@ async function main() {
   await notifikaceReklamnichFirem();
   await audiotaggerUCekameNaOpravy();
   await vyberTerminuTomuKdoHlidaPlan();
+  await vratKanalyNedokoncenychProjektu();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
@@ -533,6 +534,46 @@ async function vyberTerminuTomuKdoHlidaPlan() {
     data: { dostavaVyberTerminu: true },
   });
   if (zmeneno.count > 0) console.log(`  notifikace o vyberu terminu zapnuta (${zmeneno.count})`);
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * KANÁLY NEDOKONČENÝCH PROJEKTŮ ZPÁTKY DO SEZNAMU (oprava 6. 10. 2026:
+ * „nejde otevřít v chatu kanál Nástroje pro život").
+ *
+ * Od 28. 9. se kanál zavíral při každém stavu mimo seznam aktivních - tedy
+ * i u „Dotočeno" nebo „Dokončeno - ke schválení", kde práce běží dál. Kanály
+ * takových projektů v databázi zůstaly zavřené a samy se neotevřou, protože
+ * stav už se podruhé nepřehazuje. Tohle je jednorázově vrátí; napravovat se
+ * tím nedá nic jiného, zavírá je jedině přechod projektu do dokončeného stavu.
+ *
+ * Projekty opravdu dokončené (`finished`) zůstávají zavřené.
+ */
+async function vratKanalyNedokoncenychProjektu() {
+  const ZNAMKA = 'kanaly-nedokoncenych-projektu-2026-10-06';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const bezici = await prisma.projectMeta.findMany({
+    where: { finished: false },
+    select: { caflouProjectId: true },
+  });
+  const idProjektu = bezici.map((p) => p.caflouProjectId);
+
+  if (idProjektu.length > 0) {
+    const kanaly = await prisma.conversation.updateMany({
+      where: { kind: 'PROJEKT', caflouProjectId: { in: idProjektu }, NOT: { uzavrenoAt: null } },
+      data: { uzavrenoAt: null },
+    });
+    const dotazy = await prisma.conversation.updateMany({
+      where: { kind: 'DOTAZ', dotazProjektId: { in: idProjektu }, NOT: { uzavrenoAt: null } },
+      data: { uzavrenoAt: null },
+    });
+    if (kanaly.count > 0 || dotazy.count > 0) {
+      console.log(`  chat: vraceno ${kanaly.count} kanalu projektu a ${dotazy.count} kanalu dotazu`);
+    }
+  }
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
 }

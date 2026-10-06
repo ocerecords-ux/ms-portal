@@ -105,7 +105,25 @@ export async function POST(req: NextRequest) {
       const existing = await prisma.conversation.findUnique({
         where: { caflouProjectId: data.caflouProjectId },
       });
-      if (existing) return NextResponse.json({ id: existing.id });
+      if (existing) {
+        /**
+         * ZAVŘENÝ KANÁL SE OTEVŘE ZPÁTKY (oprava 6. 10. 2026: „nejde otevřít
+         * v chatu kanál Nástroje pro život").
+         *
+         * Když je kanál zavřený, v seznamu rozhovorů není - prohlížeč tedy
+         * zkusí „založit nový", dostane odsud jeho id a otevře rozhovor,
+         * který v seznamu pořád chybí. Na obrazovce zůstalo prázdné okno.
+         * Klepnutí na kanál v záložce Projekty je jasný pokyn, že se v něm
+         * má psát, takže ho tu rovnou vrátíme mezi otevřené.
+         */
+        if (existing.uzavrenoAt) {
+          await prisma.conversation.update({
+            where: { id: existing.id },
+            data: { uzavrenoAt: null },
+          });
+        }
+        return NextResponse.json({ id: existing.id });
+      }
       const created = await prisma.conversation.create({
         data: {
           kind: 'PROJEKT',

@@ -460,16 +460,29 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         void navrhniBonusyZaProjekt(params.id).catch(() => undefined);
       }
 
-      // Dokoncenym projektem se uzavira i kanal dotazu klienta (zadani
-      // 11. 9. 2026) - historie zustava, jen uz do nej neni kam psat.
-      // Od 28. 9. 2026 s nim mizi ze seznamu i NAS kanal k projektu
-      // („zustavaji nam v chatu projekty, ktere uz jsou ukoncene").
-      if (!isActiveProjectStatus(data.statusName)) {
-        void uzavriDotazyProjektu(params.id).catch(() => undefined);
+      /**
+       * NÁŠ KANÁL K PROJEKTU SE ŘÍDÍ DOKONČENOSTÍ, NE ŠTÍTKEM STAVU (oprava
+       * 6. 10. 2026: „nejde otevřít v chatu kanál Nástroje pro život").
+       *
+       * Od 28. 9. se kanál zavíral při každém stavu, který nebyl v seznamu
+       * aktivních - tedy i u „Dotočeno" nebo „Dokončeno - ke schválení".
+       * Jenže záložka Projekty v chatu stojí na příznaku `finished`, takže
+       * projekt v seznamu zůstal, kanál už v seznamu rozhovorů nebyl, a
+       * kliknutí skončilo na prázdném okně „Vyberte vlevo projekt nebo
+       * člověka". Obojí teď řídí jedna a tatáž věc: dokončenost projektu.
+       */
+      const projektDokoncen = stavJeDokonceny(data.statusName);
+      if (projektDokoncen === true) {
         void uzavriKanalProjektu(params.id).catch(() => undefined);
-      } else {
+      } else if (projektDokoncen === false) {
         // Vraceny projekt patri zpatky do seznamu.
         void otevriKanalProjektu(params.id).catch(() => undefined);
+      }
+
+      // Dokoncenym projektem se uzavira kanal dotazu klienta (zadani
+      // 11. 9. 2026) - historie zustava, jen uz do nej neni kam psat.
+      if (!isActiveProjectStatus(data.statusName)) {
+        void uzavriDotazyProjektu(params.id).catch(() => undefined);
       }
     }
 
