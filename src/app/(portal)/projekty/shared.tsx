@@ -872,15 +872,21 @@ function bunkaSloupce(
             {/* Klik ukáže náhled přeposlechu (25. 9. 2026, upraveno 26. 9.). */}
             {/* Obal jen tam, kde odznak opravdu je - jinak by na řádku
                 zůstal prázdný klikatelný kousek plochy (26. 9. 2026). */}
+            {/* NA TELEFONU SE IKONKY NEVYKRESLUJÍ (zadání 6. 10. 2026: „stejně
+                tak ty ikony nabídky, faktury atd. a poslech v audiotaggeru").
+                V úzkém řádku se lepily přes datum a nikdo na ně stejně
+                prstem netrefí. */}
             {maOdznakPreposlechu(p.meta?.preposlech) ? (
-              <NahledIkony
-                odkaz={`/projekty/${p.id}?zalozka=preposlech`}
-                druh="PREPOSLECH"
-                id={String(p.id)}
-                popis="Klik ukáže náhled přeposlechu"
-              >
-                <OdznakPreposlechu stav={p.meta?.preposlech} jazyk={jazyk} />
-              </NahledIkony>
+              <span className="hidden sm:block">
+                <NahledIkony
+                  odkaz={`/projekty/${p.id}?zalozka=preposlech`}
+                  druh="PREPOSLECH"
+                  id={String(p.id)}
+                  popis="Klik ukáže náhled přeposlechu"
+                >
+                  <OdznakPreposlechu stav={p.meta?.preposlech} jazyk={jazyk} />
+                </NahledIkony>
+              </span>
             ) : null}
             {(p.meta?.licence ?? []).length > 0 && (
               <span className="flex items-center justify-center gap-[2px] flex-wrap leading-none">
@@ -904,10 +910,13 @@ function bunkaSloupce(
           >
             {p.name}
           </Link>
-          {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
-          {p.meta?.nabidka ? <ZnackaNabidky stav={p.meta.nabidka} velikost={15} /> : null}
-          {/* Nabídka / faktura u zakázky (25. 9. 2026) - jen pro ty dva. */}
-          <ZnackyDokladu doklady={p.meta?.doklady} velikost={15} dvojklik />
+          {/* Na telefonu se značky dokladů nevykreslují (6. 10. 2026) - viz výš. */}
+          <span className="hidden sm:inline-flex items-center gap-2.5">
+            {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
+            {p.meta?.nabidka ? <ZnackaNabidky stav={p.meta.nabidka} velikost={15} /> : null}
+            {/* Nabídka / faktura u zakázky (25. 9. 2026) - jen pro ty dva. */}
+            <ZnackyDokladu doklady={p.meta?.doklady} velikost={15} dvojklik />
+          </span>
         </span>
       );
     case 'companyName':

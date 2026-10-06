@@ -23,7 +23,11 @@ export function OzubeneKolo({
       href={cesta}
       title={popis}
       aria-label={popis}
-      className="shrink-0 inline-grid place-items-center w-8 h-8 rounded-pill border border-line text-muted no-underline transition-colors hover:text-brand-purple hover:border-brand-purple"
+      /* NA TELEFONU ŽÁDNÉ KOLEČKO (zadání 6. 10. 2026: „to ozubené kolo
+         s nastavením bych v mobilní aplikaci vůbec nedával. U žádné
+         stránky"). Nastavuje se od stolu, ne z telefonu - a v úzké liště
+         nad obsahem zabírá místo, které patří práci. */
+      className="shrink-0 hidden sm:inline-grid place-items-center w-8 h-8 rounded-pill border border-line text-muted no-underline transition-colors hover:text-brand-purple hover:border-brand-purple"
     >
       <svg
         viewBox="0 0 24 24"

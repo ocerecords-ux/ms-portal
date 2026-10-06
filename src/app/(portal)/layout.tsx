@@ -10,6 +10,7 @@ import { RozdeleneOkno } from './components/RozdeleneOkno';
 import { TaskDock } from './components/TaskDock';
 import { QuickDock } from './components/QuickDock';
 import { SiteDock } from './components/SiteDock';
+import { PribehNaTelefonu } from './components/PribehNaTelefonu';
 import { ChatDock } from './components/ChatDock';
 import { PrehledDne } from './components/PrehledDne';
 import { PoutkoDoku } from './components/PoutkoDoku';
@@ -267,6 +268,13 @@ export default async function PortalLayout({ children }: { children: React.React
           tomu, kdo si ho zapnul v Můj účet. Na mobilu taky, proto je mimo
           obal doků. */}
       {internal && <PrehledDne />}
+      {/* PŘÍBĚH NA INSTAGRAM Z TELEFONU (zadání 6. 10. 2026) - tlačítko
+          v tmavém pruhu pod lištou, u pravé hrany. Je mimo obal doků
+          schválně: doky jsou na telefonu schované a tohle je právě jejich
+          mobilní náhrada. Ukáže se jen tomu, kdo příběhy posílat smí. */}
+      {internal && dokSiti?.smiPoslat && (
+        <PribehNaTelefonu pocet={dokSiti.cekajici.length} vicNez={dokSiti.vicNez} />
+      )}
       <div data-doky className="hidden md:block">
         {internal && <QuickDock actions={quickActions} available={quickActionsFor(role)} />}
         {/* Sítě pod rychlými volbami (zadání 6. 10. 2026) - záložka se ukáže
