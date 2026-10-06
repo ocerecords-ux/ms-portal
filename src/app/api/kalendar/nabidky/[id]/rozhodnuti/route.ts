@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { uliceStudia } from '@/lib/studioProHerce';
 import { canManageCalendar } from '@/lib/roles';
 import { checkSlot, recordEvent } from '@/lib/calendarServer';
 import { minutesInZone, minutesToTime } from '@/lib/calendar';
@@ -36,7 +37,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const request = await prisma.recordingRequest.findUnique({
       where: { id: params.id },
-      include: { slots: true, studio: { select: { name: true, timezone: true } } },
+      // Adresa studia: v mailech hercovi se pobocka oznacuje ulici, ne jako
+      // „Brno I" (pripominka Heleny 5. 10. 2026), viz lib/studioProHerce.ts.
+      include: { slots: true, studio: { select: { name: true, timezone: true, adresa: true } } },
     });
     if (!request) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
 
@@ -107,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         to: request.actorEmail,
         actorName: request.actorName,
         projectName: request.projectName,
-        studioName: request.studio.name,
+        studioName: uliceStudia(request.studio),
         decision: 'RETURNED',
         note: note || null,
         slots: [],
@@ -160,7 +163,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         to: request.actorEmail,
         actorName: request.actorName,
         projectName: request.projectName,
-        studioName: request.studio.name,
+        studioName: uliceStudia(request.studio),
         decision: 'REJECTED',
         note: note || null,
         slots: [],
@@ -260,7 +263,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       to: request.actorEmail,
       actorName: request.actorName,
       projectName: request.projectName,
-      studioName: request.studio.name,
+      studioName: uliceStudia(request.studio),
       decision: 'CONFIRMED',
       note: note || null,
       slots: popisTerminu,

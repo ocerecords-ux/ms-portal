@@ -31,7 +31,19 @@ export async function ZalozkyPrehledu({
       (!z.role || (role && z.role.includes(role))) &&
       (z.jenSPriznakem !== 'palubovka' || palubovka) &&
       (z.jenSPriznakem !== 'bonusy' || bonusy),
-  ).map((z) => ({ klic: z.href, href: z.href, nazev: prelozit(jazyk, `prehledy.zalozka.${z.href}`) }));
+  ).map((z) => ({
+    klic: z.href,
+    href: z.href,
+    /**
+     * U ŽŮŽO-LABŮŽO SE ZÁLOŽKA JMENUJE JEN „Bonusy" (zadání 6. 10. 2026:
+     * „a u mě ať se to nejmenuje moje bonusy, ale Bonusy") - vidí v ní podíly
+     * celého týmu, ne jen svůj.
+     */
+    nazev:
+      z.jenSPriznakem === 'bonusy' && role === 'ADMIN'
+        ? prelozit(jazyk, 'prehledy.zalozka.bonusy')
+        : prelozit(jazyk, `prehledy.zalozka.${z.href}`),
+  }));
 
   return <ZalozkyLista sekce="prehledy" zalozky={zalozky} poradi={await poradiZalozek('prehledy')} />;
 }

@@ -4,6 +4,7 @@ import { recordEvent } from '@/lib/calendarServer';
 import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 import { ActorPicker } from './ActorPicker';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { uliceStudia } from '@/lib/studioProHerce';
 import { prelozit } from '@/lib/jazyk';
 
 /**
@@ -32,7 +33,9 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
     where: { accessToken: params.token },
     include: {
       studio: { select: { name: true, location: true, timezone: true } },
-      slots: { orderBy: { start: 'asc' }, include: { studio: { select: { name: true } } } },
+      // Adresa studia: herci se pobocky neoznacuji jako Brno I / Brno II,
+      // ale ulici (pripominka Heleny 5. 10. 2026) - viz lib/studioProHerce.ts.
+      slots: { orderBy: { start: 'asc' }, include: { studio: { select: { name: true, adresa: true } } } },
     },
   });
   if (!request) notFound();
@@ -97,7 +100,7 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
             id: s.id,
             start: s.start.toISOString(),
             end: s.end.toISOString(),
-            studio: s.studio.name,
+            studio: uliceStudia(s.studio),
             studioId: s.studioId,
             poznamka: s.note,
           }))}
@@ -109,7 +112,7 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
             id: s.id,
             start: s.start.toISOString(),
             end: s.end.toISOString(),
-            studio: s.studio.name,
+            studio: uliceStudia(s.studio),
             state: s.state,
           }))}
         />

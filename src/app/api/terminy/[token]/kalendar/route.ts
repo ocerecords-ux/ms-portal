@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { adresaStudia } from '@/lib/studioProHerce';
 import { buildIcs, type IcsEvent } from '@/lib/ics';
 
 /**
@@ -32,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       : { state: 'CONFIRMED', requestId: request.id },
     orderBy: { start: 'asc' },
     include: {
-      studio: { select: { name: true, location: true } },
+      studio: { select: { name: true, location: true, adresa: true } },
       request: { select: { projectName: true } },
     },
   });
@@ -44,7 +45,12 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
     end: s.end,
     summary: `Natáčení – ${s.request.projectName}`,
     description: [`Natáčení – ${s.request.projectName}`, s.note].filter(Boolean).join('\n'),
-    location: [s.studio.name, s.studio.location].filter(Boolean).join(', '),
+    /**
+     * MÍSTO V KALENDÁŘI JE ADRESA, NE „Brno I" (připomínka Heleny 5. 10. 2026).
+     * Z odebíraného kalendáře se jede rovnou do navigace, takže tam patří to,
+     * co umí mapa najít; naše jméno pobočky by herce poslalo nikam.
+     */
+    location: adresaStudia(s.studio) || [s.studio.name, s.studio.location].filter(Boolean).join(', '),
     updatedAt: s.updatedAt,
   }));
 

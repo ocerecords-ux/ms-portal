@@ -44,13 +44,15 @@ Tlačítkem **Odeslat herci** se nabídka založí a rovnou odejde e-mailem. Kdy
 - **Vynechá se** všechno, co je v kalendáři obsazené: potvrzené a držené termíny jiných nabídek, jakákoli událost ve studiu (natáčení, střih, casting, svátek, údržba) a jiné natáčení téhož herce.
 - **Jedno místo za město.** Když je stejný čas volný v obou brněnských studiích, herec ho uvidí jen jednou a patří **Brnu I**. Brno II dostane jen tehdy, když je Brno I v tu dobu obsazené.
 - Nabídka se srovnává s kalendářem **pokaždé, když ji kdo otevře** — co se mezitím obsadí, zmizí; co se uvolní, přibude.
-- **Termín jde z nabídky vyhodit ručně** (1. 10. 2026): v seznamu nabídnutých termínů je u každého křížek. Hodí se na Vánoce, silvestr nebo cokoliv, co kalendář nezná — nabídka do ledna jinak nabídne i 24. prosince. Vyhozené termíny se vypíšou pod seznamem a tlačítkem **Vrátit** je dáte zpátky. Protože se nabídka přepočítává při každém otevření, pamatuje si portál vyhozené termíny zvlášť — jinak by se hned vrátily. Vyhazovat jde **jen dokud nabídka neodešla herci**; potom už si z ní vybírá on.
+- **Termín jde z nabídky vyhodit ručně** (1. 10. 2026): v **Seznamu termínů** na stránce nabídky je u každého nabídnutého termínu **křížek**. Hodí se na Vánoce, silvestr nebo cokoliv, co kalendář nezná — nabídka do ledna jinak nabídne i 24. prosince. Vyhozené termíny se vypíšou pod seznamem a tlačítkem **Vrátit** je dáte zpátky. Protože se nabídka přepočítává při každém otevření, pamatuje si portál vyhozené termíny zvlášť — jinak by se hned vrátily. **Jde to i potom, co nabídka herci odešla** (od 6. 10. 2026): odebírá se jen z toho, co má herec na výběr, takže jeho hotovým výběrem to nehne. Zamčené je to až u potvrzené a zrušené nabídky.
 
 # 3. Výběr hercem
 
 Herec dostane e-mail s odkazem (přihlašovat se nemusí; kdo účet má, najde totéž v **Moje termíny**).
 
 Vidí jen **dny a časy za město** — ne studio. Kliknutím na termín ho zaškrtne; dva termíny ve stejný čas vybrat nejde.
+
+**Studia se hercům nepíšou jako Brno I a Brno II, ale ulicí** (od 6. 10. 2026) — ve výběru termínů, v Moje termíny, v odebíraném kalendáři (tam rovnou celou adresou, ať z ní jde spustit navigace) i v mailech, které mu chodí. Jméno pobočky je naše interní značka a herci neřekne, kam má jet; obě brněnská studia jsou od sebe přes celé město. Adresy se vyplňují v Administraci u studií; dokud u studia žádná není, píše se dál jeho název. Uvnitř portálu — v kalendáři, v přehledech a v našich mailech — zůstávají jména poboček.
 
 ![Stránka, kde si herec vybírá termíny](/navody/terminy-2.png)
 
@@ -65,7 +67,7 @@ Po odeslání se vybrané termíny **drží** (délka držení je v Cenících).
 
 # 4. Potvrzení (produkce)
 
-Oznámení vede na stránku nabídky. Nahoře vidíte, kolik frekvencí je potřeba, kolik herec vybral a do kdy se termíny drží. Pod tím je jeho výběr.
+Oznámení vede na stránku nabídky. Nahoře vidíte, kolik frekvencí je potřeba, kolik herec vybral a do kdy se termíny drží. Pod tím je jeho výběr — **u každého termínu i studio**, do kterého ho navolil (6. 10. 2026); nabídka chodí z víc studií naráz, takže bez toho nebylo poznat, kam se v ten den jede. Totéž nese i mail, který o výběru přijde.
 
 **Potřeba frekvencí** je nahoře rovnou **políčko** — číslo přepište a odklikněte, uloží se samo (dřív se to dalo měnit jen dole v **Parametrech**). Hodí se to při odesílání: je vidět, kolik je volných míst, a když jich je méně než frekvencí, odeslání je zamčené — po snížení počtu se rozsvítí. U potvrzené a zrušené nabídky je to zas jen číslo.
 

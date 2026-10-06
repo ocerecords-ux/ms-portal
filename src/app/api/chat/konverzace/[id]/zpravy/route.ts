@@ -397,7 +397,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       void posliPush(prijemci, {
         titulek: conversation.kind === 'PROJEKT' ? `# ${conversation.name ?? 'Projekt'}` : kdo,
         text: conversation.kind === 'PROJEKT' ? `${kdo}: ${nahled}` : nahled,
-        odkaz: `/chat?konverzace=${conversation.id}`,
+        /**
+         * ODPOVĚĎ VE VLÁKNĚ OTEVŘE VLÁKNO (připomínka Petera 5. 10. 2026:
+         * „při kliknutí na notifikaci nové zprávy, která je odpovědí ve
+         * vlákně, se nezobrazí poslední zpráva vlákna, ale první zpráva").
+         * Odkaz vedl jen na rozhovor, kde je odpověď schovaná pod rodičovskou
+         * zprávou - člověk tak klepl na upozornění a novou zprávu nenašel.
+         */
+        odkaz: parentId
+          ? `/chat?konverzace=${conversation.id}&vlakno=${parentId}`
+          : `/chat?konverzace=${conversation.id}`,
         // Nova zprava z teze konverzace prepise predchozi upozorneni.
         znacka: `chat-${conversation.id}`,
       });

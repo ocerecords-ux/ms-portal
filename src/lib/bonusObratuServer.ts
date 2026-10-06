@@ -45,6 +45,10 @@ export type BonusyData = {
   obratRoku: number;
   /** Kdo má na kartě vyplněný podíl - seřazeno podle jména. */
   lide: ClovekSPodilem[];
+  /** Roky, ve kterých je co ukazovat - do přepínače nad přehledem. */
+  roky: number[];
+  /** Měsíc, který právě běží (1-12), nebo null u staršího roku. */
+  rozjetyMesic: number | null;
 };
 
 /** Bonus z obratu. Zaokrouhluje se až tady, ať to sedí s tím, co je vidět. */
@@ -52,12 +56,17 @@ export function bonusZObratu(obrat: number, procento: number): number {
   return Math.round((obrat * procento) / 100);
 }
 
-export async function nactiBonusyObratu(dnes = new Date()): Promise<BonusyData> {
-  const rok = dnes.getFullYear();
+export async function nactiBonusyObratu(rokVstup?: number, dnes = new Date()): Promise<BonusyData> {
+  /**
+   * ROK SE PŘEPÍNÁ (zadání 6. 10. 2026: „a ještě bych měl mít já možnost
+   * upravit ta procenta a získat nějaké grafy a přehledy za minulé měsíce
+   * a pod."). Bez roku se bere ten letošní.
+   */
+  const rok = rokVstup && rokVstup >= 2000 && rokVstup <= 2100 ? rokVstup : dnes.getFullYear();
   const od = new Date(rok, 0, 1);
   const doKdy = new Date(rok + 1, 0, 1);
 
-  const [faktury, lide] = await Promise.all([
+  const [faktury, lide, nejstarsi] = await Promise.all([
     prisma.invoice.findMany({
       where: { status: { in: ['SENT', 'PAID'] }, issueDate: { gte: od, lt: doKdy } },
       select: {
@@ -83,6 +92,12 @@ export async function nactiBonusyObratu(dnes = new Date()): Promise<BonusyData> 
     }) as unknown as Promise<
       { id: string; name: string | null; email: string; podilNaObratu: number | null }[]
     >,
+    // Od kdy vubec mame faktury - z toho se sklada prepinac roku.
+    prisma.invoice.findFirst({
+      where: { status: { in: ['SENT', 'PAID'] } },
+      orderBy: { issueDate: 'asc' },
+      select: { issueDate: true },
+    }) as unknown as Promise<{ issueDate: Date } | null>,
   ]);
 
   /**
@@ -106,6 +121,11 @@ export async function nactiBonusyObratu(dnes = new Date()): Promise<BonusyData> 
     obratRoku += castka;
   }
 
+  const letos = dnes.getFullYear();
+  const prvniRok = Math.min(nejstarsi?.issueDate.getFullYear() ?? letos, rok, letos);
+  const roky: number[] = [];
+  for (let r = letos; r >= prvniRok; r -= 1) roky.push(r);
+
   return {
     rok,
     mesice,
@@ -115,6 +135,8 @@ export async function nactiBonusyObratu(dnes = new Date()): Promise<BonusyData> 
       jmeno: u.name || u.email,
       procento: u.podilNaObratu ?? 0,
     })),
+    roky,
+    rozjetyMesic: rok === letos ? dnes.getMonth() + 1 : null,
   };
 }
 

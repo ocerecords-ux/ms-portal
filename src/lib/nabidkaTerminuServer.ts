@@ -9,6 +9,7 @@ import { notify } from '@/lib/notifications';
 import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import { jazykUzivatele } from '@/lib/jazykPrijemce';
+import { uliceStudia } from '@/lib/studioProHerce';
 
 /**
  * Odeslání nabídky termínů herci - společné pro tlačítko v nabídce
@@ -30,7 +31,7 @@ export async function odesliNabidkuHerci(
 
   const request = await prisma.recordingRequest.findUnique({
     where: { id: params.id },
-    include: { studio: { select: { name: true } }, slots: { select: { state: true } } },
+    include: { studio: { select: { name: true, adresa: true } }, slots: { select: { state: true } } },
   });
   if (!request) return { error: 'Nabídka nenalezena.', status: 404 };
   if (['CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(request.status)) {
@@ -50,7 +51,9 @@ export async function odesliNabidkuHerci(
     to: request.actorEmail,
     actorName: request.actorName,
     projectName: request.projectName,
-    studioName: request.studio.name,
+    // Hercovi se pobocka oznacuje ulici, ne jako „Brno I" (pripominka Heleny
+    // 5. 10. 2026) - viz lib/studioProHerce.ts.
+    studioName: uliceStudia(request.studio),
     requiredSessions: request.requiredSessions,
     offeredCount: nabidnuto,
     periodFrom: request.periodFrom,
@@ -96,8 +99,8 @@ function adresaPortalu(): string {
   return (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 }
 
-/** „pá 10. 10. · 9:00–13:00" v pásmu studia - do mailu produkci. */
-function popisTerminu(start: Date, end: Date, pasmo: string): string {
+/** „pá 10. 10. · 9:00–13:00 · Brno I" v pásmu studia - do mailu produkci. */
+function popisTerminu(start: Date, end: Date, pasmo: string, studio?: string | null): string {
   const den = new Intl.DateTimeFormat('cs-CZ', {
     timeZone: pasmo,
     weekday: 'short',
@@ -106,7 +109,11 @@ function popisTerminu(start: Date, end: Date, pasmo: string): string {
   }).format(start);
   const cas = (d: Date) =>
     new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', minute: '2-digit', hour12: false }).format(d);
-  return `${den} · ${cas(start)}–${cas(end)}`;
+  // STUDIO U KAŽDÉHO TERMÍNU (připomínka Heleny 6. 10. 2026: „když mi dojde
+  // seznam vybraných termínů od herce, ať tam vidím, ve kterém studiu jsou ty
+  // termíny navoleny"). Nabídka chodí z víc studií naráz, takže bez něj se
+  // z mailu nepoznalo, kam se v ten den jede.
+  return `${den} · ${cas(start)}–${cas(end)}${studio ? ` · ${studio}` : ''}`;
 }
 
 /**
@@ -136,7 +143,7 @@ export async function oznamProdukciVyberTerminu(requestId: string): Promise<void
         studio: { select: { name: true, timezone: true } },
         slots: {
           where: { state: { in: ['SELECTED', 'CONFIRMED'] } },
-          select: { start: true, end: true },
+          select: { start: true, end: true, studio: { select: { name: true } } },
           orderBy: { start: 'asc' },
         },
       },
@@ -163,7 +170,7 @@ export async function oznamProdukciVyberTerminu(requestId: string): Promise<void
       actorName: request.actorName,
       projectName: request.projectName,
       studioName: request.studio.name,
-      terminy: request.slots.map((s) => popisTerminu(s.start, s.end, pasmo)),
+      terminy: request.slots.map((s) => popisTerminu(s.start, s.end, pasmo, s.studio?.name)),
       requiredSessions: request.requiredSessions,
       drzenoDo: request.holdUntil
         ? new Intl.DateTimeFormat('cs-CZ', {

@@ -612,6 +612,13 @@ export function OfferBuilder({
                       {minutesToTime(minutesInZone(new Date(s.start), request.timezone))}–
                       {minutesToTime(minutesInZone(new Date(s.end), request.timezone))}
                     </span>
+                    {/* STUDIO U KAŽDÉHO VYBRANÉHO TERMÍNU (připomínka Heleny
+                        6. 10. 2026: „když mi dojde seznam vybraných termínů od
+                        herce, ať tam vidím, ve kterém studiu jsou ty termíny
+                        navoleny"). Nabídka chodí z víc studií naráz, takže bez
+                        tohohle se nedalo poznat, kam se v ten den jede -
+                        a potvrzuje se tím zápis do kalendáře konkrétní pobočky. */}
+                    <span className="text-muted font-body">{` · ${s.studioName}`}</span>
                   </li>
                 ))}
               </ul>
@@ -639,15 +646,16 @@ export function OfferBuilder({
                       {minutesToTime(minutesInZone(new Date(s.start), request.timezone))}–
                       {minutesToTime(minutesInZone(new Date(s.end), request.timezone))}
                     </span>
-                    {/* Odebrání termínu z nabídky (1. 10. 2026). Po odeslání
-                        herci už se seznamem nehýbeme - ten už si z něj vybírá. */}
-                    {!locked && !request.sentAt && (
+                    {/* Odebrání termínu z nabídky (1. 10. 2026). Odebírá se
+                        jen z toho, co herec NEVYBRAL, takže jeho výběrem to
+                        nehne. */}
+                    {!locked && (
                       <button
                         type="button"
                         onClick={() => void zmenVyrazeni({ vyradit: klicSlotu(s) })}
                         disabled={busy}
-                        title="Odebrat z nabídky"
-                        aria-label="Odebrat z nabídky"
+                        title={t('nabidkaTerminu.odebratZNabidky')}
+                        aria-label={t('nabidkaTerminu.odebratZNabidky')}
                         className="ml-auto text-xs font-heading text-muted hover:text-danger transition-colors disabled:opacity-50"
                       >
                         ✕
@@ -657,30 +665,6 @@ export function OfferBuilder({
                 ))}
               </ul>
 
-              {vyrazena.length > 0 && (
-                <div className="mt-4 border-t border-line pt-3">
-                  <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0 mb-2">
-                    Odebráno z nabídky ({vyrazena.length})
-                  </p>
-                  <ul className="list-none m-0 p-0 flex flex-col gap-1">
-                    {vyrazena.map((klic) => (
-                      <li key={klic} className="text-sm font-body text-muted flex items-center gap-2">
-                        <span className="capitalize line-through">{popisKlice(klic)}</span>
-                        {!locked && !request.sentAt && (
-                          <button
-                            type="button"
-                            onClick={() => void zmenVyrazeni({ vratit: klic })}
-                            disabled={busy}
-                            className="ml-auto text-xs font-heading text-brand-purple hover:underline disabled:opacity-50"
-                          >
-                            Vrátit
-                          </button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
 
@@ -837,6 +821,16 @@ export function OfferBuilder({
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           {t('nabidkaTerminu.seznamNadpis')} <span className="tabular-nums">({slots.length})</span>
         </h2>
+        {/* ODEBÍRÁNÍ TERMÍNŮ JE TADY (připomínka Heleny 5. 10. 2026: „možnost
+            manuálního odstranění některých dat (svátky, Vánoce) z nabídky
+            termínů pro herce").
+            Křížek vznikl 1. 10. 2026, ale visel jen v bloku „Herec vybral"
+            a jen dokud nabídka neodešla - a protože se od 19. 9. 2026 nabídka
+            z projektu ZAKLÁDÁ A ROVNOU POSÍLÁ, nebyl k zastižení nikdy.
+            Odebírá se jen z nabídnutých termínů, takže hercův výběr zůstává. */}
+        {!locked && nabidnute.length > 0 && (
+          <p className="text-xs font-body text-muted m-0">{t('nabidkaTerminu.odebiraniPopis')}</p>
+        )}
         {slots.length === 0 && (
           <p className="text-sm font-body text-muted m-0">{t('nabidkaTerminu.zadneVolneMisto')}</p>
         )}
@@ -868,11 +862,48 @@ export function OfferBuilder({
                   <span className="text-xs font-heading font-semibold text-muted">
                     {KLICE_STAVU_TERMINU[s.state] ? t(KLICE_STAVU_TERMINU[s.state]) : s.state}
                   </span>
+                  {!locked && s.state === 'OFFERED' && (
+                    <button
+                      type="button"
+                      onClick={() => void zmenVyrazeni({ vyradit: klicSlotu(s) })}
+                      disabled={busy}
+                      title={t('nabidkaTerminu.odebratZNabidky')}
+                      aria-label={t('nabidkaTerminu.odebratZNabidky')}
+                      className="text-sm font-heading text-muted hover:text-danger transition-colors disabled:opacity-50"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </span>
               </li>
             );
           })}
         </ul>
+
+        {vyrazena.length > 0 && (
+          <div className="border-t border-line pt-3">
+            <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0 mb-2">
+              {t('nabidkaTerminu.odebrano', { pocet: vyrazena.length })}
+            </p>
+            <ul className="list-none m-0 p-0 flex flex-col gap-1">
+              {vyrazena.map((klic) => (
+                <li key={klic} className="text-sm font-body text-muted flex items-center gap-2">
+                  <span className="capitalize line-through">{popisKlice(klic)}</span>
+                  {!locked && (
+                    <button
+                      type="button"
+                      onClick={() => void zmenVyrazeni({ vratit: klic })}
+                      disabled={busy}
+                      className="ml-auto text-xs font-heading text-brand-purple hover:underline disabled:opacity-50"
+                    >
+                      {t('nabidkaTerminu.vratit')}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Historie */}

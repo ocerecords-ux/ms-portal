@@ -11,6 +11,7 @@ import { PridatDoKalendare } from '@/components/PridatDoKalendare';
 import { MojeNataceni, type Nataceni } from './MojeNataceni';
 import { ProbehlaNataceni, type ProbehleNataceni } from './ProbehlaNataceni';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { uliceStudia } from '@/lib/studioProHerce';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
@@ -36,8 +37,11 @@ export default async function MojeTerminyPage() {
     where: { actorUserId: session.user.id, status: { notIn: ['DRAFT', 'PREPARING', 'CANCELLED'] } },
     orderBy: { createdAt: 'desc' },
     include: {
-      studio: { select: { name: true, location: true, timezone: true } },
-      slots: { orderBy: { start: 'asc' }, include: { studio: { select: { name: true, location: true } } } },
+      studio: { select: { name: true, location: true, timezone: true, adresa: true } },
+      slots: {
+        orderBy: { start: 'asc' },
+        include: { studio: { select: { name: true, location: true, adresa: true } } },
+      },
     },
   });
 
@@ -58,8 +62,13 @@ export default async function MojeTerminyPage() {
           start: s.start.toISOString(),
           end: s.end.toISOString(),
           mesto: mesto(s.studio),
-          // Presne studio (Brno I / Brno II) - herec musi vedet, kam jde.
-          studio: (s.studio.name.split(' - ').pop() ?? s.studio.name).trim(),
+          /**
+           * ULICE MÍSTO „Brno I" (připomínka Heleny 5. 10. 2026: „ať se ve
+           * výstupech pro herce studia neoznačují jako Brno I a Brno II, ale
+           * adresou"). Herec musí vědět, kam jede, a dvě brněnská studia jsou
+           * od sebe přes celé město.
+           */
+          studio: uliceStudia(s.studio),
           potvrzeno: s.state === 'CONFIRMED',
           timezone: r.studio.timezone,
           zadost:
@@ -85,7 +94,7 @@ export default async function MojeTerminyPage() {
           projekt: r.projectName,
           start: s.start.toISOString(),
           end: s.end.toISOString(),
-          studio: (s.studio.name.split(' - ').pop() ?? s.studio.name).trim(),
+          studio: uliceStudia(s.studio),
           timezone: r.studio.timezone,
         })),
     )
@@ -135,7 +144,7 @@ export default async function MojeTerminyPage() {
                 <span className="block font-heading font-semibold text-ink">{r.projectName}</span>
                 <span className="block text-sm font-body text-muted mt-0.5">
                   {prelozitS(jazyk, 'mojeTerminy.vyberteZ', {
-                    studio: r.studio.name,
+                    studio: uliceStudia(r.studio),
                     pocet: r.requiredSessions,
                     nabidnuto: r.slots.filter((s) => s.state === 'OFFERED').length,
                   })}

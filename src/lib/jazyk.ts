@@ -9682,6 +9682,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Mail, jak se u projektu odškrtne dotočeno s hercem - u všech projektů.',
     en: 'An email when a project is ticked off as finished with an actor — for every project.',
   },
+  // --- připomínky z 5. a 6. 10. 2026 ---
+  'nabidkaTerminu.odebratZNabidky': { cs: 'Odebrat z nabídky', en: 'Remove from the offer' },
+  'nabidkaTerminu.odebrano': { cs: 'Odebráno z nabídky ({pocet})', en: 'Removed from the offer ({pocet})' },
+  'nabidkaTerminu.vratit': { cs: 'Vrátit', en: 'Put back' },
+  'nabidkaTerminu.odebiraniPopis': {
+    cs: 'Křížkem termín z nabídky odeberete - na svátky a Vánoce, o kterých kalendář neví. Hercova volba tím nehne a tlačítkem Vrátit se termín vrací zpátky.',
+    en: 'The cross takes a session out of the offer — for bank holidays and Christmas, which the calendar knows nothing about. It never touches what the actor has already chosen, and Put back returns it.',
+  },
+
   // --- Moje bonusy: podíl na obratu (6. 10. 2026) ---
   'prehledy.zalozka./prehledy/moje-bonusy': { cs: 'Moje bonusy', en: 'My bonuses' },
   'uzivatel.polePodilNaObratu': { cs: 'Podíl na obratu (%)', en: 'Share of turnover (%)' },
@@ -9689,11 +9698,27 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'z obratu bez DPH se z něj počítá bonus v Přehledech → Moje bonusy; prázdné pole znamená žádný podíl',
     en: 'the bonus in Reports → My bonuses is worked out from it, out of turnover excluding VAT; empty means no share',
   },
-  'bonusObratu.mujBonus': { cs: 'Můj bonus za {rok}', en: 'My bonus for {rok}' },
   'bonusObratu.mujPodil': { cs: 'Můj podíl', en: 'My share' },
-  'bonusObratu.obratRoku': { cs: 'Obrat za {rok} bez DPH', en: 'Turnover for {rok} excluding VAT' },
+  'bonusObratu.bonusZaMesic': { cs: 'Můj bonus za {mesic}', en: 'My bonus for {mesic}' },
+  'bonusObratu.obratMesice': { cs: 'Obrat za {mesic} bez DPH', en: 'Turnover for {mesic} excluding VAT' },
+  'bonusObratu.grafBonusu': { cs: 'Můj bonus po měsících — {rok}', en: 'My bonus month by month — {rok}' },
+  'bonusObratu.grafObratu': { cs: 'Obrat po měsících — {rok}', en: 'Turnover month by month — {rok}' },
+  'bonusObratu.bezi': { cs: 'běží', en: 'in progress' },
+  'bonusObratu.zatimNic': {
+    cs: 'V tomhle roce se zatím nic nevyfakturovalo.',
+    en: 'Nothing has been invoiced this year yet.',
+  },
+  'bonusObratu.clovek': { cs: 'Člověk', en: 'Person' },
+  'bonusObratu.podil': { cs: 'Podíl', en: 'Share' },
+  'bonusObratu.podilCloveka': { cs: 'Podíl na obratu — {jmeno}', en: 'Share of turnover — {jmeno}' },
+  'bonusObratu.chybaProcento': {
+    cs: 'Podíl zadejte jako procenta od 0 do 100.',
+    en: 'Enter the share as a percentage between 0 and 100.',
+  },
+  'bonusObratu.chybaUlozeni': { cs: 'Podíl se nepodařilo uložit.', en: 'The share could not be saved.' },
+  'prehledy.zalozka.bonusy': { cs: 'Bonusy', en: 'Bonuses' },
   'bonusObratu.zaklad': {
-    cs: 'Počítá se z vystavených faktur podle data vystavení, v korunách bez DPH - tedy ze stejného obratu, jaký ukazuje Palubovka. Stornované a rozpracované faktury se nepočítají.',
+    cs: 'Počítá se po měsících z vystavených faktur podle data vystavení, v korunách bez DPH - tedy ze stejného obratu, jaký ukazuje Palubovka. Stornované a rozpracované faktury se nepočítají.',
     en: 'Worked out from issued invoices by their issue date, in CZK excluding VAT — the same turnover the Dashboard shows. Cancelled and draft invoices do not count.',
   },
   'bonusObratu.poMesicich': { cs: 'Po měsících', en: 'Month by month' },
@@ -9703,8 +9728,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'bonusObratu.celkemRok': { cs: 'Celkem {rok}', en: 'Total for {rok}' },
   'bonusObratu.vsichni': { cs: 'Podíly celého týmu', en: 'The whole team’s shares' },
   'bonusObratu.vsichniPopis': {
-    cs: 'Kdo má na kartě vyplněný podíl na obratu a kolik mu k dnešku vychází. Vidí to jen Žůžo-labůžo.',
-    en: 'Who has a share of turnover on their card and what it comes to today. Only Žůžo-labůžo sees this.',
+    cs: 'Kdo má podíl na obratu a kolik mu vychází za měsíc a za rok. Procento jde přepsat rovnou tady — uloží se po odkliknutí. Vidí to jen Žůžo-labůžo.',
+    en: 'Who has a share of turnover and what it comes to for the month and for the year. The percentage can be changed right here — it saves when you click away. Only Žůžo-labůžo sees this.',
   },
   'bonusObratu.nikdoNemaPodil': {
     cs: 'Podíl na obratu zatím nemá nikdo - vyplňuje se na kartě uživatele.',

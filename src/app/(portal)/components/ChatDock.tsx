@@ -1806,6 +1806,17 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // Otevrene vlakno (zadani 8. 9. 2026) - ID zpravy, pod kterou se odpovida.
   const [vlaknoId, setVlaknoId] = useState<string | null>(null);
   const [vlakno, setVlakno] = useState<ChatMessage[]>([]);
+  /**
+   * VLÁKNO SE OTEVÍRÁ U POSLEDNÍ ODPOVĚDI (připomínka Petera 5. 10. 2026:
+   * „při kliknutí na notifikaci nové zprávy, která je odpovědí ve vlákně, se
+   * nezobrazí poslední zpráva vlákna, ale první zpráva").
+   *
+   * Panel vlákna má vlastní rolování a nikdo s ním nehýbal, takže u delšího
+   * vlákna zůstal nahoře - na zprávě, kterou člověk zná, místo té, kvůli
+   * které mu to cinklo. Hlavní seznam zpráv to dělá odjakživa, jen o pár
+   * stovek řádků níž.
+   */
+  const vlaknoPanelRef = useRef<HTMLDivElement | null>(null);
   const [vlaknoDraft, setVlaknoDraft] = useState('');
   // Vybrane, jeste neodeslane prilohy (zadani 9. 9. 2026). Nahravaji se az
   // pri odeslani - kdyz clovek soubor zase odebere, nic zbytecne neputuje.
@@ -2376,10 +2387,19 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
      * skončil jinde, než kam ho zmínka volala.
      */
     let zOdkazu: string | null = null;
+    /**
+     * Odpověď ve vlákně otevře rovnou to vlákno (6. 10. 2026) - push u ní nese
+     * i `vlakno=<id zprávy>`. Bez toho se otevřel jen rozhovor a nová odpověď
+     * nebyla nikde vidět: ve výpisu je pod rodičovskou zprávou schovaná.
+     */
+    let vlaknoZOdkazu: string | null = null;
     try {
-      zOdkazu = new URLSearchParams(window.location.search).get('konverzace');
+      const parametry = new URLSearchParams(window.location.search);
+      zOdkazu = parametry.get('konverzace');
+      vlaknoZOdkazu = parametry.get('vlakno');
     } catch {
       zOdkazu = null;
+      vlaknoZOdkazu = null;
     }
 
     let posledni: string | null = null;
@@ -2396,7 +2416,16 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     if (!vrat) return;
     setTab(vrat.kind);
     setOpenId(vrat.id);
+    // Vlakno jen u toho rozhovoru, na ktery odkaz opravdu vedl.
+    if (vlaknoZOdkazu && vrat.id === zOdkazu) setVlaknoId(vlaknoZOdkazu);
   }, [expanded, openId, conversations]);
+
+  /** Konec vlákna po otevření i po každé nové odpovědi (6. 10. 2026). */
+  useEffect(() => {
+    const el = vlaknoPanelRef.current;
+    if (!el || !vlaknoId) return;
+    el.scrollTop = el.scrollHeight;
+  }, [vlaknoId, vlakno.length]);
 
   const neprectene = conversations.reduce((sum, c) => sum + c.unread, 0);
 
@@ -3847,23 +3876,33 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     )}
                     {messages.map((m, index) => {
                       /**
-                       * Odkaz "Odpovedet" se ukazuje jen u POSLEDNI zpravy
-                       * ze serie od jednoho autora (zadani 10. 9. 2026:
-                       * "kdyz napise nekdo vice zprav za sebou, at se pod
-                       * kazdou neobjevuje odpovedet, strasne to zabira
-                       * misto"). Zprava, pod kterou uz nejake odpovedi visi,
-                       * si svuj odkaz nechava vzdycky - jinak by k vlaknu
-                       * nebyla cesta.
+                       * Odkaz „Odpovědět" DRŽÍ MÍSTO jen u POSLEDNÍ zprávy ze
+                       * série od jednoho autora (zadání 10. 9. 2026: „když
+                       * napíše někdo více zpráv za sebou, ať se pod každou
+                       * neobjevuje odpovědět, strašně to zabírá místo").
+                       * Zpráva, pod kterou už nějaké odpovědi visí, si svůj
+                       * odkaz nechává vždycky - jinak by k vláknu nebyla cesta.
+                       *
+                       * U OSTATNÍCH SE UKÁŽE PO NAJETÍ MYŠÍ (6. 10. 2026:
+                       * „když jsou zprávy za sebou, nejde reagovat ve vlákně
+                       * u každé zvlášť"). Odpovědět jde tedy na každou zprávu,
+                       * ale v klidu jich seznam nese jen tolik odkazů co dřív.
+                       * V mobilu se ukazují pořád - najet tam není čím.
                        */
                       const dalsi = messages[index + 1];
                       const posledniOdAutora = !dalsi || dalsi.authorId !== m.authorId;
                       const ukazOdpovedet = m.replyCount > 0 || posledniOdAutora;
+                      const odpovedetSkryta = !ukazOdpovedet
+                        ? 'opacity-100 sm:opacity-0 sm:group-hover/zprava:opacity-100 sm:focus-visible:opacity-100 transition-opacity'
+                        : '';
                       return (
                       <div key={m.id} className="flex flex-col gap-3">
                         {(index === 0 || !stejnyDen(m.createdAt, messages[index - 1].createdAt)) && (
                           <DenOddelovac iso={m.createdAt} />
                         )}
-                      <div className={`flex items-start gap-2 ${m.stav === 'posilam' ? 'opacity-60' : ''}`}>
+                      <div
+                        className={`group/zprava flex items-start gap-2 ${m.stav === 'posilam' ? 'opacity-60' : ''}`}
+                      >
                         <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
                         <div className="min-w-0">
                           <Hlavicka
@@ -3909,15 +3948,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                           {/* Zobrazeno i odkaz do vlakna na jednom radku -
                               samostatny radek na odpoved zabiral moc mista
                               (zprava uzivatele 8. 9. 2026). */}
-                          {(m.mine || ukazOdpovedet) && (
                           <span className="mt-0.5 flex items-center gap-2 flex-wrap">
                             {m.mine && <Zobrazeno seenBy={m.seenBy} stav={m.stav} />}
-                            {m.mine && ukazOdpovedet && <span className="text-[11px] text-muted/40">·</span>}
-                            {ukazOdpovedet && (
+                            {m.mine && <span className={`text-[11px] text-muted/40 ${odpovedetSkryta}`}>·</span>}
                             <button
                               type="button"
                               onClick={() => setVlaknoId(m.id)}
-                              className={`text-[11px] font-heading font-semibold hover:underline ${
+                              className={`text-[11px] font-heading font-semibold hover:underline ${odpovedetSkryta} ${
                                 vlaknoId === m.id ? 'text-brand-purpleDark underline' : 'text-brand-purple'
                               }`}
                             >
@@ -3929,7 +3966,6 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                     ? t('chat.odpovediMalo', { pocet: m.replyCount })
                                     : t('chat.odpovediMnoho', { pocet: m.replyCount })}
                             </button>
-                            )}
                             {/* Upravit smi jen autor - i na serveru (zadani
                                 9. 9. 2026: "bylo by super upravovat me
                                 odeslane zpravy, kdyz se treba spletu"). */}
@@ -3955,7 +3991,6 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               </>
                             )}
                           </span>
-                          )}
                         </div>
                       </div>
                       </div>
@@ -4020,7 +4055,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       </button>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 bg-surfaceSoft">
+                    <div
+                      ref={vlaknoPanelRef}
+                      className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 bg-surfaceSoft"
+                    >
                       {vlakno.map((m, index) => (
                         <div key={m.id} className={`flex items-start gap-2 ${index === 0 ? '' : 'pl-3'}`}>
                           <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={index === 0 ? 26 : 22} />
