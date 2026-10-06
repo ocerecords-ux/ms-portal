@@ -532,6 +532,12 @@ export async function podepsanyOdkazNaPrilohu(
   key: string,
   fileName: string,
   jakoPrilohu = false,
+  /**
+   * Jak dlouho odkaz platí. Delší se hodí, když si soubor stahuje CIZÍ server -
+   * Instagram si příběh tahá sám a pět minut je na to zbytečně nakrátko
+   * (6. 10. 2026).
+   */
+  platnostSekund = PLATNOST_STAZENI,
 ): Promise<string | null> {
   const client = getClient();
   const bucket = process.env.S3_BUCKET;
@@ -546,7 +552,7 @@ export async function podepsanyOdkazNaPrilohu(
         fileName,
       )}`,
     }),
-    { expiresIn: PLATNOST_STAZENI },
+    { expiresIn: platnostSekund },
   );
 }
 

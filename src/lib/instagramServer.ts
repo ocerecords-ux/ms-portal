@@ -61,7 +61,7 @@ export function odkazPrihlaseni(state: string): string {
     client_id: appId(),
     redirect_uri: adresaNavratu(),
     response_type: 'code',
-    scope: 'instagram_business_basic',
+    scope: 'instagram_business_basic,instagram_business_content_publish',
     state,
   });
   return `https://www.instagram.com/oauth/authorize?${p.toString()}`;
@@ -193,5 +193,112 @@ export async function instagramProTabuli(): Promise<InstagramNaTabuli | null> {
   } catch (err) {
     console.error('Instagram pro tabuli selhal:', err);
     return null;
+  }
+}
+
+/**
+ * VYVĚŠENÍ PŘÍBĚHU PŘES API (zadání 6. 10. 2026: „můžeme dát zvukařům
+ * přístup, aby mohli posílat na instagram příběhy, aniž by měli přístup na
+ * instagram?").
+ *
+ * DVA KROKY, JAK TO CHCE META: nejdřív se založí kontejner
+ * (`media_type=STORIES` a ADRESA souboru), pak se potvrdí. Soubor si Instagram
+ * stáhne SÁM ze svých serverů - proto se mu posílá podepsaná adresa úložiště
+ * s delší platností, ne odkaz do portálu, který chce přihlášení.
+ *
+ * U VIDEA SE MUSÍ POČKAT. Kontejner se založí hned, ale video se na straně
+ * Mety ještě zpracovává a potvrzení dřív než dojede skončí chybou - proto se
+ * stav kontejneru obvolává, dokud není FINISHED.
+ *
+ * TEXT SE NEPŘIPOJUJE. Instagram u příběhů popisek přes API nebere; co má být
+ * v obrázku, musí být v obrázku. Text z portálu proto zůstává jen poznámkou
+ * pro toho, kdo příběh vyvěšuje.
+ *
+ * NIKDY NEVYHAZUJE - vrací důvod, který se dá ukázat ve frontě.
+ */
+export type VysledekVyveseni = { ok: true; id: string } | { ok: false; chyba: string };
+
+const CEKANI_NA_VIDEO_MS = 3_000;
+/** 15 x 3 s = 45 s; funkce na Vercelu ma strop 60 s, at zbyde na odpoved. */
+const POKUSU_NA_VIDEO = 15;
+
+export async function vyvesPribeh(adresaSouboru: string, jeVideo: boolean): Promise<VysledekVyveseni> {
+  try {
+    const ucet = await prisma.instagramUcet.findUnique({ where: { id: 'hlavni' } });
+    if (!ucet) return { ok: false, chyba: 'Instagram není připojený.' };
+    const token = await platnyToken(ucet);
+
+    const zalozeni = new URLSearchParams({
+      media_type: 'STORIES',
+      [jeVideo ? 'video_url' : 'image_url']: adresaSouboru,
+      access_token: token,
+    });
+    const r1 = await fetch(`${API}/${VERZE}/me/media`, { method: 'POST', body: zalozeni, cache: 'no-store' });
+    const d1 = (await r1.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+    if (!r1.ok || !d1.id) {
+      return { ok: false, chyba: d1.error?.message || `Instagram odmítl příběh (${r1.status}).` };
+    }
+
+    if (jeVideo) {
+      const hotovo = await pockejNaZpracovani(d1.id, token);
+      if (!hotovo.ok) return hotovo;
+    }
+
+    const potvrzeni = new URLSearchParams({ creation_id: d1.id, access_token: token });
+    const r2 = await fetch(`${API}/${VERZE}/me/media_publish`, { method: 'POST', body: potvrzeni, cache: 'no-store' });
+    const d2 = (await r2.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+    if (!r2.ok || !d2.id) {
+      return { ok: false, chyba: d2.error?.message || `Instagram příběh nevyvěsil (${r2.status}).` };
+    }
+    // Novy pribeh znamena, ze cache pro tabule uz neplati.
+    await prisma.instagramUcet.update({ where: { id: 'hlavni' }, data: { cacheAt: null } }).catch(() => undefined);
+    return { ok: true, id: d2.id };
+  } catch (err) {
+    console.error('Vyvěšení příběhu selhalo:', err);
+    return { ok: false, chyba: 'Instagram se nepodařilo oslovit.' };
+  }
+}
+
+/** Token, který ještě chvíli platí - prodlouží se, když se blíží konec. */
+async function platnyToken(ucet: { token: string; tokenDo: Date }): Promise<string> {
+  if (ucet.tokenDo.getTime() - Date.now() >= PRODLOUZIT_PRED_MS) return ucet.token;
+  const r = await fetch(
+    `${API}/refresh_access_token?grant_type=ig_refresh_token&access_token=${encodeURIComponent(ucet.token)}`,
+    { cache: 'no-store' },
+  );
+  const d = (await r.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
+  if (!r.ok || !d.access_token) return ucet.token;
+  await prisma.instagramUcet
+    .update({
+      where: { id: 'hlavni' },
+      data: { token: d.access_token, tokenDo: new Date(Date.now() + (d.expires_in ?? 60 * 24 * 3600) * 1000) },
+    })
+    .catch(() => undefined);
+  return d.access_token;
+}
+
+/** Obvolává stav kontejneru, dokud Meta video nezpracuje. */
+async function pockejNaZpracovani(kontejner: string, token: string): Promise<VysledekVyveseni> {
+  for (let pokus = 0; pokus < POKUSU_NA_VIDEO; pokus += 1) {
+    await new Promise((hotovo) => setTimeout(hotovo, CEKANI_NA_VIDEO_MS));
+    const r = await fetch(
+      `${API}/${VERZE}/${kontejner}?fields=status_code,status&access_token=${encodeURIComponent(token)}`,
+      { cache: 'no-store' },
+    );
+    const d = (await r.json().catch(() => ({}))) as { status_code?: string; status?: string };
+    if (d.status_code === 'FINISHED') return { ok: true, id: kontejner };
+    if (d.status_code === 'ERROR' || d.status_code === 'EXPIRED') {
+      return { ok: false, chyba: d.status || 'Instagram video nepřijal.' };
+    }
+  }
+  return { ok: false, chyba: 'Instagram video zpracovává moc dlouho. Zkuste to za chvíli znovu.' };
+}
+
+/** Umí portál vyvěšovat sám? Jen když je účet připojený. */
+export async function lzeVyvesitPresApi(): Promise<boolean> {
+  try {
+    return (await prisma.instagramUcet.count({ where: { id: 'hlavni' } })) > 0;
+  } catch {
+    return false;
   }
 }

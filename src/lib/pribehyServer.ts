@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db';
 import { notify } from '@/lib/notifications';
 import { maPristup, podlehaPristupum, type KdoPristupy } from '@/lib/pristupy';
 import { jeVideo } from '@/lib/pribehy';
+import { vyvesPribeh } from '@/lib/instagramServer';
+import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 
 /**
  * PŘÍBĚHY NA INSTAGRAM - DATA (zadání 6. 10. 2026: „můžeme dát zvukařům
@@ -251,6 +253,49 @@ export async function vyridPribeh(
     });
   }
   return radek;
+}
+
+/**
+ * VYVĚŠENÍ PŘÍMÉ Z PORTÁLU (6. 10. 2026).
+ *
+ * Instagram si soubor stáhne sám ze svých serverů, takže mu nejde poslat
+ * odkaz do portálu (ten chce přihlášení) - dostane PODEPSANOU ADRESU
+ * úložiště s půlhodinovou platností. U videa to chvíli trvá, protože Meta
+ * video nejdřív zpracuje; viz vyvesPribeh v lib/instagramServer.ts.
+ *
+ * KDYŽ SE TO NEPOVEDE, FRONTA ZŮSTÁVÁ BEZE ZMĚNY a volá se důvod. Označit
+ * příběh za vyvěšený, když venku není, je horší než chyba.
+ */
+export async function vyvesPribehNaInstagram(
+  user: Ucet,
+  id: string,
+): Promise<{ ok: true; pribeh: PribehRadek } | { ok: false; chyba: string }> {
+  const p = (await prisma.socialniPribeh.findUnique({
+    where: { id },
+    select: { url: true, nazevSouboru: true, typSouboru: true, stav: true },
+  })) as { url: string; nazevSouboru: string; typSouboru: string; stav: string } | null;
+  if (!p) return { ok: false, chyba: 'Příběh nenalezen.' };
+  if (p.stav !== 'CEKA') return { ok: false, chyba: 'Tenhle příběh už někdo vyřídil.' };
+
+  const klic = klicZAdresyUloziste(p.url);
+  if (!klic) {
+    return { ok: false, chyba: 'Soubor není v úložišti, Instagram si ho nemá odkud stáhnout.' };
+  }
+  const adresa = await podepsanyOdkazNaPrilohu(klic, p.nazevSouboru, false, 30 * 60);
+  if (!adresa) return { ok: false, chyba: 'Úložiště souborů není dostupné.' };
+
+  const vysledek = await vyvesPribeh(adresa, jeVideo(p.typSouboru));
+  if (!vysledek.ok) return vysledek;
+
+  const radek = await vyridPribeh(user, id, 'VYVESENO', null);
+  if (!radek) {
+    // Pribeh JE venku, jen se mezitim stav zmenil - nepredstirej neuspech.
+    return { ok: false, chyba: 'Příběh je na Instagramu, ale ve frontě ho mezitím někdo vyřídil.' };
+  }
+  await prisma.socialniPribeh
+    .update({ where: { id }, data: { externiId: vysledek.id } })
+    .catch(() => undefined);
+  return { ok: true, pribeh: radek };
 }
 
 /** Autor může svůj příběh stáhnout, dokud se nikdo nerozhodl. */

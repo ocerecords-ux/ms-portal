@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nactiPribehy, smiPoslatPribeh, smiSchvalovatPribehy } from '@/lib/pribehyServer';
+import { lzeVyvesitPresApi } from '@/lib/instagramServer';
 import { FrontaPribehu } from './FrontaPribehu';
 
 /**
@@ -27,11 +28,18 @@ export default async function PribehyPage() {
   ]);
   if (!smiPoslat && !smiSchvalit) redirect('/projekty');
 
+  /**
+   * Umí to portál vyvěsit sám? Jen když je účet připojený (Administrace →
+   * Studia → Připojit Instagram). Když ne, zůstává jen ruční cesta.
+   */
+  const presApi = smiSchvalit ? await lzeVyvesitPresApi() : false;
+
   return (
     <FrontaPribehu
       pribehy={await nactiPribehy(kdo)}
       smiPoslat={smiPoslat}
       smiSchvalit={smiSchvalit}
+      presApi={presApi}
       jaId={session.user.id}
     />
   );

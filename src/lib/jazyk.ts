@@ -8169,8 +8169,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'pribehy.popisek': { cs: 'Text k příběhu', en: 'Story text' },
   'pribehy.popisekPlaceholder': {
-    cs: 'Není povinný. Napiš, co má být v příběhu – včetně značek a odkazů.',
-    en: 'Optional. Write what should be in the story – including tags and links.',
+    cs: 'Není povinný. Do obrázku se nepropiše – je to vzkaz pro toho, kdo příběh vyvěšuje.',
+    en: 'Optional. It is not burned into the image – it is a note for whoever posts the story.',
   },
   'pribehy.odeslat': { cs: 'Odeslat ke schválení', en: 'Send for approval' },
   'pribehy.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
@@ -8201,6 +8201,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'pribehy.zkopirovatText': { cs: 'Zkopírovat text', en: 'Copy the text' },
   'pribehy.zkopirovano': { cs: 'Zkopírováno', en: 'Copied' },
   'pribehy.vyveseno': { cs: 'Vyvěšeno na Instagram', en: 'Posted to Instagram' },
+  'pribehy.vyvesit': { cs: 'Vyvěsit na Instagram', en: 'Post to Instagram' },
+  'pribehy.vyvesuji': { cs: 'Vyvěšuji…', en: 'Posting…' },
+  'pribehy.vyvesenoRucne': { cs: 'Vyvěšeno ručně', en: 'Posted by hand' },
   'pribehy.zamitnout': { cs: 'Nevyvěsit', en: 'Do not post' },
   'pribehy.vzkaz': { cs: 'Vzkaz zpátky', en: 'Message back' },
   'pribehy.vzkazPlaceholder': {

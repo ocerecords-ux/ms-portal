@@ -62,11 +62,14 @@ export function FrontaPribehu({
   pribehy,
   smiPoslat,
   smiSchvalit,
+  presApi,
   jaId,
 }: {
   pribehy: PribehRadek[];
   smiPoslat: boolean;
   smiSchvalit: boolean;
+  /** Je Instagram připojený? Pak portál vyvěšuje sám, jinak zbývá ruční cesta. */
+  presApi: boolean;
   jaId: string;
 }) {
   const t = usePreklad();
@@ -143,14 +146,14 @@ export function FrontaPribehu({
     }
   }
 
-  async function vyrid(id: string, stav: 'VYVESENO' | 'ZAMITNUTO', text?: string) {
+  async function vyrid(id: string, stav: 'VYVESENO' | 'ZAMITNUTO', text?: string, pres?: 'API') {
     setPracuji(id);
     setChyba(null);
     try {
       const res = await fetch(`/api/site/pribehy/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stav, vzkaz: text ?? undefined }),
+        body: JSON.stringify({ stav, vzkaz: text ?? undefined, pres }),
       });
       const telo = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(telo.error || t('pribehy.nevyrizeno'));
@@ -272,13 +275,27 @@ export function FrontaPribehu({
 
             {smiSchvalit && p.stav === 'CEKA' && (
               <>
+                {presApi && (
+                  <button
+                    type="button"
+                    disabled={pracuji === p.id}
+                    onClick={() => void vyrid(p.id, 'VYVESENO', undefined, 'API')}
+                    className="rounded-pill bg-brand-purple px-4 py-1.5 text-xs font-heading font-semibold text-white hover:bg-brand-purpleDeep transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {t(pracuji === p.id ? 'pribehy.vyvesuji' : 'pribehy.vyvesit')}
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={pracuji === p.id}
                   onClick={() => void vyrid(p.id, 'VYVESENO')}
-                  className="rounded-pill bg-brand-purple px-4 py-1.5 text-xs font-heading font-semibold text-white hover:bg-brand-purpleDeep transition-colors cursor-pointer disabled:opacity-50"
+                  className={`rounded-pill px-4 py-1.5 text-xs font-heading font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
+                    presApi
+                      ? 'border border-line text-muted hover:text-ink'
+                      : 'bg-brand-purple text-white hover:bg-brand-purpleDeep'
+                  }`}
                 >
-                  {t('pribehy.vyveseno')}
+                  {t(presApi ? 'pribehy.vyvesenoRucne' : 'pribehy.vyveseno')}
                 </button>
                 <button
                   type="button"
