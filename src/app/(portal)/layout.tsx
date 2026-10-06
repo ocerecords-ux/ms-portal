@@ -9,6 +9,7 @@ import { Topbar } from './components/Topbar';
 import { RozdeleneOkno } from './components/RozdeleneOkno';
 import { TaskDock } from './components/TaskDock';
 import { QuickDock } from './components/QuickDock';
+import { SiteDock } from './components/SiteDock';
 import { ChatDock } from './components/ChatDock';
 import { PrehledDne } from './components/PrehledDne';
 import { PoutkoDoku } from './components/PoutkoDoku';
@@ -19,6 +20,7 @@ import { loadMyTasks } from '@/lib/tasksServer';
 import { countUnread } from '@/lib/notifications';
 import { loadQuickActions } from '@/lib/quickActionsServer';
 import { quickActionsFor } from '@/lib/quickActions';
+import { nactiDokSiti } from '@/lib/pribehyServer';
 import { isInternalRole } from '@/lib/roles';
 import { odkazNaFotku } from '@/lib/fotky';
 import { zkusDatabazi } from '@/lib/dbZnovu';
@@ -125,6 +127,15 @@ export default async function PortalLayout({ children }: { children: React.React
    * přesměruje na projekty").
    */
   const maTabuli = role === 'ADMIN' || ((ucet?.tabulePristup ?? []) as { id: string }[]).length > 0;
+
+  /**
+   * ZÁLOŽKA SÍTĚ POD RYCHLÝMI VOLBAMI (zadání 6. 10. 2026). Natáhá se až
+   * tady, mimo společný `Promise.all` - v nouzovém režimu (nefunkční databáze)
+   * se záložka prostě neukáže a portál jede dál. Sama funkce taky nikdy
+   * nevyhazuje, vrací null.
+   */
+  const dokSiti =
+    internal && !nouzovyRezim ? await nactiDokSiti({ id: session.user.id, role }) : null;
 
   /**
    * KDO CO VIDÍ V LIŠTĚ (zadání 28. 9. 2026). Zaškrtávátka z karty uživatele -
@@ -258,6 +269,9 @@ export default async function PortalLayout({ children }: { children: React.React
       {internal && <PrehledDne />}
       <div data-doky className="hidden md:block">
         {internal && <QuickDock actions={quickActions} available={quickActionsFor(role)} />}
+        {/* Sítě pod rychlými volbami (zadání 6. 10. 2026) - záložka se ukáže
+            jen tomu, kdo na sítě vůbec má přístup; viz nactiDokSiti. */}
+        {internal && dokSiti && <SiteDock dok={dokSiti} />}
         {internal && <TaskDock tasks={tasks} />}
         {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
             (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}

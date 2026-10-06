@@ -298,6 +298,73 @@ export async function vyvesPribehNaInstagram(
   return { ok: true, pribeh: radek };
 }
 
+/**
+ * DO VYSKAKOVACÍ ZÁLOŽKY SÍTÍ V LEVÉM PANELU (zadání 6. 10. 2026: „chci
+ * udělat vyskakovací záložku, kde budou soc. sítě, nalevo v portálu pod
+ * rychlýma volbama").
+ *
+ * Volá to LAYOUT, tedy každá stránka portálu - proto se tu šetří na dvou
+ * dotazech: jeden na práva z karty účtu a jeden na to, co čeká ve frontě.
+ * Jméno instagramového účtu se schválně nenatáhá - je vidět na samotné
+ * stránce a třetí dotaz na každém načtení za to nestojí.
+ *
+ * NIKDY NEVYHAZUJE: záložka navíc nesmí shodit celý portál.
+ */
+export type DokSiti = {
+  /** Co čeká ve frontě - nejvýš pět, na náhledy v záložce. */
+  cekajici: { id: string; jeVideo: boolean }[];
+  /** Je jich víc než těch pět? Pak se u počtu ukáže „+". */
+  vicNez: boolean;
+  smiPoslat: boolean;
+  smiSchvalit: boolean;
+  smiPrispevky: boolean;
+};
+
+export async function nactiDokSiti(user: Ucet): Promise<DokSiti | null> {
+  try {
+    const u = (await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { superadmin: true, pristupy: true, vidiSite: true, active: true },
+    })) as {
+      superadmin: boolean | null;
+      pristupy: string[] | null;
+      vidiSite: boolean | null;
+      active: boolean;
+    } | null;
+    if (!u?.active) return null;
+
+    const kdo: KdoPristupy = {
+      role: user.role,
+      superadmin: Boolean(u.superadmin) || Boolean(u.vidiSite),
+      pristupy: u.pristupy ?? [],
+    };
+    const smi = (klic: string) => kdo.superadmin || (podlehaPristupum(user.role) && maPristup(kdo, klic));
+
+    const smiPoslat = smi('SITE.PRIBEHY_POSLAT');
+    const smiSchvalit = smi('SITE.PRIBEHY_SCHVALIT');
+    const smiPrispevky = smi('SITE.PRISPEVKY');
+    if (!smiPoslat && !smiSchvalit && !smiPrispevky) return null;
+
+    let cekajici: { id: string; jeVideo: boolean }[] = [];
+    let vicNez = false;
+    if (smiPoslat || smiSchvalit) {
+      const fronta = (await prisma.socialniPribeh.findMany({
+        where: { stav: 'CEKA', ...(smiSchvalit ? {} : { autorId: user.id }) },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        select: { id: true, typSouboru: true },
+      })) as { id: string; typSouboru: string }[];
+      vicNez = fronta.length > 5;
+      cekajici = fronta.slice(0, 5).map((p) => ({ id: p.id, jeVideo: jeVideo(p.typSouboru) }));
+    }
+
+    return { cekajici, vicNez, smiPoslat, smiSchvalit, smiPrispevky };
+  } catch (err) {
+    console.error('Záložku Sítě se nepodařilo načíst:', err);
+    return null;
+  }
+}
+
 /** Autor může svůj příběh stáhnout, dokud se nikdo nerozhodl. */
 export async function smazPribeh(user: Ucet, id: string): Promise<boolean> {
   const p = (await prisma.socialniPribeh.findUnique({

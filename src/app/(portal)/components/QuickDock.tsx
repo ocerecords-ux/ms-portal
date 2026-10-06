@@ -259,7 +259,7 @@ export function QuickDock({
   // --- Zatazeno: uzky fialovy pruh se zelenymi ikonami --------------------
   if (!expanded) {
     return (
-      <aside className="fixed left-0 top-28 z-40 flex flex-col items-stretch bg-brand-purple rounded-r-card shadow-lg overflow-hidden">
+      <aside data-quick-dock className="fixed left-0 top-28 z-40 flex flex-col items-stretch bg-brand-purple rounded-r-card shadow-lg overflow-hidden">
         {actions.map((akce) =>
           // Volba, ktera nikam nevede (Co me dnes ceka) - tlacitko, ne odkaz.
           jeOtevriVPortalu(akce) ? (
@@ -300,7 +300,7 @@ export function QuickDock({
 
   // --- Rozbaleno: ikony i nazvy ------------------------------------------
   return (
-    <aside className="fixed left-0 top-28 z-40 flex items-stretch">
+    <aside data-quick-dock className="fixed left-0 top-28 z-40 flex items-stretch">
       <div className="w-60 max-w-[70vw] bg-surface border border-l-0 border-line rounded-r-card shadow-lg flex flex-col">
         <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-brand-purple text-white rounded-tr-card">
           <span className="font-heading font-semibold text-xs uppercase tracking-wide">{t('rychleVolby.nadpis')}</span>

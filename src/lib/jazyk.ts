@@ -8153,6 +8153,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'site.pismo.body': { cs: 'Text', en: 'Body' },
 
   /* Pribehy na Instagram (6. 10. 2026). */
+  /* Vyskakovaci zalozka Site v levem panelu (6. 10. 2026). */
+  'dokSiti.nadpis': { cs: 'Sítě', en: 'Social' },
+  'dokSiti.zobrazit': { cs: 'Zobrazit Sítě', en: 'Show social' },
+  'dokSiti.skryt': { cs: 'Skrýt Sítě', en: 'Hide social' },
+  'dokSiti.novyPribeh': { cs: 'Nový příběh', en: 'New story' },
+  'dokSiti.fronta': { cs: 'Čeká na vyvěšení', en: 'Waiting to be posted' },
+  'dokSiti.prispevky': { cs: 'Příspěvky na sítě', en: 'Social posts' },
+  'dokSiti.popis': {
+    cs: 'Na Instagram to vyvěsí ten, kdo má přístup k účtu.',
+    en: 'Someone with access to the account posts it to Instagram.',
+  },
   'pribehy.nadpis': { cs: 'Příběhy na Instagram', en: 'Instagram stories' },
   'pribehy.podnadpis': {
     cs: 'Nahraj fotku nebo video a text. Na Instagram to vyvěsí ten, kdo k účtu má přístup – ty ho nepotřebuješ.',
