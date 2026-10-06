@@ -504,7 +504,7 @@ export function Editor({
         >
           <span
             ref={ramRef}
-            className="relative block aspect-[9/16] w-[250px] overflow-hidden rounded-[24px] bg-field sm:w-[300px]"
+            className="relative block aspect-[9/16] w-[200px] overflow-hidden rounded-[24px] bg-field sm:w-[230px]"
           >
             {nahled ? (
               <>
@@ -577,7 +577,7 @@ export function Editor({
           onChange={vyber}
           className="sr-only"
         />
-        <span className="max-w-[300px] text-center font-body text-[11px] text-muted">
+        <span className="max-w-[230px] text-center font-body text-[11px] text-muted">
           {t(nahled ? (jeVideo ? 'pribehy.uVideaBezTextu' : 'pribehy.tahniText') : 'pribehy.devetNaSestnact')}
         </span>
       </div>

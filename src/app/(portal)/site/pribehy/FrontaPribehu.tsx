@@ -51,7 +51,6 @@ export function FrontaPribehu({
   const nevyveseno = pribehy.filter((p) => p.stav === 'CEKA' || p.stav === 'ZAMITNUTO');
   const vyvesene = pribehy.filter((p) => p.stav === 'VYVESENO');
   const naInstagramu = vyvesene.filter((p) => p.vyrizenoAt && zbyvaMinut(p.vyrizenoAt, ted) !== null);
-  const vyprsele = vyvesene.filter((p) => !p.vyrizenoAt || zbyvaMinut(p.vyrizenoAt, ted) === null);
 
   const koncept = koncepty.find((p) => p.id === otevrenyKoncept) ?? null;
 
@@ -81,88 +80,149 @@ export function FrontaPribehu({
 
       <p className="m-0 max-w-[72ch] font-body text-sm text-muted">{t('pribehy.podnadpis')}</p>
 
-      {smiPoslat && (
-        <Editor
-          key={koncept?.id ?? 'novy'}
-          ucet={ucet}
-          koncept={koncept}
-          onHotovo={() => setOtevrenyKoncept(null)}
-        />
-      )}
+      {/**
+       * VLEVO SE TVOŘÍ, VPRAVO SE KOUKÁ (6. 10. 2026: „s tím náhledem by to
+       * mohlo být v levé části obrazovky a v pravé by byl rastr 3×3 s těmi
+       * zveřejněnými příspěvky a stavem").
+       *
+       * MŘÍŽKA MÁ VŽdYCKY DEVĚT OKEN, i když jsou venku dvě fotky - prázdná
+       * místa jsou součástí sdělení. Na užším okně se sloupce složí pod sebe.
+       */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="flex min-w-0 flex-col gap-6">
+          {smiPoslat && (
+            <Editor
+              key={koncept?.id ?? 'novy'}
+              ucet={ucet}
+              koncept={koncept}
+              onHotovo={() => setOtevrenyKoncept(null)}
+            />
+          )}
 
-      {koncepty.length > 0 && (
-        <Sekce nadpis={`${t('pribehy.koncepty')} ${koncepty.length}`}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {koncepty.map((p) => (
-              <Dlazdice
-                key={p.id}
-                p={p}
-                jazyk={jazyk}
-                stuha={t('pribehy.stav.KONCEPT')}
-                kruh={false}
-                akce={
-                  <>
-                    <Mala onClick={() => setOtevrenyKoncept(p.id)}>{t('pribehy.otevrit')}</Mala>
-                    <Mala onClick={() => void smaz(p.id)} nebezpecna>
-                      {t('pribehy.smazat')}
-                    </Mala>
-                  </>
-                }
-              />
-            ))}
-          </div>
-        </Sekce>
-      )}
+          {koncepty.length > 0 && (
+            <Sekce nadpis={`${t('pribehy.koncepty')} ${koncepty.length}`}>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {koncepty.map((p) => (
+                  <Dlazdice
+                    key={p.id}
+                    p={p}
+                    jazyk={jazyk}
+                    stuha={t('pribehy.stav.KONCEPT')}
+                    kruh={false}
+                    akce={
+                      <>
+                        <Mala onClick={() => setOtevrenyKoncept(p.id)}>{t('pribehy.otevrit')}</Mala>
+                        <Mala onClick={() => void smaz(p.id)} nebezpecna>
+                          {t('pribehy.smazat')}
+                        </Mala>
+                      </>
+                    }
+                  />
+                ))}
+              </div>
+            </Sekce>
+          )}
 
-      {nevyveseno.length > 0 && (
-        <Sekce nadpis={`${t('pribehy.neproslo')} ${nevyveseno.length}`}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {nevyveseno.map((p) => (
-              <Dlazdice
-                key={p.id}
-                p={p}
-                jazyk={jazyk}
-                stuha={p.vzkaz ?? t('pribehy.stav.CEKA')}
-                kruh
-                akce={
-                  <>
-                    <Mala onClick={() => void zkusZnovu(p.id)}>{t('pribehy.zkusitZnovu')}</Mala>
-                    <Mala onClick={() => void smaz(p.id)} nebezpecna>
-                      {t('pribehy.smazat')}
-                    </Mala>
-                  </>
-                }
-              />
-            ))}
-          </div>
-        </Sekce>
-      )}
+          {nevyveseno.length > 0 && (
+            <Sekce nadpis={`${t('pribehy.neproslo')} ${nevyveseno.length}`}>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {nevyveseno.map((p) => (
+                  <Dlazdice
+                    key={p.id}
+                    p={p}
+                    jazyk={jazyk}
+                    stuha={p.vzkaz ?? t('pribehy.stav.CEKA')}
+                    kruh
+                    akce={
+                      <>
+                        <Mala onClick={() => void zkusZnovu(p.id)}>{t('pribehy.zkusitZnovu')}</Mala>
+                        <Mala onClick={() => void smaz(p.id)} nebezpecna>
+                          {t('pribehy.smazat')}
+                        </Mala>
+                      </>
+                    }
+                  />
+                ))}
+              </div>
+            </Sekce>
+          )}
+        </div>
 
-      {/* --- CO JE PRÁVĚ NA INSTAGRAMU ------------------------------------ */}
-      <Sekce nadpis={`${t('pribehy.naInstagramu')} ${naInstagramu.length}`}>
-        {naInstagramu.length === 0 ? (
-          <p className="m-0 rounded-card border border-line bg-surface px-5 py-8 text-center font-body text-sm text-muted">
-            {t('pribehy.nicVenku')}
-          </p>
-        ) : (
-          <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-surface">
-            {naInstagramu.map((p) => (
-              <Radek key={p.id} p={p} jazyk={jazyk} ted={ted} />
-            ))}
+        {/* --- VPRAVO: mřížka 3×3 s tím, co je venku -------------------- */}
+        <div className="flex flex-col gap-3">
+          <h2 className="m-0 font-heading text-sm font-semibold uppercase tracking-wide text-muted">
+            {t('pribehy.naInstagramu')}{' '}
+            <span className="tabular-nums text-brand-greenDeep dark:text-brand-green">
+              {naInstagramu.length}
+            </span>
+          </h2>
+          <div className="grid w-full grid-cols-3 gap-2 xl:w-[372px]">
+            {Array.from({ length: 9 }, (_, i) => vyvesene[i] ?? null).map((p, i) =>
+              p ? (
+                <Okno key={p.id} p={p} jazyk={jazyk} ted={ted} />
+              ) : (
+                <span
+                  key={`prazdne-${i}`}
+                  aria-label={t('pribehy.prazdneMisto')}
+                  className="block aspect-[9/16] rounded-[14px] border border-dashed border-line/70"
+                />
+              ),
+            )}
           </div>
-        )}
-      </Sekce>
-
-      {vyprsele.length > 0 && (
-        <Sekce nadpis={t('pribehy.vyprsele')}>
-          <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-surface opacity-75">
-            {vyprsele.slice(0, 20).map((p) => (
-              <Radek key={p.id} p={p} jazyk={jazyk} ted={ted} />
-            ))}
-          </div>
-        </Sekce>
-      )}
+          {vyvesene.length === 0 && (
+            <p className="m-0 font-body text-xs text-muted">{t('pribehy.nicVenku')}</p>
+          )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+/**
+ * Jedno okno mřížky: fotka, stav a kdo ji tam dal. Zelený štítek znamená
+ * „ještě je vidět", šedý už vypršel a celé okno zeslábne.
+ */
+function Okno({ p, jazyk, ted }: { p: PribehRadek; jazyk: Jazyk; ted: Date }) {
+  const t = usePreklad();
+  const zbyva = p.vyrizenoAt ? zbyvaMinut(p.vyrizenoAt, ted) : null;
+  const zive = zbyva !== null;
+  const stav = !zive
+    ? t('pribehy.uzPryc')
+    : zbyva >= 60
+      ? t('pribehy.zbyvaHodin', { h: String(Math.floor(zbyva / 60)) })
+      : t('pribehy.zbyvaMinut', { m: String(zbyva) });
+
+  return (
+    <span
+      title={`${p.popisek.trim() || t('pribehy.bezPopisku')} — ${t('pribehy.daltamVKolik', {
+        kdo: p.vyridil || p.autor,
+        datum: p.vyrizenoAt ? formatDatum(jazyk, new Date(p.vyrizenoAt)) : '—',
+      })}`}
+      className={`relative block aspect-[9/16] overflow-hidden rounded-[14px] bg-bar ${zive ? '' : 'opacity-60'}`}
+    >
+      {p.jeVideo ? (
+        <video
+          src={`/api/site/pribehy/${p.id}/soubor`}
+          preload="metadata"
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={`/api/site/pribehy/${p.id}/soubor`} alt="" className="h-full w-full object-cover" />
+      )}
+      <span
+        className={`absolute left-1.5 top-1.5 rounded-pill px-1.5 py-0.5 font-heading text-[10px] tabular-nums backdrop-blur-sm ${
+          zive ? 'bg-brand-green text-onAccent' : 'bg-black/60 text-white/80'
+        }`}
+      >
+        {stav}
+      </span>
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1 pt-6">
+        <span className="block truncate font-heading text-[10px] text-white">{p.vyridil || p.autor}</span>
+      </span>
+    </span>
   );
 }
 
@@ -239,61 +299,6 @@ function Dlazdice({
         </span>
       </span>
       <span className="flex flex-wrap gap-1">{akce}</span>
-    </div>
-  );
-}
-
-/** Řádek přehledu: co je venku, kdo to tam dal a za jak dlouho zmizí. */
-function Radek({ p, jazyk, ted }: { p: PribehRadek; jazyk: Jazyk; ted: Date }) {
-  const t = usePreklad();
-  const zbyva = p.vyrizenoAt ? zbyvaMinut(p.vyrizenoAt, ted) : null;
-  const zbyvaText =
-    zbyva === null
-      ? t('pribehy.uzPryc')
-      : zbyva >= 60
-        ? t('pribehy.zbyvaHodin', { h: String(Math.floor(zbyva / 60)) })
-        : t('pribehy.zbyvaMinut', { m: String(zbyva) });
-
-  return (
-    <div className="flex items-center gap-3 p-3">
-      <span className="shrink-0 overflow-hidden rounded-lg border border-line bg-bar">
-        <span className="relative block aspect-[9/16] w-11">
-          {p.jeVideo ? (
-            <video
-              src={`/api/site/pribehy/${p.id}/soubor`}
-              preload="metadata"
-              muted
-              playsInline
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={`/api/site/pribehy/${p.id}/soubor`} alt="" className="h-full w-full object-cover" />
-          )}
-        </span>
-      </span>
-
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate font-heading text-sm text-ink">
-          {p.popisek.trim() || t('pribehy.bezPopisku')}
-        </span>
-        <span className="truncate font-body text-xs text-muted">
-          {t('pribehy.daltamVKolik', {
-            kdo: p.vyridil || p.autor,
-            datum: p.vyrizenoAt ? formatDatum(jazyk, new Date(p.vyrizenoAt)) : '—',
-          })}
-        </span>
-      </span>
-
-      <span
-        className={`shrink-0 rounded-pill border px-2.5 py-1 font-heading text-[11px] tabular-nums ${
-          zbyva === null
-            ? 'border-line text-muted'
-            : 'border-brand-green/50 bg-brand-green/15 text-brand-greenDeep dark:text-brand-green'
-        }`}
-      >
-        {zbyvaText}
-      </span>
     </div>
   );
 }
