@@ -15,6 +15,7 @@ import { loadMyTasks } from '@/lib/tasksServer';
 import { loadQuickActions } from '@/lib/quickActionsServer';
 import { quickActionsFor } from '@/lib/quickActions';
 import { prisma } from '@/lib/db';
+import { smiDoAdministrace } from '@/lib/pristupyServer';
 import { countUnread } from '@/lib/notifications';
 import { odkazNaFotku } from '@/lib/fotky';
 import { nactiJazyk } from '@/lib/jazykServer';
@@ -28,7 +29,21 @@ import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
 // zustane všechno jednoduše s tou fialovou lištou nahoře.").
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'ADMIN') redirect('/login');
+  if (!session) redirect('/login');
+  /**
+   * STEJNÉ PRAVIDLO JAKO V MIDDLEWARE (oprava 6. 10. 2026: „Tomáš Ilavský už
+   * vidí Studia, ale po kliknutí na Studia na hlavní liště se mu to
+   * odhlásí"). Rozhodují zaškrtávátka sekcí z karty uživatele; Žůžo-labůžo
+   * má všechno.
+   *
+   * KDO JE PŘIHLÁŠENÝ, TOHO UŽ NEPOSÍLÁME NA PŘIHLÁŠENÍ. Dřív tu bylo
+   * `redirect('/login')` pro každého, kdo není ADMIN - a protože je přitom
+   * přihlášený, vypadalo to, že ho portál odhlásil. Teď skončí na projektech,
+   * tedy tam, kam se dostane každý.
+   */
+  if (!(await smiDoAdministrace({ id: session.user.id, role: session.user.role }))) {
+    redirect('/projekty');
+  }
 
   // JAZYK I V ADMINISTRACI (davka 4, 27. 9. 2026). Do ted mela administrace
   // vlastni layout bez JazykProvideru, takze i sdilene komponenty (ChatDock,

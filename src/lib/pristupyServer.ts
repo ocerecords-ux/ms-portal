@@ -1,6 +1,8 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canSee } from '@/lib/menu';
-import type { KdoPristupy } from '@/lib/pristupy';
+import { CESTY_SEKCI, maPristup, podlehaPristupum, type KdoPristupy } from '@/lib/pristupy';
 
 /**
  * PRÁVO NA STRÁNKU PODLE KARTY UŽIVATELE (6. 10. 2026).
@@ -35,4 +37,66 @@ export async function smiNaStranku(
     console.error('Přístupy uživatele se nepodařilo načíst:', err);
   }
   return canSee(href, user.role as never, kdo);
+}
+
+
+/** Zaškrtávátka člověka z databáze; prázdno, když se nedají přečíst. */
+async function kdoJe(user: { id: string; role: string }): Promise<KdoPristupy> {
+  try {
+    const ucet = (await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { superadmin: true, pristupy: true },
+    })) as { superadmin: boolean | null; pristupy: string[] | null } | null;
+    return {
+      role: user.role,
+      superadmin: ucet?.superadmin ?? false,
+      pristupy: ucet?.pristupy ?? [],
+    };
+  } catch (err) {
+    console.error('Přístupy uživatele se nepodařilo načíst:', err);
+    return { role: user.role, superadmin: false, pristupy: [] };
+  }
+}
+
+/** Klíče sekcí a práv, které otevírají něco pod /admin. */
+const ADMIN_KLICE = Array.from(
+  new Set(CESTY_SEKCI.filter((c) => c.cesta.startsWith('/admin')).map((c) => c.klic)),
+);
+
+/**
+ * SMÍ TENHLE ČLOVĚK DO ADMINISTRACE? (6. 10. 2026)
+ *
+ * Hrubé síto pro společný layout administrace: Žůžo-labůžo ano, a dál každý,
+ * kdo má zaškrtnutou aspoň jednu sekci, která něco pod /admin otevírá.
+ * O KONKRÉTNÍ STRÁNCE rozhoduje middleware a stránka sama přes `smiNaStranku`
+ * - layout nezná adresu, takže přesnější být nemůže.
+ */
+export async function smiDoAdministrace(user: { id: string; role: string }): Promise<boolean> {
+  if (user.role === 'ADMIN') return true;
+  if (!podlehaPristupum(user.role)) return false;
+  const kdo = await kdoJe(user);
+  return ADMIN_KLICE.some((klic) => maPristup(kdo, klic));
+}
+
+/** Právo na konkrétní klíč sekce - pro API routy pod /api/admin. */
+export async function smiNaSekci(
+  user: { id: string; role: string },
+  klic: string,
+): Promise<boolean> {
+  if (user.role === 'ADMIN') return true;
+  if (!podlehaPristupum(user.role)) return false;
+  return maPristup(await kdoJe(user), klic);
+}
+
+
+/**
+ * Smí přihlášený člověk do nastavení studií? Zkratka pro routy
+ * /api/admin/studia/*, které jinak pouštějí jen Žůžo-labůžo: od 6. 10. 2026
+ * tam patří i ten, kdo má na kartě zaškrtnuté *Nastavení studií* - jinak by
+ * stránku viděl, ale nic by si na ní neuložil.
+ */
+export async function smiNaStudia(): Promise<boolean> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return false;
+  return smiNaSekci({ id: session.user.id, role: session.user.role }, 'STUDIA.NASTAVENI');
 }

@@ -1,6 +1,7 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import { ZPRAVA_JEN_NAHLED } from '@/lib/nahledRole';
+import { maPristup, podlehaPristupum, sekceCesty } from '@/lib/pristupy';
 
 // Vse pod (portal) i (admin) skupinou vyzaduje prihlaseni; /admin navic
 // vyzaduje roli ADMIN (interni pracovnik Mediaspace). Kazda admin API
@@ -59,7 +60,37 @@ export default withAuth(
          * pustilo, kdyby mel na karte Zuzo-labuzo - a administrace jsou
          * doklady, banka a osobni udaje lidi. To neni nic na vyzkouseni.
          */
-        if (cesta.startsWith('/admin') && (token.role !== 'ADMIN' || token.jenNahled)) return false;
+        if (cesta.startsWith('/admin')) {
+          if (token.jenNahled) return false;
+          /**
+           * ZAŠKRTÁVÁTKA SEKCÍ PLATÍ I TADY (oprava 6. 10. 2026: „Tomáš
+           * Ilavský už vidí Studia, ale po kliknutí na Studia na hlavní liště
+           * se mu to odhlásí").
+           *
+           * Od 28. 9. 2026 rozhodují o přístupu zaškrtávátka na kartě
+           * uživatele, jenže middleware znal jen roli. Zvukař se zaškrtnutým
+           * *Nastavení studií* si odkaz do lišty přidal, klepl na něj
+           * a middleware ho poslal na přihlášení - z jeho pohledu ho portál
+           * odhlásil.
+           *
+           * Zaškrtávátka pokrývají jen ty cesty, které jsou v lib/pristupy.ts
+           * vypsané (Doklady, Studia, Firmy, Ceníky, Zprávy portálu, Procesy,
+           * Technické parametry, Údaje). Zbytek administrace - uživatelé,
+           * archiv, Bruno, návody - zůstává jen pro Žůžo-labůžo.
+           */
+          if (token.role === 'ADMIN') return true;
+          if (!podlehaPristupum(String(token.role))) return false;
+          const sekce = sekceCesty(cesta);
+          if (!sekce) return false;
+          return maPristup(
+            {
+              role: String(token.role),
+              superadmin: token.superadmin === true,
+              pristupy: Array.isArray(token.pristupy) ? (token.pristupy as string[]) : [],
+            },
+            sekce,
+          );
+        }
         return true;
       },
     },

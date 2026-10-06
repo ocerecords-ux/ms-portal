@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { smiNaStudia } from '@/lib/pristupyServer';
 
 // Zalozeni studia. Pracovni doba a presety se doplni rovnou, at nove studio
 // neni v kalendari mrtve.
@@ -15,8 +16,11 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Nastaveni studii smi i ten, kdo to ma zaskrtnute na karte (6. 10. 2026).
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session && !(await smiNaStudia())) {
+      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    }
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {

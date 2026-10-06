@@ -83,6 +83,10 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           companyId: user.companyId,
           jenNahled: user.jenNahled,
+          // Zaskrtavatka sekci do tokenu uz pri prihlaseni (6. 10. 2026),
+          // at se na ne middleware muze ptat hned, ne az po prvnim overeni.
+          pristupy: user.pristupy ?? [],
+          superadmin: user.superadmin === true,
         };
       },
     }),
@@ -111,6 +115,20 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.companyId = (user as any).companyId;
         token.jenNahled = (user as any).jenNahled === true;
+        /**
+         * PŘÍSTUPY DO SEKCÍ I V TOKENU (oprava 6. 10. 2026: „Tomáš Ilavský už
+         * vidí Studia, ale po kliknutí na Studia na hlavní liště se mu to
+         * odhlásí").
+         *
+         * Middleware běží na edge a do databáze nesahá - zná jen token. Do
+         * 6. 10. v něm byla jen role, takže na všechno pod /admin pouštěl
+         * výhradně Žůžo-labůžo a kdo tam přišel se zaškrtnutou sekcí, toho
+         * poslal na přihlášení. Z pohledu člověka: odkaz ho odhlásil.
+         *
+         * Obnovuje se spolu s rolí, tedy do pěti minut od změny na kartě.
+         */
+        token.pristupy = ((user as any).pristupy ?? []) as string[];
+        token.superadmin = (user as any).superadmin === true;
         token.overenoAt = Date.now();
         token.neaktivni = false;
         return token;
@@ -126,7 +144,16 @@ export const authOptions: NextAuthOptions = {
           // `jenNahled` se overuje spolu s roli schvalne: kdyz se priznak
           // z uctu sundá, musí zámek na zápis zmizet do pěti minut sám -
           // ne až ve chvíli, kdy se člověk odhlásí a zase přihlásí.
-          select: { role: true, companyId: true, active: true, jenNahled: true },
+          select: {
+            role: true,
+            companyId: true,
+            active: true,
+            jenNahled: true,
+            // Zaskrtavatka sekci (6. 10. 2026) - rozhoduje podle nich
+            // middleware, viz vys.
+            pristupy: true,
+            superadmin: true,
+          },
         });
         if (!ucet || !ucet.active) {
           // Ucet uz neexistuje nebo je vypnuty - middleware ho pusti na login.
@@ -136,6 +163,8 @@ export const authOptions: NextAuthOptions = {
         token.role = ucet.role;
         token.companyId = ucet.companyId;
         token.jenNahled = ucet.jenNahled === true;
+        token.pristupy = (ucet.pristupy ?? []) as string[];
+        token.superadmin = ucet.superadmin === true;
         token.neaktivni = false;
         token.overenoAt = Date.now();
       } catch (err) {

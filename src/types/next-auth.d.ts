@@ -38,5 +38,12 @@ declare module 'next-auth/jwt' {
      * middleware podle nej zamyka zapis a do databaze se z middleware nechodi.
      */
     jenNahled?: boolean;
+    /**
+     * ZAŠKRTÁVÁTKA SEKCÍ (6. 10. 2026). V tokenu schválně: podle nich pouští
+     * middleware do administrace a do databáze z něj nejde sáhnout. Obnovují
+     * se spolu s rolí, tedy do pěti minut od změny na kartě uživatele.
+     */
+    pristupy?: string[];
+    superadmin?: boolean;
   }
 }

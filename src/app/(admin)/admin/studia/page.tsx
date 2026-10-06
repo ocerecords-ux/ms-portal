@@ -1,4 +1,8 @@
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { smiNaStranku } from '@/lib/pristupyServer';
 import { StudiosManager } from './StudiosManager';
 import { TabuleStudii } from './TabuleStudii';
 import { RezervaceStudii } from './RezervaceStudii';
@@ -13,6 +17,17 @@ import { prelozit } from '@/lib/jazyk';
 export const dynamic = 'force-dynamic';
 
 export default async function StudiaPage({ searchParams }: { searchParams?: { instagram?: string } }) {
+  /**
+   * Nastavení studií smí i někdo mimo Žůžo-labůžo, když to má zaškrtnuté na
+   * kartě (6. 10. 2026) - layout administrace pouští dovnitř podle sekcí
+   * obecně, tahle stránka si hlídá přesně svoje právo.
+   */
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) redirect('/login');
+  if (!(await smiNaStranku({ id: session.user.id, role: session.user.role }, '/admin/studia'))) {
+    redirect('/projekty');
+  }
+
   const jazyk = nactiJazyk();
   const igStav = await stavInstagramu();
   const [studios, tabule] = await Promise.all([
