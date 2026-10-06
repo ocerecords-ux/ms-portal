@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nactiPribehy, smiPoslatPribeh, smiSchvalovatPribehy } from '@/lib/pribehyServer';
-import { lzeVyvesitPresApi, stavInstagramu } from '@/lib/instagramServer';
+import { stavInstagramu } from '@/lib/instagramServer';
 import { FrontaPribehu } from './FrontaPribehu';
 
 /**
@@ -10,10 +10,10 @@ import { FrontaPribehu } from './FrontaPribehu';
  * aby mohli posílat na instagram příběhy, aniž by měli přístup na
  * instagram?").
  *
- * Jedna obrazovka pro obě role. Kdo smí posílat, vidí nahoře formulář a pod
- * ním svoje příběhy; kdo smí schvalovat, vidí celou frontu a tlačítka. Kdo
- * smí obojí (Ondřej), má obojí. Dvě stránky by znamenaly dvakrát stejný
- * seznam a první rozejití by nikdo nepoznal.
+ * NESCHVALUJE SE (6. 10. 2026: „nemusíme to nechávat schvalovat, všichni
+ * z týmu by měli mít možnost to tam dát"). Nahoře se příběh složí a pustí
+ * ven, dole je vidět, co je právě na Instagramu, kdo to tam dal a za jak
+ * dlouho to zmizí.
  */
 export const dynamic = 'force-dynamic';
 
@@ -22,17 +22,9 @@ export default async function PribehyPage() {
   if (!session?.user?.id) redirect('/login');
 
   const kdo = { id: session.user.id, role: session.user.role };
-  const [smiPoslat, smiSchvalit] = await Promise.all([
-    smiPoslatPribeh(kdo),
-    smiSchvalovatPribehy(kdo),
-  ]);
-  if (!smiPoslat && !smiSchvalit) redirect('/projekty');
+  const smiPoslat = await smiPoslatPribeh(kdo);
+  if (!smiPoslat && !(await smiSchvalovatPribehy(kdo))) redirect('/projekty');
 
-  /**
-   * Umí to portál vyvěsit sám? Jen když je účet připojený (Administrace →
-   * Studia → Připojit Instagram). Když ne, zůstává jen ruční cesta.
-   */
-  const presApi = smiSchvalit ? await lzeVyvesitPresApi() : false;
   // Jmeno uctu do nahledu - at je videt, kam to pujde.
   const ucet = (await stavInstagramu())?.username ?? null;
 
@@ -40,8 +32,6 @@ export default async function PribehyPage() {
     <FrontaPribehu
       pribehy={await nactiPribehy(kdo)}
       smiPoslat={smiPoslat}
-      smiSchvalit={smiSchvalit}
-      presApi={presApi}
       ucet={ucet}
       jaId={session.user.id}
     />

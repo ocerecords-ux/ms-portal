@@ -4411,8 +4411,13 @@ model SocialniPribeh {
   typSouboru   String
   velikost     Int    @default(0)
 
-  /// CEKA -> VYVESENO / ZAMITNUTO.
+  /// KONCEPT -> VYVESENO; CEKA je pribeh, ktery se vyvesit nepodarilo
+  /// a ceka na dalsi pokus; ZAMITNUTO zustava u starsich radku.
   stav       String    @default("CEKA")
+  /// Podoba textu na pribehu (viz StylTextu v lib/pribehText.ts). Drzi se
+  /// kvuli konceptum: u nich lezi v ulozisti PUVODNI fotka, text se do ni
+  /// vypaluje az pri vyveseni, takze se musi pamatovat, kde a jak stal.
+  textStyl   Json?
   vyridilId  String?
   vyridil    User?     @relation("PribehVyridil", fields: [vyridilId], references: [id], onDelete: SetNull)
   vyrizenoAt DateTime?

@@ -495,6 +495,12 @@ export const VYCHOZI_PRISTUPY: Record<string, string[]> = {
     'HERCI.UPRAVY',
     'HERCI.POZVANKY',
     'PROCESY',
+    /**
+     * Na Instagram smí celý tým (6. 10. 2026: „nemusíme to nechávat
+     * schvalovat, všichni z týmu by měli mít možnost to tam dát").
+     */
+    'SITE',
+    'SITE.PRIBEHY_POSLAT',
   ],
   ZVUKAR: [
     'PROCESY',

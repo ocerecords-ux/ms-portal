@@ -230,6 +230,7 @@ async function main() {
   await klientAudiolibrixu();
   await adresyStudii();
   await pribehyZvukarum();
+  await pribehyCelymuTymu();
   await castiJenTamKdeSeNaCastiFakturuje();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
@@ -495,7 +496,40 @@ async function notifikaceReklamnichFirem() {
 }
 
 /**
- * PRÍBĚHY NA INSTAGRAM ZVUKAŘŮM (zadání 6. 10. 2026: „můžeme dát
+ * NA INSTAGRAM SMÍ CELÝ TÝM (zadání 6. 10. 2026: „nemusíme to nechávat
+ * schvalovat. Všichni z týmu by měli mít možnost to tam dát").
+ *
+ * Zvukaři právo dostali už předtím, teď se doplňuje produkci a správcům.
+ * Schvalování (SITE.PRIBEHY_SCHVALIT) se nerozdává - od téhle chvíle už
+ * nerozhoduje o vyvěšení, zůstává jen pro mazání cizích příběhů.
+ */
+async function pribehyCelymuTymu() {
+  const ZNAMKA = 'pribehy-instagram-cely-tym-2026-10-06';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const lide = (await prisma.user.findMany({
+    where: { active: true, role: { in: ['ADMIN', 'PRODUKCE', 'ZVUKAR'] } },
+    select: { id: true, name: true, email: true, role: true, pristupy: true },
+  })) as { id: string; name: string | null; email: string | null; role: string; pristupy: string[] | null }[];
+
+  for (const u of lide) {
+    const ma = u.pristupy ?? [];
+    if (ma.includes('SITE.PRIBEHY_POSLAT')) continue;
+    // Prazdny seznam znamena "jeste nenastaveno" - dosadi se cela vychozi sada.
+    const nove =
+      ma.length > 0
+        ? Array.from(new Set([...ma, 'SITE', 'SITE.PRIBEHY_POSLAT']))
+        : Array.from(new Set(VYCHOZI_PRISTUPY[u.role] ?? []));
+    await prisma.user.update({ where: { id: u.id }, data: { pristupy: nove } });
+    console.log(`  pribehy na Instagram: ${u.name || u.email}`);
+  }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * PŘÍBĚHY NA INSTAGRAM ZVUKAŘŮM (zadání 6. 10. 2026: „můžeme dát
  * zvukařům přístup, aby mohli posílat na instagram příběhy, aniž by měli
  * přístup na instagram?").
  *

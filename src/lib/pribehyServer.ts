@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { notify } from '@/lib/notifications';
 import { maPristup, podlehaPristupum, type KdoPristupy } from '@/lib/pristupy';
-import { jeVideo } from '@/lib/pribehy';
+import { jeVideo, zminkyZTextu } from '@/lib/pribehy';
 import { vyvesPribeh } from '@/lib/instagramServer';
 import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 
@@ -25,6 +25,8 @@ import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 export type PribehRadek = {
   id: string;
   popisek: string;
+  /** Jen u konceptu - podle toho se text vrátí na místo, kde stál. */
+  textStyl: unknown;
   nazevSouboru: string;
   typSouboru: string;
   velikost: number;
@@ -83,6 +85,7 @@ export async function smiSchvalovatPribehy(user: Ucet): Promise<boolean> {
 const VYBER = {
   id: true,
   popisek: true,
+  textStyl: true,
   nazevSouboru: true,
   typSouboru: true,
   velikost: true,
@@ -98,6 +101,7 @@ const VYBER = {
 type Zaznam = {
   id: string;
   popisek: string;
+  textStyl: unknown;
   nazevSouboru: string;
   typSouboru: string;
   velikost: number;
@@ -118,6 +122,7 @@ function naRadek(p: Zaznam): PribehRadek {
   return {
     id: p.id,
     popisek: p.popisek,
+    textStyl: p.textStyl ?? null,
     nazevSouboru: p.nazevSouboru,
     typSouboru: p.typSouboru,
     velikost: p.velikost,
@@ -137,9 +142,13 @@ function naRadek(p: Zaznam): PribehRadek {
  * důvod vidět, co posílá kolega.
  */
 export async function nactiPribehy(user: Ucet): Promise<PribehRadek[]> {
-  const vsechno = await smiSchvalovatPribehy(user);
+  /**
+   * KONCEPT VIDÍ JEN AUTOR, VYVĚŠENÉ CELÝ TýM (6. 10. 2026: „a pod tím bude
+   * přehled toho, co se dalo na instagram a kdy to vyprší a kdo to tam dal").
+   * Rozdělaný příběh je soukromá věc, hotový je věc firmy.
+   */
   const vsechny = (await prisma.socialniPribeh.findMany({
-    where: vsechno ? {} : { autorId: user.id },
+    where: { OR: [{ stav: { not: 'KONCEPT' } }, { autorId: user.id }] },
     orderBy: [{ createdAt: 'desc' }],
     take: 200,
     select: VYBER,
@@ -156,26 +165,6 @@ export async function nactiPribeh(id: string): Promise<(PribehRadek & { url: str
   return { ...naRadek(p), url: p.url };
 }
 
-/** Komu dát vědět, že něco přišlo do fronty. */
-async function schvalovatele(): Promise<{ id: string }[]> {
-  try {
-    return (await prisma.user.findMany({
-      where: {
-        active: true,
-        OR: [
-          { superadmin: true },
-          { vidiSite: true },
-          { pristupy: { has: 'SITE.PRIBEHY_SCHVALIT' } },
-        ],
-      },
-      select: { id: true },
-    })) as { id: string }[];
-  } catch (err) {
-    console.error('Schvalovatele příběhů se nepodařilo najít:', err);
-    return [];
-  }
-}
-
 export async function zalozPribeh(
   user: Ucet & { name?: string | null },
   vstup: {
@@ -184,6 +173,8 @@ export async function zalozPribeh(
     typSouboru: string;
     velikost: number;
     popisek: string;
+    textStyl?: unknown;
+    stav?: string;
   },
 ): Promise<PribehRadek> {
   const p = (await prisma.socialniPribeh.create({
@@ -194,22 +185,47 @@ export async function zalozPribeh(
       typSouboru: vstup.typSouboru,
       velikost: vstup.velikost,
       popisek: vstup.popisek,
+      stav: vstup.stav === 'KONCEPT' ? 'KONCEPT' : 'CEKA',
+      textStyl: (vstup.textStyl ?? null) as never,
     },
     select: VYBER,
   })) as unknown as Zaznam;
+  return naRadek(p);
+}
 
-  const radek = naRadek(p);
-  for (const s of await schvalovatele()) {
-    if (s.id === user.id) continue;
-    await notify({
-      userId: s.id,
-      kind: 'pribeh-ke-schvaleni',
-      title: 'Příběh ke schválení',
-      body: `${radek.autor} poslal ${radek.jeVideo ? 'video' : 'fotku'} na Instagram.`,
-      url: '/site/pribehy',
-    });
-  }
-  return radek;
+/** Úprava rozdělaného konceptu - text, podoba textu a případně jiný soubor. */
+export async function upravKoncept(
+  user: Ucet,
+  id: string,
+  zmena: {
+    popisek?: string;
+    textStyl?: unknown;
+    url?: string;
+    nazevSouboru?: string;
+    typSouboru?: string;
+    velikost?: number;
+  },
+): Promise<PribehRadek | null> {
+  const uz = (await prisma.socialniPribeh.findUnique({
+    where: { id },
+    select: { autorId: true, stav: true },
+  })) as { autorId: string; stav: string } | null;
+  if (!uz || uz.autorId !== user.id || uz.stav !== 'KONCEPT') return null;
+
+  const data: Record<string, unknown> = {};
+  if (zmena.popisek !== undefined) data.popisek = zmena.popisek;
+  if (zmena.textStyl !== undefined) data.textStyl = zmena.textStyl;
+  if (zmena.url !== undefined) data.url = zmena.url;
+  if (zmena.nazevSouboru !== undefined) data.nazevSouboru = zmena.nazevSouboru;
+  if (zmena.typSouboru !== undefined) data.typSouboru = zmena.typSouboru;
+  if (zmena.velikost !== undefined) data.velikost = zmena.velikost;
+
+  const p = (await prisma.socialniPribeh.update({
+    where: { id },
+    data,
+    select: VYBER,
+  })) as unknown as Zaznam;
+  return naRadek(p);
 }
 
 /**
@@ -348,8 +364,13 @@ export async function nactiDokSiti(user: Ucet): Promise<DokSiti | null> {
     let cekajici: { id: string; jeVideo: boolean }[] = [];
     let vicNez = false;
     if (smiPoslat || smiSchvalit) {
+      /**
+       * Rozdělané: vlastní koncepty a to, co Instagram nevzal. Od 6. 10. 2026
+       * se neschvaluje, takže „čeká ve frontě" už znamená „čeká na další
+       * pokus", ne „čeká na někoho".
+       */
       const fronta = (await prisma.socialniPribeh.findMany({
-        where: { stav: 'CEKA', ...(smiSchvalit ? {} : { autorId: user.id }) },
+        where: { OR: [{ stav: 'CEKA' }, { stav: 'KONCEPT', autorId: user.id }] },
         orderBy: { createdAt: 'desc' },
         take: 6,
         select: { id: true, typSouboru: true },
@@ -365,6 +386,34 @@ export async function nactiDokSiti(user: Ucet): Promise<DokSiti | null> {
   }
 }
 
+/**
+ * ZMÍNKY, KTERÉ UŽ NĚKDO POUŽIL (6. 10. 2026). Nabídka pod textovým polem se
+ * staví z minulých příběhů - vlastní seznam instagramových přezdívek by se
+ * stejně nikdy neudržoval. Nejpoužívanější nahoře.
+ */
+export async function nactiZminky(): Promise<string[]> {
+  try {
+    const texty = (await prisma.socialniPribeh.findMany({
+      where: { popisek: { contains: '@' } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: { popisek: true },
+    })) as { popisek: string }[];
+
+    const kolikrat = new Map<string, number>();
+    for (const t of texty) {
+      for (const z of zminkyZTextu(t.popisek)) kolikrat.set(z, (kolikrat.get(z) ?? 0) + 1);
+    }
+    return [...kolikrat.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 20)
+      .map(([z]) => z);
+  } catch (err) {
+    console.error('Zmínky se nepodařilo načíst:', err);
+    return [];
+  }
+}
+
 /** Autor může svůj příběh stáhnout, dokud se nikdo nerozhodl. */
 export async function smazPribeh(user: Ucet, id: string): Promise<boolean> {
   const p = (await prisma.socialniPribeh.findUnique({
@@ -373,7 +422,9 @@ export async function smazPribeh(user: Ucet, id: string): Promise<boolean> {
   })) as { autorId: string; stav: string } | null;
   if (!p) return false;
   if (p.autorId !== user.id && !(await smiSchvalovatPribehy(user))) return false;
-  if (p.stav !== 'CEKA' && p.autorId === user.id) return false;
+  // Svůj koncept i nevyvěšený příběh si autor smaze; co už je na Instagramu,
+  // se maze tam - záznam o tom, že to venku bylo, má zůstat.
+  if (p.autorId === user.id && p.stav !== 'CEKA' && p.stav !== 'KONCEPT') return false;
   await prisma.socialniPribeh.delete({ where: { id } });
   return true;
 }
