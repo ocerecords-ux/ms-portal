@@ -231,6 +231,7 @@ async function main() {
   await adresyStudii();
   await pribehyZvukarum();
   await pribehyCelymuTymu();
+  await prispevkyNaSiteJenOndrejovi();
   await castiJenTamKdeSeNaCastiFakturuje();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
@@ -490,6 +491,39 @@ async function notifikaceReklamnichFirem() {
       });
     }
     console.log(`  notifikace reklamy: ${f.name}${f.dealsAudiobooks ? ' (jen doplneno)' : ''}`);
+  }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * PŘÍSPĚVKY NA SÍTĚ ZATÍM JEN ONDREJOVI (zadání 6. 10. 2026: „všem
+ * ostatním vypni zatím ty příspěvky na sítě. Nech jim jenom možnost
+ * pracovat s příběhy na instagram. Tu sekci velkého přidávání
+ * příspěvků ještě doladíme později").
+ *
+ * Plátno a šablony v Sítích nejsou hotové, takže se právo
+ * SITE.PRISPEVKY odebírá všem kromě superadminů. Příběhy
+ * (SITE.PRIBEHY_*) zůstávají - o ty tu vůbec nejde.
+ *
+ * Ondřejovi modul otevírá příznak `vidiSite` na kartě, ne tenhle seznam,
+ * takže se mu nic nezavře.
+ */
+async function prispevkyNaSiteJenOndrejovi() {
+  const ZNAMKA = 'site-prispevky-jen-superadmin-2026-10-06';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const lide = (await prisma.user.findMany({
+    where: { pristupy: { has: 'SITE.PRISPEVKY' } },
+    select: { id: true, name: true, email: true, superadmin: true, pristupy: true },
+  })) as { id: string; name: string | null; email: string | null; superadmin: boolean | null; pristupy: string[] | null }[];
+
+  for (const u of lide) {
+    if (u.superadmin) continue;
+    const nove = (u.pristupy ?? []).filter((k) => k !== 'SITE.PRISPEVKY');
+    await prisma.user.update({ where: { id: u.id }, data: { pristupy: nove } });
+    console.log(`  prispevky na site odebrany: ${u.name || u.email}`);
   }
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });

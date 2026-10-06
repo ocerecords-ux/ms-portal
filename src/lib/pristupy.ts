@@ -409,7 +409,8 @@ export const SEKCE: Sekce[] = [
       {
         klic: 'SITE.PRISPEVKY',
         nazev: 'Tvoří příspěvky na sítě',
-        popis: 'Modul Sítě - plátno, šablony a export. Dřív to byl příznak Vidí Sítě na kartě.',
+        popis:
+          'Modul Sítě - plátno, šablony a export. Zatím se dodělává, takže ho má jen Ondřej (6. 10. 2026).',
         cesty: ['/site'],
       },
     ],
@@ -471,7 +472,15 @@ export const VYCHOZI_PRISTUPY: Record<string, string[]> = {
     ...celaSekce('ZPRAVY_PORTALU'),
     ...celaSekce('HERCI'),
     ...celaSekce('KLIENTI'),
-    ...celaSekce('SITE'),
+    /**
+     * SÍTĚ BEZ PŘÍSPĚVKŮ (6. 10. 2026: „všem ostatním vypni zatím ty
+     * příspěvky na sítě, nech jim jenom možnost pracovat s příběhy").
+     * Plátno a šablony se ještě dodělávají, takže je zatím má jen Ondřej -
+     * jemu je otevírá příznak `vidiSite`, ne tenhle seznam.
+     */
+    'SITE',
+    'SITE.PRIBEHY_POSLAT',
+    'SITE.PRIBEHY_SCHVALIT',
   ],
   PRODUKCE: [
     'PROJEKTY',
