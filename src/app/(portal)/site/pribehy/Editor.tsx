@@ -318,7 +318,7 @@ export function Editor({
   }
 
   return (
-    <div className="grid gap-6 rounded-card border border-line bg-surface p-5 sm:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="grid min-h-0 flex-1 gap-6 rounded-card border border-line bg-surface p-5 sm:grid-cols-[minmax(0,1fr)_auto]">
       {/* --- VLEVO: text a jeho podoba ------------------------------------ */}
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -493,18 +493,25 @@ export function Editor({
       </div>
 
       {/* --- VPRAVO: náhled ----------------------------------------------- */}
-      <div className="flex flex-col items-center gap-2 sm:order-last">
+      {/**
+         * Náhled se natáhne na výšku celé karty (6. 10. 2026: „udělal bych to
+         * na výšku toho rastru, co je vlevo, a tím i zvětšil náhled").
+         * Šířku si dopočítá poměr 9:16 sám, takže se rám nikdy nerozjede.
+         */}
+      <div className="flex min-h-0 flex-col items-center gap-2 sm:order-last">
         <label
           htmlFor="pribeh-soubor"
           onClick={(e) => {
             // S náhledem se do rámu klikat nedá - tahalo by se tím textem.
             if (nahled) e.preventDefault();
           }}
-          className={`block rounded-[26px] p-[2px] ${nahled ? KROUZEK : KROUZEK_KLID} ${nahled ? '' : 'cursor-pointer'}`}
+          className={`block min-h-0 flex-1 rounded-[26px] p-[2px] ${nahled ? KROUZEK : KROUZEK_KLID} ${
+            nahled ? '' : 'cursor-pointer'
+          }`}
         >
           <span
             ref={ramRef}
-            className="relative block aspect-[9/16] w-[200px] overflow-hidden rounded-[24px] bg-field sm:w-[230px]"
+            className="relative block aspect-[9/16] h-full max-h-[700px] min-h-[340px] w-auto overflow-hidden rounded-[24px] bg-field"
           >
             {nahled ? (
               <>
@@ -577,7 +584,7 @@ export function Editor({
           onChange={vyber}
           className="sr-only"
         />
-        <span className="max-w-[230px] text-center font-body text-[11px] text-muted">
+        <span className="max-w-[260px] shrink-0 text-center font-body text-[11px] text-muted">
           {t(nahled ? (jeVideo ? 'pribehy.uVideaBezTextu' : 'pribehy.tahniText') : 'pribehy.devetNaSestnact')}
         </span>
       </div>
