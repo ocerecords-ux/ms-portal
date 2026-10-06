@@ -308,25 +308,43 @@ export function Topbar({
           povyrostla a zbytek z ni vytlacil ven. Tady je text na jeden radek,
           mensi, logo nizsi a delici cara az od tabletu - na telefonu je to
           jen dalsi svisly pruh v uzkem miste. */}
-      {/* ZNAČKA NAČTE PORTÁL ZNOVU (zadání 28. 9. 2026: „mám staženou desktop
-          aplikaci MS portal z Chromu. Nejde tam nějak nastavit, že když kliknu
-          na název MS portal nebo logo, že se stránka refreshne, ať vidím
-          změny?").
+      {/* ZNAČKA MÁ DVĚ RŮZNÁ TLAČÍTKA (zadání 6. 10. 2026: „potřebuju, aby
+          kliknutím na MS portal jsem se dostal na domovskou stránku projekty
+          a kliknutím na animované logo, aby se obnovila stránka, ale zůstalo to
+          tam, kde jsem").
 
-          Schválně obyčejné <a> a ne <Link>: Next by přepnul stránku v prohlížeči
-          a nechal běžet ten JavaScript, který se natáhl při spuštění aplikace -
-          po nasazení nové verze by tedy klik na značku ukázal pořád tu starou.
-          Celé načtení si sáhne na server a vytáhne novou verzi. V okně aplikace
-          z Chromu není adresní řádek ani tlačítko Znovu načíst, takže tohle je
-          jediné místo, kde se portál dá obnovit myší. */}
-      <a href="/projekty" className="order-1 flex items-center gap-2 sm:gap-4 no-underline shrink-0" title="Načíst portál znovu">
-        <span className="font-body text-brand-green font-semibold text-lg sm:text-3xl whitespace-nowrap">
-          MS portal
-        </span>
+          NÁZEV vede domů na Projekty, LOGO načte znovu to, na čem právě jsem.
+          Do 6. 10. 2026 dělalo obojí to samé - skok na Projekty - a obnovit
+          stránku, kde člověk stoí, nešlo vůbec.
+
+          OBOJÍ SÁHNE NA SERVER, schválně. Next by při `Link` jen překreslil
+          obsah a nechal běžet JavaScript natažený při spuštění aplikace -
+          po nasazení nové verze by člověk dál koukal na tu starou. Proto
+          obyčejné <a> u názvu a `location.reload()` u loga. V okně aplikace
+          stažené z Chromu není adresní řádek ani tlačítko Znovu načíst, takže
+          je tohle jediné místo, kde se portál dá obnovit myší. */}
+      <span className="order-1 flex items-center gap-2 sm:gap-4 shrink-0">
+        <a
+          href="/projekty"
+          className="no-underline"
+          title="Domů na Projekty"
+        >
+          <span className="font-body text-brand-green font-semibold text-lg sm:text-3xl whitespace-nowrap">
+            MS portal
+          </span>
+        </a>
         <span className="hidden sm:block w-px h-8 sm:h-10 bg-white/40" aria-hidden="true" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
-      </a>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          title="Načíst stránku znovu"
+          aria-label="Načíst stránku znovu"
+          className="flex items-center cursor-pointer"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
+        </button>
+      </span>
 
       {/* py-3 -my-3: posuvny pruh oreze vsechno, co z nej cni - a krizky
           u odkazu cni nahoru, takze se usekavaly (zprava uzivatele
