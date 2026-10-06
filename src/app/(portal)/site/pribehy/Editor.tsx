@@ -69,6 +69,7 @@ export function Editor({
   const [popisek, setPopisek] = useState('');
   const [styl, setStyl] = useState<StylTextu>(VYCHOZI_STYL);
   const [ramVyska, setRamVyska] = useState(0);
+  const [vyskaMrizky, setVyskaMrizky] = useState(0);
   const [procenta, setProcenta] = useState<number | null>(null);
   const [pracuji, setPracuji] = useState<'odeslat' | 'koncept' | 'smazat' | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -108,6 +109,26 @@ export function Editor({
     return () => URL.revokeObjectURL(adresa);
   }, [soubor]);
 
+  /**
+   * ŠÍŘKA RÁMU SE POČÍTÁ Z VÝŠKY MŘÍŽKY VEDLE NĚJ (6. 10. 2026:
+   * „udělal bych to na výšku toho rastru, co je vlevo, a tím i zvětšil
+   * náhled").
+   *
+   * Záměrně ŠÍŘKA, ne výška: `aspect-ratio` s výškou na 100 % si sice
+   * šířku dopočítá, ale sloupec mřížky už je mezitím změřený podle užšího
+   * obsahu - rám pak přeteče přes sousední sloupec. Když se šířka zadá
+   * rovnou, výška z ní vyjde a nic se nekryje.
+   */
+  useEffect(() => {
+    const mrizka = document.querySelector('[data-mrizka]');
+    if (!mrizka || typeof ResizeObserver === 'undefined') return;
+    const zmer = () => setVyskaMrizky(mrizka.getBoundingClientRect().height);
+    const hlidac = new ResizeObserver(zmer);
+    hlidac.observe(mrizka);
+    zmer();
+    return () => hlidac.disconnect();
+  }, []);
+
   /** Výška rámu v bodech - velikost písma je v procentech výšky. */
   useEffect(() => {
     const prvek = ramRef.current;
@@ -119,6 +140,10 @@ export function Editor({
   }, [nahled]);
 
   const jeVideo = soubor !== null && typSouboru(soubor).startsWith('video/');
+
+  // Pod rámem ještě sedí popísek, proto se pár bodů ubere; meze drží rám
+  // rozumný i na úzkém okně, kde mřížka zabere celou šířku.
+  const sirkaRamu = vyskaMrizky > 0 ? Math.min(340, Math.max(200, Math.round(((vyskaMrizky - 26) * 9) / 16))) : 230;
 
   function vyber(e: React.ChangeEvent<HTMLInputElement>) {
     const vybrany = e.target.files?.[0] ?? null;
@@ -505,13 +530,14 @@ export function Editor({
             // S náhledem se do rámu klikat nedá - tahalo by se tím textem.
             if (nahled) e.preventDefault();
           }}
-          className={`block min-h-0 flex-1 rounded-[26px] p-[2px] ${nahled ? KROUZEK : KROUZEK_KLID} ${
+          className={`block shrink-0 rounded-[26px] p-[2px] ${nahled ? KROUZEK : KROUZEK_KLID} ${
             nahled ? '' : 'cursor-pointer'
           }`}
         >
           <span
             ref={ramRef}
-            className="relative block aspect-[9/16] h-full max-h-[700px] min-h-[340px] w-auto overflow-hidden rounded-[24px] bg-field"
+            style={{ width: sirkaRamu }}
+            className="relative block aspect-[9/16] overflow-hidden rounded-[24px] bg-field"
           >
             {nahled ? (
               <>

@@ -156,7 +156,7 @@ export function FrontaPribehu({
               {naInstagramu.length}
             </span>
           </h2>
-          <div className="grid w-full grid-cols-3 gap-2 lg:w-[330px]">
+          <div data-mrizka className="grid w-full grid-cols-3 gap-2 lg:w-[330px]">
             {Array.from({ length: 9 }, (_, i) => vyvesene[i] ?? null).map((p, i) =>
               p ? (
                 <Okno key={p.id} p={p} jazyk={jazyk} ted={ted} />
