@@ -221,6 +221,15 @@ export type VysledekVyveseni = { ok: true; id: string } | { ok: false; chyba: st
 const CEKANI_NA_VIDEO_MS = 3_000;
 /** 15 x 3 s = 45 s; funkce na Vercelu ma strop 60 s, at zbyde na odpoved. */
 const POKUSU_NA_VIDEO = 15;
+/**
+ * I FOTKA SE MUSÍ POČKAT (oprava 6. 10. 2026: první vyvěšení spadlo na
+ * „Media ID is not available"). Meta kontejner založí a hned vrátí jeho id,
+ * ale ještě chvíli ho zpracovává - potvrzení poslané o vteřinu dřív skončí
+ * právě touhle hláškou, jako by id neexistovalo. U fotky je to otázka
+ * vteřin, proto stačí pár pokusů.
+ */
+const CEKANI_NA_FOTKU_MS = 1_200;
+const POKUSU_NA_FOTKU = 8;
 
 export async function vyvesPribeh(adresaSouboru: string, jeVideo: boolean): Promise<VysledekVyveseni> {
   try {
@@ -239,24 +248,40 @@ export async function vyvesPribeh(adresaSouboru: string, jeVideo: boolean): Prom
       return { ok: false, chyba: d1.error?.message || `Instagram odmítl příběh (${r1.status}).` };
     }
 
-    if (jeVideo) {
-      const hotovo = await pockejNaZpracovani(d1.id, token);
-      if (!hotovo.ok) return hotovo;
-    }
+    const hotovo = await pockejNaZpracovani(d1.id, token, jeVideo);
+    // U videa je nedočkané potvrzení jistý neúspěch, u fotky to zkusíme i tak.
+    if (!hotovo.ok && jeVideo) return hotovo;
 
-    const potvrzeni = new URLSearchParams({ creation_id: d1.id, access_token: token });
-    const r2 = await fetch(`${API}/${VERZE}/me/media_publish`, { method: 'POST', body: potvrzeni, cache: 'no-store' });
-    const d2 = (await r2.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
-    if (!r2.ok || !d2.id) {
-      return { ok: false, chyba: d2.error?.message || `Instagram příběh nevyvěsil (${r2.status}).` };
-    }
+    const d2 = await potvrd(d1.id, token);
+    if (!d2.ok) return d2;
     // Novy pribeh znamena, ze cache pro tabule uz neplati.
     await prisma.instagramUcet.update({ where: { id: 'hlavni' }, data: { cacheAt: null } }).catch(() => undefined);
-    return { ok: true, id: d2.id };
+    return d2;
   } catch (err) {
     console.error('Vyvěšení příběhu selhalo:', err);
     return { ok: false, chyba: 'Instagram se nepodařilo oslovit.' };
   }
+}
+
+/**
+ * POTVRZENÍ KONTEJNERU, s jedním opakováním.
+ *
+ * „Media ID is not available" znamená „kontejner ještě není hotový", ne
+ * „neexistuje" - stačí počkat a zkusit to znovu. Opakuje se jen na tuhle
+ * jednu hlášku; cokoli jiného je skutečná chyba a opakováním se nespraví.
+ */
+async function potvrd(kontejner: string, token: string): Promise<VysledekVyveseni> {
+  let posledni = '';
+  for (let pokus = 0; pokus < 2; pokus += 1) {
+    const telo = new URLSearchParams({ creation_id: kontejner, access_token: token });
+    const r = await fetch(`${API}/${VERZE}/me/media_publish`, { method: 'POST', body: telo, cache: 'no-store' });
+    const d = (await r.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+    if (r.ok && d.id) return { ok: true, id: d.id };
+    posledni = d.error?.message || `Instagram příběh nevyvěsil (${r.status}).`;
+    if (!/media id is not available/i.test(posledni)) break;
+    await new Promise((h) => setTimeout(h, 4_000));
+  }
+  return { ok: false, chyba: posledni };
 }
 
 /** Token, který ještě chvíli platí - prodlouží se, když se blíží konec. */
@@ -277,10 +302,16 @@ async function platnyToken(ucet: { token: string; tokenDo: Date }): Promise<stri
   return d.access_token;
 }
 
-/** Obvolává stav kontejneru, dokud Meta video nezpracuje. */
-async function pockejNaZpracovani(kontejner: string, token: string): Promise<VysledekVyveseni> {
-  for (let pokus = 0; pokus < POKUSU_NA_VIDEO; pokus += 1) {
-    await new Promise((hotovo) => setTimeout(hotovo, CEKANI_NA_VIDEO_MS));
+/** Obvolává stav kontejneru, dokud ho Meta nezpracuje. */
+async function pockejNaZpracovani(
+  kontejner: string,
+  token: string,
+  jeVideo: boolean,
+): Promise<VysledekVyveseni> {
+  const pokusu = jeVideo ? POKUSU_NA_VIDEO : POKUSU_NA_FOTKU;
+  const cekani = jeVideo ? CEKANI_NA_VIDEO_MS : CEKANI_NA_FOTKU_MS;
+  for (let pokus = 0; pokus < pokusu; pokus += 1) {
+    await new Promise((hotovo) => setTimeout(hotovo, cekani));
     const r = await fetch(
       `${API}/${VERZE}/${kontejner}?fields=status_code,status&access_token=${encodeURIComponent(token)}`,
       { cache: 'no-store' },
@@ -291,7 +322,7 @@ async function pockejNaZpracovani(kontejner: string, token: string): Promise<Vys
       return { ok: false, chyba: d.status || 'Instagram video nepřijal.' };
     }
   }
-  return { ok: false, chyba: 'Instagram video zpracovává moc dlouho. Zkuste to za chvíli znovu.' };
+  return { ok: false, chyba: 'Instagram soubor zpracovává moc dlouho. Zkuste to za chvíli znovu.' };
 }
 
 /** Umí portál vyvěšovat sám? Jen když je účet připojený. */

@@ -6,6 +6,18 @@ import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, type Jazyk } from '@/lib/jazyk';
 import type { PribehRadek } from '@/lib/pribehyServer';
 import { MAX_POPISEK, PRIJIMANE_PRIPONY, POVOLENE_TYPY, maxProTyp, velikostVMB } from '@/lib/pribehy';
+import {
+  BARVY_TEXTU,
+  MAX_VELIKOST,
+  MIN_VELIKOST,
+  PODKLADY,
+  SIRKA_BLOKU,
+  VYCHOZI_STYL,
+  orezStyl,
+  slozPribeh,
+  type StylTextu,
+  type ZarovnaniTextu,
+} from '@/lib/pribehText';
 
 /**
  * FRONTA PŘÍBĚHŮ (zadání 6. 10. 2026: „tohle se musí chovat jak zjednodušený
@@ -45,7 +57,7 @@ function typSouboru(soubor: File): string {
   return soubor.type;
 }
 
-function nahrajDoUloziste(adresa: string, soubor: File, typ: string, pokrok: (p: number) => void) {
+function nahrajDoUloziste(adresa: string, soubor: Blob, typ: string, pokrok: (p: number) => void) {
   return new Promise<void>((hotovo, chyba) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', adresa);
@@ -67,6 +79,32 @@ function Znacka({ velikost = 36 }: { velikost?: number }) {
         MS
       </span>
     </span>
+  );
+}
+
+/** Malé kulaté tlačítko k ovládání textu (zvětšit, zmenšit). */
+function KulatyKnoflik({
+  popisek,
+  nazev,
+  onClick,
+  vypnuto,
+}: {
+  popisek: string;
+  nazev: string;
+  onClick: () => void;
+  vypnuto?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={vypnuto}
+      aria-label={nazev}
+      title={nazev}
+      className="grid h-7 w-7 cursor-pointer place-items-center rounded-full border border-line font-heading text-sm text-ink transition-colors hover:border-brand-purple disabled:opacity-40"
+    >
+      {popisek}
+    </button>
   );
 }
 
@@ -161,6 +199,10 @@ export function FrontaPribehu({
   const [soubor, setSoubor] = useState<File | null>(null);
   const [nahled, setNahled] = useState<string | null>(null);
   const [popisek, setPopisek] = useState('');
+  const [styl, setStyl] = useState<StylTextu>(VYCHOZI_STYL);
+  const ramRef = useRef<HTMLSpanElement | null>(null);
+  const [ramVyska, setRamVyska] = useState(0);
+  const taham = useRef(false);
   const [procenta, setProcenta] = useState<number | null>(null);
   const [odesilam, setOdesilam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -180,6 +222,20 @@ export function FrontaPribehu({
     setNahled(adresa);
     return () => URL.revokeObjectURL(adresa);
   }, [soubor]);
+
+  /**
+   * Výška rámu v bodech. Velikost písma je v PROCENTECH výšky, aby náhled
+   * i hotový příběh (1080×1920) vypadaly stejně - v CSS se procenta z výšky
+   * u písma zadat nedají, takže se to musí přepočítat.
+   */
+  useEffect(() => {
+    const prvek = ramRef.current;
+    if (!prvek || typeof ResizeObserver === 'undefined') return;
+    const hlidac = new ResizeObserver(() => setRamVyska(prvek.clientHeight));
+    hlidac.observe(prvek);
+    setRamVyska(prvek.clientHeight);
+    return () => hlidac.disconnect();
+  }, [nahled]);
 
   // Escape zavira prohlizec pribehu - jako na Instagramu.
   useEffect(() => {
@@ -212,34 +268,75 @@ export function FrontaPribehu({
     setSoubor(vybrany);
   }
 
+  /** Táhnutí textu po příběhu. Procenta, ne body - viz lib/pribehText.ts. */
+  function chytText(e: React.PointerEvent<HTMLDivElement>) {
+    const ram = ramRef.current;
+    if (!ram) return;
+    taham.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  function tahniText(e: React.PointerEvent<HTMLDivElement>) {
+    const ram = ramRef.current;
+    if (!taham.current || !ram) return;
+    const r = ram.getBoundingClientRect();
+    setStyl((st) =>
+      orezStyl({
+        ...st,
+        x: ((e.clientX - r.left) / r.width) * 100,
+        y: ((e.clientY - r.top) / r.height) * 100,
+      }),
+    );
+  }
+
+  function pustText(e: React.PointerEvent<HTMLDivElement>) {
+    taham.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  }
+
   async function odesli() {
     if (!soubor) return;
-    const typ = typSouboru(soubor);
+    let data: Blob = soubor;
+    let typ = typSouboru(soubor);
+    let nazev = soubor.name;
     setOdesilam(true);
     setChyba(null);
     setProcenta(0);
     try {
+      /**
+       * FOTKA SE SKLÁDÁ UŽ TADY: ořízne se na 9:16 a vypálí se do ní text.
+       * Instagram popisek u příběhů přes API nebere, takže co není v obrázku,
+       * nikdo neuvidí. U videa to nejde - text zůstane jen vzkazem.
+       */
+      if (!typ.startsWith('video/')) {
+        data = await slozPribeh(soubor, popisek, styl);
+        typ = 'image/jpeg';
+        nazev = `${soubor.name.replace(/\.[^.]+$/, '')}.jpg`;
+      }
+
       const podpisRes = await fetch('/api/site/pribehy/podpis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nazev: soubor.name, typ, velikost: soubor.size }),
+        body: JSON.stringify({ nazev, typ, velikost: data.size }),
       });
       const podpis = await podpisRes.json().catch(() => ({}));
       if (!podpisRes.ok) throw new Error(podpis.error || t('pribehy.neodeslano'));
 
-      await nahrajDoUloziste(podpis.uploadUrl, soubor, typ, setProcenta);
+      await nahrajDoUloziste(podpis.uploadUrl, data, typ, setProcenta);
       setProcenta(null);
 
       const res = await fetch('/api/site/pribehy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ klic: podpis.key, nazevSouboru: soubor.name, popisek }),
+        body: JSON.stringify({ klic: podpis.key, nazevSouboru: nazev, popisek }),
       });
       const telo = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(telo.error || t('pribehy.neodeslano'));
 
       setSoubor(null);
       setPopisek('');
+      setStyl(VYCHOZI_STYL);
       if (vstupSouboru.current) vstupSouboru.current.value = '';
       router.refresh();
     } catch (err) {
@@ -299,6 +396,8 @@ export function FrontaPribehu({
     }
   }
 
+  const jeVideoNahled = soubor !== null && typSouboru(soubor).startsWith('video/');
+
   function otevri(id: string) {
     setOtevreny(id);
     setZamitam(false);
@@ -327,43 +426,80 @@ export function FrontaPribehu({
       </p>
 
       {smiPoslat && (
-        <div className="grid gap-5 rounded-card border border-line bg-surface p-5 sm:grid-cols-[auto_1fr]">
-          <div className="flex flex-col items-center gap-2">
+        <div className="grid gap-5 rounded-card border border-line bg-surface p-5 lg:grid-cols-[auto_1fr]">
+          <div className="flex flex-col items-center gap-3">
             <label
               htmlFor="pribeh-soubor"
-              className={`block cursor-pointer rounded-[22px] p-[2px] ${nahled ? KROUZEK : KROUZEK_KLID}`}
+              /* S náhledem se do rámu klikat nedá - jinak by každé tažení textem otevřelo výběr souboru. */
+              onClick={(e) => {
+                if (nahled) e.preventDefault();
+              }}
+              className={`block rounded-[26px] p-[2px] ${nahled ? KROUZEK : KROUZEK_KLID} ${nahled ? '' : 'cursor-pointer'}`}
             >
-              <span className="relative block aspect-[9/16] w-[160px] overflow-hidden rounded-[20px] bg-field">
+              <span
+                ref={ramRef}
+                className="relative block aspect-[9/16] w-[250px] overflow-hidden rounded-[24px] bg-field sm:w-[290px]"
+              >
                 {nahled ? (
                   <>
-                    {soubor && typSouboru(soubor).startsWith('video/') ? (
+                    {jeVideoNahled ? (
                       <video src={nahled} muted playsInline className="h-full w-full object-cover" />
                     ) : (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={nahled} alt="" className="h-full w-full object-cover" />
                     )}
-                    <span className="pointer-events-none absolute inset-x-3 top-3 flex flex-col gap-2">
+                    <span className="pointer-events-none absolute inset-x-4 top-4 flex flex-col gap-2">
                       <span className="h-[3px] rounded-pill bg-white/90" />
-                      <span className="flex items-center gap-1.5">
-                        <Znacka velikost={18} />
-                        <span className="truncate font-heading text-[10px] text-white drop-shadow">
+                      <span className="flex items-center gap-2">
+                        <Znacka velikost={22} />
+                        <span className="truncate font-heading text-[11px] text-white drop-shadow">
                           {ucet ? `@${ucet}` : t('pribehy.nadpis')}
                         </span>
                       </span>
                     </span>
-                    {popisek.trim() && (
-                      <span className="pointer-events-none absolute inset-x-2 bottom-2 line-clamp-3 rounded-xl bg-black/55 px-2 py-1 font-body text-[10px] text-white backdrop-blur-sm">
-                        {popisek}
-                      </span>
+
+                    {/* TEXT NA PŘÍBĚHU - táhne se myší i prstem. */}
+                    {popisek.trim() && !jeVideoNahled && (
+                      <div
+                        onPointerDown={chytText}
+                        onPointerMove={tahniText}
+                        onPointerUp={pustText}
+                        onPointerCancel={pustText}
+                        onClick={(e) => e.preventDefault()}
+                        role="presentation"
+                        className="absolute cursor-grab touch-none select-none font-heading font-semibold leading-tight active:cursor-grabbing"
+                        style={{
+                          left: `${styl.x}%`,
+                          top: `${styl.y}%`,
+                          width: `${SIRKA_BLOKU}%`,
+                          transform: 'translate(-50%, -50%)',
+                          fontSize: ramVyska ? (ramVyska * styl.velikost) / 100 : 14,
+                          textAlign: styl.zarovnani,
+                          color: styl.barva,
+                        }}
+                      >
+                        <span
+                          className="whitespace-pre-wrap"
+                          style={{
+                            background: PODKLADY[styl.podklad] ?? 'transparent',
+                            padding: '0.12em 0.3em',
+                            borderRadius: '0.22em',
+                            boxDecorationBreak: 'clone',
+                            WebkitBoxDecorationBreak: 'clone',
+                          }}
+                        >
+                          {popisek}
+                        </span>
+                      </div>
                     )}
                   </>
                 ) : (
                   <span className="absolute inset-0 grid place-items-center text-center">
-                    <span className="flex flex-col items-center gap-1 px-3">
-                      <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-purple font-display text-2xl leading-none text-white">
+                    <span className="flex flex-col items-center gap-2 px-4">
+                      <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-purple font-display text-3xl leading-none text-white">
                         +
                       </span>
-                      <span className="font-heading text-[11px] text-muted">{t('pribehy.vybratSoubor')}</span>
+                      <span className="font-heading text-xs text-muted">{t('pribehy.vybratSoubor')}</span>
                     </span>
                   </span>
                 )}
@@ -377,8 +513,8 @@ export function FrontaPribehu({
               onChange={vyber}
               className="sr-only"
             />
-            <span className="font-body text-[11px] text-muted">
-              {t(nahled ? 'pribehy.takhleToBude' : 'pribehy.devetNaSestnact')}
+            <span className="text-center font-body text-[11px] text-muted">
+              {t(nahled ? (jeVideoNahled ? 'pribehy.uVideaBezTextu' : 'pribehy.tahniText') : 'pribehy.devetNaSestnact')}
             </span>
           </div>
 
@@ -390,10 +526,102 @@ export function FrontaPribehu({
               id="pribeh-popisek"
               value={popisek}
               onChange={(e) => setPopisek(e.target.value.slice(0, MAX_POPISEK))}
-              rows={4}
+              rows={3}
               placeholder={t('pribehy.popisekPlaceholder')}
               className="w-full rounded-card border border-line bg-field/40 px-3 py-2 font-body text-sm text-ink outline-none focus:border-brand-purple"
             />
+
+            {/* OVLÁDÁNÍ TEXTU - jen u fotky, do videa text vypálit nejde. */}
+            {popisek.trim() && !jeVideoNahled && (
+              <div className="flex flex-col gap-3 rounded-card border border-line bg-field/30 p-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <span className="font-heading text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t('pribehy.velikost')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <KulatyKnoflik
+                      popisek="−"
+                      nazev={t('pribehy.zmensit')}
+                      onClick={() => setStyl((st) => orezStyl({ ...st, velikost: st.velikost - 0.5 }))}
+                      vypnuto={styl.velikost <= MIN_VELIKOST}
+                    />
+                    <span className="w-10 text-center font-heading text-xs tabular-nums text-ink">
+                      {styl.velikost.toFixed(1)}
+                    </span>
+                    <KulatyKnoflik
+                      popisek="+"
+                      nazev={t('pribehy.zvetsit')}
+                      onClick={() => setStyl((st) => orezStyl({ ...st, velikost: st.velikost + 0.5 }))}
+                      vypnuto={styl.velikost >= MAX_VELIKOST}
+                    />
+                  </span>
+
+                  <span className="font-heading text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t('pribehy.zarovnani')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    {(['left', 'center', 'right'] as ZarovnaniTextu[]).map((z) => (
+                      <button
+                        key={z}
+                        type="button"
+                        onClick={() => setStyl((st) => ({ ...st, zarovnani: z }))}
+                        aria-pressed={styl.zarovnani === z}
+                        className={`h-7 w-8 cursor-pointer rounded-lg border font-heading text-xs transition-colors ${
+                          styl.zarovnani === z
+                            ? 'border-brand-purple bg-brand-purple/15 text-ink'
+                            : 'border-line text-muted hover:text-ink'
+                        }`}
+                      >
+                        {z === 'left' ? '◧' : z === 'center' ? '▣' : '◨'}
+                      </button>
+                    ))}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <span className="font-heading text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t('pribehy.barvaPisma')}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {BARVY_TEXTU.map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => setStyl((st) => ({ ...st, barva: b }))}
+                        aria-pressed={styl.barva === b}
+                        aria-label={b}
+                        style={{ background: b }}
+                        className={`h-6 w-6 cursor-pointer rounded-full border-2 transition-transform ${
+                          styl.barva === b ? 'border-brand-purple scale-110' : 'border-line'
+                        }`}
+                      />
+                    ))}
+                  </span>
+
+                  <span className="font-heading text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t('pribehy.podklad')}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-1">
+                    {Object.keys(PODKLADY).map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setStyl((st) => ({ ...st, podklad: k }))}
+                        aria-pressed={styl.podklad === k}
+                        className={`cursor-pointer rounded-pill border px-2.5 py-1 font-heading text-[11px] transition-colors ${
+                          styl.podklad === k
+                            ? 'border-brand-purple bg-brand-purple/15 text-ink'
+                            : 'border-line text-muted hover:text-ink'
+                        }`}
+                      >
+                        {t(`pribehy.podklad.${k}`)}
+                      </button>
+                    ))}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <span className="font-body text-xs text-muted">{t('pribehy.souborPopis')}</span>
 
             <div className="mt-auto flex flex-wrap items-center gap-3">
@@ -517,13 +745,19 @@ export function FrontaPribehu({
                 ✕
               </button>
 
-              {vybrany.popisek.trim() && (
+              {/* U fotky je text vypálený přímo v obrázku, tady se už nepřekrývá. */}
+              {vybrany.popisek.trim() && vybrany.jeVideo && (
                 <div className="absolute inset-x-4 bottom-4 max-h-[40%] overflow-y-auto rounded-card bg-black/55 px-3 py-2 font-body text-sm text-white backdrop-blur-sm">
                   <p className="m-0 whitespace-pre-wrap">{vybrany.popisek}</p>
                 </div>
               )}
             </div>
 
+            {vybrany.popisek.trim() && !vybrany.jeVideo && (
+              <p className="m-0 w-full whitespace-pre-wrap rounded-card border border-white/15 bg-white/10 px-3 py-2 font-body text-xs text-white/80">
+                {vybrany.popisek}
+              </p>
+            )}
             {vybrany.vzkaz && (
               <p className="m-0 w-full rounded-card border border-white/15 bg-white/10 px-3 py-2 font-body text-xs text-white/80">
                 {vybrany.vzkaz}
