@@ -318,7 +318,7 @@ export function Editor({
   }
 
   return (
-    <div className="grid gap-6 rounded-card border border-line bg-surface p-5 lg:grid-cols-[1fr_auto]">
+    <div className="grid gap-6 rounded-card border border-line bg-surface p-5 sm:grid-cols-[minmax(0,1fr)_auto]">
       {/* --- VLEVO: text a jeho podoba ------------------------------------ */}
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -493,7 +493,7 @@ export function Editor({
       </div>
 
       {/* --- VPRAVO: náhled ----------------------------------------------- */}
-      <div className="flex flex-col items-center gap-2 lg:order-last">
+      <div className="flex flex-col items-center gap-2 sm:order-last">
         <label
           htmlFor="pribeh-soubor"
           onClick={(e) => {

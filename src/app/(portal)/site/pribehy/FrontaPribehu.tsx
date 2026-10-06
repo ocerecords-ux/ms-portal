@@ -88,7 +88,7 @@ export function FrontaPribehu({
        * MŘÍŽKA MÁ VŽdYCKY DEVĚT OKEN, i když jsou venku dvě fotky - prázdná
        * místa jsou součástí sdělení. Na užším okně se sloupce složí pod sebe.
        */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 flex-col gap-6">
           {smiPoslat && (
             <Editor
@@ -156,7 +156,7 @@ export function FrontaPribehu({
               {naInstagramu.length}
             </span>
           </h2>
-          <div className="grid w-full grid-cols-3 gap-2 xl:w-[372px]">
+          <div className="grid w-full grid-cols-3 gap-2 lg:w-[330px]">
             {Array.from({ length: 9 }, (_, i) => vyvesene[i] ?? null).map((p, i) =>
               p ? (
                 <Okno key={p.id} p={p} jazyk={jazyk} ted={ted} />
