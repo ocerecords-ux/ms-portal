@@ -8157,6 +8157,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'dokSiti.nadpis': { cs: 'Sítě', en: 'Social' },
   'dokSiti.zobrazit': { cs: 'Zobrazit Sítě', en: 'Show social' },
   'dokSiti.skryt': { cs: 'Skrýt Sítě', en: 'Hide social' },
+  'dokSiti.pribehy': { cs: 'Příběhy na Instagram', en: 'Instagram stories' },
   'dokSiti.novyPribeh': { cs: 'Nový příběh', en: 'New story' },
   'dokSiti.fronta': { cs: 'Rozdělané', en: 'Drafts and failures' },
   'dokSiti.prispevky': { cs: 'Příspěvky na sítě', en: 'Social posts' },
