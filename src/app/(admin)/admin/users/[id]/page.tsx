@@ -131,6 +131,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           // Do formuláře jde jen adresa, ne samotná data - viz výš.
           photoUrl: user.photoUrl ? `/api/uzivatele/${user.id}/fotka` : null,
           hourlyRate: user.hourlyRate,
+          podilNaObratu: user.podilNaObratu,
           manazerProjektu: user.manazerProjektu,
           smlouvyPodepisuje: user.smlouvyPodepisuje,
           prijimaDotazyKlientu: user.prijimaDotazyKlientu,

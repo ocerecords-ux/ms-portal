@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { smiNaPalubovku } from '@/lib/palubovkaServer';
+import { mujPodilNaObratu } from '@/lib/bonusObratuServer';
 import { ZALOZKY_PREHLEDU } from './zalozky';
 import { poradiZalozek } from '@/lib/zalozkyServer';
 import { seradZalozky } from '@/lib/zalozky';
@@ -23,11 +24,14 @@ export default async function PrehledyPage() {
   const session = await getServerSession(authOptions);
   const role = session?.user?.role ?? null;
   const palubovka = await smiNaPalubovku(session?.user?.id);
+  const podil = session?.user?.id ? await mujPodilNaObratu(session.user.id) : null;
+  const bonusy = role === 'ADMIN' || podil !== null;
 
   const dostupne = ZALOZKY_PREHLEDU.filter(
     (z) =>
       (!z.role || (role && z.role.includes(role))) &&
-      (z.jenSPriznakem !== 'palubovka' || palubovka),
+      (z.jenSPriznakem !== 'palubovka' || palubovka) &&
+      (z.jenSPriznakem !== 'bonusy' || bonusy),
   ).map((z) => ({ ...z, klic: z.href }));
 
   const prvni = seradZalozky(dostupne, await poradiZalozek('prehledy'))[0];

@@ -218,6 +218,14 @@ model User {
   // prace. Vychozi 250 Kc; u ostatnich roli se nepouziva.
   hourlyRate   Int?      @default(250)
 
+  /// PODIL NA OBRATU V PROCENTECH (zadani 6. 10. 2026: „potrebuju dat Peterovi
+  /// a Karoline do Prehledu zalozku Moje bonusy, kde uvidi aktualne castku bez
+  /// dph. Kazdy z nich ma jiny podil na obratu").
+  ///
+  /// Procenta, ne desetinne cislo: Karolina 2, Peter 4. Prazdno znamena, ze
+  /// clovek zadny podil nema a zalozku Moje bonusy vubec nevidi.
+  podilNaObratu Float?
+
   /// Smi byt manazerem projektu (zadani 10. 9. 2026: "manazera projektu bych
   /// dal na vyber jen me nebo Karolinu"). Zamerne priznak na uctu, ne seznam
   /// jmen v kodu - lidi se meni a kod by o tom nevedel.

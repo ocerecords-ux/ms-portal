@@ -222,6 +222,7 @@ async function main() {
   await audiotaggerUCekameNaOpravy();
   await vyberTerminuTomuKdoHlidaPlan();
   await vratKanalyNedokoncenychProjektu();
+  await podilyNaObratu();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
@@ -573,6 +574,35 @@ async function vratKanalyNedokoncenychProjektu() {
     if (kanaly.count > 0 || dotazy.count > 0) {
       console.log(`  chat: vraceno ${kanaly.count} kanalu projektu a ${dotazy.count} kanalu dotazu`);
     }
+  }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * PODÍLY NA OBRATU (zadání 6. 10. 2026: „potřebuju ještě dát Peterovi
+ * a Karolíně do Přehledů záložku Moje bonusy… Karolína 2 % a Peter 4 %").
+ *
+ * Jednorázově, ať to nemusí nikdo doklikávat; dál se to mění na kartě
+ * uživatele (pole Podíl na obratu). Komu už podíl vyplněný je, toho se tohle
+ * nedotkne - přepsat ručně zadané číslo by bylo horší než ho nedoplnit.
+ */
+async function podilyNaObratu() {
+  const ZNAMKA = 'podily-na-obratu-2026-10-06';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const podily: { email: string; procento: number }[] = [
+    { email: 'karolina.zborilova@mediaspace.cz', procento: 2 },
+    { email: 'peter.dratva@mediaspace.cz', procento: 4 },
+  ];
+
+  for (const p of podily) {
+    const zmeneno = await prisma.user.updateMany({
+      where: { email: p.email, podilNaObratu: null },
+      data: { podilNaObratu: p.procento },
+    });
+    if (zmeneno.count > 0) console.log(`  podil na obratu ${p.procento} % -> ${p.email}`);
   }
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });

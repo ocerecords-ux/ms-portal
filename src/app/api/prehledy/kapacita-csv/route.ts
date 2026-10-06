@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { canSee } from '@/lib/menu';
+import { smiNaStranku } from '@/lib/pristupyServer';
 import { nactiKapacituRoku } from '@/lib/kapacitaServer';
 import { csvKapacity } from '@/lib/kapacitaAnalyzy';
 
@@ -20,7 +20,12 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !canSee('/prehledy', session.user.role)) {
+  // Stejná kontrola jako na stránce Kapacity - podle zaškrtávátek z karty,
+  // ne jen podle role (6. 10. 2026).
+  if (
+    !session?.user?.id ||
+    !(await smiNaStranku({ id: session.user.id, role: session.user.role }, '/prehledy/kapacita'))
+  ) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
 

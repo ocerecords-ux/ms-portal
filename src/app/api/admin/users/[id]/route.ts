@@ -35,6 +35,8 @@ const schema = z.object({
   birthDate: z.string().trim().optional(),
   // Hodinova sazba zvukare (zadani 6. 9. 2026) - pocita se z ni vykaz prace.
   hourlyRate: z.string().trim().optional(),
+  /** Podil na obratu v procentech (6. 10. 2026) - Prehledy > Moje bonusy. */
+  podilNaObratu: z.string().trim().optional(),
   /** "1" / "0" - smi byt manazerem projektu (zadani 10. 9. 2026). */
   manazerProjektu: z.string().trim().optional(),
   smlouvyPodepisuje: z.string().trim().optional(),
@@ -92,6 +94,7 @@ function readFormData(formData: FormData) {
     removePhoto: formData.get('removePhoto') === 'true',
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
     hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
+    podilNaObratu: has('podilNaObratu') ? formData.get('podilNaObratu') : undefined,
     manazerProjektu: has('manazerProjektu') ? formData.get('manazerProjektu') : undefined,
     smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
@@ -290,6 +293,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         : {}),
       ...(nextRole === 'ZVUKAR' && data.hourlyRate !== undefined
         ? { hourlyRate: data.hourlyRate ? parseInt(data.hourlyRate, 10) || null : null }
+        : {}),
+      /**
+       * PODIL NA OBRATU (6. 10. 2026). Prazdne pole znamena „zadny podil" -
+       * null, ne nula: podle neho se pozna, komu se zalozka Moje bonusy vubec
+       * neukaze. Carka i tecka projdou, lidi pisou obojí.
+       */
+      ...(data.podilNaObratu !== undefined
+        ? {
+            podilNaObratu: data.podilNaObratu
+              ? Number.parseFloat(data.podilNaObratu.replace(',', '.')) || null
+              : null,
+          }
         : {}),
       // Studia zvukare (zadani 20. 9. 2026). `set` prepise cely seznam, takze
       // odskrtnute studio zmizi. U jine role se vazba necha byt - clovek

@@ -46,6 +46,7 @@ type EditableUser = {
   birthDate: string | null;
   photoUrl: string | null;
   hourlyRate: number | null;
+  podilNaObratu: number | null;
   /** Smí být manažerem projektu (zadání 10. 9. 2026). */
   manazerProjektu: boolean;
   /** Podepisuje za Mediaspace smlouvy (zadání 15. 9. 2026). */
@@ -134,6 +135,7 @@ export function UserEditForm({
   const [phone, setPhone] = useState(user.phone ?? '');
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
+  const [podilNaObratu, setPodilNaObratu] = useState(String(user.podilNaObratu ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
   /** Do kterých sekcí ten člověk smí (28. 9. 2026). */
   const [pristupy, setPristupy] = useState<string[]>(user.pristupy);
@@ -256,6 +258,7 @@ export function UserEditForm({
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
         if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
+        if (isMediaspace) fd.set('podilNaObratu', podilNaObratu);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
@@ -402,6 +405,25 @@ export function UserEditForm({
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(e.target.value)}
                 placeholder="250"
+                className="admin-input"
+              />
+            </AdminField>
+          </div>
+        )}
+        {/* PODÍL NA OBRATU (zadání 6. 10. 2026: „každý z nich má jiný podíl
+            na obratu"). Procenta z obratu bez DPH; prázdno = žádný podíl
+            a záložka Moje bonusy se tomu člověku vůbec neukáže. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[180px]">
+            <AdminField label={t('uzivatel.polePodilNaObratu')} hint={t('uzivatel.podilNaObratuHint')}>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={0.1}
+                value={podilNaObratu}
+                onChange={(e) => setPodilNaObratu(e.target.value)}
+                placeholder="0"
                 className="admin-input"
               />
             </AdminField>

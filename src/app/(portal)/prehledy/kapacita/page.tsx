@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { canSee } from '@/lib/menu';
+import { smiNaStranku } from '@/lib/pristupyServer';
 import { hodiny, nactiKapacituRoku, procenta } from '@/lib/kapacitaServer';
 import { analyzaRoku } from '@/lib/kapacitaAnalyzy';
 import { Analyzy } from './Analyzy';
@@ -43,7 +43,11 @@ export default async function KapacitaPage({
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/login');
-  if (!canSee('/prehledy', session.user.role)) redirect('/projekty');
+  // Rozhodují zaškrtávátka z karty, ne jen role (6. 10. 2026) - viz
+  // lib/pristupyServer.ts.
+  if (!(await smiNaStranku({ id: session.user.id, role: session.user.role }, '/prehledy/kapacita'))) {
+    redirect('/projekty');
+  }
 
   const jazyk = nactiJazyk();
   // Nazvy mesicu a dnu jsou ve slovniku (obecne.mesic.*), ne v poli natvrdo.

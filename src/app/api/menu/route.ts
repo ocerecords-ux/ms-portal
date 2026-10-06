@@ -11,8 +11,9 @@ import { jeZarizeni, type Zarizeni } from '@/lib/zarizeni';
 // Posila se vzdy CELY seznam v poradi, jak ma vypadat.
 //
 // Viditelnost se tu nenastavuje: kdo co uvidi se ridi pravy ke strance
-// (lib/menu.ts > PAGE_ACCESS). Odkaz na stranku, kam uzivatel nesmi, se
-// proto rovnou zahodi - jinak by si ho mohl do sve listy propasovat.
+// (lib/menu.ts > PAGE_ACCESS a zaskrtavatka z lib/pristupy.ts). Odkaz na
+// stranku, kam uzivatel nesmi, se proto rovnou zahodi - jinak by si ho mohl
+// do sve listy propasovat.
 const itemSchema = z.object({
   label: z.string().trim().min(1, 'Název položky nesmí být prázdný.').max(40, 'Název je moc dlouhý.'),
   href: z
@@ -42,7 +43,29 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
     const role = session.user.role;
-    const items = parsed.data.items.filter((i) => canSee(i.href, role));
+
+    /**
+     * ZAŠKRTÁVÁTKA ROZHODUJÍ I TADY (oprava 6. 10. 2026: „Tomáš Ilavský si
+     * nemůže přidat Studia na hlavní lištu").
+     *
+     * Nabídka pod „+ Přidat stránku" se od 28. 9. 2026 skládá podle přístupů
+     * z karty uživatele (`pageOptionsFor` dostává `kdo`), ale uložení se dál
+     * ptalo jen role. Zvukař, který má zaškrtnuté *Nastavení studií*, si
+     * Studia v liště přidal, ukládání je bez hlášky zahodilo a lišta se
+     * vrátila beze změny. Totéž potkalo každou sekci, kterou má člověk ze
+     * zaškrtávátek a role na ni sama nestačí - Doklady, Firmy, Přehledy.
+     *
+     * Účet se čte z databáze, ne ze session: práva se mění na kartě uživatele
+     * a nikdo se kvůli nim nebude odhlašovat.
+     */
+    const ucet = await prisma.user
+      .findUnique({ where: { id: session.user.id }, select: { superadmin: true, pristupy: true } })
+      .catch(() => null);
+    const kdo = ucet
+      ? { role, superadmin: ucet.superadmin ?? false, pristupy: (ucet.pristupy ?? []) as string[] }
+      : undefined;
+
+    const items = parsed.data.items.filter((i) => canSee(i.href, role, kdo));
     const zarizeni: Zarizeni = parsed.data.zarizeni;
 
     await prisma.$transaction([

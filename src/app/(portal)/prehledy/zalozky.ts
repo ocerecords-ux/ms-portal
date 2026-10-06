@@ -20,7 +20,7 @@ export const ZALOZKY_PREHLEDU: {
    * Palubovku vidí jen ten, kdo má `vidiPalubovku` (zadání 27. 9. 2026:
    * „vidím jen já a tím řídím celou firmu").
    */
-  jenSPriznakem?: 'palubovka';
+  jenSPriznakem?: 'palubovka' | 'bonusy';
 }[] = [
   // Palubovka je PRVNÍ (zadání 27. 9. 2026: „ať je to první, co se mi ukáže,
   // když otevřu přehledy"). Kdo ji nemá zapnutou, tomu se přeskočí a otevře
@@ -36,4 +36,10 @@ export const ZALOZKY_PREHLEDU: {
   { href: '/prehledy/knihy', label: 'Knihy a rozpočty', role: ['ADMIN'] },
   // Co chodí zvukařům a kdy (21. 9. 2026) - peníze lidí, jen admin.
   { href: '/prehledy/zvukari', label: 'Zvukaři', role: ['ADMIN'] },
+  /**
+   * Moje bonusy (zadání 6. 10. 2026) - vlastní podíl na obratu. Záložku vidí
+   * ten, kdo má na kartě vyplněný podíl, a Žůžo-labůžo (tomu ukáže všechny).
+   * Role sama nestačí, proto `jenSPriznakem` jako u Palubovky.
+   */
+  { href: '/prehledy/moje-bonusy', label: 'Moje bonusy', jenSPriznakem: 'bonusy' },
 ];

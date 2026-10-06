@@ -9682,6 +9682,34 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Mail, jak se u projektu odškrtne dotočeno s hercem - u všech projektů.',
     en: 'An email when a project is ticked off as finished with an actor — for every project.',
   },
+  // --- Moje bonusy: podíl na obratu (6. 10. 2026) ---
+  'prehledy.zalozka./prehledy/moje-bonusy': { cs: 'Moje bonusy', en: 'My bonuses' },
+  'uzivatel.polePodilNaObratu': { cs: 'Podíl na obratu (%)', en: 'Share of turnover (%)' },
+  'uzivatel.podilNaObratuHint': {
+    cs: 'z obratu bez DPH se z něj počítá bonus v Přehledech → Moje bonusy; prázdné pole znamená žádný podíl',
+    en: 'the bonus in Reports → My bonuses is worked out from it, out of turnover excluding VAT; empty means no share',
+  },
+  'bonusObratu.mujBonus': { cs: 'Můj bonus za {rok}', en: 'My bonus for {rok}' },
+  'bonusObratu.mujPodil': { cs: 'Můj podíl', en: 'My share' },
+  'bonusObratu.obratRoku': { cs: 'Obrat za {rok} bez DPH', en: 'Turnover for {rok} excluding VAT' },
+  'bonusObratu.zaklad': {
+    cs: 'Počítá se z vystavených faktur podle data vystavení, v korunách bez DPH - tedy ze stejného obratu, jaký ukazuje Palubovka. Stornované a rozpracované faktury se nepočítají.',
+    en: 'Worked out from issued invoices by their issue date, in CZK excluding VAT — the same turnover the Dashboard shows. Cancelled and draft invoices do not count.',
+  },
+  'bonusObratu.poMesicich': { cs: 'Po měsících', en: 'Month by month' },
+  'bonusObratu.mesic': { cs: 'Měsíc', en: 'Month' },
+  'bonusObratu.obrat': { cs: 'Obrat', en: 'Turnover' },
+  'bonusObratu.bonus': { cs: 'Můj bonus', en: 'My bonus' },
+  'bonusObratu.celkemRok': { cs: 'Celkem {rok}', en: 'Total for {rok}' },
+  'bonusObratu.vsichni': { cs: 'Podíly celého týmu', en: 'The whole team’s shares' },
+  'bonusObratu.vsichniPopis': {
+    cs: 'Kdo má na kartě vyplněný podíl na obratu a kolik mu k dnešku vychází. Vidí to jen Žůžo-labůžo.',
+    en: 'Who has a share of turnover on their card and what it comes to today. Only Žůžo-labůžo sees this.',
+  },
+  'bonusObratu.nikdoNemaPodil': {
+    cs: 'Podíl na obratu zatím nemá nikdo - vyplňuje se na kartě uživatele.',
+    en: 'Nobody has a share of turnover yet — it is filled in on the user card.',
+  },
   'uzivatel.pravoDostavaVyberTerminu': { cs: 'Dostává výběr termínů', en: 'Receives chosen sessions' },
   'uzivatel.pravoDostavaVyberTerminuPopis': {
     cs: 'Mail, jak si herec naklikal natáčecí termíny. Přepnout si to umí i sám v Můj účet.',
