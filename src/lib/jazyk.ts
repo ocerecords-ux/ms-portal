@@ -8152,6 +8152,65 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'site.pismo.heading': { cs: 'Popisky', en: 'Headings' },
   'site.pismo.body': { cs: 'Text', en: 'Body' },
 
+  /* Pribehy na Instagram (6. 10. 2026). */
+  'pribehy.nadpis': { cs: 'Příběhy na Instagram', en: 'Instagram stories' },
+  'pribehy.podnadpis': {
+    cs: 'Nahraj fotku nebo video a text. Na Instagram to vyvěsí ten, kdo k účtu má přístup – ty ho nepotřebuješ.',
+    en: 'Upload a photo or video and the text. Someone with access to the account posts it – you do not need the account yourself.',
+  },
+  'pribehy.podnadpisSchvalovatel': {
+    cs: 'Co přijde od týmu, čeká tady. Soubor si stáhni, vyvěs ho na Instagram a dá se tu označit jako venku.',
+    en: 'Whatever the team sends waits here. Download the file, post it to Instagram and mark it as published.',
+  },
+  'pribehy.soubor': { cs: 'Fotka nebo video', en: 'Photo or video' },
+  'pribehy.souborPopis': {
+    cs: 'Na výšku 9:16, JPEG, PNG, WEBP, MP4 nebo MOV. Video až 15 sekund – delší si Instagram rozseká sám.',
+    en: 'Portrait 9:16, JPEG, PNG, WEBP, MP4 or MOV. Video up to 15 seconds – Instagram splits anything longer.',
+  },
+  'pribehy.popisek': { cs: 'Text k příběhu', en: 'Story text' },
+  'pribehy.popisekPlaceholder': {
+    cs: 'Není povinný. Napiš, co má být v příběhu – včetně značek a odkazů.',
+    en: 'Optional. Write what should be in the story – including tags and links.',
+  },
+  'pribehy.odeslat': { cs: 'Odeslat ke schválení', en: 'Send for approval' },
+  'pribehy.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'pribehy.nahravam': { cs: 'Nahráno {procenta} %', en: '{procenta}% uploaded' },
+  'pribehy.neodeslano': {
+    cs: 'Příběh se nepodařilo odeslat. Zkus to znovu.',
+    en: 'The story could not be sent. Please try again.',
+  },
+  'pribehy.nevyrizeno': { cs: 'Nepodařilo se to. Zkus to znovu.', en: 'That did not work. Please try again.' },
+  'pribehy.nezkopirovano': { cs: 'Text se nepodařilo zkopírovat.', en: 'The text could not be copied.' },
+  'pribehy.spatnyTyp': {
+    cs: 'Instagram vezme jen JPEG, PNG, WEBP, MP4 nebo MOV.',
+    en: 'Instagram only takes JPEG, PNG, WEBP, MP4 or MOV.',
+  },
+  'pribehy.mocVelky': { cs: 'Soubor je moc velký – vejde se do {kolik}.', en: 'The file is too big – the limit is {kolik}.' },
+  'pribehy.cekaji': { cs: 'Čeká na vyvěšení', en: 'Waiting to be posted' },
+  'pribehy.vyrizene': { cs: 'Vyřízené', en: 'Done' },
+  'pribehy.zatimNic': {
+    cs: 'Zatím tu nic není.',
+    en: 'Nothing here yet.',
+  },
+  'pribehy.stav.CEKA': { cs: 'Čeká', en: 'Waiting' },
+  'pribehy.stav.VYVESENO': { cs: 'Vyvěšeno', en: 'Posted' },
+  'pribehy.stav.ZAMITNUTO': { cs: 'Nevyvěšeno', en: 'Not posted' },
+  'pribehy.od': { cs: '{kdo} · {datum}', en: '{kdo} · {datum}' },
+  'pribehy.bezPopisku': { cs: 'Bez textu.', en: 'No text.' },
+  'pribehy.stahnout': { cs: 'Stáhnout', en: 'Download' },
+  'pribehy.zkopirovatText': { cs: 'Zkopírovat text', en: 'Copy the text' },
+  'pribehy.zkopirovano': { cs: 'Zkopírováno', en: 'Copied' },
+  'pribehy.vyveseno': { cs: 'Vyvěšeno na Instagram', en: 'Posted to Instagram' },
+  'pribehy.zamitnout': { cs: 'Nevyvěsit', en: 'Do not post' },
+  'pribehy.vzkaz': { cs: 'Vzkaz zpátky', en: 'Message back' },
+  'pribehy.vzkazPlaceholder': {
+    cs: 'Proč to nejde ven – ať to autor ví.',
+    en: 'Why it is not going out – so the author knows.',
+  },
+  'pribehy.potvrditZamitnuti': { cs: 'Potvrdit a poslat vzkaz', en: 'Confirm and send the message' },
+  'pribehy.stahnoutZFronty': { cs: 'Stáhnout z fronty', en: 'Take it back' },
+  'pribehy.vyridil': { cs: 'Vyřídil {kdo}, {datum}', en: 'Handled by {kdo}, {datum}' },
+
   /* Editor plátna. */
   'siteEditor.nazevPrispevku': { cs: 'Název příspěvku', en: 'Post name' },
   'siteEditor.ulozeno': { cs: 'Uloženo', en: 'Saved' },

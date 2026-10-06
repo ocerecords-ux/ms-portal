@@ -40,7 +40,8 @@ export type KlicSekce =
   | 'PROCESY'
   | 'ZPRAVY_PORTALU'
   | 'HERCI'
-  | 'KLIENTI';
+  | 'KLIENTI'
+  | 'SITE';
 
 export type Pravo = {
   /** Celý klíč i se sekcí, např. „DOKLADY.FAKTURY_VYSTAVIT". */
@@ -377,6 +378,42 @@ export const SEKCE: Sekce[] = [
       },
     ],
   },
+  /**
+   * SITE (6. 10. 2026). Puvodne to byl priznak `vidiSite` na karte uzivatele
+   * ("zatim uvidim jen ja", 27. 9. 2026). Od chvile, kdy do sitich posilaji
+   * i zvukari, to musi byt zaskrtavatko jako vsechno ostatni - priznak
+   * v databazi nejde nikomu dat bez zasahu do databaze.
+   *
+   * PRAVA JSOU ZAMERNE TRI. Posilani pribehu a vyvesovani na Instagram se
+   * nesmi slit do jednoho: cely smysl zadani je, ze zvukar pribeh posle,
+   * ale na ucet se nedostane.
+   */
+  {
+    klic: 'SITE',
+    ikona: 'megafon',
+    nazev: 'Sítě',
+    popis: 'Příspěvky na Instagram a LinkedIn a fronta příběhů ke schválení.',
+    cesty: ['/site/pribehy'],
+    prava: [
+      {
+        klic: 'SITE.PRIBEHY_POSLAT',
+        nazev: 'Posílá příběhy ke schválení',
+        popis: 'Nahraje fotku nebo video a text. K instagramovému účtu se nedostane.',
+        cesty: ['/site/pribehy'],
+      },
+      {
+        klic: 'SITE.PRIBEHY_SCHVALIT',
+        nazev: 'Schvaluje a vyvěšuje příběhy',
+        popis: 'Vidí celou frontu, příběh vyvěsí nebo zamítne se vzkazem zpátky.',
+      },
+      {
+        klic: 'SITE.PRISPEVKY',
+        nazev: 'Tvoří příspěvky na sítě',
+        popis: 'Modul Sítě - plátno, šablony a export. Dřív to byl příznak Vidí Sítě na kartě.',
+        cesty: ['/site'],
+      },
+    ],
+  },
   {
     klic: 'KLIENTI',
     ikona: 'klic',
@@ -434,6 +471,7 @@ export const VYCHOZI_PRISTUPY: Record<string, string[]> = {
     ...celaSekce('ZPRAVY_PORTALU'),
     ...celaSekce('HERCI'),
     ...celaSekce('KLIENTI'),
+    ...celaSekce('SITE'),
   ],
   PRODUKCE: [
     'PROJEKTY',
@@ -478,6 +516,13 @@ export const VYCHOZI_PRISTUPY: Record<string, string[]> = {
     'KALENDARE.VSICHNI_LIDE',
     'STUDIA',
     'STUDIA.REZERVACE',
+    /**
+     * Posilani pribehu na Instagram (6. 10. 2026). Jen posilani - vyvesuje
+     * je dal ten, kdo ucet opravdu ma. Stavajicim uctum to doplnila
+     * jednorazovka v seedu, tohle je pro nove zalozene.
+     */
+    'SITE',
+    'SITE.PRIBEHY_POSLAT',
   ],
 };
 

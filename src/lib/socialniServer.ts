@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { najdiFormat, prazdnePlatno, type Platno } from '@/lib/socialni';
+import { maPristup, podlehaPristupum } from '@/lib/pristupy';
 
 /**
  * SÍTĚ - DATA (zadání 27. 9. 2026). Prisma část modulu; podoba plátna
@@ -27,15 +28,31 @@ export type PrispevekRadek = {
 
 export type PrispevekDetail = PrispevekRadek & { platno: Platno };
 
-/** Smí tenhle účet do Sítí? */
+/**
+ * Smí tenhle účet do Sítí?
+ *
+ * Od 6. 10. 2026 rozhoduje i ZAŠKRTÁVÁTKO *Tvoří příspěvky na sítě*
+ * (SITE.PRISPEVKY) - příznak `vidiSite` nejde nikomu dát bez zásahu do
+ * databáze a modul už nepoužívá jeden člověk. Příznak zůstává v platnosti,
+ * aby se Ondřejovi nic nezavřelo pod rukama.
+ */
 export async function smiSite(userId: string | null | undefined): Promise<boolean> {
   if (!userId) return false;
   try {
     const u = (await prisma.user.findUnique({
       where: { id: userId },
-      select: { vidiSite: true, active: true },
-    })) as { vidiSite: boolean; active: boolean } | null;
-    return Boolean(u?.active && u.vidiSite);
+      select: { vidiSite: true, active: true, role: true, superadmin: true, pristupy: true },
+    })) as {
+      vidiSite: boolean;
+      active: boolean;
+      role: string;
+      superadmin: boolean | null;
+      pristupy: string[] | null;
+    } | null;
+    if (!u?.active) return false;
+    if (u.vidiSite || u.superadmin) return true;
+    if (!podlehaPristupum(u.role)) return false;
+    return maPristup({ role: u.role, superadmin: false, pristupy: u.pristupy ?? [] }, 'SITE.PRISPEVKY');
   } catch {
     return false;
   }

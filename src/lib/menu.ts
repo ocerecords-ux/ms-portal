@@ -92,6 +92,13 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // „zatim uvidim jen ja"). Role je jen prvni zamek; druhy je priznak
   // vidiSite na karte uzivatele, ktery kontroluje samotna stranka.
   '/site': ['ADMIN'],
+  /**
+   * PRIBEHY KE SCHVALENI (zadani 6. 10. 2026: "muzeme dat zvukarum pristup,
+   * aby mohli posilat na instagram pribehy, aniz by meli pristup na
+   * instagram?"). Role je tu jen hrube sito; kdo pribeh posle a kdo ho
+   * vyvesi, rozhoduji zaskrtavatka SITE.PRIBEHY_* z lib/pristupy.ts.
+   */
+  '/site/pribehy': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
   // Palubovka - budiky, podle kterych Ondrej ridi firmu (zadani 27. 9. 2026:
   // „vidim jen ja"). Role je jen prvni zamek; druhy je priznak vidiPalubovku
   // na karte uzivatele, ktery kontroluje sama stranka.
@@ -186,6 +193,8 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/studia', label: 'Studia' },
+  // Pribehy na Instagram (6. 10. 2026) - zvukar si odkaz prida sam.
+  { href: '/site/pribehy', label: 'Příběhy' },
   { href: '/admin/doklady', label: 'Doklady' },
 ];
 

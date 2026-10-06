@@ -449,6 +449,35 @@ export async function podepsanyUploadPrilohy(
 }
 
 /**
+ * PODEPSANA ADRESA NA NAHRANI PRIBEHU NA INSTAGRAM (6. 10. 2026).
+ *
+ * Stejny duvod jako u chatu a smluv: video z telefonu prerostne strop
+ * Vercelu (4,5 MB) driv, nez se stihne odeslat, takze jde do uloziste rovnou
+ * z prohlizece. Klic si urcuje server - kdyby ho posilal prohlizec, dal by
+ * se jim prepsat cizi soubor.
+ */
+export async function podepsanyUploadPribehu(
+  fileName: string,
+  mime: string,
+): Promise<{ key: string; uploadUrl: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const key = `pribehy/${randomUUID()}-${bezpecnyNazev(fileName)}`;
+  const uploadUrl = await getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: mime || 'application/octet-stream',
+    }),
+    { expiresIn: PLATNOST_UPLOADU },
+  );
+  return { key, uploadUrl };
+}
+
+/**
  * Podepsaná adresa na nahrání SMLOUVY OD KLIENTA (21. 9. 2026) - stejně jako
  * přílohy v chatu jde soubor rovnou z prohlížeče do úložiště, protože
  * naskenovaná smlouva snadno přeroste limit Vercelu (4,5 MB).

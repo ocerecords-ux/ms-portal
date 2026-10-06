@@ -604,6 +604,8 @@ model User {
   /// Příspěvky na sítě a obrázky k nim (zadání 27. 9. 2026).
   socialniPrispevky SocialniPrispevek[] @relation("SocialniAutor")
   socialniObrazky   SocialniObrazek[]   @relation("SocialniObrazekAutor")
+  socialniPribehy   SocialniPribeh[]    @relation("PribehAutor")
+  pribehyVyrizene   SocialniPribeh[]    @relation("PribehVyridil")
 }
 
 model Order {
@@ -4375,6 +4377,57 @@ model SocialniPrispevek {
 /// doklady; do plátna se dávají odkazem na portál (/api/site/obrazek/<id>),
 /// ne adresou úložiště - jednak je adresa podepsaná a propadá, jednak by se
 /// z cizí domény nedalo plátno vyexportovat do PNG.
+/// PRIBEHY KE SCHVALENI (zadani 6. 10. 2026: "muzeme dat zvukarum pristup,
+/// aby mohli posilat na instagram pribehy, aniz by meli pristup na
+/// instagram?").
+///
+/// ODPOVED JE FRONTA. Zvukar nahraje fotku nebo video a text, portal to
+/// polozi sem a oznami to tomu, kdo ma Instagram. Heslo k uctu ani aplikaci
+/// zvukar nepotrebuje - a kdyz od firmy odejde, nema co odhlasovat.
+///
+/// PUBLIKUJE SE ZATIM RUKOU. Instagram na vyveseni pres API vyzaduje
+/// opravneni instagram_business_content_publish a k nemu schvaleni aplikace
+/// u Mety; dokud neprojde, schvalovatel soubor stahne a vyvesi ho sam
+/// a portal si jen poznaci, ze je to venku. Az schvaleni prijde, vymeni se
+/// vnitrek tlacitka a `externiId` se zacne plnit - fronta ani obrazovka
+/// zvukare se nemeni.
+///
+/// SOUBOR JDE ROVNOU DO ULOZISTE podepsanou adresou, ne pres portal: video
+/// z telefonu prerostne limit Vercelu (4,5 MB) driv, nez se stihne odeslat.
+/// Proto se tady drzi adresa v ulozisti a bajty se vydavaji odkazem
+/// (/api/site/pribehy/<id>/soubor), ktery se podepise az pri otevreni.
+model SocialniPribeh {
+  id      String @id @default(cuid())
+  autorId String
+  autor   User   @relation("PribehAutor", fields: [autorId], references: [id], onDelete: Cascade)
+
+  /// Text, ktery ma jit k pribehu. Muze byt prazdny - nekdy staci fotka.
+  popisek String @default("") @db.Text
+
+  /// Adresa v ulozisti (nebo data URL, kdyz uloziste neni nastavene).
+  url          String @db.Text
+  nazevSouboru String
+  /// MIME typ, podle ktereho se pozna fotka od videa.
+  typSouboru   String
+  velikost     Int    @default(0)
+
+  /// CEKA -> VYVESENO / ZAMITNUTO.
+  stav       String    @default("CEKA")
+  vyridilId  String?
+  vyridil    User?     @relation("PribehVyridil", fields: [vyridilId], references: [id], onDelete: SetNull)
+  vyrizenoAt DateTime?
+  /// Vzkaz zpatky autorovi - hlavne proc to neslo ven.
+  vzkaz      String?   @db.Text
+  /// Id pribehu u Instagramu, az se bude vyvesovat pres API.
+  externiId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stav, createdAt])
+  @@index([autorId, createdAt])
+}
+
 model SocialniObrazek {
   id      String @id @default(cuid())
   autorId String

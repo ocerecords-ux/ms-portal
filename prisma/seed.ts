@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { SEKCE } from '../src/lib/pristupy';
+import { SEKCE, VYCHOZI_PRISTUPY } from '../src/lib/pristupy';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { VYCHOZI_NAVODY } from './vychoziNavody';
@@ -229,6 +229,7 @@ async function main() {
   await oznacCastiZakazek();
   await klientAudiolibrixu();
   await adresyStudii();
+  await pribehyZvukarum();
   await castiJenTamKdeSeNaCastiFakturuje();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
@@ -488,6 +489,49 @@ async function notifikaceReklamnichFirem() {
       });
     }
     console.log(`  notifikace reklamy: ${f.name}${f.dealsAudiobooks ? ' (jen doplneno)' : ''}`);
+  }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * PRÍBĚHY NA INSTAGRAM ZVUKAŘŮM (zadání 6. 10. 2026: „můžeme dát
+ * zvukařům přístup, aby mohli posílat na instagram příběhy, aniž by měli
+ * přístup na instagram?").
+ *
+ * Nové právo SITE.PRIBEHY_POSLAT je ve výchozí sadě role ZVUKAR, ale ta platí
+ * jen pro účty s prázdným seznamem - tedy pro ty, které teprve vzniknou.
+ * Stávajícím zvukařům by ho Ondřej musel naklikávat jednomu po druhém.
+ *
+ * SCHVALOVANÍ SE NEROZDÁVÁ. Vyvěšování (SITE.PRIBEHY_SCHVALIT) zůstává na
+ * superadminovi a na tom, komu se zaškrtne na kartě - celý smysl zadání je,
+ * že zvukař příběh pošle, ale na účet se nedostane.
+ */
+async function pribehyZvukarum() {
+  const ZNAMKA = 'pribehy-instagram-zvukarum-2026-10-06';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const zvukari = (await prisma.user.findMany({
+    where: { active: true, role: 'ZVUKAR' },
+    select: { id: true, name: true, email: true, pristupy: true },
+  })) as { id: string; name: string | null; email: string | null; pristupy: string[] | null }[];
+
+  for (const z of zvukari) {
+    const ma = z.pristupy ?? [];
+    if (ma.includes('SITE.PRIBEHY_POSLAT')) continue;
+    /**
+     * PRÁZDNÝ SEZNAM SE NESMÍ PŘEPSAT JEN NOVÝM PRÁVEM. Prázdno znamená
+     * „ještě nenastaveno" a portál za něj dosazuje celou výchozí sadu role
+     * (viz maPristup v lib/pristupy.ts) - zápisem dvou klíčů by takový účet
+     * o projekty, kalendář i studia přišel.
+     */
+    const nove =
+      ma.length > 0
+        ? Array.from(new Set([...ma, 'SITE', 'SITE.PRIBEHY_POSLAT']))
+        : Array.from(new Set(VYCHOZI_PRISTUPY.ZVUKAR));
+    await prisma.user.update({ where: { id: z.id }, data: { pristupy: nove } });
+    console.log(`  pribehy na Instagram: ${z.name || z.email}`);
   }
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });

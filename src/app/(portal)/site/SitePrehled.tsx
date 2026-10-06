@@ -66,10 +66,16 @@ export function SitePrehled({ prispevky }: { prispevky: PrispevekRadek[] }) {
             {prispevky.length}
           </span>
         )}
+        <Link
+          href="/site/pribehy"
+          className="ml-auto rounded-pill border border-line text-ink font-heading font-semibold text-sm px-4 py-2 no-underline hover:border-brand-purple transition-colors"
+        >
+          {t('pribehy.nadpis')}
+        </Link>
         <button
           type="button"
           onClick={() => setOtevreno((o) => !o)}
-          className="ml-auto rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 hover:bg-brand-purpleDeep transition-colors cursor-pointer"
+          className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 hover:bg-brand-purpleDeep transition-colors cursor-pointer"
         >
           {t(otevreno ? 'site.zavrit' : 'site.novyPrispevek')}
         </button>
