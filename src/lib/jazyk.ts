@@ -8167,6 +8167,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Na výšku 9:16, JPEG, PNG, WEBP, MP4 nebo MOV. Video až 15 sekund – delší si Instagram rozseká sám.',
     en: 'Portrait 9:16, JPEG, PNG, WEBP, MP4 or MOV. Video up to 15 seconds – Instagram splits anything longer.',
   },
+  'pribehy.bezUctu': { cs: 'Účet zatím není připojený', en: 'No account connected yet' },
+  'pribehy.vybratSoubor': { cs: 'Vybrat fotku nebo video', en: 'Choose a photo or video' },
+  'pribehy.zmenitSoubor': { cs: 'Vybrat jiný', en: 'Choose another' },
+  'pribehy.takhleToBude': { cs: 'Takhle to bude vypadat', en: 'This is how it will look' },
+  'pribehy.devetNaSestnact': { cs: 'Na výšku 9:16', en: 'Portrait 9:16' },
+  'pribehy.zavrit': { cs: 'Zavřít', en: 'Close' },
   'pribehy.popisek': { cs: 'Text k příběhu', en: 'Story text' },
   'pribehy.popisekPlaceholder': {
     cs: 'Není povinný. Do obrázku se nepropiše – je to vzkaz pro toho, kdo příběh vyvěšuje.',

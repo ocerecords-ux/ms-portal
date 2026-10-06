@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nactiPribehy, smiPoslatPribeh, smiSchvalovatPribehy } from '@/lib/pribehyServer';
-import { lzeVyvesitPresApi } from '@/lib/instagramServer';
+import { lzeVyvesitPresApi, stavInstagramu } from '@/lib/instagramServer';
 import { FrontaPribehu } from './FrontaPribehu';
 
 /**
@@ -33,6 +33,8 @@ export default async function PribehyPage() {
    * Studia → Připojit Instagram). Když ne, zůstává jen ruční cesta.
    */
   const presApi = smiSchvalit ? await lzeVyvesitPresApi() : false;
+  // Jmeno uctu do nahledu - at je videt, kam to pujde.
+  const ucet = (await stavInstagramu())?.username ?? null;
 
   return (
     <FrontaPribehu
@@ -40,6 +42,7 @@ export default async function PribehyPage() {
       smiPoslat={smiPoslat}
       smiSchvalit={smiSchvalit}
       presApi={presApi}
+      ucet={ucet}
       jaId={session.user.id}
     />
   );
