@@ -140,6 +140,44 @@ export async function nactiBonusyObratu(rokVstup?: number, dnes = new Date()): P
   };
 }
 
+/**
+ * OBRAT JEDNOHO MĚSÍCE (6. 10. 2026: „u těch přehledů bonusů dej ještě na první
+ * pohled minulý měsíc a tento měsíc").
+ *
+ * Minulý měsíc je skoro vždycky už v `mesice` z `nactiBonusyObratu`. Jediná
+ * výjimka je LEDEN: tam leží prosinec v jiném roce, a ten by se jinak musel
+ * tažit celý jen kvůli jedné dlaždici. Pro ten jeden případ je tahle funkce.
+ *
+ * Základ je stejný jako výš - vystavené faktury podle data vystavení, bez DPH,
+ * kurzem uloženým u dokladu.
+ */
+export async function obratMesice(rok: number, mesic: number): Promise<number> {
+  if (!(rok >= 2000 && rok <= 2100) || !(mesic >= 1 && mesic <= 12)) return 0;
+  const od = new Date(rok, mesic - 1, 1);
+  const doKdy = new Date(rok, mesic, 1);
+  try {
+    const faktury = (await prisma.invoice.findMany({
+      where: { status: { in: ['SENT', 'PAID'] }, issueDate: { gte: od, lt: doKdy } },
+      select: {
+        exchangeRate: true,
+        slevaProcent: true,
+        slevaMinor: true,
+        items: { select: { quantity: true, unitPriceMinor: true, vatRate: true } },
+      },
+    })) as unknown as {
+      exchangeRate: number;
+      slevaProcent: number;
+      slevaMinor: number;
+      items: PolozkaDokladu[];
+    }[];
+    return faktury.reduce((soucet, f) => soucet + bezDph(f.items, f, f.exchangeRate), 0);
+  } catch (err) {
+    // Dlaždice navíc nikdy nesmí shodit celý přehled.
+    console.error('Obrat měsíce se nepodařilo načíst:', err);
+    return 0;
+  }
+}
+
 /** Podíl přihlášeného člověka, nebo null, když žádný nemá. */
 export async function mujPodilNaObratu(userId: string): Promise<number | null> {
   try {

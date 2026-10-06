@@ -9,6 +9,8 @@ type Radek = {
   id: string;
   jmeno: string;
   procento: number;
+  /** Bonus za uzavřený minulý měsíc - vedle rozjetého (6. 10. 2026). */
+  bonusMinuly: number;
   bonusMesic: number;
   bonusRok: number;
 };
@@ -24,7 +26,17 @@ type Radek = {
  * Prázdné pole (nebo nula) znamená žádný podíl - takovému člověku se záložka
  * přestane ukazovat.
  */
-export function PodilyTymu({ radky, mesicNazev, rok }: { radky: Radek[]; mesicNazev: string; rok: number }) {
+export function PodilyTymu({
+  radky,
+  mesicNazev,
+  minulyNazev,
+  rok,
+}: {
+  radky: Radek[];
+  mesicNazev: string;
+  minulyNazev: string;
+  rok: number;
+}) {
   const t = usePreklad();
   const jazyk = useJazyk();
   const router = useRouter();
@@ -72,7 +84,9 @@ export function PodilyTymu({ radky, mesicNazev, rok }: { radky: Radek[]; mesicNa
         <span className="min-w-0">{t('bonusObratu.clovek')}</span>
         <span className="flex items-center gap-4 sm:gap-6 shrink-0">
           <span className="w-20 text-right">{t('bonusObratu.podil')}</span>
-          <span className="w-24 sm:w-28 text-right">{mesicNazev}</span>
+          {/* Minuly mesic se na uzkem telefonu schova - ctyri cisla vedle sebe uz se nevejdou. */}
+          <span className="hidden sm:block w-28 text-right capitalize">{minulyNazev}</span>
+          <span className="w-24 sm:w-28 text-right capitalize">{mesicNazev}</span>
           <span className="w-24 sm:w-28 text-right">{rok}</span>
         </span>
       </div>
@@ -95,6 +109,9 @@ export function PodilyTymu({ radky, mesicNazev, rok }: { radky: Radek[]; mesicNa
                   className="w-14 rounded-lg border border-line bg-field px-2 py-1 text-right text-sm font-heading text-ink tabular-nums outline-none focus:border-brand-purple disabled:opacity-60"
                 />
                 <span className="text-xs font-body text-muted">%</span>
+              </span>
+              <span className="hidden sm:block w-28 text-right text-sm font-body text-muted">
+                {koruny(r.bonusMinuly, jazyk)}
               </span>
               <span className="w-24 sm:w-28 text-right text-sm font-heading font-semibold text-ink">
                 {koruny(r.bonusMesic, jazyk)}

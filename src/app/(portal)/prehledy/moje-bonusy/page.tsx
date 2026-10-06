@@ -2,7 +2,12 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { bonusZObratu, mujPodilNaObratu, nactiBonusyObratu } from '@/lib/bonusObratuServer';
+import {
+  bonusZObratu,
+  mujPodilNaObratu,
+  nactiBonusyObratu,
+  obratMesice,
+} from '@/lib/bonusObratuServer';
 import { koruny, nazevMesicePalubovky } from '@/lib/palubovka';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
@@ -51,6 +56,22 @@ export default async function MojeBonusyPage({ searchParams }: { searchParams?: 
   const mesic = data.mesice.find((m) => m.mesic === mesicCislo) ?? { mesic: mesicCislo, obrat: 0 };
   const mesicNazev = nazevMesicePalubovky(mesicCislo - 1, jazyk);
 
+  /**
+   * MINULÝ MĚSÍC VEDLE TOHO ROZJETÉHO (zadání 6. 10. 2026: „u těch přehledů
+   * bonusů dej ještě na první pohled minulý měsíc a tento měsíc").
+   *
+   * Prvního v měsíci je rozjetý měsíc skoro nula a samotný by nic neřekl -
+   * teprve vedle dokončeného minulého je vidět, o co jde. V lednu leží minulý
+   * měsíc v jiném roce, proto se pro něj saha zvlášť.
+   */
+  const minulyCislo = mesicCislo > 1 ? mesicCislo - 1 : 12;
+  const minulyRok = mesicCislo > 1 ? data.rok : data.rok - 1;
+  const minulyObrat =
+    mesicCislo > 1
+      ? (data.mesice.find((m) => m.mesic === minulyCislo)?.obrat ?? 0)
+      : await obratMesice(minulyRok, 12);
+  const minulyNazev = nazevMesicePalubovky(minulyCislo - 1, jazyk);
+
   const rada = data.mesice.map((m) => ({
     mesic: m.mesic,
     bonus: muj !== null ? bonusZObratu(m.obrat, muj) : m.obrat,
@@ -82,17 +103,22 @@ export default async function MojeBonusyPage({ searchParams }: { searchParams?: 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Dlazdice
               nazev={prelozitS(jazyk, 'bonusObratu.bonusZaMesic', { mesic: mesicNazev })}
+              znacka={data.rozjetyMesic === mesicCislo ? prelozit(jazyk, 'bonusObratu.tentoMesic') : null}
               hodnota={koruny(bonusZObratu(mesic.obrat, muj), jazyk)}
+              pod={prelozitS(jazyk, 'bonusObratu.obratHodnota', { castka: koruny(mesic.obrat, jazyk) })}
               vyrazna
             />
             <Dlazdice
-              nazev={prelozitS(jazyk, 'bonusObratu.obratMesice', { mesic: mesicNazev })}
-              hodnota={koruny(mesic.obrat, jazyk)}
+              nazev={prelozitS(jazyk, 'bonusObratu.bonusZaMesic', { mesic: minulyNazev })}
+              znacka={prelozit(jazyk, 'bonusObratu.minulyMesic')}
+              hodnota={koruny(bonusZObratu(minulyObrat, muj), jazyk)}
+              pod={prelozitS(jazyk, 'bonusObratu.obratHodnota', { castka: koruny(minulyObrat, jazyk) })}
             />
             <Dlazdice nazev={prelozit(jazyk, 'bonusObratu.mujPodil')} hodnota={procento(muj)} />
             <Dlazdice
               nazev={prelozitS(jazyk, 'bonusObratu.celkemRok', { rok: data.rok })}
               hodnota={koruny(bonusZObratu(data.obratRoku, muj), jazyk)}
+              pod={prelozitS(jazyk, 'bonusObratu.obratHodnota', { castka: koruny(data.obratRoku, jazyk) })}
             />
           </div>
           <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'bonusObratu.zaklad')}</p>
@@ -166,10 +192,12 @@ export default async function MojeBonusyPage({ searchParams }: { searchParams?: 
             <PodilyTymu
               rok={data.rok}
               mesicNazev={mesicNazev}
+              minulyNazev={minulyNazev}
               radky={data.lide.map((c) => ({
                 id: c.id,
                 jmeno: c.jmeno,
                 procento: c.procento,
+                bonusMinuly: bonusZObratu(minulyObrat, c.procento),
                 bonusMesic: bonusZObratu(mesic.obrat, c.procento),
                 bonusRok: bonusZObratu(data.obratRoku, c.procento),
               }))}
@@ -181,15 +209,43 @@ export default async function MojeBonusyPage({ searchParams }: { searchParams?: 
   );
 }
 
-function Dlazdice({ nazev, hodnota, vyrazna = false }: { nazev: string; hodnota: string; vyrazna?: boolean }) {
+/**
+ * Dlaždice. `znacka` je odznak vedle nadpisu (tento / minulý měsíc), `pod`
+ * drobný řádek pod číslem - obrat, ze kterého bonus vyšel. Dřív měl obrat
+ * vlastní dlaždici; od 6. 10. 2026 je místo ní minulý měsíc, a aby se obrat
+ * neztratil, visí pod svým bonusem.
+ */
+function Dlazdice({
+  nazev,
+  hodnota,
+  pod,
+  znacka,
+  vyrazna = false,
+}: {
+  nazev: string;
+  hodnota: string;
+  pod?: string;
+  znacka?: string | null;
+  vyrazna?: boolean;
+}) {
   return (
     <div className="bg-surface border border-line rounded-card shadow-sm p-4 flex flex-col gap-1 min-w-0">
-      <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">{nazev}</span>
+      <span className="flex items-center gap-2 min-w-0">
+        <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted truncate">
+          {nazev}
+        </span>
+        {znacka && (
+          <span className="shrink-0 rounded-pill border border-line bg-field px-2 py-0.5 text-[10px] font-heading uppercase tracking-wide text-muted">
+            {znacka}
+          </span>
+        )}
+      </span>
       <span
         className={`font-display tabular-nums truncate ${vyrazna ? 'text-3xl text-brand-purple' : 'text-2xl text-ink'}`}
       >
         {hodnota}
       </span>
+      {pod && <span className="text-xs font-body text-muted tabular-nums truncate">{pod}</span>}
     </div>
   );
 }
