@@ -40,6 +40,7 @@ export function FrontaPribehu({
   const router = useRouter();
   const [otevrenyKoncept, setOtevrenyKoncept] = useState<string | null>(null);
   const [ted, setTed] = useState(() => new Date());
+  const [ukazKoncepty, setUkazKoncepty] = useState(false);
 
   // Odpocet do vyprseni - stacilo by i po minute, cas je stejne zaokrouhleny.
   useEffect(() => {
@@ -70,13 +71,70 @@ export function FrontaPribehu({
 
   return (
     <div className="flex flex-col gap-7">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Znacka velikost={46} />
         <div className="flex min-w-0 flex-col">
           <h1 className="m-0 font-display text-3xl text-ink">{t('pribehy.nadpis')}</h1>
           <span className="font-body text-sm text-muted">{ucet ? `@${ucet}` : t('pribehy.bezUctu')}</span>
         </div>
+
+        {/**
+         * KONCEPTY SE OTEVÍRAJÍ ODSUD (6. 10. 2026: „dal bych nahoru někde
+         * tlačítko, kde otevřu koncepty"). Dole pod editorem visely pořád
+         * a tlačily přehled níž; tady jsou po ruce a nepřekážejí.
+         */}
+        {smiPoslat && (
+          <button
+            type="button"
+            disabled={koncepty.length === 0}
+            onClick={() => setUkazKoncepty((o) => !o)}
+            aria-expanded={ukazKoncepty}
+            className={`ml-auto flex cursor-pointer items-center gap-2 rounded-pill border px-4 py-2 font-heading text-sm transition-colors disabled:cursor-default disabled:opacity-50 ${
+              ukazKoncepty
+                ? 'border-brand-purple bg-brand-purple/15 text-ink'
+                : 'border-line text-ink hover:border-brand-purple'
+            }`}
+          >
+            {t('pribehy.koncepty')}
+            <span
+              className={`grid min-w-[22px] place-items-center rounded-pill px-1.5 font-heading text-xs font-semibold tabular-nums ${
+                koncepty.length > 0 ? 'bg-brand-green text-onAccent' : 'bg-field text-muted'
+              }`}
+            >
+              {koncepty.length}
+            </span>
+          </button>
+        )}
       </div>
+
+      {ukazKoncepty && koncepty.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 rounded-card border border-line bg-surface p-4 sm:grid-cols-4 lg:grid-cols-6">
+          {koncepty.map((p) => (
+            <Dlazdice
+              key={p.id}
+              p={p}
+              jazyk={jazyk}
+              stuha={t('pribehy.stav.KONCEPT')}
+              kruh={false}
+              akce={
+                <>
+                  <Mala
+                    onClick={() => {
+                      setOtevrenyKoncept(p.id);
+                      setUkazKoncepty(false);
+                    }}
+                  >
+                    {t('pribehy.otevrit')}
+                  </Mala>
+                  <Mala onClick={() => void smaz(p.id)} nebezpecna>
+                    {t('pribehy.smazat')}
+                  </Mala>
+                </>
+              }
+            />
+          ))}
+        </div>
+      )}
 
       {/**
        * VLEVO SE TVOŘÍ, VPRAVO SE KOUKÁ (6. 10. 2026: „s tím náhledem by to
@@ -95,30 +153,6 @@ export function FrontaPribehu({
               koncept={koncept}
               onHotovo={() => setOtevrenyKoncept(null)}
             />
-          )}
-
-          {koncepty.length > 0 && (
-            <Sekce nadpis={`${t('pribehy.koncepty')} ${koncepty.length}`}>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {koncepty.map((p) => (
-                  <Dlazdice
-                    key={p.id}
-                    p={p}
-                    jazyk={jazyk}
-                    stuha={t('pribehy.stav.KONCEPT')}
-                    kruh={false}
-                    akce={
-                      <>
-                        <Mala onClick={() => setOtevrenyKoncept(p.id)}>{t('pribehy.otevrit')}</Mala>
-                        <Mala onClick={() => void smaz(p.id)} nebezpecna>
-                          {t('pribehy.smazat')}
-                        </Mala>
-                      </>
-                    }
-                  />
-                ))}
-              </div>
-            </Sekce>
           )}
 
           {nevyveseno.length > 0 && (
