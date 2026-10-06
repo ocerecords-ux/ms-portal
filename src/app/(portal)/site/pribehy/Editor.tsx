@@ -610,9 +610,13 @@ export function Editor({
           onChange={vyber}
           className="sr-only"
         />
-        <span className="max-w-[260px] shrink-0 text-center font-body text-[11px] text-muted">
-          {t(nahled ? (jeVideo ? 'pribehy.uVideaBezTextu' : 'pribehy.tahniText') : 'pribehy.devetNaSestnact')}
-        </span>
+        {/* Bez vybraného souboru se pod rámem nic nepíše - prázdný rám řekne
+            o formátu víc než věta pod ním (6. 10. 2026). */}
+        {nahled && (
+          <span className="max-w-[260px] shrink-0 text-center font-body text-[11px] text-muted">
+            {t(jeVideo ? 'pribehy.uVideaBezTextu' : 'pribehy.tahniText')}
+          </span>
+        )}
       </div>
     </div>
   );

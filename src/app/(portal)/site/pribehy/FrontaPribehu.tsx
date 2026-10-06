@@ -78,8 +78,6 @@ export function FrontaPribehu({
         </div>
       </div>
 
-      <p className="m-0 max-w-[72ch] font-body text-sm text-muted">{t('pribehy.podnadpis')}</p>
-
       {/**
        * VLEVO SE TVOŘÍ, VPRAVO SE KOUKÁ (6. 10. 2026: „s tím náhledem by to
        * mohlo být v levé části obrazovky a v pravé by byl rastr 3×3 s těmi
