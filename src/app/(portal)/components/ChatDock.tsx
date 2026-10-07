@@ -1222,9 +1222,15 @@ function NabidkaReakci({
     <>
       {/* Klepnuti kamkoliv jinam nabidku zavre. */}
       <span className="fixed inset-0 z-30" onPointerDown={onZavri} />
+      {/* NA TELEFONU SE NABÍDKA ZALOMÍ (oprava 7. 10. 2026: „akorát na tom
+          mobilu je to schované"). Reakce a k nim dvě slovní tlačítka se do
+          jedné řádky na šířku telefonu nevejdou a *Vybrat text* končil za
+          okrajem obrazovky. `inset-x-0` drží nabídku v šířce bubliny a co se
+          nevejde, spadne na další řádek; od tabletu výš zůstává přichycená
+          u kraje bubliny jako dřív. */}
       <span
-        className={`absolute bottom-full mb-1 z-40 flex items-center gap-0.5 rounded-lg border border-line bg-surface p-1 shadow-lg ${
-          mine ? 'right-0' : 'left-0'
+        className={`absolute bottom-full mb-1 z-40 flex flex-wrap items-center gap-0.5 rounded-lg border border-line bg-surface p-1 shadow-lg inset-x-0 sm:inset-x-auto ${
+          mine ? 'justify-end sm:right-0' : 'sm:left-0'
         }`}
       >
         {RYCHLE_REAKCE.map((code) => (
