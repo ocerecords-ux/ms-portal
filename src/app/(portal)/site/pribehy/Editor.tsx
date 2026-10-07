@@ -45,6 +45,9 @@ type Rozdelano = {
   styl: StylTextu;
 };
 
+/** O kolik bodů se musí prst pohnout, než se text začne stěhovat. */
+const PRAH_TAHU = 8;
+
 export function Editor({
   onZavri,
   ucet,
@@ -66,8 +69,12 @@ export function Editor({
 
   const vstupSouboru = useRef<HTMLInputElement | null>(null);
   const poleTextu = useRef<HTMLTextAreaElement | null>(null);
+  /** Psaní přímo do fotky - na telefonu je to jediné pole na text. */
+  const poleNaFotce = useRef<HTMLTextAreaElement | null>(null);
   const ramRef = useRef<HTMLSpanElement | null>(null);
   const taham = useRef(false);
+  /** Kde prst začal a jestli už překročil práh - viz chytText. */
+  const zacatekTahu = useRef<{ x: number; y: number; tahne: boolean } | null>(null);
 
   const [soubor, setSoubor] = useState<File | null>(null);
   const [nahled, setNahled] = useState<string | null>(null);
@@ -81,6 +88,8 @@ export function Editor({
   const [chyba, setChyba] = useState<string | null>(null);
   /** Rozbalene „dalsi volby" pod tremi teckami - jen na telefonu. */
   const [dalsi, setDalsi] = useState(false);
+  /** Právě se píše do fotky? Pak se textem netáhne, jinak by se psaní přerušilo. */
+  const [pisuNaFotce, setPisuNaFotce] = useState(false);
 
   /** Otevření konceptu: stáhne jeho soubor zpátky do prohlížeče a naváže se na něj. */
   useEffect(() => {
@@ -177,24 +186,50 @@ export function Editor({
     if (vstupSouboru.current) vstupSouboru.current.value = '';
   }
 
-  /** Táhnutí textu po příběhu. Procenta, ne body - viz lib/pribehText.ts. */
+  /**
+   * TÁHNUTÍ TEXTU, NEBO PSANÍ? (7. 10. 2026: „na mobilu musím ten text psát
+   * pod obrázkem a ne přímo do něj")
+   *
+   * Jedno gesto, dva úmysly: kdo prstem POSUNE, ten text stěhuje; kdo jen
+   * KLEPNE, ten chce psát. Rozhoduje o tom vzdálenost - dokud se prst
+   * nepohne o {@link PRAH_TAHU} bodů, nic se nestěhuje. Bez toho prahu by
+   * každé klepnutí textem o kousek cuklo.
+   *
+   * Procenta, ne body - viz lib/pribehText.ts.
+   */
   function chytText(e: React.PointerEvent<HTMLDivElement>) {
-    if (!ramRef.current) return;
+    if (!ramRef.current || pisuNaFotce) return;
     taham.current = true;
+    zacatekTahu.current = { x: e.clientX, y: e.clientY, tahne: false };
     e.currentTarget.setPointerCapture(e.pointerId);
-    e.preventDefault();
   }
   function tahniText(e: React.PointerEvent<HTMLDivElement>) {
     const ram = ramRef.current;
-    if (!taham.current || !ram) return;
+    const zacatek = zacatekTahu.current;
+    if (!taham.current || !ram || !zacatek) return;
+    if (!zacatek.tahne) {
+      const dx = e.clientX - zacatek.x;
+      const dy = e.clientY - zacatek.y;
+      if (Math.hypot(dx, dy) < PRAH_TAHU) return;
+      zacatek.tahne = true;
+    }
+    e.preventDefault();
     const r = ram.getBoundingClientRect();
     setStyl((st) =>
       orezStyl({ ...st, x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 }),
     );
   }
   function pustText(e: React.PointerEvent<HTMLDivElement>) {
+    const jenKlepnuti = taham.current && zacatekTahu.current?.tahne === false;
     taham.current = false;
+    zacatekTahu.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
+    // Klepnutí = „chci sem psát". Na počítači je pole schované, takže se nic
+    // nestane a text se dál píše vlevo.
+    if (jenKlepnuti && poleNaFotce.current?.offsetParent) {
+      setPisuNaFotce(true);
+      poleNaFotce.current.focus();
+    }
   }
 
   /** Nahraje soubor do úložiště a vrátí klíč; vrací null, když není co měnit. */
@@ -336,7 +371,9 @@ export function Editor({
 
   /** Vloží zmínku na místo kurzoru - viz Zminky. */
   function vlozZminku(znacka: string) {
-    const pole = poleTextu.current;
+    // Na telefonu se píše do fotky, na počítači do pole vlevo.
+    const naFotce = poleNaFotce.current;
+    const pole = naFotce?.offsetParent ? naFotce : poleTextu.current;
     const kde = pole ? pole.selectionStart : popisek.length;
     const pred = popisek.slice(0, kde).replace(/@[A-Za-z0-9._]*$/, '');
     const za = popisek.slice(kde);
@@ -400,7 +437,9 @@ export function Editor({
           onChange={(e) => setPopisek(e.target.value.slice(0, MAX_POPISEK))}
           rows={5}
           placeholder={t('pribehy.popisekPlaceholder')}
-          className="h-16 w-full rounded-card border border-line bg-field/40 px-3 py-2 font-body text-sm text-ink outline-none focus:border-brand-purple md:h-auto"
+          /* Na telefonu se píše rovnou do fotky (7. 10. 2026), tohle pole
+             by bylo druhé a jen by ujedálo místo náhledu. */
+          className="hidden w-full rounded-card border border-line bg-field/40 px-3 py-2 font-body text-sm text-ink outline-none focus:border-brand-purple md:block"
         />
 
         <Zminky text={popisek} naVlozeni={vlozZminku} />
@@ -637,15 +676,30 @@ export function Editor({
                     </span>
                   </span>
                 </span>
-                {popisek.trim() && !jeVideo && (
+                {/* TEXT SE PÍŠE PŘÍMO DO FOTKY (zadání 7. 10. 2026: „na mobilu
+                    musím ten text psát pod obrázkem a ne přímo do něj").
+
+                    Vidět je pořád jen `span` níže - ten umí podklad po řádcích
+                    a vypadá přesně jako výsledek. Přes něj leží PRŮHLEDNÉ pole:
+                    stejné písmo, stejná šířka, stejné zarovnání, takže se řádky
+                    lámou stejně a kurzor stojí tam, kde má. Vlastní písmo má
+                    průhledné - barvu nese `span` pod ním.
+
+                    Pole propouští doteky (`pointer-events-none`), dokud se do
+                    něj neklepne; jinak by se textem nedalo táhnout.
+
+                    Na počítači se bez textu blok nekreslí vůbec (`md:hidden`) -
+                    tam se píše do pole vlevo a prázdný rám má zůstat prázdný. */}
+                {!jeVideo && (
                   <div
                     onPointerDown={chytText}
                     onPointerMove={tahniText}
                     onPointerUp={pustText}
                     onPointerCancel={pustText}
-                    onClick={(e) => e.preventDefault()}
                     role="presentation"
-                    className="absolute cursor-grab touch-none select-none font-heading font-semibold leading-tight active:cursor-grabbing"
+                    className={`absolute touch-none font-heading font-semibold leading-tight ${
+                      pisuNaFotce ? '' : 'cursor-grab select-none active:cursor-grabbing'
+                    } ${popisek.trim() ? '' : 'md:hidden'}`}
                     style={{
                       left: `${styl.x}%`,
                       top: `${styl.y}%`,
@@ -666,8 +720,28 @@ export function Editor({
                         WebkitBoxDecorationBreak: 'clone',
                       }}
                     >
-                      {popisek}
+                      {popisek || (
+                        <span className="opacity-60">{t('pribehy.klepniAPis')}</span>
+                      )}
                     </span>
+                    <textarea
+                      ref={poleNaFotce}
+                      value={popisek}
+                      onChange={(e) => setPopisek(e.target.value.slice(0, MAX_POPISEK))}
+                      onBlur={() => setPisuNaFotce(false)}
+                      rows={1}
+                      aria-label={t('pribehy.popisek')}
+                      className={`absolute inset-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent p-0 outline-none md:hidden ${
+                        pisuNaFotce ? 'pointer-events-auto' : 'pointer-events-none'
+                      }`}
+                      style={{
+                        color: 'transparent',
+                        caretColor: styl.barva,
+                        font: 'inherit',
+                        textAlign: styl.zarovnani,
+                        padding: '0.12em 0.3em',
+                      }}
+                    />
                   </div>
                 )}
               </>

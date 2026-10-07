@@ -8175,6 +8175,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'pribehy.nadpis': { cs: 'Příběhy na Instagram', en: 'Instagram stories' },
   // CELÁ OBRAZOVKA NA TELEFONU (zadání 7. 10. 2026).
   'pribehy.novy': { cs: 'Nový příběh', en: 'New story' },
+  'pribehy.klepniAPis': { cs: 'Klepni a piš', en: 'Tap to write' },
   'pribehy.dalsiVolby': { cs: 'Další volby', en: 'More options' },
   'pribehy.podnadpis': {
     cs: 'Slož příběh a pusť ho ven. K instagramovému účtu se nedostaneš – vyvěsí to za tebe portál a po 24 hodinách to samo zmizí.',
