@@ -595,26 +595,30 @@ export function Editor({
             nahled ? '' : 'cursor-pointer'
           }`}
         >
-          {/* BAREVNÝ PROUŽEK OBLÉPÁ RÁM, NE CELOU PLOCHU (oprava 7. 10. 2026:
-              „jestě dejme pryč to pozadí za fotkou, vypadá to hrozně").
+{/* BAREVNÝ PROUŽEK OBLÉPÁ RÁM, NE CELOU PLOCHU (oprava 7. 10. 2026:
+              „ještě dejme pryč to pozadí za fotkou, vypadá to hrozně").
               Předtím ho nesl `label`, který se na telefonu roztahuje na celou
-              šířku - z ténkého kolečka kolem fotky se tak stal velký barevný
-              podklad. Teď je na vlastním obalu se šířkou `w-fit`, která se
-              smrskne přesně na rám. */}
+              šířku - z tenkého kolečka kolem fotky se tak stal velký barevný
+              podklad za náhledem.
+
+              POMĚR DRŽÍ TENHLE OBAL, ne rám pod ním. První pokus měl obal
+              `w-fit` a poměr na rámu - jenže šířka odvozená z procentní
+              výšky se do `fit-content` nepočítá a celý náhled se smrskl na
+              svislou čárku. Teď si výšku bere obal (na telefonu zbytek
+              obrazovky, na počítači ze změřené mřížky vedle) a šířku z ní
+              dopočítá poměr 9:16. Šířka jde přes proměnnou, ne přímo do
+              `width`: hodnota ve `style` by přebila třídu a na telefonu by
+              rám zůstal úzký. */}
           <span
-            className={`flex h-full max-h-full w-fit max-w-full rounded-[26px] p-[2px] md:h-auto ${
+            style={{ '--ram': `${sirkaRamu}px` } as React.CSSProperties}
+            className={`block aspect-[9/16] h-full max-h-full w-auto max-w-full rounded-[26px] p-[2px] md:h-auto md:w-[calc(var(--ram)+4px)] ${
               nahled ? KROUZEK : KROUZEK_KLID
             }`}
           >
-          {/* NA TELEFONU SE RÁM NATÁHNE NA ZBYLÉ MÍSTO (7. 10. 2026), na
-              počítači si šířku pořád bere ze změřené výšky mřížky vedle.
-              Šířka jde do proměnné, ne přímo do `width`: hodnota ve `style`
-              by přebila třídu a na telefonu by rám zůstal úzký.
-              Poměr 9:16 platí pořád — náhled a výsledek kreslí táž čísla. */}
+          {/* Rám už jen vyplňuje obal — poměr 9:16 i šířku drží obal nad ním. */}
           <span
             ref={ramRef}
-            style={{ '--ram': `${sirkaRamu}px` } as React.CSSProperties}
-            className="relative block aspect-[9/16] h-full max-h-full w-auto max-w-full overflow-hidden rounded-[24px] bg-field md:h-auto md:w-[var(--ram)]"
+            className="relative block h-full w-full overflow-hidden rounded-[24px] bg-field"
           >
             {nahled ? (
               <>
