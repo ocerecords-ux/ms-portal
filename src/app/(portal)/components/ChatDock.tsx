@@ -1222,15 +1222,16 @@ function NabidkaReakci({
     <>
       {/* Klepnuti kamkoliv jinam nabidku zavre. */}
       <span className="fixed inset-0 z-30" onPointerDown={onZavri} />
-      {/* NA TELEFONU SE NABÍDKA ZALOMÍ (oprava 7. 10. 2026: „akorát na tom
-          mobilu je to schované"). Reakce a k nim dvě slovní tlačítka se do
-          jedné řádky na šířku telefonu nevejdou a *Vybrat text* končil za
-          okrajem obrazovky. `inset-x-0` drží nabídku v šířce bubliny a co se
-          nevejde, spadne na další řádek; od tabletu výš zůstává přichycená
-          u kraje bubliny jako dřív. */}
+      {/* NABÍDKA DRŽÍ JEDNU ŘÁDKU (oprava 7. 10. 2026).
+          Nejdřív jsem ji nechal zalomit, jenže otevírá se NAD bublinou -
+          druhý řádek tak vyrostl nahoru a reakce zmizely za horním okrajem
+          („ale teď tam nejsou ty reakce"). Na šířku telefonu se proto reakce
+          zmenší a obe akce jsou jen ikony; slova se vrátí od tabletu výš.
+          `overflow-x-auto` je poslední pojistka pro opravdu úzké displeje -
+          to už se dá nabídkou posunout prstem. */}
       <span
-        className={`absolute bottom-full mb-1 z-40 flex flex-wrap items-center gap-0.5 rounded-lg border border-line bg-surface p-1 shadow-lg inset-x-0 sm:inset-x-auto ${
-          mine ? 'justify-end sm:right-0' : 'sm:left-0'
+        className={`absolute bottom-full mb-1 z-40 flex max-w-[calc(100vw-5rem)] items-center gap-0.5 overflow-x-auto rounded-lg border border-line bg-surface p-1 shadow-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          mine ? 'right-0' : 'left-0'
         }`}
       >
         {RYCHLE_REAKCE.map((code) => (
@@ -1239,27 +1240,42 @@ function NabidkaReakci({
             type="button"
             onClick={() => onVyber(code)}
             // Vetsi plocha nez v puvodni nabidce - tady se miri prstem.
-            className="flex items-center justify-center rounded p-1.5 hover:bg-field"
+            className="flex shrink-0 items-center justify-center rounded p-1 hover:bg-field sm:p-1.5"
           >
-            <ZnakReakce code={code} size={22} />
+            {/* O tři body menší než dřív - osm reakcí a dvě akce se jinak na
+                šířku telefonu nevejdou. Velikost jde propem, ne třídou:
+                znak je buď text (ten se řídí `font-size`), nebo obrázek. */}
+            <ZnakReakce code={code} size={19} />
           </button>
         ))}
         {onKopirovat && (
           <button
             type="button"
             onClick={onKopirovat}
-            className="ml-0.5 rounded px-2 py-1.5 text-xs font-heading text-muted hover:bg-field whitespace-nowrap"
+            title={t('chat.kopirovat')}
+            aria-label={t('chat.kopirovat')}
+            className="ml-0.5 flex shrink-0 items-center gap-1 rounded px-1.5 py-1.5 text-xs font-heading text-muted hover:bg-field whitespace-nowrap sm:px-2"
           >
-            {t('chat.kopirovat')}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-[18px] w-[18px] sm:hidden">
+              <rect x="9" y="9" width="11" height="11" rx="2" />
+              <path d="M5 15V5a2 2 0 0 1 2-2h8" />
+            </svg>
+            <span className="hidden sm:inline">{t('chat.kopirovat')}</span>
           </button>
         )}
         {onVybratText && (
           <button
             type="button"
             onClick={onVybratText}
-            className="rounded px-2 py-1.5 text-xs font-heading text-muted hover:bg-field whitespace-nowrap"
+            title={t('chat.vybratText')}
+            aria-label={t('chat.vybratText')}
+            className="flex shrink-0 items-center gap-1 rounded px-1.5 py-1.5 text-xs font-heading text-muted hover:bg-field whitespace-nowrap sm:px-2"
           >
-            {t('chat.vybratText')}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-[18px] w-[18px] sm:hidden">
+              <path d="M10 4h4M12 4v16M10 20h4" />
+              <path d="M4 8V6h4M20 8V6h-4M4 16v2h4M20 16v2h-4" />
+            </svg>
+            <span className="hidden sm:inline">{t('chat.vybratText')}</span>
           </button>
         )}
       </span>
