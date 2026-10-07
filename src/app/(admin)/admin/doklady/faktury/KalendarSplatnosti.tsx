@@ -96,7 +96,10 @@ function Castka({
         <span className="font-heading text-xs font-semibold text-ink">{r.cislo}</span>
         <span className="font-body text-xs text-ink">{r.odberatel}</span>
         {r.nazev && <span className="font-body text-[11px] text-muted">{r.nazev}</span>}
-        {r.projekt && <span className="font-body text-[11px] text-muted">{r.projekt}</span>}
+        {/* Předmět faktury a název projektu bývají stejné - pak stačí jednou. */}
+        {r.projekt && r.projekt !== r.nazev && (
+          <span className="font-body text-[11px] text-muted">{r.projekt}</span>
+        )}
         <span className="mt-0.5 flex items-baseline justify-between gap-2 border-t border-line pt-1">
           <span className={`font-body text-[11px] ${r.poSplatnosti ? 'text-danger' : 'text-muted'}`}>
             {r.splatnost || '—'}
