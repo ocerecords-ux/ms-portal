@@ -2573,6 +2573,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'faktura.kalendarBezSplatnosti': { cs: 'Bez vyplněné splatnosti', en: 'No due date' },
   'faktura.kalendarPrazdno': { cs: 'Žádná neuhrazená faktura nemá vyplněnou splatnost.', en: 'No unpaid invoice has a due date.' },
   'faktura.kalendarDnes': { cs: 'dnes', en: 'today' },
+  'faktura.kalendarDoTydne': { cs: 'do týdne', en: 'within a week' },
+  'faktura.kalendarPozdeji': { cs: 'později', en: 'later' },
   'faktura.zalozkaUhrazene': { cs: 'Uhrazené', en: 'Paid' },
   'faktura.zalozkaStornovane': { cs: 'Stornované', en: 'Cancelled' },
   'faktura.stavRozpracovana': { cs: 'Rozpracovaná', en: 'Draft' },
