@@ -23,8 +23,12 @@ import { usePreklad } from './JazykProvider';
  * schovávají doky, aby ikona nebyla na počítači dvakrát.
  */
 
-/** Když se lišta nenajde, tlačítko si sedne sem. */
-const ZALOHA_SHORA = 120;
+/**
+ * Když se lišta nenajde, tlačítko si sedne sem. Číslo odpovídá liště
+ * zalomené na dva řádky, jak vypadá na telefonu - nižší záloha by
+ * tlačítko při prvním vykreslení položila do lišty.
+ */
+const ZALOHA_SHORA = 180;
 
 /** Instagram - stejná kresba jako v záložce Sítě u levé hrany. */
 function IkonaPribehu() {
