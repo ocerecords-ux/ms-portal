@@ -789,6 +789,52 @@ mazat nesmí. Lístek je otevřený od dávky 7b. **Chce to smazat z počítače
 (`rm .git/*.lock.*`). Platí i `git rm --cached stubs/prisma-client.d.ts`
 (viz dávka 7a).
 
+### Večer 7. 10. 2026 — dávky jsou hotové, úloha může skončit
+
+Večerní dávka nenašla v tabulce žádnou nezaškrtnutou dávku: 0–5 a 7a–7f jsou
+hotové, dávka 6 je schválně z poloviny (zapojení pošty se nemá stát v noci bez
+dohledu — viz níž). **Překlad portálu je tím dokončený a naplánovanou večerní
+úlohu je možné zrušit.** Co z dávky 6 zbývá, je rozhodnutí k dennímu světlu,
+ne práce na večer.
+
+Kontrola „soubory bez jediného volání překladu" je v `src/app` prázdná —
+zbývají jen `kalendar/CaraTed.tsx` a `site/pribehy/spolecne.tsx`, a v obou je
+česky pouze komentář (ty zůstávají české schválně).
+
+**Co ale ukázal průchod `src/components`:** tentýž příkaz mířil vždycky jen na
+`src/app`, takže se do něj nikdy nedostaly SPOLEČNÉ komponenty, které přibyly
+po dávce 3. Doplněno dnes (slovník +7 klíčů):
+
+- `components/ZalozkyLista.tsx` — společná lišta záložek (Doklady, Přehledy,
+  nastavení sekcí), od 29. 9. 2026. Přeskládávání mluvilo česky: „neuloženo",
+  „Výchozí", „Hotovo", „Přeskládat záložky" a obě šipky pro čtečku
+  („Posunout {nazev} doleva/doprava" — jeden klíč se značkou, pravidlo 7).
+  **Názvy samotných záložek se nepřekládají tady** — chodí do komponenty už
+  přeložené podle ADRESY z `ZalozkyPrehledu`, `DokladyTabs`
+  a `ZalozkyNastaveni`, takže se vzor z dávek 7d a 7f nemění.
+- `projekty/page.tsx` — `popis` u ozubeného kola („Nastavení projektů —
+  zprávy klientovi") byl posledním českým řetězcem na té obrazovce. Sekce
+  `InternalProjektySection` si proto bere `nactiJazyk()` sama.
+- `components/OzubeneKolo.tsx` — výchozí `popis = 'Nastavení sekce'` zůstává
+  **česky schválně**: je to serverová komponenta (pravidlo 8, jazyk propem)
+  a všichni čtyři volající dnes posílají přeložený text, takže je to jen
+  český zdroj pravdy pro případ, že by někdo `popis` zapomněl.
+
+**Poučení pro příští kontrolu:** hledat napříč `src`, ne jen `src/app` —
+`src/components` a `src/lib` do skriptu nikdy nepatřily.
+
+```bash
+for f in $(find src/app src/components -name '*.tsx'); do
+  grep -q "usePreklad\|prelozit\|nactiJazyk" "$f" && continue
+  n=$(grep "[ěščřžýáíéúůňťďó]" "$f" | grep -vE "^\s*(//|\*)" | wc -l)
+  [ "${n:-0}" -ge 3 ] && echo "$n $f"
+done | sort -rn
+```
+
+**Zámky v `.git` jsou uklizené** — lístek otevřený od dávky 7b je splacený,
+dnes v `.git` nebyl ani jeden `*.lock.*`. Platí dál jen
+`git rm --cached stubs/prisma-client.d.ts` (viz dávka 7a).
+
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 
 Šablony pošty jsou přeložené a ověřené, ale **zapojené nejsou**. To není

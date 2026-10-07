@@ -509,6 +509,7 @@ async function InternalProjektySection({
   /** Zvukar vidi projekt az od stavu „Natáčíme" - viz vidiProjektyVPriprave. */
   vidiVPriprave: boolean;
 }) {
+  const jazyk = nactiJazyk();
   // Projekty jsou nase - jeden dotaz do databaze (viz lib/projektySeznamServer.ts).
   const { projects: vsechnyProjekty, error } = await loadInternalProjects();
   // Projekt v pripravě je zatim jen objednavka - zvukari se v seznamu
@@ -764,7 +765,7 @@ async function InternalProjektySection({
           {isAdmin && (
             <OzubeneKolo
               cesta={nastaveniSekce('PROJEKTY')?.cesta ?? '/admin/nastaveni/projekty'}
-              popis="Nastavení projektů - zprávy klientovi"
+              popis={prelozit(jazyk, 'projekty.nastaveniSekce')}
             />
           )}
         </div>

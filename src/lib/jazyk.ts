@@ -9889,6 +9889,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Mail, jak si herec naklikal natáčecí termíny. Přepnout si to umí i sám v Můj účet.',
     en: 'An email when an actor has picked their recording sessions. They can also switch it themselves in My account.',
   },
+
+  // Spolecna lista zalozek (components/ZalozkyLista.tsx) - Doklady, Prehledy
+  // i nastaveni sekci. Nazvy samotnych zalozek si prekladaji volajici.
+  'zalozky.neulozeno': { cs: 'neuloženo', en: 'not saved' },
+  'zalozky.vychozi': { cs: 'Výchozí', en: 'Default' },
+  'zalozky.hotovo': { cs: 'Hotovo', en: 'Done' },
+  'zalozky.preskladat': { cs: 'Přeskládat záložky', en: 'Reorder tabs' },
+  'zalozky.posunoutDoleva': { cs: 'Posunout {nazev} doleva', en: 'Move {nazev} left' },
+  'zalozky.posunoutDoprava': { cs: 'Posunout {nazev} doprava', en: 'Move {nazev} right' },
+  'projekty.nastaveniSekce': {
+    cs: 'Nastavení projektů - zprávy klientovi',
+    en: 'Project settings - messages to the customer',
+  },
 };
 
 /**

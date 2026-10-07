@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { posun, seradZalozky, type Zalozka } from '@/lib/zalozky';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * LIŠTA ZÁLOŽEK S VLASTNÍM POŘADÍM (zadání 29. 9. 2026: „na ty záložky karet
@@ -35,6 +36,7 @@ export function ZalozkyLista({
   poradi: string[];
 }) {
   const pathname = usePathname();
+  const t = usePreklad();
   const [klice, setKlice] = useState<string[]>(poradi);
   const [upravuji, setUpravuji] = useState(false);
   const [chyba, setChyba] = useState(false);
@@ -90,7 +92,7 @@ export function ZalozkyLista({
                 type="button"
                 onClick={() => prehod(i, -1)}
                 disabled={i === 0}
-                aria-label={`Posunout ${z.nazev} doleva`}
+                aria-label={t('zalozky.posunoutDoleva', { nazev: z.nazev })}
                 className="px-1.5 py-1 rounded text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
               >
                 ‹
@@ -100,7 +102,7 @@ export function ZalozkyLista({
                 type="button"
                 onClick={() => prehod(i, 1)}
                 disabled={i === serazene.length - 1}
-                aria-label={`Posunout ${z.nazev} doprava`}
+                aria-label={t('zalozky.posunoutDoprava', { nazev: z.nazev })}
                 className="px-1.5 py-1 rounded text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
               >
                 ›
@@ -120,21 +122,21 @@ export function ZalozkyLista({
       </nav>
 
       <div className="shrink-0 flex items-center gap-2 pb-1.5">
-        {chyba && <span className="text-xs font-body text-danger">neuloženo</span>}
+        {chyba && <span className="text-xs font-body text-danger">{t('zalozky.neulozeno')}</span>}
         {upravuji && klice.length > 0 && (
           <button
             type="button"
             onClick={() => void uloz([])}
             className="text-xs font-body text-muted hover:text-ink underline"
           >
-            Výchozí
+            {t('zalozky.vychozi')}
           </button>
         )}
         <button
           type="button"
           onClick={() => setUpravuji((u) => !u)}
-          title={upravuji ? 'Hotovo' : 'Přeskládat záložky'}
-          aria-label={upravuji ? 'Hotovo' : 'Přeskládat záložky'}
+          title={upravuji ? t('zalozky.hotovo') : t('zalozky.preskladat')}
+          aria-label={upravuji ? t('zalozky.hotovo') : t('zalozky.preskladat')}
           className={`p-1.5 rounded-lg border transition-colors ${
             upravuji ? 'border-brand-purple text-brand-purple' : 'border-transparent text-muted hover:text-ink'
           }`}
