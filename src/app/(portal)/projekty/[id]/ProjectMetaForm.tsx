@@ -989,22 +989,38 @@ export function ProjectMetaForm({
 
       <Karta nadpis={t('projektMeta.kartaZakazka')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{t('projektMeta.firma')}</span>
-            <VyberPole
-              value={values.companyId}
-              onChange={(e) => set('companyId', e.target.value)}
-              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-            >
-              <option value="">{t('obecne.nevybrano')}</option>
-              {firmy.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.label}
-                </option>
-              ))}
-            </VyberPole>
-            <span className="text-xs text-muted font-body">{t('projektMeta.firmaNapoveda')}</span>
-          </label>
+          {/* ODKAZ NA KARTU FIRMY I VE FORMULÁŘI (připomínka 7. 10. 2026).
+              Náhled s pouhým názvem vidí jen ten, kdo projekt upravovat
+              nesmí - Žůžo-labůžo má rovnou formulář, takže odkaz patří
+              i sem. Stojí POD výběrem, ne místo něj: firma se tu pořád
+              přepisuje. Obal je `div`, aby odkaz zůstal ve stejném sloupci
+              mřížky jako pole a klik na něj neotevíral výběr. */}
+          <div className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">{t('projektMeta.firma')}</span>
+              <VyberPole
+                value={values.companyId}
+                onChange={(e) => set('companyId', e.target.value)}
+                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+              >
+                <option value="">{t('obecne.nevybrano')}</option>
+                {firmy.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label}
+                  </option>
+                ))}
+              </VyberPole>
+              <span className="text-xs text-muted font-body">{t('projektMeta.firmaNapoveda')}</span>
+            </label>
+            {smiNaKartuFirmy && values.companyId ? (
+              <Link
+                href={`/admin/companies/${encodeURIComponent(values.companyId)}`}
+                className="text-xs font-heading text-brand-purple no-underline hover:underline"
+              >
+                {t('projektMeta.firmaKarta')} →
+              </Link>
+            ) : null}
+          </div>
 
 
           {/* Klienta zvukar nevidi ani ve formulari (zadani 13. 9. 2026).

@@ -129,7 +129,7 @@ Klient má v přehledu zakázek sloupec **Natáčecí plán** s tlačítkem **Zo
 - **Historie** — co se u projektu měnilo a jaké zprávy odešly klientovi.
 - **Doklady** — nabídky, faktury, výdaje a smlouvy navázané na projekt. Jen admin. Odsud jde nový doklad (i výdaj, také k ukončenému projektu) rovnou založit, projekt i klient se předvyplní. **Cesta zpátky se neztratí** (7. 10. 2026): nad každým dokladem je linka historie — vedle „zpět na nabídky/faktury/výdaje/smlouvy" je odkaz na **projekt**, ze kterého doklad vzniknul, a na **kartu firmy**. Na projektu se tak dá hned dodělat zbytek a kartu firmy netreba hledat přes seznam Firem, když například při odeslání dokladu chybí e-mail. Odkaz na kartu firmy vidí jen ten, kdo má právo na sekci **Firmy**.
 
-- **Název firmy u projektu vede na její kartu** (7. 10. 2026) — v kartě *Zakázka* na detailu projektu je název firmy odkaz. Zase jen pro toho, kdo na Firmy právo má.
+- **Z projektu rovnou na kartu firmy** (7. 10. 2026) — v kartě *Zakázka* na detailu projektu je pod výběrem firmy odkaz **Otevřít kartu firmy** (a komu se karta jen zobrazuje, ten má odkazem rovnou název firmy). Už se nemusí chodit přes seznam Firem v liště, když například chybí e-mail. Zase jen pro toho, kdo na Firmy právo má.
 
 # Cesta zakázky
 
