@@ -591,10 +591,21 @@ export function Editor({
             // S náhledem se do rámu klikat nedá - tahalo by se tím textem.
             if (nahled) e.preventDefault();
           }}
-          className={`grid min-h-0 w-full flex-1 place-items-center rounded-[26px] p-[2px] md:block md:w-auto md:flex-none md:shrink-0 ${
-            nahled ? KROUZEK : KROUZEK_KLID
-          } ${nahled ? '' : 'cursor-pointer'}`}
+          className={`grid min-h-0 w-full flex-1 place-items-center md:block md:w-auto md:flex-none md:shrink-0 ${
+            nahled ? '' : 'cursor-pointer'
+          }`}
         >
+          {/* BAREVNÝ PROUŽEK OBLÉPÁ RÁM, NE CELOU PLOCHU (oprava 7. 10. 2026:
+              „jestě dejme pryč to pozadí za fotkou, vypadá to hrozně").
+              Předtím ho nesl `label`, který se na telefonu roztahuje na celou
+              šířku - z ténkého kolečka kolem fotky se tak stal velký barevný
+              podklad. Teď je na vlastním obalu se šířkou `w-fit`, která se
+              smrskne přesně na rám. */}
+          <span
+            className={`flex h-full max-h-full w-fit max-w-full rounded-[26px] p-[2px] md:h-auto ${
+              nahled ? KROUZEK : KROUZEK_KLID
+            }`}
+          >
           {/* NA TELEFONU SE RÁM NATÁHNE NA ZBYLÉ MÍSTO (7. 10. 2026), na
               počítači si šířku pořád bere ze změřené výšky mřížky vedle.
               Šířka jde do proměnné, ne přímo do `width`: hodnota ve `style`
@@ -666,6 +677,7 @@ export function Editor({
                 </span>
               </span>
             )}
+          </span>
           </span>
         </label>
         <input
