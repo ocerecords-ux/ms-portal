@@ -6,6 +6,8 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 import { ContractEditor } from './ContractEditor';
 import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
+import { HlavickaProjektu } from '@/components/HlavickaProjektu';
+import { nactiKontextProjektu } from '@/lib/kontextProjektu';
 import { smiNaKartyFirem } from '@/lib/pristupyServer';
 
 // Detail smlouvy - text, podpis za Mediaspace a odeslani protistrane.
@@ -37,10 +39,15 @@ export default async function ContractDetailPage({
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 
   const smiNaFirmu = await smiNaKartyFirem();
+  /* Hlavicka projektu nad dokladem (zadani 7. 10. 2026) - jen kdyz se sem
+     prislo z projektu; viz lib/kontextProjektu.ts. */
+  const kontextProjektu = await nactiKontextProjektu(searchParams?.projekt, jazyk);
 
   return (
     <div className="flex flex-col gap-6">
       {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
+      {kontextProjektu && <HlavickaProjektu kontext={kontextProjektu} jazyk={jazyk} />}
+
       <DrobeckyDokladu
         zpetHref="/admin/doklady/smlouvy"
         zpetPopisek={`← ${prelozit(jazyk, 'smlouva.zpetNaSmlouvy')}`}

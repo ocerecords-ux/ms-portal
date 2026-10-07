@@ -14,7 +14,11 @@ export default async function DokladyLayout({ children }: { children: React.Reac
   const banka = await smiDoBanky();
   return (
     <section className="flex flex-col gap-3 sm:gap-6">
-      <div className="hidden sm:flex items-center gap-3">
+      {/* `data-doklady-hlavicka`: kdyz se doklad otevre Z PROJEKTU, schova se
+          nadpis sekce i jeji zalozky - clovek ma byt porad na projektu
+          (zadani 7. 10. 2026). Dela to jedno pravidlo v globals.css; layout
+          o adrese nevi, searchParams se do nej nepredavaji. */}
+      <div data-doklady-hlavicka className="hidden sm:flex items-center gap-3">
         <h1 className="font-display text-3xl text-ink m-0">{prelozit(jazyk, 'doklady.nadpis')}</h1>
         {/* OZUBENÉ KOLO (zadání 28. 9. 2026) - maily k dokladům, upomínky
             a údaje našich firem. Do sekce se stejně dostane jen
@@ -25,7 +29,9 @@ export default async function DokladyLayout({ children }: { children: React.Reac
         />
       </div>
 
-      <DokladyTabs banka={banka} />
+      <div data-doklady-hlavicka>
+        <DokladyTabs banka={banka} />
+      </div>
 
       {children}
     </section>

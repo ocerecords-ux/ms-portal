@@ -447,3 +447,18 @@ html[data-v-panelu] [data-doky] {
 html[data-v-panelu] .obsah-portalu {
   padding: 12px 14px 24px !important;
 }
+
+/* DOKLAD OTEVŘENÝ Z PROJEKTU (7. 10. 2026: „když otevřu nějaký doklad, tak
+   potřebuji být pořád na této stránce a vidět tyto záložky").
+
+   Nad dokladem je pak hlavička projektu i s jeho páskem záložek, takže nadpis
+   sekce Doklady a její vlastní záložky (Faktury, Nabídky, Upomínky…) by byly
+   druhý pásek nad prvním - a hlavně by zvaly tam, odkud se člověk právě
+   nechce hnout.
+
+   Řeší to CSS, ne JavaScript: layout sekce Doklady o adrese neví (do layoutu
+   se `searchParams` nepředávají), ale ví to stránka pod ním - a `:has()`
+   dovolí rodiči zareagovat na to, co se vykreslilo uvnitř. */
+section:has([data-kontext-projektu]) [data-doklady-hlavicka] {
+  display: none !important;
+}

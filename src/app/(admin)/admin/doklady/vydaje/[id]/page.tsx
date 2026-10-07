@@ -10,6 +10,8 @@ import { formatMoney } from '@/lib/doklady';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit } from '@/lib/jazyk';
 import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
+import { HlavickaProjektu } from '@/components/HlavickaProjektu';
+import { nactiKontextProjektu } from '@/lib/kontextProjektu';
 import { smiNaKartyFirem } from '@/lib/pristupyServer';
 
 // Detail prijateho dokladu.
@@ -45,6 +47,9 @@ export default async function ExpenseDetailPage({
   const projects = await listProjectOptions();
 
   const smiNaFirmu = await smiNaKartyFirem();
+  /* Hlavicka projektu nad dokladem (zadani 7. 10. 2026) - jen kdyz se sem
+     prislo z projektu; viz lib/kontextProjektu.ts. */
+  const kontextProjektu = await nactiKontextProjektu(searchParams?.projekt, jazyk);
 
   /**
    * DODATEČNÁ FAKTURA KE SMLOUVĚ (zadání 25. 9. 2026: „my vytvoříme herci
@@ -130,6 +135,8 @@ export default async function ExpenseDetailPage({
   return (
     <div className={`flex flex-col gap-6 ${maPrilohu ? 'max-w-[1400px]' : 'max-w-3xl'}`}>
       {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
+      {kontextProjektu && <HlavickaProjektu kontext={kontextProjektu} jazyk={jazyk} />}
+
       <DrobeckyDokladu
         zpetHref="/admin/doklady/vydaje"
         zpetPopisek={prelozit(jazyk, 'vydaj.zpetNaVydaje')}

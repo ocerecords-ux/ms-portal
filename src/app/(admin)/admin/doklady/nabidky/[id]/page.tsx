@@ -7,6 +7,8 @@ import { computeTotals } from '@/lib/doklady';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
+import { HlavickaProjektu } from '@/components/HlavickaProjektu';
+import { nactiKontextProjektu } from '@/lib/kontextProjektu';
 import { smiNaKartyFirem } from '@/lib/pristupyServer';
 
 // Detail nabidky - editor, ktery vypada jako samotny doklad (zadani 8. 9. 2026:
@@ -52,6 +54,9 @@ export default async function OfferDetailPage({
   const projects = await listProjectOptions();
 
   const smiNaFirmu = await smiNaKartyFirem();
+  /* Hlavicka projektu nad dokladem (zadani 7. 10. 2026) - jen kdyz se sem
+     prislo z projektu; viz lib/kontextProjektu.ts. */
+  const kontextProjektu = await nactiKontextProjektu(searchParams?.projekt, jazyk);
   // Komu nabidka poleti - viz lib/prijemceNabidky.ts (zadani 17. 9. 2026).
   const [klientiProjektu, herciProjektu] = await Promise.all([mapaKlientuProjektu(), mapaHercuProjektu()]);
 
@@ -63,6 +68,8 @@ export default async function OfferDetailPage({
   return (
     <div className="flex flex-col gap-6">
       {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
+      {kontextProjektu && <HlavickaProjektu kontext={kontextProjektu} jazyk={jazyk} />}
+
       <DrobeckyDokladu
         zpetHref="/admin/doklady/nabidky"
         zpetPopisek={prelozit(jazyk, 'nabidka.zpetNaNabidky')}

@@ -73,7 +73,9 @@ export function DrobeckyDokladu({
         </Link>
       )}
 
-      {projekt?.id && (
+      {/* Když je nad dokladem hlavička projektu (7. 10. 2026), název projektu
+          už stojí nahoře velkým písmem - tady by byl podruhé. */}
+      {projekt?.id && !zProjektu && (
         <>
           <span aria-hidden="true" className="text-line">
             ·
