@@ -2379,6 +2379,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // Slouží i jako popisek místo čísla v hlavičce ještě neuložené nabídky.
   'nabidka.nova': { cs: 'Nová nabídka', en: 'New quote' },
   'nabidka.zpetNaNabidky': { cs: '← Zpět na nabídky', en: '← Back to quotes' },
+  // LINKA HISTORIE U DOKLADU (připomínka Báry Šíblové 7. 10. 2026).
+  'drobecky.projekt': { cs: 'Projekt', en: 'Project' },
+  'drobecky.firma': { cs: 'Firma', en: 'Company' },
+  'drobecky.naProjekt': { cs: 'Zpět na projekt', en: 'Back to the project' },
+  'drobecky.naFirmu': { cs: 'Otevřít kartu firmy', en: 'Open the company card' },
+  'projektMeta.firmaKarta': { cs: 'Otevřít kartu firmy', en: 'Open the company card' },
 
   // --- editor: kolik z nabídky je vyfakturováno ---
   'nabidka.vyfakturovano': { cs: 'Vyfakturováno z nabídky', en: 'Invoiced from this quote' },

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { smiNaKartyFirem } from '@/lib/pristupyServer';
 import {
   canEditProjectMeta,
   canManageCalendar,
@@ -478,6 +479,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         dotoceniHercu={dotoceniPodleHerce}
         normostranyHercu={normostranyPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}
+        smiNaKartuFirmy={await smiNaKartyFirem()}
         vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
         nabizetUvodZaver={firmaChceUvodZaver(firmaProjektu?.name ?? company?.name)}
         firmaDelaReklamy={Boolean(company?.dealsAds)}

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { documentHash } from '@/lib/contractsServer';
@@ -6,6 +5,8 @@ import { listProjectOptions } from '@/lib/projectOptions';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 import { ContractEditor } from './ContractEditor';
+import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
+import { smiNaKartyFirem } from '@/lib/pristupyServer';
 
 // Detail smlouvy - text, podpis za Mediaspace a odeslani protistrane.
 export const dynamic = 'force-dynamic';
@@ -28,11 +29,25 @@ export default async function ContractDetailPage({ params }: { params: { id: str
 
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 
+  const smiNaFirmu = await smiNaKartyFirem();
+
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/admin/doklady/smlouvy" className="text-muted text-sm font-heading no-underline">
-        ← {prelozit(jazyk, 'smlouva.zpetNaSmlouvy')}
-      </Link>
+      {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
+      <DrobeckyDokladu
+        zpetHref="/admin/doklady/smlouvy"
+        zpetPopisek={`← ${prelozit(jazyk, 'smlouva.zpetNaSmlouvy')}`}
+        projekt={
+          contract.caflouProjectId ? { id: contract.caflouProjectId, nazev: contract.projectName ?? '' } : null
+        }
+        firma={
+          contract.companyId
+            ? { id: contract.companyId, nazev: companies.find((f) => f.id === contract.companyId)?.name ?? '' }
+            : null
+        }
+        smiNaFirmu={smiNaFirmu}
+        jazyk={jazyk}
+      />
 
       <ContractEditor
         contract={{

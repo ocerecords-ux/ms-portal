@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { ProjectPriority } from '@prisma/client';
 import { PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
@@ -166,6 +167,7 @@ export function ProjectMetaForm({
   dotoceniHercu,
   normostranyHercu,
   natoceniZaznamy,
+  smiNaKartuFirmy = false,
   vidiKlienta,
   nabizetUvodZaver = false,
   firmaDelaReklamy = false,
@@ -246,6 +248,14 @@ export function ProjectMetaForm({
    * chybí, když se ve zprávě nevyjasnilo, o kterého herce jde.
    */
   natoceniZaznamy?: { id: string; strana: number; kdy: string; userId: string | null; jmeno: string | null }[];
+  /**
+   * SMÍ SE Z NÁZVU FIRMY PROKLIKNOUT NA JEJÍ KARTU? (připomínka Báry
+   * Šíblové 7. 10. 2026: „Když např. otevřu projekt, tak se nemůžu přes
+   * název firmy prokliknout na kartu firmy. Musím jít přes firmy v liště.")
+   * Komu by karta stejně neotevřela (zvukaři), tomu zůstane jen název -
+   * odkaz končící přesměrováním je horší než žádný.
+   */
+  smiNaKartuFirmy?: boolean;
 }) {
   const router = useRouter();
   const jazyk = useJazyk();
@@ -655,8 +665,21 @@ export function ProjectMetaForm({
               <dt className="text-xs font-heading text-muted uppercase tracking-wide">
                 {t('projektMeta.firma')}
               </dt>
+              {/* NÁZEV FIRMY VEDE NA JEJÍ KARTU (připomínka 7. 10. 2026) -
+                  odtud se chodí pro e-mail, když se poslá doklad a firma
+                  ho nemá vyplněný. Bez práva na Firmy zůstane jen text. */}
               <dd className="text-sm font-heading text-ink m-0 mt-1">
-                {firmy.find((f) => f.id === values.companyId)?.label ?? '—'}
+                {smiNaKartuFirmy && values.companyId ? (
+                  <Link
+                    href={`/admin/companies/${encodeURIComponent(values.companyId)}`}
+                    title={t('projektMeta.firmaKarta')}
+                    className="text-ink no-underline hover:text-brand-purple transition-colors"
+                  >
+                    {firmy.find((f) => f.id === values.companyId)?.label ?? '—'}
+                  </Link>
+                ) : (
+                  (firmy.find((f) => f.id === values.companyId)?.label ?? '—')
+                )}
               </dd>
             </div>
             {vidiKlienta && (

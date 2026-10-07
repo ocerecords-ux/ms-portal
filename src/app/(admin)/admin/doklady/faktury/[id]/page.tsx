@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { jeCastFaktury } from '@/lib/fakturaCast';
@@ -6,6 +5,8 @@ import { InvoiceEditor } from './InvoiceEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
+import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
+import { smiNaKartyFirem } from '@/lib/pristupyServer';
 
 // Detail faktury - stejny "vypada jako doklad" editor jako u nabidek.
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
 
   const projects = await listProjectOptions();
 
+  const smiNaFirmu = await smiNaKartyFirem();
+
   const companies = await prisma.company.findMany({
     where: { active: true },
     orderBy: { name: 'asc' },
@@ -36,9 +39,17 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/admin/doklady/faktury" className="text-muted text-sm font-heading no-underline">
-        {prelozit(jazyk, 'faktura.zpetNaFaktury')}
-      </Link>
+      {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
+      <DrobeckyDokladu
+        zpetHref="/admin/doklady/faktury"
+        zpetPopisek={prelozit(jazyk, 'faktura.zpetNaFaktury')}
+        projekt={
+          invoice.caflouProjectId ? { id: invoice.caflouProjectId, nazev: invoice.projectName ?? '' } : null
+        }
+        firma={{ id: invoice.companyId, nazev: invoice.company.name }}
+        smiNaFirmu={smiNaFirmu}
+        jazyk={jazyk}
+      />
 
       <InvoiceEditor
         issuerCompanyId={invoice.issuerCompanyId}

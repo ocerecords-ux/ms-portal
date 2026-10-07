@@ -90,6 +90,20 @@ export async function smiNaSekci(
 
 
 /**
+ * SMÍ PŘIHLÁŠENÝ ČLOVĚK NA KARTY FIREM? (připomínka 7. 10. 2026)
+ *
+ * Pro odkaz na kartu firmy u dokladu a u projektu. Ptá se na cestu, ne na
+ * roli: kdo má zaškrtnutou sekci *Firmy*, tomu se odkaz ukáže, a kdo ji
+ * nemá, tomu se nevykreslí vůbec - mrtvý odkaz, který skončí přesměrováním
+ * zpátky na Projekty, je horší než žádný.
+ */
+export async function smiNaKartyFirem(): Promise<boolean> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return false;
+  return smiNaStranku({ id: session.user.id, role: session.user.role }, '/admin/companies');
+}
+
+/**
  * Smí přihlášený člověk do nastavení studií? Zkratka pro routy
  * /api/admin/studia/*, které jinak pouštějí jen Žůžo-labůžo: od 6. 10. 2026
  * tam patří i ten, kdo má na kartě zaškrtnuté *Nastavení studií* - jinak by

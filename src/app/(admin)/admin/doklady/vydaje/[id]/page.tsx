@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { ExpenseEditor } from './ExpenseEditor';
@@ -10,6 +9,8 @@ import { FakturaKeSmlouve, type KandidatFaktury } from './FakturaKeSmlouve';
 import { formatMoney } from '@/lib/doklady';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit } from '@/lib/jazyk';
+import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
+import { smiNaKartyFirem } from '@/lib/pristupyServer';
 
 // Detail prijateho dokladu.
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,8 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
   if (!expense) notFound();
 
   const projects = await listProjectOptions();
+
+  const smiNaFirmu = await smiNaKartyFirem();
 
   /**
    * DODATEČNÁ FAKTURA KE SMLOUVĚ (zadání 25. 9. 2026: „my vytvoříme herci
@@ -119,9 +122,21 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
 
   return (
     <div className={`flex flex-col gap-6 ${maPrilohu ? 'max-w-[1400px]' : 'max-w-3xl'}`}>
-      <Link href="/admin/doklady/vydaje" className="text-muted text-sm font-heading no-underline">
-        {prelozit(jazyk, 'vydaj.zpetNaVydaje')}
-      </Link>
+      {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
+      <DrobeckyDokladu
+        zpetHref="/admin/doklady/vydaje"
+        zpetPopisek={prelozit(jazyk, 'vydaj.zpetNaVydaje')}
+        projekt={
+          expense.caflouProjectId ? { id: expense.caflouProjectId, nazev: expense.projectName ?? '' } : null
+        }
+        firma={
+          expense.supplierCompanyId
+            ? { id: expense.supplierCompanyId, nazev: expense.supplier?.name ?? expense.supplierName ?? '' }
+            : null
+        }
+        smiNaFirmu={smiNaFirmu}
+        jazyk={jazyk}
+      />
 
       <div
         className={

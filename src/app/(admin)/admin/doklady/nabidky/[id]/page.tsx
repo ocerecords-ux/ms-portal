@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { OfferEditor } from './OfferEditor';
@@ -7,6 +6,8 @@ import { mapaHercuProjektu, mapaKlientuProjektu } from '@/lib/prijemceNabidky';
 import { computeTotals } from '@/lib/doklady';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
+import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
+import { smiNaKartyFirem } from '@/lib/pristupyServer';
 
 // Detail nabidky - editor, ktery vypada jako samotny doklad (zadani 8. 9. 2026:
 // "hlavně, ať je vše přehledné a intuitivní").
@@ -42,6 +43,8 @@ export default async function OfferDetailPage({ params }: { params: { id: string
   if (!offer) notFound();
 
   const projects = await listProjectOptions();
+
+  const smiNaFirmu = await smiNaKartyFirem();
   // Komu nabidka poleti - viz lib/prijemceNabidky.ts (zadani 17. 9. 2026).
   const [klientiProjektu, herciProjektu] = await Promise.all([mapaKlientuProjektu(), mapaHercuProjektu()]);
 
@@ -52,9 +55,15 @@ export default async function OfferDetailPage({ params }: { params: { id: string
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/admin/doklady/nabidky" className="text-muted text-sm font-heading no-underline">
-        {prelozit(jazyk, 'nabidka.zpetNaNabidky')}
-      </Link>
+      {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
+      <DrobeckyDokladu
+        zpetHref="/admin/doklady/nabidky"
+        zpetPopisek={prelozit(jazyk, 'nabidka.zpetNaNabidky')}
+        projekt={offer.caflouProjectId ? { id: offer.caflouProjectId, nazev: offer.projectName ?? '' } : null}
+        firma={{ id: offer.companyId, nazev: offer.company.name }}
+        smiNaFirmu={smiNaFirmu}
+        jazyk={jazyk}
+      />
 
       <OfferEditor
         offer={{
