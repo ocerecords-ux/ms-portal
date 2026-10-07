@@ -85,9 +85,23 @@ export function KalendarSplatnosti({ radky }: { radky: FakturaRadek[] }) {
   const dnesMs = dnesek.getTime();
   const klicTydneDnes = klicDne(startOfWeek(dnesek));
 
+
+  /**
+   * KALENDÁŘ VŽDYCKY ZAČÍNÁ NEJPOZDĚJI TÍMTO TÝDNEM (oprava 7. 10. 2026).
+   * Když nejbližší splatnost přijde až za tři týdny, začínal přehled až
+   * u ní - a označený dnešek, kvůli kterému to celé je, nebyl vůbec vidět.
+   * Stejně tak končí nejdřív tímto týdnem, když je všechno po splatnosti.
+   */
   const casy = sDatem.map((r) => r.splatnostMs as number);
-  const prvni = casy.length > 0 ? startOfWeek(new Date(Math.min(...casy))) : null;
-  const posledni = casy.length > 0 ? startOfWeek(new Date(Math.max(...casy))) : null;
+  const tydenDnes = startOfWeek(dnesek);
+  const prvni =
+    casy.length > 0
+      ? new Date(Math.min(startOfWeek(new Date(Math.min(...casy))).getTime(), tydenDnes.getTime()))
+      : null;
+  const posledni =
+    casy.length > 0
+      ? new Date(Math.max(startOfWeek(new Date(Math.max(...casy))).getTime(), tydenDnes.getTime()))
+      : null;
 
   const tydny: Date[] = [];
   if (prvni && posledni) {
