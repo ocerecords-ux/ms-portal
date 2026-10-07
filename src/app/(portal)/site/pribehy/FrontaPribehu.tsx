@@ -201,7 +201,7 @@ export function FrontaPribehu({
             <div
               className={`${
                 skladam ? 'flex' : 'hidden'
-              } fixed inset-0 z-[70] flex-col overflow-y-auto overscroll-contain bg-paper md:static md:z-auto md:flex md:overflow-visible md:bg-transparent`}
+              } fixed inset-0 z-[70] flex-col overflow-hidden overscroll-contain bg-paper md:static md:z-auto md:flex md:overflow-visible md:bg-transparent`}
             >
               <Editor
                 key={koncept?.id ?? 'novy'}

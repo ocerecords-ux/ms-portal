@@ -71,6 +71,8 @@ export function Editor({
   const poleTextu = useRef<HTMLTextAreaElement | null>(null);
   /** Psaní přímo do fotky - na telefonu je to jediné pole na text. */
   const poleNaFotce = useRef<HTMLTextAreaElement | null>(null);
+  /** Sloupec, do kterého se náhled vejde - z něj se počítá velikost rámu. */
+  const sloupecRef = useRef<HTMLDivElement | null>(null);
   const ramRef = useRef<HTMLSpanElement | null>(null);
   const taham = useRef(false);
   /** Kde prst začal a jestli už překročil práh - viz chytText. */
@@ -90,6 +92,9 @@ export function Editor({
   const [dalsi, setDalsi] = useState(false);
   /** Právě se píše do fotky? Pak se textem netáhne, jinak by se psaní přerušilo. */
   const [pisuNaFotce, setPisuNaFotce] = useState(false);
+  /** Kolik místa na náhled zbývá - používá se jen na telefonu, viz níže. */
+  const [misto, setMisto] = useState({ sirka: 0, vyska: 0 });
+  const [naTelefonu, setNaTelefonu] = useState(false);
 
   /** Otevření konceptu: stáhne jeho soubor zpátky do prohlížeče a naváže se na něj. */
   useEffect(() => {
@@ -160,6 +165,50 @@ export function Editor({
 
   // Pod rámem ještě sedí popísek, proto se pár bodů ubere; meze drží rám
   // rozumný i na úzkém okně, kde mřížka zabere celou šířku.
+  /**
+   * VELIKOST RÁMU NA TELEFONU SE MĚŘÍ, NEPOČÍTÁ V CSS (oprava 7. 10. 2026).
+   *
+   * Pokus držet poměr 9:16 třídami skončil dvakrát špatně: jednou se rám smrskl
+   * na čárku, podruhé se roztáhl přes celý sloupec a obsah přetekl z obrazovky -
+   * a přeteklou stránku pak prohlížeč v apce překresloval přes sebe.
+   * `height: 100%` je totiž pevná výška a `max-width` už ji nedokáže zmenšit,
+   * takže se poměr zlomí.
+   *
+   * Tady se změří volné místo a rozměr se dopočítá — stejně jako to už dělá
+   * počítač podle mřížky vedle. Sloupec má `overflow-hidden`, takže rám nikdy
+   * nemůže sloupec zvětšit a měření se točit dokola.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const dotaz = window.matchMedia('(max-width: 767px)');
+    const zmer = () => setNaTelefonu(dotaz.matches);
+    zmer();
+    dotaz.addEventListener('change', zmer);
+    return () => dotaz.removeEventListener('change', zmer);
+  }, []);
+
+  useEffect(() => {
+    const sloupec = sloupecRef.current;
+    if (!sloupec || typeof ResizeObserver === 'undefined') return;
+    const zmer = () => {
+      const r = sloupec.getBoundingClientRect();
+      setMisto({ sirka: r.width, vyska: r.height });
+    };
+    const hlidac = new ResizeObserver(zmer);
+    hlidac.observe(sloupec);
+    zmer();
+    return () => hlidac.disconnect();
+  }, []);
+
+  /** Rozměr rámu i s dvoubodovým proužkem kolem něj. */
+  const ramNaTelefonu =
+    naTelefonu && misto.vyska > 0 && misto.sirka > 0
+      ? (() => {
+          const s = Math.max(0, Math.min(misto.sirka, (misto.vyska * 9) / 16) - 4);
+          return { width: Math.round(s) + 4, height: Math.round((s * 16) / 9) + 4 };
+        })()
+      : null;
+
   const sirkaRamu = vyskaMrizky > 0 ? Math.min(340, Math.max(200, Math.round(((vyskaMrizky - 26) * 9) / 16))) : 230;
 
   function vyber(e: React.ChangeEvent<HTMLInputElement>) {
@@ -623,7 +672,10 @@ export function Editor({
          * na výšku toho rastru, co je vlevo, a tím i zvětšil náhled").
          * Šířku si dopočítá poměr 9:16 sám, takže se rám nikdy nerozjede.
          */}
-      <div className="order-2 flex min-h-0 flex-1 flex-col items-center gap-2 md:order-last md:flex-none">
+      <div
+        ref={sloupecRef}
+        className="order-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden md:order-last md:block md:flex-none md:overflow-visible"
+      >
         <label
           htmlFor="pribeh-soubor"
           onClick={(e) => {
@@ -649,10 +701,14 @@ export function Editor({
               `width`: hodnota ve `style` by přebila třídu a na telefonu by
               rám zůstal úzký. */}
           <span
-            style={{ '--ram': `${sirkaRamu}px` } as React.CSSProperties}
-            className={`block aspect-[9/16] h-full max-h-full w-auto max-w-full rounded-[26px] p-[2px] md:h-auto md:w-[calc(var(--ram)+4px)] ${
-              nahled ? KROUZEK : KROUZEK_KLID
-            }`}
+            style={
+              ramNaTelefonu
+                ? { width: ramNaTelefonu.width, height: ramNaTelefonu.height }
+                : ({ '--ram': `${sirkaRamu}px` } as React.CSSProperties)
+            }
+            className={`block shrink-0 rounded-[26px] p-[2px] ${
+              ramNaTelefonu ? '' : 'aspect-[9/16] md:w-[calc(var(--ram)+4px)]'
+            } ${nahled ? KROUZEK : KROUZEK_KLID}`}
           >
           {/* Rám už jen vyplňuje obal — poměr 9:16 i šířku drží obal nad ním. */}
           <span
