@@ -2564,6 +2564,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // --- seznam faktur: záložky a stavy ---
   'faktura.zalozkaRozpracovane': { cs: 'Rozpracované', en: 'Drafts' },
   'faktura.zalozkaNeuhrazene': { cs: 'Neuhrazené', en: 'Unpaid' },
+  // KALENDÁŘ SPLATNOSTÍ (zadání 7. 10. 2026) - vidí ho jen superadmin.
+  'faktura.pohledTabulka': { cs: 'Tabulka', en: 'Table' },
+  'faktura.pohledKalendar': { cs: 'Kalendář splatností', en: 'Due date calendar' },
+  'faktura.kalendarCelkem': { cs: 'celkem', en: 'total' },
+  'faktura.kalendarBezSplatnosti': { cs: 'Bez vyplněné splatnosti', en: 'No due date' },
+  'faktura.kalendarPrazdno': { cs: 'Žádná neuhrazená faktura nemá vyplněnou splatnost.', en: 'No unpaid invoice has a due date.' },
+  'faktura.kalendarDnes': { cs: 'dnes', en: 'today' },
   'faktura.zalozkaUhrazene': { cs: 'Uhrazené', en: 'Paid' },
   'faktura.zalozkaStornovane': { cs: 'Stornované', en: 'Cancelled' },
   'faktura.stavRozpracovana': { cs: 'Rozpracovaná', en: 'Draft' },

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import { jsemSuperadmin } from '@/lib/pristupyServer';
 import { computeTotals, formatMoney } from '@/lib/doklady';
 import { NewInvoiceForm } from './NewInvoiceForm';
 import { StahnoutPrilohy } from '../StahnoutPrilohy';
@@ -89,6 +90,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
    */
   const upominky = await stavyUpominek(invoices.map((i) => i.id));
 
+  /* Kalendar splatnosti je jen pro superadmina - viz nize u FakturyTabulka. */
+  const jsemSuperadminTed = await jsemSuperadmin();
+
   const radkyTabulky: FakturaRadek[] = invoices.map((invoice) => {
     const totals = computeTotals(invoice.items, invoice);
     return {
@@ -109,6 +113,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
       stavPoradi: STATUS_PORADI[invoice.status] ?? 9,
       castka: formatMoney(totals.incVat, invoice.currency, jazyk),
       castkaMinor: totals.incVat,
+      mena: invoice.currency,
       cast: invoice.interniCast ?? null,
       upominka: upominky.get(invoice.id) ?? PRAZDNY_STAV_UPOMINKY,
     };
@@ -171,7 +176,15 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
           )}
 
           {/* Mazat jde jen ve Stornovanych (zadani 17. 9. 2026). */}
-          <FakturyTabulka radky={radkyTabulky} lzeMazat={activeTab.key === 'stornovane'} />
+          {/* KALENDÁŘ SPLATNOSTÍ JEN PRO SUPERADMINA (zadání 7. 10. 2026:
+          „ale opravdu to nesmí nikdo jiný vidět, než já"). Kdo superadmin
+          není, tomu se přepínač vůbec nevykreslí a kalendář nemá jak
+          otevřít. A jen v neuhrazených - jinde by neměl co ukázat. */}
+      <FakturyTabulka
+        radky={radkyTabulky}
+        lzeMazat={activeTab.key === 'stornovane'}
+        kalendar={jsemSuperadminTed && activeTab.key === 'neuhrazene'}
+      />
         </>
       )}
     </div>

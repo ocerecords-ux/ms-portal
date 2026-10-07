@@ -90,6 +90,26 @@ export async function smiNaSekci(
 
 
 /**
+ * JE PŘIHLÁŠENÝ ČLOVĚK SUPERADMIN? (7. 10. 2026)
+ *
+ * Pro věci, které nemá vidět ani zbytek Žůžo-labůža - například kalendář
+ * splatností v neuhrazených fakturách. `maPristup` se na to použít nedá:
+ * ta říká „smí na sekci", a superadmin v ní znamená jen „vlezu všude".
+ *
+ * Čte se to z databáze, ne ze session - příznak se mění na kartě uživatele
+ * a nikdo se kvůli tomu nebude odhlašovat.
+ */
+export async function jsemSuperadmin(): Promise<boolean> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return false;
+  const u = (await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { active: true, superadmin: true },
+  })) as { active: boolean; superadmin: boolean | null } | null;
+  return Boolean(u?.active && u.superadmin);
+}
+
+/**
  * SMÍ PŘIHLÁŠENÝ ČLOVĚK NA KARTY FIREM? (připomínka 7. 10. 2026)
  *
  * Pro odkaz na kartu firmy u dokladu a u projektu. Ptá se na cestu, ne na

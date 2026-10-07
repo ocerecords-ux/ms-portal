@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { Currency } from '@prisma/client';
 import Link from 'next/link';
 import { HromadneMazani, VyberRadku } from '@/components/HromadneMazani';
 import {
@@ -17,6 +18,7 @@ import {
   upominkaNaSpadnuti,
   type StavUpominky,
 } from '@/lib/upominkaStav';
+import { KalendarSplatnosti } from './KalendarSplatnosti';
 
 /**
  * Tabulka vydaných faktur, řaditelná kliknutím na název sloupce (zadání
@@ -41,6 +43,8 @@ export type FakturaRadek = {
   stavPoradi: number;
   castka: string;
   castkaMinor: number;
+  /** Měna dokladu - kvůli součtům v kalendáři splatností (7. 10. 2026). */
+  mena: Currency;
   /**
    * Interní značka „1. část / 2. část" (29. 9. 2026). Jen pro nás - na
    * dokladu ani v mailu klientovi není. Prázdno = zakázka není na části.
@@ -56,6 +60,7 @@ export type FakturaRadek = {
 export function FakturyTabulka({
   radky,
   lzeMazat = false,
+  kalendar = false,
 }: {
   radky: FakturaRadek[];
   /**
@@ -65,9 +70,15 @@ export function FakturyTabulka({
    * aby se odeslaná faktura nedala ztratit jedním kliknutím.
    */
   lzeMazat?: boolean;
+  /**
+   * Nabídnout přepínač do kalendáře splatností? Rozhoduje o tom stránka -
+   * vidí ho jen superadmin a jen v neuhrazených (zadání 7. 10. 2026).
+   */
+  kalendar?: boolean;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
+  const [pohled, setPohled] = useState<'tabulka' | 'kalendar'>('tabulka');
   const [vybrane, setVybrane] = useState<Set<string>>(new Set());
 
   const sloupce: SloupecTabulky<FakturaRadek>[] = [
@@ -222,7 +233,46 @@ export function FakturyTabulka({
     },
   ];
 
+  /**
+   * PŘEPÍNAČ POHLEDU (zadání 7. 10. 2026). Nevykreslí se nikomu, komu ho
+   * stránka nenabídla - a protistrana toho přepínaní, kalendář splatností,
+   * se bez něj nemá jak otevřít.
+   */
+  const prepinac = kalendar ? (
+    <div className="flex items-center gap-1 self-start rounded-pill border border-line p-1">
+      {(
+        [
+          ['tabulka', t('faktura.pohledTabulka')],
+          ['kalendar', t('faktura.pohledKalendar')],
+        ] as const
+      ).map(([klic, popisek]) => (
+        <button
+          key={klic}
+          type="button"
+          onClick={() => setPohled(klic)}
+          aria-pressed={pohled === klic}
+          className={`cursor-pointer rounded-pill px-3.5 py-1.5 font-heading text-sm transition-colors ${
+            pohled === klic ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
+          }`}
+        >
+          {popisek}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  if (kalendar && pohled === 'kalendar') {
+    return (
+      <div className="flex flex-col gap-4">
+        {prepinac}
+        <KalendarSplatnosti radky={radky} />
+      </div>
+    );
+  }
+
   return (
+    <>
+    {prepinac && <div className="mb-4">{prepinac}</div>}
     <RaditelnaTabulka
       radky={radky}
       sloupce={sloupce}
@@ -291,5 +341,6 @@ export function FakturyTabulka({
           : undefined
       }
     />
+    </>
   );
 }
