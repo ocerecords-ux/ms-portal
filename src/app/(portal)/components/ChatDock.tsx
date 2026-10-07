@@ -1194,12 +1194,20 @@ function NabidkaReakci({
   onVyber,
   onZavri,
   onKopirovat,
+  onVybratText,
 }: {
   mine: boolean;
   onVyber: (code: string) => void;
   onZavri: () => void;
   /** Kopírování textu - systémová nabídka je na bublině vypnutá (23. 9. 2026). */
   onKopirovat?: () => void;
+  /**
+   * Pustí na téhle jedné bublině výběr textu (připomínka Petera Dratvy
+   * 7. 10. 2026: „nejde kopírovat část textu ze správy: když např.
+   * potrebujem skopírovat zaslané heslo alebo len nejakú krátku časť
+   * textu"). `Kopírovat` vedle vezme celou zprávu, tohle pustí prst.
+   */
+  onVybratText?: () => void;
 }) {
   const t = usePreklad();
   useEffect(() => {
@@ -1239,6 +1247,15 @@ function NabidkaReakci({
             {t('chat.kopirovat')}
           </button>
         )}
+        {onVybratText && (
+          <button
+            type="button"
+            onClick={onVybratText}
+            className="rounded px-2 py-1.5 text-xs font-heading text-muted hover:bg-field whitespace-nowrap"
+          >
+            {t('chat.vybratText')}
+          </button>
+        )}
       </span>
     </>
   );
@@ -1270,6 +1287,8 @@ function BublinaZpravy({
   children: React.ReactNode;
 }) {
   const [nabidka, setNabidka] = useState(false);
+  /** Na téhle bublině je teď prstem puditelný výběr textu (7. 10. 2026). */
+  const [vybiram, setVybiram] = useState(false);
   const casovac = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zacatek = useRef<{ x: number; y: number } | null>(null);
 
@@ -1282,7 +1301,9 @@ function BublinaZpravy({
   useEffect(() => zrusCekani, [zrusCekani]);
 
   function zacniDrzet(e: React.PointerEvent<HTMLElement>) {
-    if (nabidka) return;
+    // Myš žádné podržení nepotřebuje - tam se text táhne a nabídka se
+    // otevírá pravým tlačítkem (7. 10. 2026).
+    if (e.pointerType === 'mouse' || nabidka || vybiram) return;
     zacatek.current = { x: e.clientX, y: e.clientY };
     casovac.current = setTimeout(() => {
       casovac.current = null;
@@ -1306,6 +1327,9 @@ function BublinaZpravy({
         onPointerUp={zrusCekani}
         onPointerCancel={zrusCekani}
         onContextMenu={(e) => {
+          // Když už je něco označené, patří pravé tlačítko systému -
+          // jinak by se šlo k „Kopírovat" nad výběrem nedostat (7. 10. 2026).
+          if ((window.getSelection()?.toString() ?? '').trim()) return;
           e.preventDefault();
           zrusCekani();
           setNabidka(true);
@@ -1315,9 +1339,18 @@ function BublinaZpravy({
            prst"). iOS jinak na podržení spustí svoje Kopírovat / Vyhledat
            a naše nabídka se k slovu nedostane. Kopírování zůstává - je
            v nabídce, která se podržením otevře. */
-        className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm select-none [-webkit-user-select:none] [-webkit-touch-callout:none] ${
-          mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
-        }`}
+        /* VÝBĚR TEXTU: MYŠ ANO, PRST AŽ NA POŽÁDÁNÍ (7. 10. 2026).
+           Na myši se text táhne jako kdekoli jinde — podržení prstu tam
+           stejně není a nabídka se otevírá pravým tlačítkem. Na dotyku
+           zůstává výběr vypnutý (23. 9. 2026: „když v mobilu chci reagovat
+           na koment, tak se mi označí celá stránka, když podržím prst"),
+           dokud se v nabídce nezvolí *Vybrat text* — pak se na téhle jedné
+           bublině pustí i prstem a iOS nad ní ukáže svoje Kopírovat. */
+        className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
+          vybiram
+            ? 'select-text [-webkit-user-select:text]'
+            : 'select-none [-webkit-user-select:none] [-webkit-touch-callout:none] [@media(pointer:fine)]:select-text [@media(pointer:fine)]:[-webkit-user-select:text]'
+        } ${mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'}`}
       >
         {children}
       </p>
@@ -1333,6 +1366,14 @@ function BublinaZpravy({
             text
               ? () => {
                   void navigator.clipboard?.writeText(text).catch(() => undefined);
+                  setNabidka(false);
+                }
+              : undefined
+          }
+          onVybratText={
+            text
+              ? () => {
+                  setVybiram(true);
                   setNabidka(false);
                 }
               : undefined

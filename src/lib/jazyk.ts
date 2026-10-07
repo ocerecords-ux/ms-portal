@@ -1476,6 +1476,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // reakce
   'chat.reakceKdo': { cs: '{pocet}× reakce: {jmena}', en: '{pocet}× reaction: {jmena}' },
   'chat.kopirovat': { cs: 'Kopírovat', en: 'Copy' },
+  // Výběr části textu v bublině (připomínka Petera Dratvy 7. 10. 2026).
+  'chat.vybratText': { cs: 'Vybrat text', en: 'Select text' },
 
   // přílohy
   'chat.stahnoutPrilohu': { cs: 'Stáhnout {nazev}', en: 'Download {nazev}' },
