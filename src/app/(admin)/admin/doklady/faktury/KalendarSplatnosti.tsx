@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { formatMoney } from '@/lib/doklady';
 import { addDays, nazevDneKratce, startOfWeek } from '@/lib/calendar';
 import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
+import type { Jazyk } from '@/lib/jazyk';
 import type { FakturaRadek } from './FakturyTabulka';
 
 /**
@@ -58,6 +60,54 @@ function souctyPoMenach(radky: FakturaRadek[]): { mena: FakturaRadek['mena']; mi
   const mapa = new Map<FakturaRadek['mena'], number>();
   for (const r of radky) mapa.set(r.mena, (mapa.get(r.mena) ?? 0) + r.castkaMinor);
   return [...mapa.entries()].map(([mena, minor]) => ({ mena, minor }));
+}
+
+/**
+ * JEDNA ČÁSTKA V KALENDÁŘI (zadání 7. 10. 2026: „když na ty částky najedu
+ * myší, tak by mi to mohlo ukázat, co to je za fakturu").
+ *
+ * Systémová bublina z `title` ukázala jen číslo a odběratele, a to ještě po
+ * vteřině čekání. Tady je vlastní kartčička: číslo, odběratel, předmět,
+ * projekt, splatnost a částka. Celá částka je navíc odkaz, takže se z
+ * přehledu dá rovnou skočit do faktury.
+ *
+ * Bez JavaScriptu — kartčičku ukazuje `group-hover`. Na dotyku se hover
+ * nekoná, tam klepnutí rovnou otevře fakturu, což je stejně to, co chce
+ * člověk na telefonu udělat.
+ */
+function Castka({
+  r,
+  trida,
+  jazyk,
+}: {
+  r: FakturaRadek;
+  trida: string;
+  jazyk: Jazyk;
+}) {
+  return (
+    <Link
+      href={`/admin/doklady/faktury/${r.id}`}
+      aria-label={`${r.cislo} · ${r.odberatel}`}
+      className={`group relative block rounded-lg px-1.5 py-1 text-right font-heading text-[11px] font-semibold tabular-nums no-underline transition-shadow hover:shadow-sm ${trida}`}
+    >
+      {formatMoney(r.castkaMinor, r.mena, jazyk)}
+
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 hidden w-56 -translate-x-1/2 flex-col gap-0.5 rounded-card border border-line bg-surface p-2.5 text-left shadow-lg group-hover:flex">
+        <span className="font-heading text-xs font-semibold text-ink">{r.cislo}</span>
+        <span className="font-body text-xs text-ink">{r.odberatel}</span>
+        {r.nazev && <span className="font-body text-[11px] text-muted">{r.nazev}</span>}
+        {r.projekt && <span className="font-body text-[11px] text-muted">{r.projekt}</span>}
+        <span className="mt-0.5 flex items-baseline justify-between gap-2 border-t border-line pt-1">
+          <span className={`font-body text-[11px] ${r.poSplatnosti ? 'text-danger' : 'text-muted'}`}>
+            {r.splatnost || '—'}
+          </span>
+          <span className="font-heading text-xs font-semibold tabular-nums text-ink">
+            {formatMoney(r.castkaMinor, r.mena, jazyk)}
+          </span>
+        </span>
+      </span>
+    </Link>
+  );
 }
 
 export function KalendarSplatnosti({ radky }: { radky: FakturaRadek[] }) {
@@ -206,16 +256,12 @@ export function KalendarSplatnosti({ radky }: { radky: FakturaRadek[] }) {
                     </span>
 
                     {vDni.map((r) => (
-                      <span
+                      <Castka
                         key={r.id}
-                        title={`${r.cislo} · ${r.odberatel}`}
-                        className={`block rounded-lg px-1.5 py-1 text-right font-heading text-[11px] font-semibold tabular-nums ${barvaCastky(
-                          r.splatnostMs,
-                          dnesMs,
-                        )}`}
-                      >
-                        {formatMoney(r.castkaMinor, r.mena, jazyk)}
-                      </span>
+                        r={r}
+                        jazyk={jazyk}
+                        trida={barvaCastky(r.splatnostMs, dnesMs)}
+                      />
                     ))}
 
                     {/* Součet u dne až od dvou faktur - u jedné by jen opakoval
@@ -245,13 +291,7 @@ export function KalendarSplatnosti({ radky }: { radky: FakturaRadek[] }) {
           </header>
           <div className="flex flex-wrap gap-1.5 p-2">
             {bezData.map((r) => (
-              <span
-                key={r.id}
-                title={`${r.cislo} · ${r.odberatel}`}
-                className="rounded-lg bg-field px-1.5 py-1 font-heading text-[11px] tabular-nums text-ink"
-              >
-                {formatMoney(r.castkaMinor, r.mena, jazyk)}
-              </span>
+              <Castka key={r.id} r={r} jazyk={jazyk} trida="bg-field text-ink" />
             ))}
           </div>
         </section>
