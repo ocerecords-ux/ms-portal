@@ -46,6 +46,7 @@ type Rozdelano = {
 };
 
 export function Editor({
+  onZavri,
   ucet,
   koncept,
   onHotovo,
@@ -54,6 +55,11 @@ export function Editor({
   /** Otevřený koncept, nebo nic - pak se zakládá nový. */
   koncept: PribehRadek | null;
   onHotovo: () => void;
+  /**
+   * Zavří celoobrazovkové skládání na telefonu (7. 10. 2026). Na počítači
+   * není co zavírat - editor tam stojí na stránce - a křížek se nevykreslí.
+   */
+  onZavri?: () => void;
 }) {
   const t = usePreklad();
   const router = useRouter();
@@ -73,6 +79,8 @@ export function Editor({
   const [procenta, setProcenta] = useState<number | null>(null);
   const [pracuji, setPracuji] = useState<'odeslat' | 'koncept' | 'smazat' | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
+  /** Rozbalene „dalsi volby" pod tremi teckami - jen na telefonu. */
+  const [dalsi, setDalsi] = useState(false);
 
   /** Otevření konceptu: stáhne jeho soubor zpátky do prohlížeče a naváže se na něj. */
   useEffect(() => {
@@ -343,10 +351,39 @@ export function Editor({
   }
 
   return (
-    <div className="grid min-h-0 flex-1 gap-6 rounded-card border border-line bg-surface p-5 sm:grid-cols-[minmax(0,1fr)_auto]">
-      {/* --- VLEVO: text a jeho podoba ------------------------------------ */}
-      <div className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 md:grid md:gap-6 md:rounded-card md:border md:border-line md:bg-surface md:p-5 md:grid-cols-[minmax(0,1fr)_auto]">
+      {/* --- NA TELEFONU HORNÍ LIŠTA (zadání 7. 10. 2026: „v mobilu to musíme
+          udělat jinak, roztáhnout na celou obrazovku s možností se vrátit,
+          jako bych byl na Instagramu"). Křížek vlevo, Zveřejnit vpravo -
+          přesně tam, kde to má Instagram, ať se to nemusí hledat. Na počítači
+          se lišta nevykreslí, tam zůstává tlačítko dole v řadě. */}
+      <div className="order-1 flex shrink-0 items-center justify-between gap-2 md:hidden">
+        <button
+          type="button"
+          onClick={onZavri}
+          aria-label={t('pribehy.zavrit')}
+          title={t('pribehy.zavrit')}
+          className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-pill text-xl leading-none text-muted transition-colors hover:text-ink"
+        >
+          ✕
+        </button>
+        <span className="truncate font-heading text-sm font-semibold text-ink">
+          {zKonceptu ? t('pribehy.upravujeteKoncept') : t('pribehy.novy')}
+        </span>
+        <button
+          type="button"
+          disabled={!soubor || pracuji !== null}
+          onClick={() => void daj()}
+          className="shrink-0 cursor-pointer rounded-pill bg-brand-purple px-4 py-1.5 font-heading text-sm font-semibold text-white transition-colors hover:bg-brand-purpleDeep disabled:opacity-50"
+        >
+          {t(pracuji === 'odeslat' ? 'pribehy.vyvesuji' : 'pribehy.datNaInstagram')}
+        </button>
+      </div>
+
+      {/* --- VLEVO (na telefonu DOLE): text a jeho podoba ------------------ */}
+      <div className="order-3 flex min-w-0 shrink-0 flex-col gap-3 md:order-none">
+        {/* Nadpis a odznak konceptu říká na telefonu už horní lišta. */}
+        <div className="hidden flex-wrap items-center justify-between gap-2 md:flex">
           <label className="font-heading text-sm font-semibold text-ink" htmlFor="pribeh-popisek">
             {t('pribehy.popisek')}
           </label>
@@ -363,7 +400,7 @@ export function Editor({
           onChange={(e) => setPopisek(e.target.value.slice(0, MAX_POPISEK))}
           rows={5}
           placeholder={t('pribehy.popisekPlaceholder')}
-          className="w-full rounded-card border border-line bg-field/40 px-3 py-2 font-body text-sm text-ink outline-none focus:border-brand-purple"
+          className="h-16 w-full rounded-card border border-line bg-field/40 px-3 py-2 font-body text-sm text-ink outline-none focus:border-brand-purple md:h-auto"
         />
 
         <Zminky text={popisek} naVlozeni={vlozZminku} />
@@ -458,51 +495,75 @@ export function Editor({
           </div>
         )}
 
-        <span className="font-body text-xs text-muted">{t('pribehy.souborPopis')}</span>
+        {/* Na telefonu by věta o formátech ujedla místo náhledu. */}
+        <span className="hidden font-body text-xs text-muted md:inline">{t('pribehy.souborPopis')}</span>
 
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+          {/* Na telefonu je Zveřejnit nahoře v liště, tady by bylo dvakrát. */}
           <button
             type="button"
             disabled={!soubor || pracuji !== null}
             onClick={() => void daj()}
-            className="cursor-pointer rounded-pill bg-brand-purple px-5 py-2 font-heading text-sm font-semibold text-white transition-colors hover:bg-brand-purpleDeep disabled:opacity-50"
+            className="hidden cursor-pointer rounded-pill bg-brand-purple px-5 py-2 font-heading text-sm font-semibold text-white transition-colors hover:bg-brand-purpleDeep disabled:opacity-50 md:inline-flex"
           >
             {t(pracuji === 'odeslat' ? 'pribehy.vyvesuji' : 'pribehy.datNaInstagram')}
           </button>
+
+          {/* TŘI TEČKY JEN NA TELEFONU (7. 10. 2026). Zbylé volby by na
+              šířku telefonu zabraly dva řádky a ujedly místo náhledu; na
+              počítači jsou pořád všechny vedle sebe. */}
           <button
             type="button"
-            disabled={!soubor || pracuji !== null}
-            onClick={() => void ulozKoncept()}
-            className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-ink transition-colors hover:border-brand-purple disabled:opacity-50"
+            onClick={() => setDalsi((o) => !o)}
+            aria-expanded={dalsi}
+            aria-label={t('pribehy.dalsiVolby')}
+            title={t('pribehy.dalsiVolby')}
+            className={`cursor-pointer rounded-pill border px-4 py-2 font-heading text-sm leading-none transition-colors md:hidden ${
+              dalsi ? 'border-brand-purple bg-brand-purple/15 text-ink' : 'border-line text-muted'
+            }`}
           >
-            {t(pracuji === 'koncept' ? 'obecne.ukladam' : 'pribehy.ulozitKoncept')}
+            ⋯
           </button>
-          {soubor && (
-            <>
-              <label
-                htmlFor="pribeh-soubor"
-                className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-muted transition-colors hover:text-ink"
-              >
-                {t('pribehy.vymenitFotku')}
-              </label>
-              <button
-                type="button"
-                disabled={pracuji !== null}
-                onClick={zacniZnovu}
-                className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-muted transition-colors hover:text-ink disabled:opacity-50"
-              >
-                {t('pribehy.zacitZnovu')}
-              </button>
-              <button
-                type="button"
-                disabled={pracuji !== null}
-                onClick={() => void smazKoncept()}
-                className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-danger transition-colors hover:border-danger disabled:opacity-50"
-              >
-                {t('pribehy.smazat')}
-              </button>
-            </>
-          )}
+
+          <div
+            className={`${dalsi ? 'flex' : 'hidden'} w-full flex-wrap items-center gap-2 md:flex md:w-auto`}
+          >
+            <button
+              type="button"
+              disabled={!soubor || pracuji !== null}
+              onClick={() => void ulozKoncept()}
+              className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-ink transition-colors hover:border-brand-purple disabled:opacity-50"
+            >
+              {t(pracuji === 'koncept' ? 'obecne.ukladam' : 'pribehy.ulozitKoncept')}
+            </button>
+            {soubor && (
+              <>
+                <label
+                  htmlFor="pribeh-soubor"
+                  className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-muted transition-colors hover:text-ink"
+                >
+                  {t('pribehy.vymenitFotku')}
+                </label>
+                <button
+                  type="button"
+                  disabled={pracuji !== null}
+                  onClick={zacniZnovu}
+                  className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-muted transition-colors hover:text-ink disabled:opacity-50"
+                >
+                  {t('pribehy.zacitZnovu')}
+                </button>
+                <button
+                  type="button"
+                  disabled={pracuji !== null}
+                  onClick={() => void smazKoncept()}
+                  className="cursor-pointer rounded-pill border border-line px-4 py-2 font-heading text-sm text-danger transition-colors hover:border-danger disabled:opacity-50"
+                >
+                  {t('pribehy.smazat')}
+                </button>
+              </>
+            )}
+          </div>
+
           {procenta !== null && (
             <span className="font-body text-xs tabular-nums text-muted">
               {t('pribehy.nahravam', { procenta: String(procenta) })}
@@ -523,21 +584,26 @@ export function Editor({
          * na výšku toho rastru, co je vlevo, a tím i zvětšil náhled").
          * Šířku si dopočítá poměr 9:16 sám, takže se rám nikdy nerozjede.
          */}
-      <div className="flex min-h-0 flex-col items-center gap-2 sm:order-last">
+      <div className="order-2 flex min-h-0 flex-1 flex-col items-center gap-2 md:order-last md:flex-none">
         <label
           htmlFor="pribeh-soubor"
           onClick={(e) => {
             // S náhledem se do rámu klikat nedá - tahalo by se tím textem.
             if (nahled) e.preventDefault();
           }}
-          className={`block shrink-0 rounded-[26px] p-[2px] ${nahled ? KROUZEK : KROUZEK_KLID} ${
-            nahled ? '' : 'cursor-pointer'
-          }`}
+          className={`grid min-h-0 w-full flex-1 place-items-center rounded-[26px] p-[2px] md:block md:w-auto md:flex-none md:shrink-0 ${
+            nahled ? KROUZEK : KROUZEK_KLID
+          } ${nahled ? '' : 'cursor-pointer'}`}
         >
+          {/* NA TELEFONU SE RÁM NATÁHNE NA ZBYLÉ MÍSTO (7. 10. 2026), na
+              počítači si šířku pořád bere ze změřené výšky mřížky vedle.
+              Šířka jde do proměnné, ne přímo do `width`: hodnota ve `style`
+              by přebila třídu a na telefonu by rám zůstal úzký.
+              Poměr 9:16 platí pořád — náhled a výsledek kreslí táž čísla. */}
           <span
             ref={ramRef}
-            style={{ width: sirkaRamu }}
-            className="relative block aspect-[9/16] overflow-hidden rounded-[24px] bg-field"
+            style={{ '--ram': `${sirkaRamu}px` } as React.CSSProperties}
+            className="relative block aspect-[9/16] h-full max-h-full w-auto max-w-full overflow-hidden rounded-[24px] bg-field md:h-auto md:w-[var(--ram)]"
           >
             {nahled ? (
               <>
@@ -613,7 +679,7 @@ export function Editor({
         {/* Bez vybraného souboru se pod rámem nic nepíše - prázdný rám řekne
             o formátu víc než věta pod ním (6. 10. 2026). */}
         {nahled && (
-          <span className="max-w-[260px] shrink-0 text-center font-body text-[11px] text-muted">
+          <span className="hidden max-w-[260px] shrink-0 text-center font-body text-[11px] text-muted md:block">
             {t(jeVideo ? 'pribehy.uVideaBezTextu' : 'pribehy.tahniText')}
           </span>
         )}

@@ -355,11 +355,18 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Datum dokladu britsky 13/09/2026, česky 13. 9. 2026 (dávka 7b).
   const dokladDatum = (date: Date | null) => formatDatum(jazyk, date, '');
 
+  /**
+   * ODKAZY NA DOKLADY NESOU `?projekt=` (upřesnění 7. 10. 2026: „když se
+   * dostanu na nabídku přes projekt, tak zůstanu na kartě Doklady v rámci
+   * projektu. Nechci se dostat do sekce Doklady na hlavní liště, abych nikam
+   * neutíkal"). Doklad podle toho pozná, odkud se sem šlo, a „zpět" vrátí
+   * člověka na záložku Doklady u projektu místo do seznamu v sekci Doklady.
+   */
   const offerRows: ProjectDocRow[] = offers.map((o) => {
     const stav = offerStatus(o.status, jazyk);
     return {
       id: o.id,
-      href: `/admin/doklady/nabidky/${o.id}`,
+      href: `/admin/doklady/nabidky/${o.id}?projekt=${encodeURIComponent(caflouProjectId)}`,
       title: o.subject || prelozit(jazyk, 'projekt.bezNazvu'),
       number: o.number,
       date: dokladDatum(o.issueDate),
@@ -374,7 +381,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     const stav = invoiceStatus(i.status, jazyk);
     return {
       id: i.id,
-      href: `/admin/doklady/faktury/${i.id}`,
+      href: `/admin/doklady/faktury/${i.id}?projekt=${encodeURIComponent(caflouProjectId)}`,
       kodStavu: i.status,
       title: i.subject || prelozit(jazyk, 'projekt.bezNazvu'),
       number: i.number,
@@ -388,7 +395,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const expenseRows: ProjectDocRow[] = expenses.map((e) => ({
     id: e.id,
-    href: `/admin/doklady/vydaje/${e.id}`,
+    href: `/admin/doklady/vydaje/${e.id}?projekt=${encodeURIComponent(caflouProjectId)}`,
     title: e.description || prelozit(jazyk, 'projekt.bezNazvu'),
     number: e.number || '',
     date: dokladDatum(e.issueDate),
@@ -400,7 +407,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const contractRows: ProjectDocRow[] = contracts.map((c) => ({
     id: c.id,
-    href: `/admin/doklady/smlouvy/${c.id}`,
+    href: `/admin/doklady/smlouvy/${c.id}?projekt=${encodeURIComponent(caflouProjectId)}`,
     title: c.title,
     number: c.number,
     date: dokladDatum(c.createdAt),

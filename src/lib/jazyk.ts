@@ -2383,6 +2383,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'drobecky.projekt': { cs: 'Projekt', en: 'Project' },
   'drobecky.firma': { cs: 'Firma', en: 'Company' },
   'drobecky.naProjekt': { cs: 'Zpět na projekt', en: 'Back to the project' },
+  'drobecky.dokladyProjektu': { cs: '← Zpět na doklady projektu', en: '← Back to the project\u2019s documents' },
   'drobecky.naFirmu': { cs: 'Otevřít kartu firmy', en: 'Open the company card' },
   'projektMeta.firmaKarta': { cs: 'Otevřít kartu firmy', en: 'Open the company card' },
 
@@ -8172,6 +8173,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'A story stays on Instagram for 24 hours and then disappears.',
   },
   'pribehy.nadpis': { cs: 'Příběhy na Instagram', en: 'Instagram stories' },
+  // CELÁ OBRAZOVKA NA TELEFONU (zadání 7. 10. 2026).
+  'pribehy.novy': { cs: 'Nový příběh', en: 'New story' },
+  'pribehy.dalsiVolby': { cs: 'Další volby', en: 'More options' },
   'pribehy.podnadpis': {
     cs: 'Slož příběh a pusť ho ven. K instagramovému účtu se nedostaneš – vyvěsí to za tebe portál a po 24 hodinách to samo zmizí.',
     en: 'Put a story together and send it out. You never touch the Instagram account – the portal posts it, and it disappears on its own after 24 hours.',

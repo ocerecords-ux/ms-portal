@@ -19,6 +19,13 @@ import { prelozit, type Jazyk } from '@/lib/jazyk';
  *
  * Co doklad neví, to se nevykreslí: výdaj bez projektu ukáže jen „zpět",
  * smlouva bez firmy jen projekt.
+ *
+ * KDO PŘIŠEL Z PROJEKTU, TOMU SE SEZNAM DOKLADŮ NENABÍZÍ (upřesnění týž den:
+ * „když se dostanu na nabídku přes projekt, tak zůstanu na kartě Doklady
+ * v rámci projektu. Nechci se dostat do sekce Doklady na hlavní liště, abych
+ * nikam neutíkal"). „Zpět" pak vede rovnou na záložku Doklady u projektu,
+ * ne do sekce Doklady. Pozná se to podle `?projekt=` v adrese - ten parametr
+ * nesou odkazy z projektu a nikdo jiný.
  */
 export function DrobeckyDokladu({
   zpetHref,
@@ -26,6 +33,7 @@ export function DrobeckyDokladu({
   projekt,
   firma,
   smiNaFirmu = false,
+  zProjektu = false,
   jazyk,
 }: {
   /** Seznam, ze kterého se sem chodí - Nabídky, Faktury, Výdaje, Smlouvy. */
@@ -34,6 +42,11 @@ export function DrobeckyDokladu({
   zpetPopisek: string;
   /** Projekt, ke kterému je doklad navázaný; bez něj se článek vynechá. */
   projekt?: { id: string; nazev: string } | null;
+  /**
+   * Přišel sem člověk z projektu? Pak „zpět" vede na záložku Doklady
+   * u projektu a odkaz na seznam v sekci Doklady se nevykreslí vůbec.
+   */
+  zProjektu?: boolean;
   /** Protistrana dokladu - odběratel u nabídky a faktury, dodavatel u výdaje. */
   firma?: { id: string; nazev: string } | null;
   /** Smí přihlášený člověk na /admin/companies? Zjišťuje se na serveru. */
@@ -43,11 +56,22 @@ export function DrobeckyDokladu({
   const clanek =
     'text-muted text-sm font-heading no-underline hover:text-brand-purple transition-colors';
 
+  /** Adresa projektu; `null`, když doklad k žádnému projektu nepatří. */
+  const naProjekt = projekt?.id ? `/projekty/${encodeURIComponent(projekt.id)}` : null;
+  /** Kdo přišel z projektu, ten se vrací na jeho záložku Doklady. */
+  const zpetDoProjektu = zProjektu && naProjekt ? `${naProjekt}?zalozka=doklady` : null;
+
   return (
     <nav className="flex items-center gap-2 flex-wrap text-sm font-heading text-muted">
-      <Link href={zpetHref} className={clanek}>
-        {zpetPopisek}
-      </Link>
+      {zpetDoProjektu ? (
+        <Link href={zpetDoProjektu} className={clanek}>
+          {prelozit(jazyk, 'drobecky.dokladyProjektu')}
+        </Link>
+      ) : (
+        <Link href={zpetHref} className={clanek}>
+          {zpetPopisek}
+        </Link>
+      )}
 
       {projekt?.id && (
         <>
@@ -55,7 +79,7 @@ export function DrobeckyDokladu({
             ·
           </span>
           <Link
-            href={`/projekty/${encodeURIComponent(projekt.id)}`}
+            href={naProjekt as string}
             title={prelozit(jazyk, 'drobecky.naProjekt')}
             className={clanek}
           >

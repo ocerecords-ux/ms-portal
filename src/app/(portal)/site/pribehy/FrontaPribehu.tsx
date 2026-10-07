@@ -41,6 +41,29 @@ export function FrontaPribehu({
   const [otevrenyKoncept, setOtevrenyKoncept] = useState<string | null>(null);
   const [ted, setTed] = useState(() => new Date());
   const [ukazKoncepty, setUkazKoncepty] = useState(false);
+  /**
+   * CELÁ OBRAZOVKA NA TELEFONU (zadání 7. 10. 2026: „v mobilu to musíme
+   * udělat jinak. Musíme to roztáhnout na celou obrazovku s možností se
+   * vrátit. Jako bych byl na Instagramu").
+   *
+   * Na telefonu se nejdřív kouká (mřížka toho, co je venku) a skládá se
+   * až po klepnutí na plovoucí „+". Na počítači tenhle stav nic neřídí -
+   * editor tam stojí na stránce pořád (viz třídy níže).
+   */
+  const [skladam, setSkladam] = useState(false);
+
+  /**
+   * Dokud je na telefonu skládání přes celou obrazovku, stránka pod ním se
+   * nerolá - jinak by pod prstem ujížděla mřížka místo textu na příběhu.
+   */
+  useEffect(() => {
+    if (!skladam) return;
+    const puvodni = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = puvodni;
+    };
+  }, [skladam]);
 
   // Odpocet do vyprseni - stacilo by i po minute, cas je stejne zaokrouhleny.
   useEffect(() => {
@@ -71,6 +94,23 @@ export function FrontaPribehu({
 
   return (
     <div className="flex flex-col gap-7">
+      {/* PLOVOUCÍ „+" JEN NA TELEFONU (7. 10. 2026). Stejné gesto jako na
+          Instagramu: nejdřív je vidět, co je venku, a příběh se zakládá
+          odsud. Když už je skládání otevřené, tlačítko zmizí. */}
+      {smiPoslat && !skladam && (
+        <button
+          type="button"
+          onClick={() => {
+            setOtevrenyKoncept(null);
+            setSkladam(true);
+          }}
+          aria-label={t('pribehy.novy')}
+          title={t('pribehy.novy')}
+          className="fixed bottom-5 right-5 z-50 grid h-14 w-14 cursor-pointer place-items-center rounded-full bg-brand-purple font-display text-3xl leading-none text-white shadow-lg transition-colors hover:bg-brand-purpleDeep md:hidden"
+        >
+          +
+        </button>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <Znacka velikost={46} />
         <div className="flex min-w-0 flex-col">
@@ -122,6 +162,7 @@ export function FrontaPribehu({
                     onClick={() => {
                       setOtevrenyKoncept(p.id);
                       setUkazKoncepty(false);
+                      setSkladam(true);
                     }}
                   >
                     {t('pribehy.otevrit')}
@@ -146,13 +187,33 @@ export function FrontaPribehu({
        */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 flex-col gap-6">
+          {/**
+           * JEDEN EDITOR, DVĚ PODOBY. Na počítači (`md:`) obal nic neřeší -
+           * editor stojí v levém sloupci jako dřív. Na telefonu je z něj
+           * překryv přes celou obrazovku, který se otevírá plovoucím „+".
+           *
+           * ŘÍDÍ TO TŘÍDA, NE JAVASCRIPT: měřit šířku okna až v prohlížeči by
+           * znamenalo, že se po načtení layout překreslí. Editor se tak
+           * vykreslí jen jednou - rozepsaný text a vybraná fotka přežijí
+           * zavření i otevření.
+           */}
           {smiPoslat && (
-            <Editor
-              key={koncept?.id ?? 'novy'}
-              ucet={ucet}
-              koncept={koncept}
-              onHotovo={() => setOtevrenyKoncept(null)}
-            />
+            <div
+              className={`${
+                skladam ? 'flex' : 'hidden'
+              } fixed inset-0 z-[70] flex-col overflow-y-auto overscroll-contain bg-paper md:static md:z-auto md:flex md:overflow-visible md:bg-transparent`}
+            >
+              <Editor
+                key={koncept?.id ?? 'novy'}
+                ucet={ucet}
+                koncept={koncept}
+                onHotovo={() => {
+                  setOtevrenyKoncept(null);
+                  setSkladam(false);
+                }}
+                onZavri={() => setSkladam(false)}
+              />
+            </div>
           )}
 
           {nevyveseno.length > 0 && (

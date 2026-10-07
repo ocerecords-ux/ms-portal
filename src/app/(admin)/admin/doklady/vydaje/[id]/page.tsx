@@ -15,7 +15,14 @@ import { smiNaKartyFirem } from '@/lib/pristupyServer';
 // Detail prijateho dokladu.
 export const dynamic = 'force-dynamic';
 
-export default async function ExpenseDetailPage({ params }: { params: { id: string } }) {
+export default async function ExpenseDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  /** `?projekt=` nesou odkazy z projektu - viz DrobeckyDokladu. */
+  searchParams?: { projekt?: string };
+}) {
   const jazyk = nactiJazyk();
 
   const [expense, categories, companies] = await Promise.all([
@@ -135,6 +142,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
             : null
         }
         smiNaFirmu={smiNaFirmu}
+        zProjektu={Boolean(searchParams?.projekt)}
         jazyk={jazyk}
       />
 

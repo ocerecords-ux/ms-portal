@@ -11,7 +11,14 @@ import { smiNaKartyFirem } from '@/lib/pristupyServer';
 // Detail smlouvy - text, podpis za Mediaspace a odeslani protistrane.
 export const dynamic = 'force-dynamic';
 
-export default async function ContractDetailPage({ params }: { params: { id: string } }) {
+export default async function ContractDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  /** `?projekt=` nesou odkazy z projektu - viz DrobeckyDokladu. */
+  searchParams?: { projekt?: string };
+}) {
   const jazyk = nactiJazyk();
   const contract = await prisma.contract.findUnique({
     where: { id: params.id },
@@ -46,6 +53,7 @@ export default async function ContractDetailPage({ params }: { params: { id: str
             : null
         }
         smiNaFirmu={smiNaFirmu}
+        zProjektu={Boolean(searchParams?.projekt)}
         jazyk={jazyk}
       />
 

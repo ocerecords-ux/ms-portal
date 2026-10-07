@@ -11,7 +11,14 @@ import { smiNaKartyFirem } from '@/lib/pristupyServer';
 // Detail faktury - stejny "vypada jako doklad" editor jako u nabidek.
 export const dynamic = 'force-dynamic';
 
-export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
+export default async function InvoiceDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  /** `?projekt=` nesou odkazy z projektu - viz DrobeckyDokladu. */
+  searchParams?: { projekt?: string };
+}) {
   const jazyk = nactiJazyk();
 
   const invoice = await prisma.invoice.findUnique({
@@ -48,6 +55,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
         }
         firma={{ id: invoice.companyId, nazev: invoice.company.name }}
         smiNaFirmu={smiNaFirmu}
+        zProjektu={Boolean(searchParams?.projekt)}
         jazyk={jazyk}
       />
 

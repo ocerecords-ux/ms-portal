@@ -13,7 +13,14 @@ import { smiNaKartyFirem } from '@/lib/pristupyServer';
 // "hlavně, ať je vše přehledné a intuitivní").
 export const dynamic = 'force-dynamic';
 
-export default async function OfferDetailPage({ params }: { params: { id: string } }) {
+export default async function OfferDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  /** `?projekt=` nesou odkazy z projektu - viz DrobeckyDokladu. */
+  searchParams?: { projekt?: string };
+}) {
   const jazyk = nactiJazyk();
   const [offer, issuers, companies] = await Promise.all([
     prisma.offer.findUnique({
@@ -62,6 +69,7 @@ export default async function OfferDetailPage({ params }: { params: { id: string
         projekt={offer.caflouProjectId ? { id: offer.caflouProjectId, nazev: offer.projectName ?? '' } : null}
         firma={{ id: offer.companyId, nazev: offer.company.name }}
         smiNaFirmu={smiNaFirmu}
+        zProjektu={Boolean(searchParams?.projekt)}
         jazyk={jazyk}
       />
 
