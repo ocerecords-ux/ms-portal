@@ -4779,6 +4779,18 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.ulozitITak': { cs: 'Uložit i tak', en: 'Save anyway' },
   'kalendar.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
   'kalendar.pridatDoKalendare': { cs: 'Přidat do kalendáře', en: 'Add to the calendar' },
+  'kalendar.pridatPocet': { cs: 'Přidat do kalendáře ({pocet})', en: 'Add to the calendar ({pocet})' },
+  'kalendar.planovaniZapnout': { cs: 'Naplánovat víc dnů najednou', en: 'Plan several days at once' },
+  'kalendar.planovaniVypnout': { cs: 'Zpět na jednu událost', en: 'Back to a single event' },
+  'kalendar.planovaniDny': { cs: 'Dny v týdnu', en: 'Days of the week' },
+  'kalendar.planovaniPopis': {
+    cs: 'Druh, studio, projekt, herec i zvukař platí pro všechny vybrané dny a čas je u všech stejný – jednotlivé dny se pak doladí tažením přímo v kalendáři.',
+    en: 'Kind, studio, project, actor and engineer apply to every selected day and they all share the same time – adjust individual days by dragging them in the calendar.',
+  },
+  'kalendar.planovaniCastSelhala': {
+    cs: 'Nepovedlo se zapsat: {dny}. {duvod}',
+    en: 'These days could not be saved: {dny}. {duvod}',
+  },
   'kalendar.smazatUdalost': { cs: 'Smazat událost', en: 'Delete the event' },
   'kalendar.opravduSmazatUdalost': {
     cs: 'Opravdu smazat tuhle událost z kalendáře?',

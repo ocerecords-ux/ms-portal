@@ -2255,6 +2255,25 @@ function UdalostForm({
    */
   const [kolize, setKolize] = useState(false);
 
+  /**
+   * MÓD PLÁNOVÁNÍ (zadání 8. 10. 2026: „potřebuji nahoře v okně nějakou
+   * ikonku, kde to přepne do módu plánování a tam se dá vybrat víc událostí
+   * najednou na jeden týden, abychom nemuseli vyklikávat třeba pořád zvukaře
+   * nebo studio“).
+   *
+   * VŠECHNO OSTATNÍ SE VYPLŇUJE JEDNOU. Druh, studio, projekt, herec,
+   * zvukař i poznámka platí pro všechny zaškrtnuté dny; čas je u všech
+   * stejný a doladí se pak tažením přímo v kalendáři. Jedno kliknutí na den
+   * = jedna událost navíc, zapíšou se všechny jedním tlačítkem.
+   *
+   * JEN U NOVÉ UDÁLOSTI. Při úpravě existující se ikona nevykresluje -
+   * „uložit změny na pět dnů najednou“ nedává smysl.
+   */
+  const [planovani, setPlanovani] = useState(false);
+  const [dalsiDny, setDalsiDny] = useState<string[]>([]);
+  /** Dny, na které se zápis nepovedl - jen ty se opakují při „Uložit i tak“. */
+  const [nepovedlo, setNepovedlo] = useState<string[]>([]);
+
   const jePrace = jePraceVeStudiu(druh);
   const jeNataceni = druh === 'NATACENI';
   // Herce ma natáčení i casting; casting nemusi mit projekt (20. 9. 2026).
@@ -2325,6 +2344,49 @@ function UdalostForm({
     denCasti && minutyDo !== null
       ? zonedToUtc(Number(denCasti[1]), Number(denCasti[2]), Number(denCasti[3]), minutyDo, pasmoStudia)
       : new Date(start.getTime() + 4 * 60 * 60 * 1000);
+
+  /**
+   * PO–NE TÝDNE, VE KTERÉM LEŽÍ VYBRANÉ DATUM (mód plánování, 8. 10. 2026).
+   * Počítá se v UTC a čte se jen datum - o pásmu tu nejde, dny jsou dny.
+   */
+  const tydenDnu: string[] = (() => {
+    if (!denCasti) return [];
+    const vybrany = Date.UTC(Number(denCasti[1]), Number(denCasti[2]) - 1, Number(denCasti[3]));
+    // getUTCDay(): neděle = 0. U nás týden začíná pondělím.
+    const odPondeli = (new Date(vybrany).getUTCDay() + 6) % 7;
+    const pondeli = vybrany - odPondeli * 86_400_000;
+    return Array.from({ length: 7 }, (_, i) => new Date(pondeli + i * 86_400_000).toISOString().slice(0, 10));
+  })();
+
+  /**
+   * Dny, na které se událost zapíše. Mimo mód plánování je to jeden den.
+   *
+   * Zaškrtnuté dny se před zápisem ořežou na zobrazený týden: kdo si po
+   * zaškrtání přepne datum na jiný týden, nesmí omylem zapsat i dny z toho
+   * předchozího.
+   */
+  const dnyKZapisu = planovani
+    ? Array.from(new Set([datum, ...dalsiDny.filter((d) => tydenDnu.includes(d))])).sort()
+    : [datum];
+
+  /** „Út 13. 10.“ - do tlačítek a do hlášky, který den se nepovedl. */
+  function popisDne(den: string): string {
+    const [y, m, d] = den.split('-').map(Number);
+    return new Intl.DateTimeFormat(kodJazyka(jazyk), {
+      timeZone: 'UTC',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'numeric',
+    }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+  }
+
+  function prepniDen(den: string) {
+    // Hlavní datum se neodklikává - od něj se počítá týden i čas.
+    if (den === datum) return;
+    setDalsiDny((d) => (d.includes(den) ? d.filter((x) => x !== den) : [...d, den]));
+    setNepovedlo([]);
+    setKolize(false);
+  }
 
   /**
    * ZVUKAŘI JEN Z TOHOHLE STUDIA (zadání 20. 9. 2026: „hlavně by nemělo jít
@@ -2432,52 +2494,110 @@ function UdalostForm({
     }
   }
 
+  /**
+   * Tělo jednoho zápisu. V módu plánování se liší jen DEN - druh, studio,
+   * projekt, herec, zvukař i poznámka jsou u všech stejné, o to tu jde.
+   */
+  function telo(den: string, presto: boolean) {
+    const [y, m, d] = den.split('-').map(Number);
+    const zacatek = minutyOd !== null ? zonedToUtc(y, m, d, minutyOd, pasmoStudia) : start;
+    const skonci = minutyDo !== null ? zonedToUtc(y, m, d, minutyDo, pasmoStudia) : konec;
+    return {
+      studioId,
+      start: zacatek.toISOString(),
+      end: skonci.toISOString(),
+      kind: druh,
+      note: poznamka.trim() || undefined,
+      ...(presto ? { presto: true } : {}),
+      ...(jePrace
+        ? {
+            caflouProjectId: sProjektem ? (projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '') : '',
+            // Bez firmy (zadání 14. 9. 2026: „firma je tady zbytečná“).
+            projectName: sProjektem
+              ? (projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '')
+              : '',
+            // U castingu je herec jen jméno - zadny ucet k nemu neni.
+            actorUserId: sHercem && !herecPsany ? (herec?.id ?? '') : '',
+            actorName: sHercem ? herecJmeno : '',
+            zvukarUserId: zvukar?.id ?? '',
+            zvukarName: zvukar?.label ?? '',
+            // Režie online (23. 9. 2026) - ukládá se jen u natáčení.
+            ...(jeNataceni || druh === 'CASTING' ? { rezieOnline: rezie } : {}),
+          }
+        : // U úklidu se název nepíše, doplní se z popisku druhu -
+          // v kalendáři pak stojí „Úklid studia“, ne prázdno.
+          { title: jeBezUdaju(druh) ? nazevDruhu(t, druh) : nazev }),
+    };
+  }
+
   async function uloz(presto = false) {
     setBusy(true);
     setError(null);
-    if (!presto) setKolize(false);
+    if (!presto) {
+      setKolize(false);
+      setNepovedlo([]);
+    }
     try {
-      const res = await fetch(
-        jeFrekvence
-          ? `/api/kalendar/terminy?id=${encodeURIComponent(upravovana!.id)}`
-          : upravovana
-            ? `/api/kalendar/blokace?id=${encodeURIComponent(upravovana.id)}`
-            : '/api/kalendar/blokace',
-        {
-        method: upravovana ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studioId,
-          start: start.toISOString(),
-          end: konec.toISOString(),
-          kind: druh,
-          note: poznamka.trim() || undefined,
-          ...(presto ? { presto: true } : {}),
-          ...(jePrace
-            ? {
-                caflouProjectId: sProjektem ? (projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '') : '',
-                // Bez firmy (zadání 14. 9. 2026: „firma je tady zbytečná").
-                projectName: sProjektem
-                  ? (projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '')
-                  : '',
-                // U castingu je herec jen jméno - zadny ucet k nemu neni.
-                actorUserId: sHercem && !herecPsany ? (herec?.id ?? '') : '',
-                actorName: sHercem ? herecJmeno : '',
-                zvukarUserId: zvukar?.id ?? '',
-                zvukarName: zvukar?.label ?? '',
-                // Režie online (23. 9. 2026) - ukládá se jen u natáčení.
-                ...(jeNataceni || druh === 'CASTING' ? { rezieOnline: rezie } : {}),
-              }
-            : // U úklidu se název nepíše, doplní se z popisku druhu -
-              // v kalendáři pak stojí „Úklid studia", ne prázdno.
-              { title: jeBezUdaju(druh) ? nazevDruhu(t, druh) : nazev }),
-        }),
-      },
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error || t('kalendar.ulozeniSelhalo'));
-        setKolize(Boolean(data?.kolize));
+      // ÚPRAVA EXISTUJÍCÍ - jeden zápis, mód plánování se jí netýká.
+      if (upravovana) {
+        const res = await fetch(
+          jeFrekvence
+            ? `/api/kalendar/terminy?id=${encodeURIComponent(upravovana.id)}`
+            : `/api/kalendar/blokace?id=${encodeURIComponent(upravovana.id)}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telo(datum, presto)),
+          },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data?.error || t('kalendar.ulozeniSelhalo'));
+          setKolize(Boolean(data?.kolize));
+          return;
+        }
+        onHotovo();
+        return;
+      }
+
+      /**
+       * NOVÁ UDÁLOST, TŘEBA I NĚKOLIK (8. 10. 2026). Zapisuje se den po dni
+       * a čeká se na každý - server hlídá kolize proti tomu, co už v kalendáři
+       * je, a při souběžných zápisech by si dva nové dny nemusely všimnout
+       * jeden druhého.
+       *
+       * CO NEPROŠLO, ZŮSTANE V `nepovedlo` a „Uložit i tak“ zkusí už jen
+       * ty dny. Dvakrát zapsaný úterý by byl horší než chybějící středa.
+       */
+      const dny = presto && nepovedlo.length > 0 ? nepovedlo : dnyKZapisu;
+      const selhaly: string[] = [];
+      let duvod: string | null = null;
+      let naslaKolize = false;
+      for (const den of dny) {
+        const res = await fetch('/api/kalendar/blokace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(telo(den, presto)),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          selhaly.push(den);
+          duvod = data?.error || duvod;
+          if (data?.kolize) naslaKolize = true;
+        }
+      }
+
+      if (selhaly.length > 0) {
+        setNepovedlo(selhaly);
+        setKolize(naslaKolize);
+        setError(
+          dny.length > 1
+            ? t('kalendar.planovaniCastSelhala', {
+                dny: selhaly.map(popisDne).join(', '),
+                duvod: duvod || t('kalendar.ulozeniSelhalo'),
+              })
+            : duvod || t('kalendar.ulozeniSelhalo'),
+        );
         return;
       }
       onHotovo();
@@ -2514,9 +2634,34 @@ function UdalostForm({
             </span>
           </p>
         </div>
-        <button type="button" onClick={onClose} aria-label={t('obecne.zavrit')} className="text-muted hover:text-ink text-lg leading-none">
-          ×
-        </button>
+        <div className="flex items-center gap-2">
+          {/* MÓD PLÁNOVÁNÍ (zadání 8. 10. 2026). Jen u nové události - při
+              úpravě existující by „uložit na pět dnů“ nedávalo smysl. */}
+          {!upravovana && !jeFrekvence && (
+            <button
+              type="button"
+              onClick={() => {
+                setPlanovani((p) => !p);
+                setDalsiDny([]);
+                setNepovedlo([]);
+                setKolize(false);
+              }}
+              aria-pressed={planovani}
+              title={planovani ? t('kalendar.planovaniVypnout') : t('kalendar.planovaniZapnout')}
+              aria-label={planovani ? t('kalendar.planovaniVypnout') : t('kalendar.planovaniZapnout')}
+              className={`grid h-8 w-8 shrink-0 place-items-center rounded-pill border transition-colors ${
+                planovani
+                  ? 'border-brand-purple bg-brand-purple text-white'
+                  : 'border-line text-muted hover:border-brand-purple hover:text-ink'
+              }`}
+            >
+              <IkonaTydne />
+            </button>
+          )}
+          <button type="button" onClick={onClose} aria-label={t('obecne.zavrit')} className="text-muted hover:text-ink text-lg leading-none">
+            ×
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -2633,6 +2778,38 @@ function UdalostForm({
           )}
         </div>
       </div>
+
+      {/* DNY TÝDNE V MÓDU PLÁNOVÁNÍ (8. 10. 2026). Týden se bere z vybraného
+          data, takže změna data posune i tenhle řádek. */}
+      {planovani && (
+        <div className="flex flex-col gap-2 rounded-card border border-brand-purple/50 bg-tint p-3">
+          <span className="font-heading text-xs font-semibold uppercase tracking-wide text-brand-purpleDark dark:text-brand-purpleLight">
+            {t('kalendar.planovaniDny')}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {tydenDnu.map((den) => {
+              const hlavni = den === datum;
+              const vybrany = hlavni || dalsiDny.includes(den);
+              return (
+                <button
+                  key={den}
+                  type="button"
+                  onClick={() => prepniDen(den)}
+                  aria-pressed={vybrany}
+                  className={`rounded-pill border px-3 py-1.5 font-heading text-xs tabular-nums capitalize transition-colors ${
+                    vybrany
+                      ? 'border-brand-purple bg-brand-purple text-white'
+                      : 'border-line bg-surface text-muted hover:border-brand-purple hover:text-ink'
+                  } ${hlavni ? 'cursor-default' : ''}`}
+                >
+                  {popisDne(den)}
+                </button>
+              );
+            })}
+          </div>
+          <span className="font-body text-xs text-muted">{t('kalendar.planovaniPopis')}</span>
+        </div>
+      )}
 
       {jePrace ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -2812,7 +2989,13 @@ function UdalostForm({
           disabled={busy || chybi}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {busy ? t('obecne.ukladam') : upravovana ? t('kalendar.ulozitZmeny') : t('kalendar.pridatDoKalendare')}
+          {busy
+            ? t('obecne.ukladam')
+            : upravovana
+              ? t('kalendar.ulozitZmeny')
+              : dnyKZapisu.length > 1
+                ? t('kalendar.pridatPocet', { pocet: String(dnyKZapisu.length) })
+                : t('kalendar.pridatDoKalendare')}
         </button>
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
           {t('obecne.zrusit')}
@@ -2879,6 +3062,31 @@ const IKONA_DRUHU: Record<NonNullable<ReturnType<typeof druhPrace>>, string> = {
  * Ikona druhu práce ve stylu typů projektů (zadání 20. 9. 2026) - kolečko
  * s tlumeným podkladem a barevnou kresbou, jen menší.
  */
+/**
+ * TÝDEN - ikona módu plánování (8. 10. 2026). Kalendářové okno se třemi
+ * vyplněnými sloupci: „víc dnů najednou“ se dá přečíst i bez popisku.
+ */
+function IkonaTydne() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="16" rx="3" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+      <rect x="6.5" y="13" width="3" height="5" rx="1" fill="currentColor" stroke="none" />
+      <rect x="10.5" y="13" width="3" height="5" rx="1" fill="currentColor" stroke="none" />
+      <rect x="14.5" y="13" width="3" height="5" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function IkonaDruhu({ druh, velikost = 16 }: { druh: ReturnType<typeof druhPrace>; velikost?: number }) {
   if (!druh) return null;
   const klic = IKONA_DRUHU[druh];
