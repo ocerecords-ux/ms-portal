@@ -302,17 +302,19 @@ export default async function KalendarPage({
   // PORADY (21. 9. 2026) - jen ty, na které je přihlášený pozvaný.
   const ukazPorady = solo ? soloPorady || soloMoje : puvodniPorady;
   /**
-   * DALŠÍ SCHŮZKY (zadání 23. 9. 2026: „udělej mi rovnou kalendář další
-   * schůzky … vidí ho Žůžo-labůžo a produkce"). Kdo kalendář nevidí, pro toho
-   * neexistuje - nenačítá se a štítek se mu ani nenabídne.
+   * DALŠÍ SCHŮZKY (zadání 23. 9. 2026) - od 8. 10. 2026 JEN SVÉ. Do té doby
+   * viděla produkce a admini všechny schůzky; teď nactiPorady vrací jen ty,
+   * u kterých je člověk účastníkem, takže se štítek může nabídnout komukoliv -
+   * i zvukaři, kterého produkce na schůzku pozvala. Zakládat a měnit je dál
+   * smí jen produkce (`muzeSchuzky` níže).
    */
   const spravceKalendare = canManageCalendar(session.user.role);
-  const ukazSchuzky = spravceKalendare && (solo ? soloSchuzky || soloMoje : puvodniSchuzky);
+  const ukazSchuzky = solo ? soloSchuzky || soloMoje : puvodniSchuzky;
 
   // Oba kalendáře čte jeden dotaz - rozdělí se až tady podle druhu.
   const vsechnyPorady =
     ukazPorady || ukazSchuzky
-      ? await nactiPorady(session.user.id, from, to, session.user.role)
+      ? await nactiPorady(session.user.id, from, to)
       : [];
   const porady = ukazPorady ? vsechnyPorady.filter((p) => p.druh !== 'SCHUZKA') : [];
   const schuzky = ukazSchuzky ? vsechnyPorady.filter((p) => p.druh === 'SCHUZKA') : [];

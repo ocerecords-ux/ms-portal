@@ -99,11 +99,11 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
    * kalendáře"). Nešlo to proto, že odběr pro ně vůbec neexistoval - kalendář
    * Další schůzky přibyl 23. 9. a ICS o něm nevědělo.
    *
-   * Role se sem schválně posílá: schůzky vidí celá produkce, ne jen pozvaní
-   * (stejné pravidlo jako v portálu, viz lib/poradyServer.ts).
+   * Schůzky jsou od 8. 10. 2026 jen pro účastníky - stejně jako porady
+   * (viz lib/poradyServer.ts), takže se role už nikam neposílá.
    */
   if (feed.scope === 'SCHUZKY') {
-    const vse = tym ? await nactiPorady(kdo.id, od, doo, kdo.role) : [];
+    const vse = tym ? await nactiPorady(kdo.id, od, doo) : [];
     const schuzky = vse.filter((p) => p.druh === 'SCHUZKA');
     return odpoved(
       'MS kalendář — Schůzky',
@@ -122,8 +122,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   }
 
   if (feed.scope === 'PORADY') {
-    // Bez role: porada je jen pro pozvané, ani správce kalendáře do cizí
-    // nevidí. Schůzky mají vlastní odběr výš.
+    // Porada je jen pro pozvané. Schůzky mají vlastní odběr výš.
     const porady = (tym ? await nactiPorady(kdo.id, od, doo) : []).filter((p) => p.druh !== 'SCHUZKA');
     return odpoved(
       'MS kalendář — Porady',

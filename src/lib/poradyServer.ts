@@ -1,10 +1,8 @@
 import { prisma } from '@/lib/db';
 import { vyskytyPorady, type DruhPorady, type Opakovani, type PoradaVKalendari } from '@/lib/porady';
-import { canManageCalendar } from '@/lib/roles';
-import type { Role } from '@prisma/client';
 
 /**
- * Porady, na které je přihlášený pozvaný, rozepsané na výskyty v rozsahu
+ * Porady a schůzky, na které je přihlášený pozvaný, rozepsané na výskyty
  * (zadání 21. 9. 2026). Cizí porady se sem nedostanou - hledá se podle
  * účastníka, ne podle role. Ani správce kalendáře nevidí poradu, na kterou
  * není pozvaný („vidíme to pak jen my").
@@ -13,20 +11,20 @@ export async function nactiPorady(
   userId: string,
   od: Date,
   doKdy: Date,
-  role?: Role | string,
 ): Promise<PoradaVKalendari[]> {
   try {
     /**
-     * DALŠÍ SCHŮZKY VIDÍ CELÁ PRODUKCE (zadání 23. 9. 2026: „vidí ho
-     * Žůžo-labůžo a produkce"). U Porad zůstává původní pravidlo - jen
-     * pozvaní, ani správce kalendáře do cizí porady nevidí.
+     * JEN ÚČASTNÍCI - U SCHŮZEK TAKÉ (zadání 8. 10. 2026: „lidi vidí
+     * události v kalendáři, schůzky, když nejsou jejich účastníci. Navíc je
+     * to upozorňuje").
      *
-     * Bez role (ranní přehled od Bruna) platí to přísnější: co se mě týká.
+     * Od 23. 9. do 8. 10. 2026 viděla produkce a admini KAŽDOU schůzku, i tu,
+     * na kterou nebyli pozvaní - a protože odsud čte i ranní přehled a
+     * připomínka 15 minut předem, chodila jim upozornění na cizí schůzky.
+     * Teď platí jedno pravidlo pro porady i schůzky: KDO NENÍ ÚČASTNÍK,
+     * NEVIDÍ NIC. Kdo má cizí schůzku vidět, patří mezi její účastníky.
      */
-    const spravce = role ? canManageCalendar(role as Role) : false;
-    const komu = spravce
-      ? [{ ucastnici: { some: { userId } } }, { druh: 'SCHUZKA' as const }]
-      : [{ ucastnici: { some: { userId } } }];
+    const komu = [{ ucastnici: { some: { userId } } }];
 
     const porady = await prisma.porada.findMany({
       where: {

@@ -293,9 +293,9 @@ export function CalendarBrowser({
   puvodniPorady: boolean;
   /**
    * DALŠÍ SCHŮZKY (zadání 23. 9. 2026) - stejný kalendář jako Porady, jen
-   * tyrkysový a společný: vidí ho Žůžo-labůžo a produkce, ne jen pozvaní.
-   * `muzeSchuzky` = má na něj přihlášený vůbec právo; když ne, štítek se
-   * mu nevykreslí.
+   * tyrkysový. Od 8. 10. 2026 v něm každý vidí JEN SVÉ schůzky, takže štítek
+   * dostane každý. `muzeSchuzky` už říká jen to, jestli je smí ZAKLÁDAT
+   * a MĚNIT - to zůstává produkci.
    */
   schuzky: PoradaVKalendari[];
   ukazSchuzky: boolean;
@@ -1332,48 +1332,46 @@ export function CalendarBrowser({
           </button>
         </span>
         {/* DALŠÍ SCHŮZKY (zadání 23. 9. 2026) - tentýž kalendář jako Porady,
-            jen tyrkysový a společný pro Žůžo-labůžo a produkci. Kdo na něj
-            nemá právo, nevidí ani štítek. */}
-        {muzeSchuzky && (
-          <span
-            className={`shrink-0 whitespace-nowrap inline-flex items-center rounded-pill border text-xs sm:text-sm font-heading font-semibold transition-colors ${
-              ukazSchuzky ? 'text-ink' : 'border-line text-muted'
-            } ${solo === SOLO_SCHUZKY ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
-            style={ukazSchuzky ? { backgroundColor: `${BARVA_SCHUZEK}26`, borderColor: BARVA_SCHUZEK } : undefined}
+            jen tyrkysový. Štítek vidí každý, protože od 8. 10. 2026 jsou v něm
+            jen vlastní schůzky. */}
+        <span
+          className={`shrink-0 whitespace-nowrap inline-flex items-center rounded-pill border text-xs sm:text-sm font-heading font-semibold transition-colors ${
+            ukazSchuzky ? 'text-ink' : 'border-line text-muted'
+          } ${solo === SOLO_SCHUZKY ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
+          style={ukazSchuzky ? { backgroundColor: `${BARVA_SCHUZEK}26`, borderColor: BARVA_SCHUZEK } : undefined}
+        >
+          <button
+            type="button"
+            onClick={prepniSchuzky}
+            aria-pressed={ukazSchuzky}
+            title={
+              ukazSchuzky
+                ? t('kalendar.vypnoutKalendar', { nazev: nazevSchuzek(t) })
+                : t('kalendar.zapnoutKalendar', { nazev: nazevSchuzek(t) })
+            }
+            aria-label={
+              ukazSchuzky
+                ? t('kalendar.vypnoutKalendar', { nazev: nazevSchuzek(t) })
+                : t('kalendar.zapnoutKalendar', { nazev: nazevSchuzek(t) })
+            }
+            className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
           >
-            <button
-              type="button"
-              onClick={prepniSchuzky}
-              aria-pressed={ukazSchuzky}
-              title={
-                ukazSchuzky
-                  ? t('kalendar.vypnoutKalendar', { nazev: nazevSchuzek(t) })
-                  : t('kalendar.zapnoutKalendar', { nazev: nazevSchuzek(t) })
-              }
-              aria-label={
-                ukazSchuzky
-                  ? t('kalendar.vypnoutKalendar', { nazev: nazevSchuzek(t) })
-                  : t('kalendar.zapnoutKalendar', { nazev: nazevSchuzek(t) })
-              }
-              className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
-            >
-              <span
-                className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: ukazSchuzky ? BARVA_SCHUZEK : '#C9C3DC' }}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={() => jenTentoKalendar(SOLO_SCHUZKY)}
-              title={
-                solo === SOLO_SCHUZKY ? t('kalendar.zpetNaVyber') : t('kalendar.docasneJen', { nazev: nazevSchuzek(t) })
-              }
-              className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${ukazSchuzky ? '' : 'hover:text-ink'}`}
-            >
-              {nazevSchuzek(t)}
-            </button>
-          </span>
-        )}
+            <span
+              className="w-3 h-3 rounded-full shrink-0"
+              style={{ backgroundColor: ukazSchuzky ? BARVA_SCHUZEK : '#C9C3DC' }}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => jenTentoKalendar(SOLO_SCHUZKY)}
+            title={
+              solo === SOLO_SCHUZKY ? t('kalendar.zpetNaVyber') : t('kalendar.docasneJen', { nazev: nazevSchuzek(t) })
+            }
+            className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${ukazSchuzky ? '' : 'hover:text-ink'}`}
+          >
+            {nazevSchuzek(t)}
+          </button>
+        </span>
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}

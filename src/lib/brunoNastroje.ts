@@ -187,7 +187,7 @@ async function provozDne(den: string, kdo: KdoSePta): Promise<string> {
         orderBy: { start: 'asc' },
       })
       .catch(() => []),
-    nactiPorady(kdo.userId, od, doKdy, kdo.role).catch(() => []),
+    nactiPorady(kdo.userId, od, doKdy).catch(() => []),
   ]);
 
   // Jména zvukařů jedním dotazem - v kalendáři jsou uložená jen jako id.

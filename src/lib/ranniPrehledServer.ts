@@ -262,9 +262,9 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
         orderBy: { start: 'asc' },
       })
       .catch(() => []),
-    // Role se posílá schválně: kalendář Schůzky vidí Žůžo-labůžo a produkce
-    // celý, ne jen to, na co jsou pozvaní (upřesnění 23. 9. 2026).
-    nactiPorady(userId, od, doKdy, clovek?.role).catch(() => []),
+    // Porady i schůzky jen pro účastníky (8. 10. 2026) - jinak chodily
+    // připomínky na schůzky, se kterými člověk neměl nic společného.
+    nactiPorady(userId, od, doKdy).catch(() => []),
   ]);
 
   /**

@@ -171,10 +171,10 @@ export async function PATCH(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Chybí porada.' }, { status: 400 });
   try {
-    // Poradu smí měnit jen její účastník; Schůzku kdokoliv z produkce -
-    // je to společný kalendář, ne soukromá skupina.
+    // Poradu i schůzku smí měnit jen její účastník (8. 10. 2026). U schůzek
+    // k tomu musí být ještě z produkce - viz kontrola nižeji.
     const puvodni = await prisma.porada.findFirst({
-      where: { id, ...(canManageCalendar(ja.role) ? {} : { ucastnici: { some: { userId: ja.id } } }) },
+      where: { id, ucastnici: { some: { userId: ja.id } } },
       include: { ucastnici: { select: { userId: true } } },
     });
     if (!puvodni) return NextResponse.json({ error: 'Porada nenalezena.' }, { status: 404 });
@@ -250,8 +250,9 @@ export async function DELETE(req: NextRequest) {
   const den = url.searchParams.get('den');
   if (!id) return NextResponse.json({ error: 'Chybí porada.' }, { status: 400 });
   try {
+    // Zrušit smí jen účastník (8. 10. 2026); u schůzky navíc jen produkce.
     const porada = await prisma.porada.findFirst({
-      where: { id, ...(canManageCalendar(ja.role) ? {} : { ucastnici: { some: { userId: ja.id } } }) },
+      where: { id, ucastnici: { some: { userId: ja.id } } },
       include: { ucastnici: { select: { userId: true } } },
     });
     if (!porada) return NextResponse.json({ error: 'Porada nenalezena.' }, { status: 404 });
