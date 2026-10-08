@@ -23,7 +23,14 @@ import {
   type StylTextu,
   type ZarovnaniTextu,
 } from '@/lib/pribehText';
-import { KROUZEK, KROUZEK_KLID, Znacka, typSouboru } from './spolecne';
+import {
+  DELKY_PRIBEHU_S,
+  DELKA_PRIBEHU_S,
+  casMinSek,
+  type SkladbaRadek,
+} from '@/lib/hudba';
+import { nactiSkladbuDoPameti, slozVideoSHudbou, umiSlozitVideo } from '@/lib/pribehVideo';
+import { KROUZEK, KROUZEK_KLID, Znacka, nahrajDoUloziste, typSouboru } from './spolecne';
 
 /**
  * EDITOR PŘÍBĚHU (zadání 6. 10. 2026: „pojďme to udělat tak, že pole textu
@@ -95,6 +102,50 @@ export function Editor({
   /** Kolik místa na náhled zbývá - používá se jen na telefonu, viz níže. */
   const [misto, setMisto] = useState({ sirka: 0, vyska: 0 });
   const [naTelefonu, setNaTelefonu] = useState(false);
+
+  /**
+   * HUDBA DO PŘÍBĚHU (zadání 8. 10. 2026). Knihovna je naše vlastní -
+   * instagramovou nalápku přes API nalepit nejde, takže se skladba VYPÁLÍ
+   * do souboru ještě před nahráním (viz lib/pribehVideo.ts). Z fotky se tím
+   * stane krátké video, což Instagram bere stejně dobře.
+   */
+  const [skladby, setSkladby] = useState<SkladbaRadek[]>([]);
+  const [skladbaId, setSkladbaId] = useState('');
+  const [zacatekHudby, setZacatekHudby] = useState(0);
+  const [delkaPribehu, setDelkaPribehu] = useState(DELKA_PRIBEHU_S);
+  /** U videa: poslat ho bez vlastního zvuku. */
+  const [bezZvuku, setBezZvuku] = useState(false);
+  /** Skládání běží v reálném čase, takže se hlásí, jak daleko je. */
+  const [sklada, setSklada] = useState<number | null>(null);
+  /**
+   * Umí to tenhle prohlížeč? Zjišťuje se až v prohlížeči (MediaRecorder na
+   * serveru neexistuje), jinak by se server a klient nešikovně rozcházely.
+   */
+  const [umiHudbu, setUmiHudbu] = useState(false);
+  const poslechRef = useRef<HTMLAudioElement | null>(null);
+  const [hraje, setHraje] = useState(false);
+
+  useEffect(() => {
+    setUmiHudbu(umiSlozitVideo());
+  }, []);
+
+  /** Knihovna skladeb. Když se nenačte, hudba se prostě nenabídne. */
+  useEffect(() => {
+    let platne = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/site/hudba');
+        if (!res.ok) return;
+        const telo = await res.json();
+        if (platne) setSkladby((telo.skladby ?? []).filter((sk: SkladbaRadek) => sk.aktivni));
+      } catch {
+        // Ticho záměrně - bez knihovny jde příběh ven jako dřív.
+      }
+    })();
+    return () => {
+      platne = false;
+    };
+  }, []);
 
   /** Otevření konceptu: stáhne jeho soubor zpátky do prohlížeče a naváže se na něj. */
   useEffect(() => {
@@ -281,17 +332,79 @@ export function Editor({
     }
   }
 
+  /** Vybraná skladba - kvůli délce, od které se počítá posuvník začátku. */
+  const vybrana = skladby.find((sk) => sk.id === skladbaId) ?? null;
+  /** Dokud skladba není delší než příběh, není čím posouvat. */
+  const nejpozdeji = vybrana ? Math.max(0, vybrana.delka - delkaPribehu) : 0;
+
+  /**
+   * Poslech kousku, který pojede do příběhu. Hraje se z téhož souboru, který
+   * se pak vypálí, takže co si člověk poslechne, to tam opravdu bude.
+   */
+  function zastavPoslech() {
+    poslechRef.current?.pause();
+    setHraje(false);
+  }
+
+  function prepniPoslech() {
+    const zvuk = poslechRef.current;
+    if (!zvuk || !skladbaId) return;
+    if (hraje) {
+      zastavPoslech();
+      return;
+    }
+    zvuk.currentTime = zacatekHudby;
+    void zvuk.play().then(() => setHraje(true)).catch(() => setHraje(false));
+  }
+
+  function vyberSkladbu(id: string) {
+    zastavPoslech();
+    setSkladbaId(id);
+    setZacatekHudby(0);
+  }
+
   /** Nahraje soubor do úložiště a vrátí klíč; vrací null, když není co měnit. */
   async function nahraj(): Promise<{ klic: string; nazev: string } | null> {
     if (!soubor) return null;
     let data: Blob = soubor;
     let typ = typSouboru(soubor);
     let nazev = soubor.name;
-    if (!typ.startsWith('video/')) {
+    const jeVid = typ.startsWith('video/');
+    if (!jeVid) {
       // Fotka se ořízne na 9:16 a text se do ní vypálí - viz lib/pribehText.ts.
       data = await slozPribeh(soubor, popisek, styl);
       typ = 'image/jpeg';
       nazev = `${soubor.name.replace(/\.[^.]+$/, '')}.jpg`;
+    }
+
+    /**
+     * HUDBA SE VYPÁLÍ AŽ TADY (8. 10. 2026), tedy po vypálení textu do fotky -
+     * to, co se nahrává, už je hotový obrázek i s textem.
+     *
+     * Bez skladby a bez ztlumení se nepřekódovává nic: video jde ven přesně
+     * takové, jaké přišlo z telefonu, ať zbytečně neztrácí kvalitu.
+     */
+    if (skladbaId || (jeVid && bezZvuku)) {
+      const hudba = skladbaId ? await nactiSkladbuDoPameti(skladbaId) : null;
+      if (skladbaId && !hudba) throw new Error(t('pribehy.hudbaNesla'));
+      setProcenta(null);
+      setSklada(0);
+      try {
+        data = await slozVideoSHudbou({
+          zdroj: data,
+          jeVideo: jeVid,
+          hudba,
+          zacatekHudbyS: zacatekHudby,
+          delkaS: delkaPribehu,
+          // Vlastní zvuk videa si necháme jen tehdy, když nehraje skladba.
+          puvodniZvuk: jeVid && !bezZvuku && !skladbaId,
+          prubeh: setSklada,
+        });
+      } finally {
+        setSklada(null);
+      }
+      typ = 'video/mp4';
+      nazev = `${soubor.name.replace(/\.[^.]+$/, '')}.mp4`;
     }
     const res = await fetch('/api/site/pribehy/podpis', {
       method: 'POST',
@@ -583,6 +696,139 @@ export function Editor({
           </div>
         )}
 
+        {/* HUDBA DO PŘÍBĚHU (zadání 8. 10. 2026). Skladby jsou naše vlastní;
+            instagramová knihovna přes API dostupná není. */}
+        {soubor && (skladby.length > 0 || jeVideo) && (
+          <div className="flex flex-col gap-2 rounded-card border border-line p-3">
+            <span className="font-heading text-xs font-semibold uppercase tracking-wide text-muted">
+              {t('pribehy.hudba')}
+            </span>
+
+            {!umiHudbu ? (
+              <span className="font-body text-xs text-muted">{t('pribehy.hudbaNeumi')}</span>
+            ) : (
+              <>
+                {skladby.length > 0 && (
+                  <span className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => vyberSkladbu('')}
+                      aria-pressed={!skladbaId}
+                      className={`cursor-pointer rounded-pill border px-2.5 py-1 font-heading text-[11px] transition-colors ${
+                        !skladbaId
+                          ? 'border-brand-purple bg-brand-purple/15 text-ink'
+                          : 'border-line text-muted hover:text-ink'
+                      }`}
+                    >
+                      {t('pribehy.bezHudby')}
+                    </button>
+                    {skladby.map((sk) => (
+                      <button
+                        key={sk.id}
+                        type="button"
+                        onClick={() => vyberSkladbu(sk.id)}
+                        aria-pressed={skladbaId === sk.id}
+                        title={sk.autor || undefined}
+                        className={`cursor-pointer rounded-pill border px-2.5 py-1 font-heading text-[11px] transition-colors ${
+                          skladbaId === sk.id
+                            ? 'border-brand-purple bg-brand-purple/15 text-ink'
+                            : 'border-line text-muted hover:text-ink'
+                        }`}
+                      >
+                        {sk.nazev}
+                        {sk.delka > 0 && <span className="ml-1 tabular-nums opacity-70">{casMinSek(sk.delka)}</span>}
+                      </button>
+                    ))}
+                  </span>
+                )}
+
+                {skladbaId && (
+                  <>
+                    <span className="flex flex-wrap items-center gap-1">
+                      <span className="mr-1 font-body text-xs text-muted">{t('pribehy.hudbaDelka')}</span>
+                      {DELKY_PRIBEHU_S.map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => {
+                            zastavPoslech();
+                            setDelkaPribehu(d);
+                          }}
+                          aria-pressed={delkaPribehu === d}
+                          className={`cursor-pointer rounded-pill border px-2.5 py-1 font-heading text-[11px] tabular-nums transition-colors ${
+                            delkaPribehu === d
+                              ? 'border-brand-purple bg-brand-purple/15 text-ink'
+                              : 'border-line text-muted hover:text-ink'
+                          }`}
+                        >
+                          {t('pribehy.sekund', { s: String(d) })}
+                        </button>
+                      ))}
+                    </span>
+
+                    {nejpozdeji > 0 && (
+                      <label className="flex items-center gap-2">
+                        <span className="shrink-0 font-body text-xs text-muted">{t('pribehy.hudbaOdKdy')}</span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={nejpozdeji}
+                          step={1}
+                          value={Math.min(zacatekHudby, nejpozdeji)}
+                          onChange={(e) => {
+                            zastavPoslech();
+                            setZacatekHudby(Number(e.target.value));
+                          }}
+                          className="w-full accent-brand-purple"
+                        />
+                        <span className="shrink-0 font-heading text-[11px] tabular-nums text-ink">
+                          {casMinSek(zacatekHudby)}
+                        </span>
+                      </label>
+                    )}
+
+                    <span className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={prepniPoslech}
+                        className="cursor-pointer rounded-pill border border-line px-3 py-1 font-heading text-[11px] text-ink transition-colors hover:border-brand-purple"
+                      >
+                        {t(hraje ? 'pribehy.hudbaStop' : 'pribehy.hudbaPoslech')}
+                      </button>
+                      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                      <audio
+                        ref={poslechRef}
+                        src={`/api/site/hudba/${encodeURIComponent(skladbaId)}/soubor`}
+                        onEnded={() => setHraje(false)}
+                        onPause={() => setHraje(false)}
+                        preload="none"
+                        className="hidden"
+                      />
+                    </span>
+                  </>
+                )}
+
+                {jeVideo && (
+                  <label className="flex items-center gap-2 font-body text-xs text-ink">
+                    <input
+                      type="checkbox"
+                      checked={bezZvuku || Boolean(skladbaId)}
+                      disabled={Boolean(skladbaId)}
+                      onChange={(e) => setBezZvuku(e.target.checked)}
+                      className="accent-brand-purple"
+                    />
+                    {t('pribehy.bezPuvodnihoZvuku')}
+                  </label>
+                )}
+
+                {(skladbaId || (jeVideo && bezZvuku)) && (
+                  <span className="font-body text-[11px] text-muted">{t('pribehy.hudbaPozor')}</span>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Na telefonu by věta o formátech ujedla místo náhledu. */}
         <span className="hidden font-body text-xs text-muted md:inline">{t('pribehy.souborPopis')}</span>
 
@@ -652,6 +898,11 @@ export function Editor({
             )}
           </div>
 
+          {sklada !== null && (
+            <span className="font-body text-xs tabular-nums text-muted">
+              {t('pribehy.skladam', { procenta: String(Math.round(sklada * 100)) })}
+            </span>
+          )}
           {procenta !== null && (
             <span className="font-body text-xs tabular-nums text-muted">
               {t('pribehy.nahravam', { procenta: String(procenta) })}
@@ -920,16 +1171,3 @@ function Knoflik({
   );
 }
 
-function nahrajDoUloziste(adresa: string, soubor: Blob, typ: string, pokrok: (p: number) => void) {
-  return new Promise<void>((hotovo, chyba) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', adresa);
-    xhr.setRequestHeader('Content-Type', typ);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) pokrok(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? hotovo() : chyba(new Error('upload')));
-    xhr.onerror = () => chyba(new Error('upload'));
-    xhr.send(soubor);
-  });
-}

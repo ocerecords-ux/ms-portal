@@ -606,6 +606,7 @@ model User {
   socialniObrazky   SocialniObrazek[]   @relation("SocialniObrazekAutor")
   socialniPribehy   SocialniPribeh[]    @relation("PribehAutor")
   pribehyVyrizene   SocialniPribeh[]    @relation("PribehVyridil")
+  hudbaDoPribehu    PribehHudba[]       @relation("HudbaNahral")
 }
 
 model Order {
@@ -4431,6 +4432,43 @@ model SocialniPribeh {
 
   @@index([stav, createdAt])
   @@index([autorId, createdAt])
+}
+
+/// HUDBA DO PŘÍBĚHŮ (zadání 8. 10. 2026: „můžeme nějak u toho příběhu rovnou
+/// vybrat hudbu jak na instagramu a mít možnost vypnout původní zvuk?").
+///
+/// INSTAGRAMOVOU KNIHOVNU PŘES API NEDOSTANEME - kontejner příběhu bere jen
+/// obrázek nebo video a zmínky, žádnou hudební nálepku. Hudba se proto
+/// VYPÁLÍ DO SOUBORU ještě v prohlížeči, než se nahraje - a hraje se jen to,
+/// co si do portálu nahrajeme sami. To je u nahrávacího studia i právně
+/// čistší: licence Instagramu platí jen uvnitř jejich aplikace.
+model PribehHudba {
+  id String @id @default(cuid())
+
+  nazev String
+  /// Kdo to hraje nebo odkud to je - do řádku pod názvem.
+  autor String @default("")
+
+  /// Adresa v ulozisti.
+  url          String @db.Text
+  nazevSouboru String
+  typSouboru   String
+  velikost     Int    @default(0)
+  /// Délka ve vteřinách; spočítá ji prohlížeč při nahrání.
+  delka        Int    @default(0)
+
+  /// Vypnutá skladba se už nenabízí, ale nemaze se - příběhy, ve kterých
+  /// už je vypálená, na ni odkazují.
+  aktivni Boolean @default(true)
+  poradi  Int     @default(0)
+
+  nahralId String?
+  nahral   User?   @relation("HudbaNahral", fields: [nahralId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aktivni, poradi])
 }
 
 model SocialniObrazek {

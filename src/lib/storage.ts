@@ -478,6 +478,35 @@ export async function podepsanyUploadPribehu(
 }
 
 /**
+ * PODEPSANA ADRESA NA NAHRANI SKLADBY DO KNIHOVNY (8. 10. 2026).
+ *
+ * Stejny duvod jako u pribehu: cela pisnicka v MP3 ma jednotky MB a strop
+ * Vercelu je 4,5 MB na pozadavek, takze soubor jde do uloziste rovnou
+ * z prohlizece. Vlastni prefix `hudba/`, aby slo v uloziste poznat, co je
+ * knihovna a co jednotlive pribehy.
+ */
+export async function podepsanyUploadHudby(
+  fileName: string,
+  mime: string,
+): Promise<{ key: string; uploadUrl: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const key = `hudba/${randomUUID()}-${bezpecnyNazev(fileName)}`;
+  const uploadUrl = await getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: mime || 'application/octet-stream',
+    }),
+    { expiresIn: PLATNOST_UPLOADU },
+  );
+  return { key, uploadUrl };
+}
+
+/**
  * Podepsaná adresa na nahrání SMLOUVY OD KLIENTA (21. 9. 2026) - stejně jako
  * přílohy v chatu jde soubor rovnou z prohlížeče do úložiště, protože
  * naskenovaná smlouva snadno přeroste limit Vercelu (4,5 MB).

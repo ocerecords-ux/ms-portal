@@ -7,6 +7,7 @@ import { formatDatum, type Jazyk } from '@/lib/jazyk';
 import type { PribehRadek } from '@/lib/pribehyServer';
 import { zbyvaMinut } from '@/lib/pribehy';
 import { Editor } from './Editor';
+import { Hudba } from './Hudba';
 import { KROUZEK, KROUZEK_KLID, Znacka } from './spolecne';
 
 /**
@@ -28,6 +29,7 @@ export function FrontaPribehu({
   smiPoslat,
   ucet,
   jaId,
+  smiSpravovatHudbu = false,
   rovnouSkladam = false,
 }: {
   pribehy: PribehRadek[];
@@ -35,6 +37,8 @@ export function FrontaPribehu({
   /** Jméno účtu, na který to půjde - do náhledu, ať je vidět čí to bude. */
   ucet: string | null;
   jaId: string;
+  /** Smí měnit knihovnu hudby? Pak se pod editorem ukáže její správa. */
+  smiSpravovatHudbu?: boolean;
   /**
    * Přišlo se přes ikonu Instagramu na telefonu, takže se má rovnou
    * otevřít prázdný rámeček (8. 10. 2026) - jinak by se „+“ máčklo dvakrát.
@@ -224,6 +228,15 @@ export function FrontaPribehu({
                 }}
                 onZavri={() => setSkladam(false)}
               />
+              {/* SPRÁVA HUDBY (8. 10. 2026) - už tady, ne v Administraci:
+                  skladba se přidává právě ve chvíli, kdy chybí u rozdělaného
+                  příběhu, a odcházet kvůli tomu ze stránky by znamenalo přijít
+                  o rozepsaný text. */}
+              {smiSpravovatHudbu && (
+                <div className="shrink-0 px-4 pb-4 md:px-0 md:pb-0">
+                  <Hudba />
+                </div>
+              )}
             </div>
           )}
 

@@ -39,3 +39,30 @@ export function Znacka({ velikost = 36 }: { velikost?: number }) {
     </span>
   );
 }
+
+/**
+ * NAHRÁNÍ ROVNOU DO ÚLOŽIŠTĚ. Soubor nejde přes portál - funkce na Vercelu
+ * mají strop požadavku kolem 4,5 MB a video i celá písnička ho přelezou.
+ * XMLHttpRequest, a ne fetch, kvůli `upload.onprogress`: bez něj by se
+ * u většího souboru nic nedělo a člověk by nevěděl, jestli to běží.
+ *
+ * Sdílí ji editor příběhu i správa hudby - jedna podoba stačí.
+ */
+export function nahrajDoUloziste(
+  adresa: string,
+  soubor: Blob,
+  typ: string,
+  pokrok: (p: number) => void,
+) {
+  return new Promise<void>((hotovo, chyba) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', adresa);
+    xhr.setRequestHeader('Content-Type', typ);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) pokrok(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? hotovo() : chyba(new Error('upload')));
+    xhr.onerror = () => chyba(new Error('upload'));
+    xhr.send(soubor);
+  });
+}

@@ -33,7 +33,9 @@ export default async function PribehyPage({
 
   const kdo = { id: session.user.id, role: session.user.role };
   const smiPoslat = await smiPoslatPribeh(kdo);
-  if (!smiPoslat && !(await smiSchvalovatPribehy(kdo))) redirect('/projekty');
+  // Knihovnu hudby spravuje produkce - stejné právo jako vyřizování fronty.
+  const smiSpravovatHudbu = await smiSchvalovatPribehy(kdo);
+  if (!smiPoslat && !smiSpravovatHudbu) redirect('/projekty');
 
   // Jmeno uctu do nahledu - at je videt, kam to pujde.
   const ucet = (await stavInstagramu())?.username ?? null;
@@ -44,6 +46,7 @@ export default async function PribehyPage({
       smiPoslat={smiPoslat}
       ucet={ucet}
       jaId={session.user.id}
+      smiSpravovatHudbu={smiSpravovatHudbu}
       rovnouSkladam={searchParams?.nova === '1'}
     />
   );
