@@ -2474,6 +2474,39 @@ function UdalostForm({
     el.scrollTo({ left: sirkaTydne() * (1 + smer), behavior: 'smooth' });
   }
 
+  /**
+   * TOUCHPAD (zadání 8. 10. 2026: „mělo by jít rolovat i posunem na
+   * touchpadu").
+   *
+   * Vodorovné rolování si prohlížeč řeší sám, jenže tenhle pás je jen úzký
+   * řádek: dva prsty se nad ním skoro vždycky vyhodnotí jako SVISLÝ posun,
+   * ten mu nepatří a místo týdnů se pohne stránka. Bere se proto ta osa,
+   * která právě převažuje - a jede to stejnou animací jako šipky.
+   *
+   * JEDNO ŠŤOUCHNUTÍ = JEDEN TÝDEN. Touchpad posílá po gestu ještě desítky
+   * doběhových událostí, takže by jinak proletěl půl roku; proto ta
+   * prodleva a práh.
+   */
+  useEffect(() => {
+    const el = pasDnu.current;
+    if (!el || !planovani) return;
+    let naposled = 0;
+    const kolecko = (e: WheelEvent) => {
+      const posun = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (Math.abs(posun) < 2) return;
+      // Pás si gesto bere celé, ať pod ním neujíždí formulář.
+      e.preventDefault();
+      const ted = performance.now();
+      if (ted - naposled < 420 || Math.abs(posun) < 6) return;
+      naposled = ted;
+      posunTyden(posun > 0 ? 1 : -1);
+    };
+    // `passive: false` - jinak by preventDefault neplatil.
+    el.addEventListener('wheel', kolecko, { passive: false });
+    return () => el.removeEventListener('wheel', kolecko);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planovani]);
+
 
   /**
    * ZVUKAŘI JEN Z TOHOHLE STUDIA (zadání 20. 9. 2026: „hlavně by nemělo jít
