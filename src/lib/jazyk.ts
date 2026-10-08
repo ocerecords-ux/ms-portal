@@ -4783,6 +4783,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.planovaniZapnout': { cs: 'Naplánovat víc dnů najednou', en: 'Plan several days at once' },
   'kalendar.planovaniVypnout': { cs: 'Zpět na jednu událost', en: 'Back to a single event' },
   'kalendar.planovaniDny': { cs: 'Dny v týdnu', en: 'Days of the week' },
+  'kalendar.planovaniPredchoziTyden': { cs: 'Předchozí týden', en: 'Previous week' },
+  'kalendar.planovaniDalsiTyden': { cs: 'Další týden', en: 'Next week' },
+  'kalendar.planovaniVybrano': { cs: 'Vybráno: {dny}', en: 'Selected: {dny}' },
   'kalendar.planovaniPopis': {
     cs: 'Druh, studio, projekt, herec i zvukař platí pro všechny vybrané dny a čas je u všech stejný – jednotlivé dny se pak doladí tažením přímo v kalendáři.',
     en: 'Kind, studio, project, actor and engineer apply to every selected day and they all share the same time – adjust individual days by dragging them in the calendar.',

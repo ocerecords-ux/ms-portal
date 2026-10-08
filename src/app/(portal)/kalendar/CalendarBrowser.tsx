@@ -2346,30 +2346,52 @@ function UdalostForm({
       : new Date(start.getTime() + 4 * 60 * 60 * 1000);
 
   /**
-   * PO–NE TÝDNE, VE KTERÉM LEŽÍ VYBRANÉ DATUM (mód plánování, 8. 10. 2026).
-   * Počítá se v UTC a čte se jen datum - o pásmu tu nejde, dny jsou dny.
+   * TÝDNY SE ROLUJÍ STEJNĚ JAKO KALENDÁŘ (zadání 8. 10. 2026: „v tom
+   * plánování více událostí by mělo jít vybírat rolovat i týdny, tak jako
+   * v normálním kalendáři - stejná funkce, animace posouvání pásu").
+   *
+   * Tentýž nápad jako velký pás výš: vedle sebe leží tři týdny a roluje je
+   * přímo prohlížeč, takže prst i touchpad táhnou pruh sami a plynule.
+   * Rozdíl je, že se tu není na co ptát serveru - jakmile pás dojede
+   * k sousedovi, posune se jen číslo týdne a pás se bez animace vrátí
+   * doprostřed; na obrazovce se nic nehne.
    */
-  const tydenDnu: string[] = (() => {
-    if (!denCasti) return [];
+  const [tydenPosun, setTydenPosun] = useState(0);
+  const pasDnu = useRef<HTMLDivElement | null>(null);
+  const prepisujemeTyden = useRef(false);
+
+  /** Pondělí týdne, ve kterém leží vybrané datum. */
+  const pondeliZakladu: number | null = (() => {
+    if (!denCasti) return null;
     const vybrany = Date.UTC(Number(denCasti[1]), Number(denCasti[2]) - 1, Number(denCasti[3]));
     // getUTCDay(): neděle = 0. U nás týden začíná pondělím.
     const odPondeli = (new Date(vybrany).getUTCDay() + 6) % 7;
-    const pondeli = vybrany - odPondeli * 86_400_000;
-    return Array.from({ length: 7 }, (_, i) => new Date(pondeli + i * 86_400_000).toISOString().slice(0, 10));
+    return vybrany - odPondeli * 86_400_000;
   })();
+
+  /** Po–Ne týdne vzdáleného `posun` týdnů od toho s vybraným datem. */
+  function tydenDnu(posun: number): string[] {
+    if (pondeliZakladu === null) return [];
+    const pondeli = pondeliZakladu + posun * 7 * 86_400_000;
+    return Array.from({ length: 7 }, (_, i) => new Date(pondeli + i * 86_400_000).toISOString().slice(0, 10));
+  }
+
+  /** Tři týdny na pásu: předchozí, zobrazený, následující. */
+  const pasTydnu = [tydenPosun - 1, tydenPosun, tydenPosun + 1].map((posun) => ({
+    posun,
+    dny: tydenDnu(posun),
+  }));
 
   /**
    * Dny, na které se událost zapíše. Mimo mód plánování je to jeden den.
    *
-   * Zaškrtnuté dny se před zápisem ořežou na zobrazený týden: kdo si po
-   * zaškrtání přepne datum na jiný týden, nesmí omylem zapsat i dny z toho
-   * předchozího.
+   * Zaškrtnuté dny se už NEOŘEZÁVAJÍ na zobrazený týden (8. 10. 2026) -
+   * když jdou týdny rolovat, je přechod přes neděli záměr, ne omyl. Aby
+   * nebylo vybrané nic neviditelného, vypisují se pod pásem.
    */
-  const dnyKZapisu = planovani
-    ? Array.from(new Set([datum, ...dalsiDny.filter((d) => tydenDnu.includes(d))])).sort()
-    : [datum];
+  const dnyKZapisu = planovani ? Array.from(new Set([datum, ...dalsiDny])).sort() : [datum];
 
-  /** „Út 13. 10.“ - do tlačítek a do hlášky, který den se nepovedl. */
+  /** „Út 13. 10." - do tlačítek a do hlášky, který den se nepovedl. */
   function popisDne(den: string): string {
     const [y, m, d] = den.split('-').map(Number);
     return new Intl.DateTimeFormat(kodJazyka(jazyk), {
@@ -2380,13 +2402,78 @@ function UdalostForm({
     }).format(new Date(Date.UTC(y, m - 1, d, 12)));
   }
 
+  /** „5. 10. – 11. 10." nad pásem, ať je poznat, kde se člověk nachází. */
+  function popisTydne(dny: string[]): string {
+    if (dny.length === 0) return '';
+    const kratce = (den: string) => {
+      const [y, m, d] = den.split('-').map(Number);
+      return new Intl.DateTimeFormat(kodJazyka(jazyk), {
+        timeZone: 'UTC',
+        day: 'numeric',
+        month: 'numeric',
+      }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+    };
+    return `${kratce(dny[0])} – ${kratce(dny[6])}`;
+  }
+
   function prepniDen(den: string) {
-    // Hlavní datum se neodklikává - od něj se počítá týden i čas.
+    // Hlavní datum se neodklikává - od něj se počítá čas i základní týden.
     if (den === datum) return;
     setDalsiDny((d) => (d.includes(den) ? d.filter((x) => x !== den) : [...d, den]));
     setNepovedlo([]);
     setKolize(false);
   }
+
+  // --- rolování pásu týdnů --------------------------------------------
+  const sirkaTydne = () => pasDnu.current?.clientWidth ?? 0;
+
+  /** Po výměně obsahu pás okamžitě (bez animace) na prostřední týden. */
+  useLayoutEffect(() => {
+    const el = pasDnu.current;
+    if (!el) return;
+    const puvodni = el.style.scrollBehavior;
+    el.style.scrollBehavior = 'auto';
+    el.scrollLeft = sirkaTydne();
+    el.style.scrollBehavior = puvodni;
+    prepisujemeTyden.current = false;
+  }, [tydenPosun, planovani]);
+
+  /** Pás se zastavil - jsme u souseda? Pak přepnout týden. */
+  useEffect(() => {
+    const el = pasDnu.current;
+    if (!el) return;
+    let casovac: number | undefined;
+    const maScrollEnd = 'onscrollend' in window;
+    const dojelo = () => {
+      if (!pasDnu.current || prepisujemeTyden.current) return;
+      const sirka = sirkaTydne();
+      if (sirka <= 0) return;
+      const pole = Math.round(pasDnu.current.scrollLeft / sirka);
+      if (pole === 1) return;
+      prepisujemeTyden.current = true;
+      setTydenPosun((p) => p + (pole < 1 ? -1 : 1));
+    };
+    const prirolovani = () => {
+      if (maScrollEnd) return;
+      window.clearTimeout(casovac);
+      casovac = window.setTimeout(dojelo, 120);
+    };
+    el.addEventListener('scroll', prirolovani, { passive: true });
+    if (maScrollEnd) el.addEventListener('scrollend', dojelo);
+    return () => {
+      window.clearTimeout(casovac);
+      el.removeEventListener('scroll', prirolovani);
+      if (maScrollEnd) el.removeEventListener('scrollend', dojelo);
+    };
+  }, [planovani]);
+
+  /** Šipky dělají totéž co tah prstem - ať to na počítači jde myší. */
+  function posunTyden(smer: -1 | 1) {
+    const el = pasDnu.current;
+    if (!el) return;
+    el.scrollTo({ left: sirkaTydne() * (1 + smer), behavior: 'smooth' });
+  }
+
 
   /**
    * ZVUKAŘI JEN Z TOHOHLE STUDIA (zadání 20. 9. 2026: „hlavně by nemělo jít
@@ -2643,6 +2730,7 @@ function UdalostForm({
               onClick={() => {
                 setPlanovani((p) => !p);
                 setDalsiDny([]);
+                setTydenPosun(0);
                 setNepovedlo([]);
                 setKolize(false);
               }}
@@ -2779,34 +2867,78 @@ function UdalostForm({
         </div>
       </div>
 
-      {/* DNY TÝDNE V MÓDU PLÁNOVÁNÍ (8. 10. 2026). Týden se bere z vybraného
-          data, takže změna data posune i tenhle řádek. */}
+      {/* DNY TÝDNE V MÓDU PLÁNOVÁNÍ (8. 10. 2026). Tři týdny vedle sebe na
+          pásu, který roluje prohlížeč - stejně jako samotný kalendář. */}
       {planovani && (
         <div className="flex flex-col gap-2 rounded-card border border-brand-purple/50 bg-tint p-3">
-          <span className="font-heading text-xs font-semibold uppercase tracking-wide text-brand-purpleDark dark:text-brand-purpleLight">
-            {t('kalendar.planovaniDny')}
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {tydenDnu.map((den) => {
-              const hlavni = den === datum;
-              const vybrany = hlavni || dalsiDny.includes(den);
-              return (
-                <button
-                  key={den}
-                  type="button"
-                  onClick={() => prepniDen(den)}
-                  aria-pressed={vybrany}
-                  className={`rounded-pill border px-3 py-1.5 font-heading text-xs tabular-nums capitalize transition-colors ${
-                    vybrany
-                      ? 'border-brand-purple bg-brand-purple text-white'
-                      : 'border-line bg-surface text-muted hover:border-brand-purple hover:text-ink'
-                  } ${hlavni ? 'cursor-default' : ''}`}
-                >
-                  {popisDne(den)}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <span className="font-heading text-xs font-semibold uppercase tracking-wide text-brand-purpleDark dark:text-brand-purpleLight">
+              {t('kalendar.planovaniDny')}
+            </span>
+            <span className="font-body text-xs tabular-nums text-muted">{popisTydne(pasTydnu[1].dny)}</span>
+            <span className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => posunTyden(-1)}
+                aria-label={t('kalendar.planovaniPredchoziTyden')}
+                title={t('kalendar.planovaniPredchoziTyden')}
+                className="grid h-7 w-7 place-items-center rounded-pill border border-line bg-surface font-heading text-sm text-muted transition-colors hover:border-brand-purple hover:text-ink"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={() => posunTyden(1)}
+                aria-label={t('kalendar.planovaniDalsiTyden')}
+                title={t('kalendar.planovaniDalsiTyden')}
+                className="grid h-7 w-7 place-items-center rounded-pill border border-line bg-surface font-heading text-sm text-muted transition-colors hover:border-brand-purple hover:text-ink"
+              >
+                ›
+              </button>
+            </span>
           </div>
+
+          <div
+            ref={pasDnu}
+            className="overflow-x-auto snap-x snap-mandatory [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <div className="flex items-start">
+              {pasTydnu.map((tyden) => (
+                <div key={tyden.dny[0] ?? tyden.posun} className="w-full shrink-0 snap-start">
+                  <div className="flex flex-wrap gap-1.5">
+                    {tyden.dny.map((den) => {
+                      const hlavni = den === datum;
+                      const vybrany = hlavni || dalsiDny.includes(den);
+                      return (
+                        <button
+                          key={den}
+                          type="button"
+                          onClick={() => prepniDen(den)}
+                          aria-pressed={vybrany}
+                          className={`rounded-pill border px-3 py-1.5 font-heading text-xs tabular-nums capitalize transition-colors ${
+                            vybrany
+                              ? 'border-brand-purple bg-brand-purple text-white'
+                              : 'border-line bg-surface text-muted hover:border-brand-purple hover:text-ink'
+                          } ${hlavni ? 'cursor-default' : ''}`}
+                        >
+                          {popisDne(den)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Co je vybrané jinde než v právě viděném týdnu, by jinak zmizelo
+              z očí - proto se to vypisuje (8. 10. 2026). */}
+          {dnyKZapisu.length > 1 && (
+            <span className="font-body text-xs text-ink">
+              {t('kalendar.planovaniVybrano', { dny: dnyKZapisu.map(popisDne).join(', ') })}
+            </span>
+          )}
+
           <span className="font-body text-xs text-muted">{t('kalendar.planovaniPopis')}</span>
         </div>
       )}
