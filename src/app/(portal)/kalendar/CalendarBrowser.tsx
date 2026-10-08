@@ -2467,11 +2467,29 @@ function UdalostForm({
     };
   }, [planovani]);
 
-  /** Šipky dělají totéž co tah prstem - ať to na počítači jde myší. */
+  /**
+   * Šipky dělají totéž co tah prstem - ať to na počítači jde myší.
+   *
+   * POJISTKA, KDYŽ PLYNULÉ ROLOVÁNÍ NEPROBĚHNE. `behavior: 'smooth'` umí
+   * prohlížeč potichu zahodit - na skryté kartě, při zapnutém „omezit pohyb“
+   * v systému nebo když už jiná animace běží. Pás pak zůstane stát a týden
+   * by se nepřepnul vůbec, což je horší než přepnutí bez animace. Po půl
+   * vteřině se proto zkontroluje, jestli se pás hnul, a když ne, přepne se
+   * týden natvrdo.
+   */
   function posunTyden(smer: -1 | 1) {
     const el = pasDnu.current;
     if (!el) return;
-    el.scrollTo({ left: sirkaTydne() * (1 + smer), behavior: 'smooth' });
+    const cil = sirkaTydne() * (1 + smer);
+    el.scrollTo({ left: cil, behavior: 'smooth' });
+    window.setTimeout(() => {
+      const porad = pasDnu.current;
+      if (!porad || prepisujemeTyden.current) return;
+      if (Math.abs(porad.scrollLeft - cil) > 4) {
+        prepisujemeTyden.current = true;
+        setTydenPosun((p) => p + smer);
+      }
+    }, 500);
   }
 
   /**
