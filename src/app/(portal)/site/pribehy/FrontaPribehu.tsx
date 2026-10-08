@@ -28,12 +28,18 @@ export function FrontaPribehu({
   smiPoslat,
   ucet,
   jaId,
+  rovnouSkladam = false,
 }: {
   pribehy: PribehRadek[];
   smiPoslat: boolean;
   /** Jméno účtu, na který to půjde - do náhledu, ať je vidět čí to bude. */
   ucet: string | null;
   jaId: string;
+  /**
+   * Přišlo se přes ikonu Instagramu na telefonu, takže se má rovnou
+   * otevřít prázdný rámeček (8. 10. 2026) - jinak by se „+“ máčklo dvakrát.
+   */
+  rovnouSkladam?: boolean;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -50,7 +56,7 @@ export function FrontaPribehu({
    * až po klepnutí na plovoucí „+". Na počítači tenhle stav nic neřídí -
    * editor tam stojí na stránce pořád (viz třídy níže).
    */
-  const [skladam, setSkladam] = useState(false);
+  const [skladam, setSkladam] = useState(rovnouSkladam && smiPoslat);
 
   /**
    * Dokud je na telefonu skládání přes celou obrazovku, stránka pod ním se
@@ -74,6 +80,11 @@ export function FrontaPribehu({
   const koncepty = pribehy.filter((p) => p.stav === 'KONCEPT' && p.autorId === jaId);
   const nevyveseno = pribehy.filter((p) => p.stav === 'CEKA' || p.stav === 'ZAMITNUTO');
   const vyvesene = pribehy.filter((p) => p.stav === 'VYVESENO');
+  /**
+   * JEN CO JE OPRAVDU VENKU (zadání 8. 10. 2026: „A když už je fotka pryč,
+   * tak už to musí zmizet“). Přepočítává se při každém tiknutí `ted`, takže
+   * příběh z mřížky zmizí sám, i když stránka zůstane otevřená.
+   */
   const naInstagramu = vyvesene.filter((p) => p.vyrizenoAt && zbyvaMinut(p.vyrizenoAt, ted) !== null);
 
   const koncept = koncepty.find((p) => p.id === otevrenyKoncept) ?? null;
@@ -250,7 +261,7 @@ export function FrontaPribehu({
             </span>
           </h2>
           <div data-mrizka className="grid w-full grid-cols-3 gap-2 lg:w-[330px]">
-            {Array.from({ length: 9 }, (_, i) => vyvesene[i] ?? null).map((p, i) =>
+            {Array.from({ length: 9 }, (_, i) => naInstagramu[i] ?? null).map((p, i) =>
               p ? (
                 <Okno key={p.id} p={p} jazyk={jazyk} ted={ted} />
               ) : (
@@ -262,7 +273,7 @@ export function FrontaPribehu({
               ),
             )}
           </div>
-          {vyvesene.length === 0 && (
+          {naInstagramu.length === 0 && (
             <p className="m-0 font-body text-xs text-muted">{t('pribehy.nicVenku')}</p>
           )}
         </div>

@@ -17,7 +17,17 @@ import { FrontaPribehu } from './FrontaPribehu';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function PribehyPage() {
+export default async function PribehyPage({
+  searchParams,
+}: {
+  /**
+   * `?nova=1` - přišel jsem přes ikonu Instagramu na telefonu (zadání
+   * 8. 10. 2026: „A když se prokliknů na tu stránku přes ikonu insta, tak
+   * bych tam měl vidět rovnou prázdný rámeček s plus. Takhle musím dávat
+   * plus 2x“). Na počítači to nic nedělá - editor tam stojí pořád.
+   */
+  searchParams?: { nova?: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/login');
 
@@ -34,6 +44,7 @@ export default async function PribehyPage() {
       smiPoslat={smiPoslat}
       ucet={ucet}
       jaId={session.user.id}
+      rovnouSkladam={searchParams?.nova === '1'}
     />
   );
 }

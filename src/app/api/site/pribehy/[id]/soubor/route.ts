@@ -29,11 +29,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const pribeh = await nactiPribeh(params.id);
   if (!pribeh) return NextResponse.json({ error: 'Příběh nenalezen.' }, { status: 404 });
 
-  const smi =
-    pribeh.autorId === session.user.id
-      ? await smiPoslatPribeh(kdo)
-      : await smiSchvalovatPribehy(kdo);
-  if (!smi) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  /**
+   * VIDI TO CELY TYM (zadání 8. 10. 2026: „Ty fotky musí vidět všichni
+   * v týmu“).
+   *
+   * Do 8. 10. 2026 sem směl jen autor a schvalovatel - jenže seznam
+   * (nactiPribehy) ukáže hotový příběh každému, kdo na stránku Sítě dojde.
+   * Zvukař tak viděl kartu kolegova příběhu, ale místo fotky rozbitý
+   * obrázek. Právo na soubor se proto drží PRÁVA NA SEZNAM - jedna podmínka
+   * na obou místech, aby se zas nerozježly.
+   *
+   * KONCEPT ZŮSTÁVÁ SOUKROMÝ. Rozdělaný příběh vidí jen jeho autor -
+   * přesně jako v seznamu.
+   */
+  const smiNaPribehy = (await smiPoslatPribeh(kdo)) || (await smiSchvalovatPribehy(kdo));
+  if (!smiNaPribehy) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (pribeh.stav === 'KONCEPT' && pribeh.autorId !== session.user.id) {
+    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  }
 
   if (pribeh.url.startsWith('data:')) {
     const carka = pribeh.url.indexOf(',');

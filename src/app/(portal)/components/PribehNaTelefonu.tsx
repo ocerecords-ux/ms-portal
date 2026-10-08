@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { usePreklad } from './JazykProvider';
 
@@ -21,7 +22,14 @@ import { usePreklad } from './JazykProvider';
  *
  * JEN NA TELEFONU (`md:hidden`) - schválně stejná hranice, za kterou se
  * schovávají doky, aby ikona nebyla na počítači dvakrát.
+ *
+ * A JEN NA ÚVODNÍ STRÁNCE (zadání 8. 10. 2026: „ta ikona na insta by neměla
+ * být vidět nikde jinde než na úvodní stránce“). Na každé stránce překrývala
+ * obsah - na Příbězích dokonce vlastní nadpis. Úvodní stránka portálu je
+ * seznam projektů, tedy `/projekty` (viz přesměrování v src/app/page.tsx);
+ * detail projektu už úvodní stránka není.
  */
+const UVODNI_STRANKA = '/projekty';
 
 /**
  * Když se lišta nenajde, tlačítko si sedne sem. Číslo odpovídá liště
@@ -51,6 +59,7 @@ function IkonaPribehu() {
 
 export function PribehNaTelefonu({ pocet, vicNez }: { pocet: number; vicNez: boolean }) {
   const t = usePreklad();
+  const kdeJsem = usePathname();
   const [shora, setShora] = useState(ZALOHA_SHORA);
 
   /** Posadí se pod lištu a hlídá, když lišta změní výšku. */
@@ -67,11 +76,14 @@ export function PribehNaTelefonu({ pocet, vicNez }: { pocet: number; vicNez: boo
     };
   }, []);
 
+  // Hooky musí běžet vždycky, takže se stránka kontroluje až tady.
+  if (kdeJsem !== UVODNI_STRANKA) return null;
+
   const popisPoctu = vicNez ? `${pocet}+` : String(pocet);
 
   return (
     <Link
-      href="/site/pribehy"
+      href="/site/pribehy?nova=1"
       style={{ top: shora }}
       title={t('dokSiti.pribehy')}
       aria-label={t('dokSiti.pribehy')}
