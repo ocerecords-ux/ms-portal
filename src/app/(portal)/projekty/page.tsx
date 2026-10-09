@@ -614,7 +614,8 @@ async function InternalProjektySection({
         where: { caflouProjectId: { in: projects.map((p) => String(p.id)) } },
         include: {
           manager: { select: { name: true, email: true, maFotku: true } },
-          actor: { select: { name: true, email: true } },
+          // `id` kvůli rozlišení soujmenovců (9. 10. 2026).
+          actor: { select: { id: true, name: true, email: true } },
           // Herci projektu (zadani 10. 9. 2026) - v prehledu se ukazuji vsichni.
           herci: { select: { id: true, name: true, email: true } },
           // Druhy licence - ikonky pod ikonou typu (zadani 18. 9. 2026).
