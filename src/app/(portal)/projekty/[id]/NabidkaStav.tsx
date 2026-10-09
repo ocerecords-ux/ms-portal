@@ -8,6 +8,7 @@ import {
   stavNabidky,
   type StavNabidky,
 } from '@/lib/nabidkaReklamy';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * ZNAČKA NABÍDKY V DETAILU PROJEKTU (zadání 23. 9. 2026). Klik na značku
@@ -33,6 +34,8 @@ export function NabidkaStav({
    */
   zDokladu?: StavNabidky | null;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [ulozeny, setUlozeny] = useState<StavNabidky>(stavNabidky(stav));
   const [otevreno, setOtevreno] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -51,18 +54,18 @@ export function NabidkaStav({
       if (!res.ok) throw new Error('nope');
     } catch {
       setUlozeny(predtim);
-      setChyba('Neuložilo se');
+      setChyba(t('nabidkaReklamy.neulozilo'));
     }
   }
 
   if (zDokladu) {
     return (
       <span
-        title="Podle nabídky v Dokladech — ručně se to nepřeklápí."
+        title={t('nabidkaReklamy.zDokladu')}
         className="inline-flex items-center gap-1.5 text-xs font-heading text-muted"
       >
-        <ZnackaNabidky stav={zDokladu} />
-        {popisNabidky(zDokladu)}
+        <ZnackaNabidky stav={zDokladu} jazyk={jazyk} />
+        {popisNabidky(zDokladu, jazyk)}
       </span>
     );
   }
@@ -70,8 +73,8 @@ export function NabidkaStav({
   if (!muzeMenit) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-heading text-muted">
-        <ZnackaNabidky stav={ulozeny} />
-        {popisNabidky(ulozeny)}
+        <ZnackaNabidky stav={ulozeny} jazyk={jazyk} />
+        {popisNabidky(ulozeny, jazyk)}
       </span>
     );
   }
@@ -81,11 +84,11 @@ export function NabidkaStav({
       <button
         type="button"
         onClick={() => setOtevreno((o) => !o)}
-        title={popisNabidky(ulozeny)}
+        title={popisNabidky(ulozeny, jazyk)}
         className="inline-flex items-center gap-1.5 text-xs font-heading text-muted bg-transparent border border-line rounded-lg px-2 py-1 cursor-pointer hover:text-ink"
       >
-        <ZnackaNabidky stav={ulozeny} />
-        {popisNabidky(ulozeny)}
+        <ZnackaNabidky stav={ulozeny} jazyk={jazyk} />
+        {popisNabidky(ulozeny, jazyk)}
       </button>
       {chyba && <span className="text-xs font-heading text-danger">{chyba}</span>}
       {otevreno && (
@@ -99,8 +102,8 @@ export function NabidkaStav({
                 s.klic === ulozeny ? 'text-ink' : 'text-muted'
               }`}
             >
-              <ZnackaNabidky stav={s.klic} velikost={14} />
-              {s.popis}
+              <ZnackaNabidky stav={s.klic} velikost={14} jazyk={jazyk} />
+              {popisNabidky(s.klic, jazyk)}
             </button>
           ))}
         </span>

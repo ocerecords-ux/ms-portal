@@ -3,9 +3,12 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { isInternalRole, ROLE_LABELS } from '@/lib/roles';
+import type { Role } from '@prisma/client';
+import { isInternalRole, nazevRole } from '@/lib/roles';
 import { navodNaHtml, vidiNavod } from '@/lib/navody';
 import { StahnoutPdf } from '@/app/(portal)/napoveda/[slug]/StahnoutPdf';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
  * JEDEN PROCES (zadání 28. 9. 2026). Text se skládá na serveru z Markdownu,
@@ -22,6 +25,7 @@ export default async function ProcesPage({ params }: { params: { slug: string } 
   const role = session.user.role;
   if (!isInternalRole(role)) redirect('/projekty');
   const jeAdmin = role === 'ADMIN';
+  const jazyk = nactiJazyk();
 
   const clanek = (await prisma.navod.findUnique({
     where: { slug: params.slug },
@@ -44,14 +48,14 @@ export default async function ProcesPage({ params }: { params: { slug: string } 
   if (!vidiNavod(clanek.proRole ?? [], role)) notFound();
 
   const proKoho = (clanek.proRole ?? []).length
-    ? clanek.proRole.map((r) => ROLE_LABELS[r as keyof typeof ROLE_LABELS] ?? r).join(', ')
-    : 'celý tým Mediaspace';
+    ? clanek.proRole.map((r) => nazevRole(r as Role, jazyk) ?? r).join(', ')
+    : prelozit(jazyk, 'procesy.celyTymMediaspace');
 
   return (
     <article className="tisk flex flex-col gap-6 max-w-3xl">
       <div>
         <Link href="/procesy" className="netisknout text-sm font-heading text-muted no-underline">
-          ← Procesy
+          {prelozit(jazyk, 'procesy.zpet')}
         </Link>
         <p className="text-xs font-heading text-muted uppercase tracking-wide m-0 mt-3">
           {clanek.kategorie}
@@ -59,10 +63,12 @@ export default async function ProcesPage({ params }: { params: { slug: string } 
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0 mt-1">{clanek.nazev}</h1>
         {clanek.perex && <p className="text-muted font-body m-0 mt-2">{clanek.perex}</p>}
         <p className="text-xs font-body text-muted m-0 mt-3">
-          Pro {proKoho} · upraveno{' '}
-          {clanek.updatedAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}
+          {prelozitS(jazyk, 'procesy.proKohoUpraveno', {
+            kdo: proKoho,
+            datum: formatDatum(jazyk, clanek.updatedAt),
+          })}
           {clanek.autor?.name ? ` · ${clanek.autor.name}` : ''}
-          {!clanek.zverejneno ? ' · rozepsané, ostatní ho nevidí' : ''}
+          {!clanek.zverejneno ? prelozit(jazyk, 'procesy.rozepsaneNevidi') : ''}
         </p>
       </div>
 
@@ -78,7 +84,7 @@ export default async function ProcesPage({ params }: { params: { slug: string } 
             href={`/admin/navody/${clanek.id}`}
             className="text-sm font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 no-underline hover:border-brand-purple"
           >
-            Upravit
+            {prelozit(jazyk, 'procesy.upravit')}
           </Link>
         )}
       </div>

@@ -865,7 +865,7 @@ function bunkaSloupce(
               má pevnou šířku, aby názvy projektů stály v jedné linii i tam,
               kde licence nejsou. */}
           <span className="shrink-0 w-[34px] flex flex-col items-center gap-[3px]">
-            <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} mezeraKdyzNeni />
+            <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} mezeraKdyzNeni jazyk={jazyk} />
             {/* Jak daleko je přeposlech (upřesnění 25. 9. 2026: „jako malou
                 ikonu u typu projektu, co je před názvem") - oranžová, když
                 se zapisují chyby, zelená, když je přeposlechnuto. */}
@@ -913,9 +913,9 @@ function bunkaSloupce(
           {/* Na telefonu se značky dokladů nevykreslují (6. 10. 2026) - viz výš. */}
           <span className="hidden sm:inline-flex items-center gap-2.5">
             {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
-            {p.meta?.nabidka ? <ZnackaNabidky stav={p.meta.nabidka} velikost={15} /> : null}
+            {p.meta?.nabidka ? <ZnackaNabidky stav={p.meta.nabidka} velikost={15} jazyk={jazyk} /> : null}
             {/* Nabídka / faktura u zakázky (25. 9. 2026) - jen pro ty dva. */}
-            <ZnackyDokladu doklady={p.meta?.doklady} velikost={15} dvojklik />
+            <ZnackyDokladu doklady={p.meta?.doklady} velikost={15} dvojklik jazyk={jazyk} />
           </span>
         </span>
       );

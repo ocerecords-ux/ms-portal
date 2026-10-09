@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IKONY_TYPU, KresbaIkony, popisekIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr ikony u položky ceníku (zadání 10. 9. 2026: „chtěl bych to měnit
@@ -25,6 +25,7 @@ export function VyberIkony({
   disabled?: boolean;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [otevreno, setOtevreno] = useState(false);
   const obal = useRef<HTMLDivElement>(null);
 
@@ -47,8 +48,8 @@ export function VyberIkony({
         // popisekIkony vrací null u klíče, který v nabídce není (stará data) -
         // pak se ukáže obecná bublina, ne „Ikona: null".
         title={
-          popisekIkony(hodnota)
-            ? t('cenik.ikonaJmeno', { nazev: popisekIkony(hodnota) as string })
+          popisekIkony(hodnota, jazyk)
+            ? t('cenik.ikonaJmeno', { nazev: popisekIkony(hodnota, jazyk) as string })
             : t('cenik.vybratIkonu')
         }
         className={`inline-grid place-items-center w-[34px] h-[34px] rounded-pill border transition-colors disabled:opacity-60 ${
@@ -67,7 +68,7 @@ export function VyberIkony({
               <button
                 key={i.klic}
                 type="button"
-                title={i.popisek}
+                title={popisekIkony(i.klic, jazyk) ?? i.popisek}
                 onClick={() => {
                   onZmena(i.klic);
                   setOtevreno(false);

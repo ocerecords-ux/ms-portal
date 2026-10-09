@@ -49,6 +49,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProjektyPage() {
   const session = await getServerSession(authOptions);
+  // Jazyk nahoru: berou si ho i popisy dokladů a kontakt „vy" dávno před
+  // vykreslením (dávka 7g).
+  const jazyk = nactiJazyk();
 
   // Interni ucty Mediaspace (Zuzo-labuzo / Produkce / Zvukar) nemaji
   // companyId (nepatri pod zadnou firmu) - misto prazdne "nemate zadne
@@ -210,7 +213,8 @@ export default async function ProjektyPage() {
   const firemniKontakty = Object.fromEntries(
     vsechnyFirmy
       .map((p) => {
-        if (p.klientUserId === jaId) return [p.caflouProjectId, 'vy'] as const;
+        if (p.klientUserId === jaId)
+          return [p.caflouProjectId, prelozit(jazyk, 'projekty.kontaktVy')] as const;
         const jmeno = p.klient ? bezTitulu(p.klient.name) || p.klient.email : null;
         return jmeno ? ([p.caflouProjectId, jmeno] as const) : null;
       })
@@ -332,6 +336,7 @@ export default async function ProjektyPage() {
   const dokladyKlienta = await dokladyProKlienta(
     [...active, ...finished, ...firemniActive, ...firemniFinished].map((p) => String(p.id)),
     companyId,
+    jazyk,
   );
 
   const reklamaTypy: Record<string, string | null> = {};
@@ -381,8 +386,6 @@ export default async function ProjektyPage() {
       ).map((o) => [o.caflouProjectId, urlPripominek(o.token)]),
     );
   }
-
-  const jazyk = nactiJazyk();
 
   return (
     <section className="flex flex-col gap-8">

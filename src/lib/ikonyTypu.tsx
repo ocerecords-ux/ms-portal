@@ -1,3 +1,5 @@
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
 /**
  * Ikony typů projektu (zadání 10. 9. 2026: „udělej nějaké ikony v našich
  * barvách, kterýma budeme rozlišovat typy projektu, bude to svítit před
@@ -470,8 +472,16 @@ export function najdiIkonu(klic: string | null | undefined): Ikona | null {
   return k ? PODLE_KLICE.get(k) ?? null : null;
 }
 
-export function popisekIkony(klic: string | null | undefined): string | null {
-  return najdiIkonu(klic)?.popisek ?? null;
+/**
+ * Popisek do bublinky. Čeština je v `IKONY_TYPU` zdrojem pravdy, angličtina
+ * se bere ze slovníku podle KLÍČE ikony - překládá se tedy i ikona, která
+ * v nabídce zůstane, až se tvary změní.
+ */
+export function popisekIkony(klic: string | null | undefined, jazyk?: Jazyk): string | null {
+  const ikona = najdiIkonu(klic);
+  if (!ikona) return null;
+  if (!jazyk || jazyk === 'cs') return ikona.popisek;
+  return prelozit(jazyk, `ikona.${ikona.klic}`);
 }
 
 /** Je tenhle klíč z naší nabídky? Cokoliv jiného se neuloží. */
@@ -514,10 +524,16 @@ export function IkonaTypu({
    * a sloupec by se rozjel. Jinde se prostě nevykreslí nic.
    */
   mezeraKdyzNeni = false,
+  /**
+   * Jazyk propem, ne hookem: tabulku projektů skládá server i prohlížeč
+   * (pravidlo 8 v docs/preklad-portalu.md).
+   */
+  jazyk,
 }: {
   klic: string | null | undefined;
   typProjektu?: string | null;
   mezeraKdyzNeni?: boolean;
+  jazyk?: Jazyk;
 }) {
   const ikona = najdiIkonu(klic);
   if (!ikona) {
@@ -525,7 +541,7 @@ export function IkonaTypu({
   }
   return (
     <span
-      title={typProjektu || ikona.popisek}
+      title={typProjektu || popisekIkony(ikona.klic, jazyk) || ikona.popisek}
       className={`shrink-0 inline-grid place-items-center w-[30px] h-[30px] rounded-pill ${tridaBarvyIkony(ikona.klic)}`}
     >
       <KresbaIkony klic={ikona.klic} />

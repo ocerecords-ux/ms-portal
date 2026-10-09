@@ -2,6 +2,7 @@
 
 import { NahledIkony } from '@/components/NahledIkony';
 import type { DokladKlienta } from '@/lib/dokladyKlientaServer';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * IKONY DOKLADŮ V KLIENTSKÉM PŘEHLEDU (zadání 1. 10. 2026: „tady budou ikony
@@ -102,6 +103,10 @@ export function ZnackyDokladuKlienta({
   doklady: DokladKlienta[] | undefined;
   velikost?: number;
 }) {
+  // Samotný popis dokladu („Nabídka 2026-0042 — schválená") přitéká už
+  // přeložený z lib/dokladyKlientaServer.ts; tady se k němu jen přidává
+  // dovětek o náhledu.
+  const t = usePreklad();
   if (!doklady || doklady.length === 0) return <span className="text-sm text-muted">—</span>;
 
   return (
@@ -113,7 +118,7 @@ export function ZnackyDokladuKlienta({
           druh={d.druh}
           id={d.id}
           odkaz={`/api/klient/doklady/pdf?druh=${DRUH_V_ADRESE[d.druh]}&id=${encodeURIComponent(d.id)}`}
-          popis={`${d.popis} — klik ukáže náhled`}
+          popis={t('dokladyProjektu.klikNahled', { popis: d.popis })}
         >
           <Znacka barva={BARVY[d.barva]} popis={d.popis} velikost={velikost} kresba={KRESBY[d.druh]} />
         </NahledIkony>

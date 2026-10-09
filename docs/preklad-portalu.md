@@ -81,6 +81,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [x] |
 | 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [x] |
 | 7f | 4. 10. | Obrazovky, které nebyly v žádné dávce — Procesy, Složky na Disku, Bruno, Nastavení, Zprávy portálu, Doplnit dotočeno, zbylé karty na detailu projektu a režim pro nevidomé v přeposlechu | [x] |
+| 7g | 9. 10. | Komponenty v `src/lib`, kam skript nikdy nemířil — popisky ikon typů projektu, značky nabídky a faktury u názvu projektu, doklady klienta, ruční značka nabídky u reklam, detail procesu | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -797,6 +798,11 @@ dohledu — viz níž). **Překlad portálu je tím dokončený a naplánovanou 
 úlohu je možné zrušit.** Co z dávky 6 zbývá, je rozhodnutí k dennímu světlu,
 ne práce na večer.
 
+> **Doplněno 9. 10. 2026:** platilo to jen zdánlivě. Kontrolní skript nikdy
+> nemířil na `src/lib/*.tsx` a hledal text jen podle diakritiky, takže
+> podceňoval, co zbývá — viz „Dávka 7g je HOTOVÁ" níž. Úloha má dál co dělat:
+> každý večer přibývají nové obrazovky, které s překladem nepočítají.
+
 Kontrola „soubory bez jediného volání překladu" je v `src/app` prázdná —
 zbývají jen `kalendar/CaraTed.tsx` a `site/pribehy/spolecne.tsx`, a v obou je
 česky pouze komentář (ty zůstávají české schválně).
@@ -834,6 +840,82 @@ done | sort -rn
 **Zámky v `.git` jsou uklizené** — lístek otevřený od dávky 7b je splacený,
 dnes v `.git` nebyl ani jeden `*.lock.*`. Platí dál jen
 `git rm --cached stubs/prisma-client.d.ts` (viz dávka 7a).
+
+### Dávka 7g je HOTOVÁ (9. 10. 2026)
+
+Tabulka dávek byla 7. 10. celá zaškrtnutá, a přece se našlo dost na jeden
+večer: **šest obrazovek, dvanáct souborů a slovník +59 klíčů (5 158 → 5 217)**.
+Není to nedodělek po 7f, je to **chyba v kontrolním skriptu** — ten mířil na
+`src/app` a od 7. 10. i na `src/components`, ale `src/lib/*.tsx` do něj
+nepatřily nikdy. A v `src/lib` přitom nejsou jen číselníky: jsou tam i hotové
+komponenty, které si bere přehled projektů i jejich detail.
+
+**Co se přeložilo:**
+
+- `lib/ikonyTypu.tsx` — 34 popisků ikon typu projektu („Audiokniha (kniha
+  a mikrofon)", „Ekvalizér", „Režie na dálku"). Chodí do bublinky u ikony
+  před názvem projektu a do nabídky ikon v Ceníku. `popisekIkony(klic, jazyk?)`
+  překládá podle KLÍČE ikony (`ikona.*`), čeština v `IKONY_TYPU` zůstává
+  zdrojem pravdy; `IkonaTypu` dostala `jazyk` propem (pravidlo 8 — tabulku
+  projektů skládá server i prohlížeč).
+- `lib/dokladyUProjektu.tsx` — značky nabídky a faktury u názvu zakázky
+  („Vyfakturováno — čeká na úhradu"). Čísla dokladů jsou data, takže dovětek
+  „klik ukáže náhled" je jeden klíč se značkou `{popis}` (pravidlo 7), ne
+  slepenec.
+- `lib/dokladyKlienta.tsx` + `lib/dokladyKlientaServer.ts` — doklady, které
+  u své zakázky vidí KLIENT. Popis se skládá na serveru s číslem dokladu,
+  takže `dokladyProKlienta()` dostala jazyk a věty mají značku `{cislo}`.
+  Tohle bylo z dávky to nejvíc vidět: anglický klient měl v přehledu
+  „Nabídka 2026-0042 — čeká na schválení".
+- `lib/nabidkaReklamy.tsx` + `projekty/[id]/NabidkaStav.tsx` — ruční značka
+  nabídky u reklam (tři stavy, hlášení „Neuložilo se" a bublina „Podle
+  nabídky v Dokladech").
+- `procesy/[slug]/page.tsx` — detail procesu. Dávka 7f přeložila seznam
+  i administraci, ale ne tuhle stránku; stála tu česky i role („Pro
+  produkce · upraveno") a datum se formátovalo natvrdo `'cs-CZ'`. Teď bere
+  `nazevRole(r, jazyk)` z dávky 7c a `formatDatum`, klíče `procesy.*` mohla
+  většinou převzít po `napoveda.*`.
+- `projekty/page.tsx` — kontakt u firemní zakázky psal u vlastních projektů
+  `'vy'`. Jedno slovo, ale v anglickém přehledu svítilo v každém druhém
+  řádku. `nactiJazyk()` se musel posunout na začátek funkce: popisy dokladů
+  si o jazyk říkají o padesát řádků dřív, než se vykresluje.
+
+**Poučení pro příští kontrolu — skript hledá málo.** Dvě chyby, obě dnes
+viděné na vlastní oči:
+
+1. Mířil jen na `src/app` (+ `src/components` od 7. 10.). Správně `src`.
+2. **Hledal text podle diakritiky**, takže minul `'vy'`, `'← Procesy'`,
+   `'Upravit'` i `'Pro {kdo} · upraveno'` — a hlavně minul celé soubory,
+   které volání překladu MAJÍ, ale jeden řetězec v nich zůstal český.
+   Soubor bez jediného volání překladu je tím pádem špatná otázka.
+
+```bash
+# retezce v JSX a v apostrofech napric src, vcetne souboru, ktere uz prekladaji
+grep -rn "[ěščřžýáíéúůňťďó]" src --include='*.ts' --include='*.tsx' \
+  | grep -vE ":\s*(//|\*|/\*)" | grep -vE "^src/lib/(jazyk|jazykEmailu)\.ts" \
+  | grep -E "'[^']*[ěščřžýáíéúůňťďó]|>[^<]*[ěščřžýáíéúůňťďó]"
+```
+
+**Co z dnešního soupisu zůstává české schválně:**
+
+- `lib/contracts.ts`, `lib/brunoPrirucka.ts` a spol. — text smluv a Brunovy
+  příručky; bere si je PDF a pošta (pravidlo 5, viz dávka 4).
+- `faktury/nova/page.tsx` — `number: 'Nová faktura'`. Mrtvá hodnota:
+  `InvoiceEditor` u neuložené faktury ukazuje `t('faktura.novaFaktura')`
+  a do názvu PDF dává `nova`, takže se tenhle řetězec nikam nedostane.
+- hlášky v `src/app/api/**` a `console.error` — nejsou rozhraní.
+
+**Nová známá hláška v typové kontrole není z téhle dávky:**
+`lib/rozliseniHercu.ts` (TS2352, `User[]` na volnějších stubech) přišla
+s dnešním commitem „Dva herci tehož jména se v bublinách rozliší městem".
+Dopsaná do `docs/preklad-kontrola-zname-hlasky.txt`, ať je seznam dál
+použitelný.
+
+**Zámky v `.git`:** mazání v téhle složce není povolené, takže po commitu
+zůstává živý `index.lock` k přejmenování a v `.git` leží `index 2` … `index 6`,
+`_smeti` a `objects/maintenance.lock`. **Ke smazání z počítače:**
+`rm .git/*.lock .git/index\ [0-9]` a `git rm --cached stubs/prisma-client.d.ts`
+(lístek z dávky 7a).
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

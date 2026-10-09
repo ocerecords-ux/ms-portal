@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import type { InvoiceStatus, OfferStatus } from '@prisma/client';
+import { prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * DOKLADY, KTERÉ KLIENT VIDÍ U SVÉ ZAKÁZKY (zadání 1. 10. 2026: „tady budou
@@ -42,6 +43,8 @@ const FAKTURA_VIDITELNA: InvoiceStatus[] = ['SENT', 'PAID'];
 export async function dokladyProKlienta(
   caflouProjectIds: string[],
   companyId: string | null | undefined,
+  /** Jazyk přehledu. Číslo dokladu je data - do věty vstupuje značkou {cislo}. */
+  jazyk: Jazyk = 'cs',
 ): Promise<Record<string, DokladKlienta[]>> {
   const vysledek: Record<string, DokladKlienta[]> = {};
   const ids = Array.from(new Set(caflouProjectIds.filter(Boolean)));
@@ -79,12 +82,15 @@ export async function dokladyProKlienta(
       pridej(n.caflouProjectId, {
         druh: 'NABIDKA',
         id: n.id,
-        popis:
+        popis: prelozitS(
+          jazyk,
           n.status === 'APPROVED'
-            ? `Nabídka ${n.number} — schválená`
+            ? 'dokladyKlienta.nabidkaSchvalena'
             : n.status === 'REJECTED'
-              ? `Nabídka ${n.number} — odmítnutá`
-              : `Nabídka ${n.number} — čeká na schválení`,
+              ? 'dokladyKlienta.nabidkaOdmitnuta'
+              : 'dokladyKlienta.nabidkaCeka',
+          { cislo: n.number },
+        ),
         barva: n.status === 'APPROVED' ? 'zelena' : n.status === 'REJECTED' ? 'cervena' : 'oranzova',
       });
     }
@@ -93,7 +99,11 @@ export async function dokladyProKlienta(
       pridej(f.caflouProjectId, {
         druh: 'FAKTURA',
         id: f.id,
-        popis: f.status === 'PAID' ? `Faktura ${f.number} — uhrazená` : `Faktura ${f.number} — k úhradě`,
+        popis: prelozitS(
+          jazyk,
+          f.status === 'PAID' ? 'dokladyKlienta.fakturaUhrazena' : 'dokladyKlienta.fakturaKUhrade',
+          { cislo: f.number },
+        ),
         barva: f.status === 'PAID' ? 'zelena' : 'oranzova',
       });
     }
@@ -102,7 +112,7 @@ export async function dokladyProKlienta(
       pridej(o.caflouProjectId, {
         druh: 'OBJEDNAVKA',
         id: o.id,
-        popis: `Objednávka ${cisloObjednavky(o.id)}`,
+        popis: prelozitS(jazyk, 'dokladyKlienta.objednavka', { cislo: cisloObjednavky(o.id) }),
         barva: 'seda',
       });
     }

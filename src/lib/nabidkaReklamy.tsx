@@ -1,3 +1,5 @@
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
 /**
  * STAV NABÍDKY U REKLAM (zadání 23. 9. 2026: „chtěl bych někde vidět (jen já)
  * v přehledu i v detailu projektu, že je nabídka schválena. Jen u reklam.
@@ -32,7 +34,9 @@ export function stavNabidky(ulozeno: string | null | undefined): StavNabidky {
   return 'CEKA';
 }
 
-export function popisNabidky(stav: StavNabidky): string {
+/** Čeština ze `STAVY_NABIDKY` je zdroj pravdy, angličtina ze slovníku podle kódu. */
+export function popisNabidky(stav: StavNabidky, jazyk?: Jazyk): string {
+  if (jazyk && jazyk !== 'cs') return prelozit(jazyk, `nabidkaReklamy.${stav}`);
   return STAVY_NABIDKY.find((s) => s.klic === stav)?.popis ?? '';
 }
 
@@ -47,15 +51,19 @@ export function barvaNabidky(stav: StavNabidky): string {
 export function ZnackaNabidky({
   stav,
   velikost = 16,
+  /** Jazyk propem - značku bere tabulka na serveru i detail v prohlížeči (pravidlo 8). */
+  jazyk,
 }: {
   stav: StavNabidky;
   velikost?: number;
+  jazyk?: Jazyk;
 }) {
   const barva = barvaNabidky(stav);
+  const popis = popisNabidky(stav, jazyk);
   return (
     <span
-      title={popisNabidky(stav)}
-      aria-label={popisNabidky(stav)}
+      title={popis}
+      aria-label={popis}
       className="inline-grid place-items-center shrink-0 rounded-full"
       style={{
         width: velikost,

@@ -9958,6 +9958,112 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Nastavení projektů - zprávy klientovi',
     en: 'Project settings - messages to the customer',
   },
+
+  /* --- Dávka 7g: popisky ikon typů projektu (lib/ikonyTypu.tsx) ---
+     Chodí do bublinky u ikony a do nabídky ikon v Ceníku. Klíč je klíč
+     ikony, ne text - stejný vzor jako číselníky z dávky 7e. */
+  'ikona.kniha': { cs: 'Kniha', en: 'Book' },
+  'ikona.kniha-mikrofon': { cs: 'Audiokniha (kniha a mikrofon)', en: 'Audiobook (book and microphone)' },
+  'ikona.radio': { cs: 'Rádio (rádiový spot)', en: 'Radio (radio spot)' },
+  'ikona.mikrofon-mix': { cs: 'Mikrofon a mixážní pult', en: 'Microphone and mixing desk' },
+  'ikona.sluchatka': { cs: 'Sluchátka', en: 'Headphones' },
+  'ikona.mikrofon': { cs: 'Mikrofon', en: 'Microphone' },
+  'ikona.mikrofon-studio': { cs: 'Studiový mikrofon', en: 'Studio microphone' },
+  'ikona.vlny': { cs: 'Vysílání', en: 'Broadcasting' },
+  'ikona.vlna': { cs: 'Zvuková vlna', en: 'Sound wave' },
+  'ikona.ekvalizer': { cs: 'Ekvalizér', en: 'Equaliser' },
+  'ikona.reproduktor': { cs: 'Reproduktor', en: 'Loudspeaker' },
+  'ikona.megafon': { cs: 'Reklama', en: 'Advert' },
+  'ikona.klapka': { cs: 'Klapka / film', en: 'Clapperboard / film' },
+  'ikona.obrazovka': { cs: 'Obrazovka / TV', en: 'Screen / TV' },
+  'ikona.noty': { cs: 'Hudba', en: 'Music' },
+  'ikona.zvonek': { cs: 'Znělka', en: 'Jingle' },
+  'ikona.globus': { cs: 'Lokalizace', en: 'Localisation' },
+  'ikona.vlajka': { cs: 'Jazyková mutace', en: 'Language version' },
+  'ikona.lide': { cs: 'Casting', en: 'Casting' },
+  'ikona.hodiny': { cs: 'Termín', en: 'Deadline' },
+  'ikona.dokument': { cs: 'Dokument', en: 'Document' },
+  'ikona.stitek': { cs: 'Štítek', en: 'Label' },
+  'ikona.hvezda': { cs: 'Hvězda', en: 'Star' },
+  'ikona.blesk': { cs: 'Rychlovka', en: 'Quick job' },
+  'ikona.ovladac': { cs: 'Hra', en: 'Game' },
+  'ikona.telefon': { cs: 'Telefon', en: 'Telephone' },
+  'ikona.rezie-na-dalku': { cs: 'Režie na dálku', en: 'Remote directing' },
+  'ikona.srdce': { cs: 'Srdce', en: 'Heart' },
+  'ikona.uklid': { cs: 'Úklid', en: 'Cleaning' },
+  'ikona.strih': { cs: 'Střih', en: 'Editing' },
+  'ikona.casting': { cs: 'Casting', en: 'Casting' },
+  'ikona.klic': { cs: 'Údržba', en: 'Maintenance' },
+  'ikona.letadlo': { cs: 'Externě, mimo studio', en: 'Off site, outside the studio' },
+  'ikona.slunce': { cs: 'Volno', en: 'Time off' },
+
+  /* --- Dávka 7g: značky dokladů u názvu projektu (lib/dokladyUProjektu.tsx) --- */
+  'dokladyProjektu.nabidka.ROZEPSANA': { cs: 'Nabídka rozepsaná', en: 'Quote in draft' },
+  'dokladyProjektu.nabidka.CEKA': {
+    cs: 'Nabídka odeslaná, čeká na schválení',
+    en: 'Quote sent, awaiting approval',
+  },
+  'dokladyProjektu.nabidka.SCHVALENA': { cs: 'Nabídka schválená', en: 'Quote approved' },
+  'dokladyProjektu.nabidka.ODMITNUTA': { cs: 'Nabídka odmítnutá', en: 'Quote rejected' },
+  'dokladyProjektu.faktura.ROZEPSANA': { cs: 'Faktura rozepsaná', en: 'Invoice in draft' },
+  'dokladyProjektu.faktura.VYSTAVENA': {
+    cs: 'Vyfakturováno — čeká na úhradu',
+    en: 'Invoiced — awaiting payment',
+  },
+  'dokladyProjektu.faktura.UHRAZENA': { cs: 'Faktura uhrazená', en: 'Invoice paid' },
+  'dokladyProjektu.klikNahled': {
+    cs: '{popis} — klik ukáže náhled',
+    en: '{popis} — click to see a preview',
+  },
+
+  /* --- Dávka 7g: doklady, které u své zakázky vidí klient (lib/dokladyKlienta*.ts) --- */
+  'dokladyKlienta.nabidkaSchvalena': {
+    cs: 'Nabídka {cislo} — schválená',
+    en: 'Quote {cislo} — approved',
+  },
+  'dokladyKlienta.nabidkaOdmitnuta': {
+    cs: 'Nabídka {cislo} — odmítnutá',
+    en: 'Quote {cislo} — rejected',
+  },
+  'dokladyKlienta.nabidkaCeka': {
+    cs: 'Nabídka {cislo} — čeká na schválení',
+    en: 'Quote {cislo} — awaiting approval',
+  },
+  'dokladyKlienta.fakturaUhrazena': {
+    cs: 'Faktura {cislo} — uhrazená',
+    en: 'Invoice {cislo} — paid',
+  },
+  'dokladyKlienta.fakturaKUhrade': {
+    cs: 'Faktura {cislo} — k úhradě',
+    en: 'Invoice {cislo} — due for payment',
+  },
+  'dokladyKlienta.objednavka': { cs: 'Objednávka {cislo}', en: 'Order {cislo}' },
+
+  /* --- Dávka 7g: ruční značka nabídky u reklam (lib/nabidkaReklamy.tsx) --- */
+  'nabidkaReklamy.CEKA': { cs: 'Nabídka čeká na schválení', en: 'Quote awaiting approval' },
+  'nabidkaReklamy.SCHVALENA': { cs: 'Nabídka schválena', en: 'Quote approved' },
+  'nabidkaReklamy.NESCHVALENA': { cs: 'Nabídka neschválena', en: 'Quote not approved' },
+  'nabidkaReklamy.neulozilo': { cs: 'Neuložilo se', en: 'It was not saved' },
+  'nabidkaReklamy.zDokladu': {
+    cs: 'Podle nabídky v Dokladech — ručně se to nepřeklápí.',
+    en: 'Taken from the quote in Documents — it is not switched by hand.',
+  },
+
+  /* --- Dávka 7g: jeden proces (procesy/[slug]) --- */
+  'procesy.zpet': { cs: '← Procesy', en: '← Procedures' },
+  'procesy.celyTymMediaspace': { cs: 'celý tým Mediaspace', en: 'the whole Mediaspace team' },
+  'procesy.proKohoUpraveno': {
+    cs: 'Pro {kdo} · upraveno {datum}',
+    en: 'For {kdo} · edited {datum}',
+  },
+  'procesy.rozepsaneNevidi': {
+    cs: ' · rozepsané, ostatní ho nevidí',
+    en: ' · a draft, nobody else can see it',
+  },
+  'procesy.upravit': { cs: 'Upravit', en: 'Edit' },
+
+  /* --- Dávka 7g: kontakt u firemní zakázky --- */
+  'projekty.kontaktVy': { cs: 'vy', en: 'you' },
 };
 
 /**

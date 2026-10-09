@@ -1,4 +1,5 @@
 import { NahledIkony, type DruhNahledu } from '@/components/NahledIkony';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * IKONY DOKLADŮ U NÁZVU PROJEKTU (zadání 25. 9. 2026: „potřebuji ještě vedle
@@ -79,6 +80,10 @@ export const PRAZDNE_DOKLADY: DokladyProjektu = {
   fakturaId: null,
 };
 
+/**
+ * Popisy stavů. Čeština je zdroj pravdy, angličtina se bere ze slovníku podle
+ * KÓDU stavu (`dokladyProjektu.nabidka.*`) - vzor z dávky 7e.
+ */
 const POPIS_NABIDKY: Record<StavNabidkyDokladu, string> = {
   ZADNA: '',
   ROZEPSANA: 'Nabídka rozepsaná',
@@ -108,6 +113,18 @@ const BARVA_FAKTURY: Record<StavFakturyDokladu, string> = {
   VYSTAVENA: '#f59e0b',
   UHRAZENA: '#16a34a',
 };
+
+function popisNabidkyDokladu(stav: StavNabidkyDokladu, jazyk?: Jazyk): string {
+  if (stav === 'ZADNA') return '';
+  if (!jazyk || jazyk === 'cs') return POPIS_NABIDKY[stav];
+  return prelozit(jazyk, `dokladyProjektu.nabidka.${stav}`);
+}
+
+function popisFakturyDokladu(stav: StavFakturyDokladu, jazyk?: Jazyk): string {
+  if (stav === 'ZADNA') return '';
+  if (!jazyk || jazyk === 'cs') return POPIS_FAKTURY[stav];
+  return prelozit(jazyk, `dokladyProjektu.faktura.${stav}`);
+}
 
 function Znacka({
   barva,
@@ -160,16 +177,24 @@ export function ZnackyDokladu({
   velikost = 15,
   /** Klik ukáže náhled dokladu (25. 9. 2026). Bez toho je značka jen obrázek. */
   dvojklik = false,
+  /** Jazyk propem, ne hookem - značky skládá server i prohlížeč (pravidlo 8). */
+  jazyk,
 }: {
   doklady: DokladyProjektu | null | undefined;
   velikost?: number;
   dvojklik?: boolean;
+  jazyk?: Jazyk;
 }) {
   if (!doklady) return null;
   const { nabidka, faktura } = doklady;
   if (nabidka === 'ZADNA' && faktura === 'ZADNA') return null;
 
   const dodatek = (cisla: string[]) => (cisla.length > 0 ? ` (${cisla.join(', ')})` : '');
+  // Čísla dokladů jsou data, ne text rozhraní - do věty vstupují značkou.
+  const sNahledem = (popis: string) =>
+    prelozitS(jazyk ?? 'cs', 'dokladyProjektu.klikNahled', { popis });
+  const popisNabidky = popisNabidkyDokladu(nabidka, jazyk) + dodatek(doklady.nabidkaCisla);
+  const popisFaktury = popisFakturyDokladu(faktura, jazyk) + dodatek(doklady.fakturaCisla);
 
   return (
     <span className="inline-flex items-center gap-1 shrink-0">
@@ -179,11 +204,11 @@ export function ZnackyDokladu({
           odkaz={`/admin/doklady/nabidky/${doklady.nabidkaId ?? ''}`}
           druh="NABIDKA"
           id={doklady.nabidkaId}
-          popis={`${POPIS_NABIDKY[nabidka]}${dodatek(doklady.nabidkaCisla)} — klik ukáže náhled`}
+          popis={sNahledem(popisNabidky)}
         >
           <Znacka
             barva={BARVA_NABIDKY[nabidka]}
-            popis={POPIS_NABIDKY[nabidka] + dodatek(doklady.nabidkaCisla)}
+            popis={popisNabidky}
             velikost={velikost}
             kresba={
               <>
@@ -200,11 +225,11 @@ export function ZnackyDokladu({
           odkaz={`/admin/doklady/faktury/${doklady.fakturaId ?? ''}`}
           druh="FAKTURA"
           id={doklady.fakturaId}
-          popis={`${POPIS_FAKTURY[faktura]}${dodatek(doklady.fakturaCisla)} — klik ukáže náhled`}
+          popis={sNahledem(popisFaktury)}
         >
           <Znacka
             barva={BARVA_FAKTURY[faktura]}
-            popis={POPIS_FAKTURY[faktura] + dodatek(doklady.fakturaCisla)}
+            popis={popisFaktury}
             velikost={velikost}
             kresba={
               <>

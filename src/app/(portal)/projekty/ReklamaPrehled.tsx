@@ -293,7 +293,7 @@ function Tabulka({
                     <span className="flex items-center gap-2">
                       {/* Ikona typu zakázky místo sloupce (1. 10. 2026) - co
                           znamená, řekne bublinka nad ní, stejně jako u nás. */}
-                      <IkonaTypu klic={ikony[id] ?? null} typProjektu={typy[id] ?? null} mezeraKdyzNeni />
+                      <IkonaTypu klic={ikony[id] ?? null} typProjektu={typy[id] ?? null} mezeraKdyzNeni jazyk={jazyk} />
                       <Link
                         href={`/projekty/${p.id}`}
                         className="text-ink hover:text-brand-purple no-underline font-heading text-sm whitespace-normal break-words leading-snug"
