@@ -36,7 +36,7 @@ Tři věci, které z obrázku stojí za zdůraznění:
 
 # Šest sekcí v horní liště
 
-**Projekty** jsou srdce portálu. Každá zakázka má svou kartu: stav, termíny, herce, rozpočet, nahrávky, doklady. Většina práce se odehraje tady. V přehledu se řadí kliknutím na hlavičku sloupce; **stav se neřadí abecedně**, ale v pořadí, které si tým nastaví tlačítkem **Pořadí stavů** vedle hledání (přetažením nebo šipkami, mění ho Žůžo-labůžo a produkce, platí pro všechny). Nabídky stavů u projektu se to netýká — cesta projektu zůstává, jak je.
+**Projekty** jsou srdce portálu. Každá zakázka má svou kartu: stav, termíny, herce, rozpočet, nahrávky, doklady. Většina práce se odehraje tady. V přehledu se řadí kliknutím na hlavičku sloupce; **stav se neřadí abecedně**, ale v pořadí, které si tým nastaví tlačítkem **Pořadí stavů** vedle hledání (přetažením nebo šipkami, mění ho Žůžo-labůžo a produkce, platí pro všechny). Nabídky stavů u projektu se to netýká — cesta projektu zůstává, jak je. Při **zakládání projektu** se datum ptá podle typu (8. 10. 2026): u reklamy je to **Datum dokončení** — náš termín —, u ostatních **Datum vydání**, tedy termín klienta. Dřív se vždycky ukládalo datum vydání, což u reklamy padalo do kolonky, která se na kartě projektu ani nenabízí, takže se datum ztratilo.
 
 Na kartě klientské firmy je kromě Údajů, Notifikací a Účtů i záložka **Zakázky**: tabulka všech zakázek té firmy, kde jde ke každé doplnit **herce, nabídku a fakturu** a uložit to jedním tlačítkem — **potichu**, bez notifikací a bez zápisu do historie projektu. V nabídce dokladů jsou jen nabídky a faktury té firmy, které ještě žádnou zakázku nemají. Kontakt (klienta) ke všem zakázkám firmy najednou přiřadí tlačítko na záložce Přihlašovací účty, taky potichu.
 
@@ -54,7 +54,7 @@ U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích toč�
 
 Kdo má jinou roli (třeba Žůžo-labůžo) a občas dělá i zvukaře, má na kartě zaškrtnuté **Může být i zvukař**. Role mu zůstane, jen se navíc nabízí mezi zvukaři u natáčení a střihu v kalendáři. Když nemá zaškrtnutá žádná studia, nabízí se ve všech. Takhle je nastavený Peter Dratva.
 
-Názvy projektů portál drží **velkými písmeny** — ať už je někdo zadá jakkoli, uloží se velkými a stejně se jmenuje i kanál projektu v chatu. Přejmenování projektu přepíše i název kanálu.
+Názvy projektů portál drží **velkými písmeny** — ať už je někdo zadá jakkoli, uloží se velkými a stejně se jmenuje i kanál projektu v chatu. Přejmenování projektu přepíše i název kanálu. V chatu se na projekt odkazuje **mřížkou** — `#` a začátek názvu. Nabídka si od 8. 10. 2026 **seznam projektů sama osvěží** (nejvýš jednou za půlminutu); do té doby se stáhl jen při otevření záložky Projekty, takže čerstvě založený projekt pod `#` nebyl k nalezení, i když jeho kanál už v seznamu nalevo byl.
 
 **Kanál projektu v chatu zmizí ze seznamu, až je projekt vyfakturovaný** — ne dřív. Ve stavech jako *Dotočeno* nebo *Dokončeno - ke schválení* se na projektu pořád dělá, takže kanál zůstává (do 6. 10. 2026 mizel už tam a kliknutí na něj v záložce Projekty skončilo na prázdném okně). Zprávy se nikdy nemažou, jen se kanál schová; když se projekt vrátí mezi rozpracované, vrátí se i kanál. Totéž platí pro **kanál dotazů klienta** — ten se zavírá ve stejnou chvíli, ne při odevzdání k poslechu, kdy má klient otázek nejvíc.
 

@@ -5779,6 +5779,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'novyProjekt.herci': { cs: 'Herci', en: 'Narrators' },
   'novyProjekt.pocetNs': { cs: 'Počet normostran', en: 'Number of standard pages' },
   'novyProjekt.datumVydani': { cs: 'Datum vydání', en: 'Release date' },
+  'novyProjekt.datumVydaniNapoveda': { cs: 'Kdy to má klient vydat.', en: 'The date the customer publishes it.' },
+  'novyProjekt.datumDokonceni': { cs: 'Datum dokončení', en: 'Completion date' },
+  'novyProjekt.datumDokonceniNapoveda': {
+    cs: 'Náš termín – do kdy to máme mít hotové. U reklamy se datum vydání nesleduje.',
+    en: 'Our deadline – when it has to be finished. Adverts do not track a release date.',
+  },
   'novyProjekt.priorita': { cs: 'Priorita', en: 'Priority' },
   'novyProjekt.prioritaNapoveda': {
     cs: 'Každé klepnutí přidá čárku, po třetí se vrátí na jednu.',

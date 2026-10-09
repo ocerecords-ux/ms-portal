@@ -2040,6 +2040,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [novy, setNovy] = useState(false);
   const [projekty, setProjekty] = useState<ProjectOption[] | null>(null);
   const [projektyChyba, setProjektyChyba] = useState<string | null>(null);
+  /**
+   * Kdy se seznam projektů naposled stáhl. Hlídá to zmínky přes `#`
+   * (8. 10. 2026) - viz osvezProjektyProZminky níže.
+   */
+  const projektyNacteny = useRef(0);
   const [nazevSkupiny, setNazevSkupiny] = useState('');
   const [vybraniLide, setVybraniLide] = useState<string[]>([]);
 
@@ -2756,6 +2761,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * záložka při každém přepnutí bliknula na „Načítám projekty…".
    */
   async function nactiProjekty() {
+    projektyNacteny.current = Date.now();
     setProjektyChyba(null);
     try {
       const res: Response = await fetch('/api/chat/projekty', { cache: 'no-store' });
@@ -2767,6 +2773,24 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (projekty === null) setProjekty([]);
       setProjektyChyba(t('projekty.nepodariloNacist'));
     }
+  }
+
+  /**
+   * ČERSTVÝ SEZNAM PRO ZMÍNKY `#` (zadání 8. 10. 2026: „nemůžu označit
+   * projekt Koupelny Jas v chatu, i když je založený").
+   *
+   * Seznam projektů se do teď stáhl JEN při otevření záložky Projekty.
+   * Kdo si ji za celé načtení stránky neotevřel - nebo otevřel ještě před
+   * založením projektu - nabídku pod `#` měl prázdnou nebo starou, přestože
+   * kanál projektu v seznamu nalevo už byl.
+   *
+   * Půlminutová pauza stačí: při psaní názvu se `sledujZminku` volá na
+   * každé písmeno a dotaz na server po každém z nich by byl zbytečný.
+   * Starý seznam zůstává vidět, dokud nový nedorazí.
+   */
+  function osvezProjektyProZminky() {
+    if (Date.now() - projektyNacteny.current < 30_000) return;
+    void nactiProjekty();
   }
 
   /**
@@ -3239,6 +3263,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       setDruhZminky('projekt');
       setZminkyPro(kde);
       setZminkaHledani(projekt[1].toLowerCase());
+      osvezProjektyProZminky();
       return;
     }
     setZminkyPro(null);

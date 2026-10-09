@@ -28,6 +28,7 @@ export function NovyProjektForm({
   manazeri,
   herci,
   typyProjektu,
+  typyReklam = [],
   typAudioknihy,
 }: {
   firmy: { id: string; label: string; maSlozku: boolean }[];
@@ -41,6 +42,12 @@ export function NovyProjektForm({
   /** Ucty hercu - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
   herci: Herec[];
   typyProjektu: string[];
+  /**
+   * Názvy typů projektu, které znamenají REKLAMU (položky ceníku
+   * zaškrtnuté jako „Rodný list"). U nich se datum ptá na náš termín
+   * dokončení, ne na termín klienta - viz dál u pole s datem.
+   */
+  typyReklam?: string[];
   /**
    * Název typu projektu, který znamená audioknihu (položka ceníku zaškrtnutá
    * jako „pro objednávky audioknih"). Jen u něj má smysl počet normostran -
@@ -67,13 +74,26 @@ export function NovyProjektForm({
     // Hercu muze byt vic (zadani 10. 9. 2026), prvni je hlavni.
     actorUserIds: [] as string[],
     pageCount: '',
-    releaseDate: '',
+    /**
+     * JEDNO POLE, DVĚ KOLONKY (zadání 8. 10. 2026: „u reklam to není datum
+     * vydání, ale datum dokončení!").
+     *
+     * Projekt má dvě data: `endDate` je NÁŠ termín dokončení a `releaseDate`
+     * termín, kdy to vydá klient. U reklamy druhé není - na kartě projektu
+     * se ani nenabízí. Zakládací formulář ho přitom psával do `releaseDate`
+     * vždycky, takže u reklamy datum spadlo do kolonky, kterou už nikdo
+     * neuvidí. Teď se podle typu projektu rozhodne až při odeslání.
+     */
+    datum: '',
     statusName: STAVY_PROJEKTU[0].nazev,
     zalozitSlozku: true,
   });
   const [uklada, setUklada] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [varovani, setVarovani] = useState<string | null>(null);
+
+  /** Je vybraný typ reklama? Podle toho se ptáme na jiné datum. */
+  const jeReklama = Boolean(form.projectType) && typyReklam.includes(form.projectType);
 
   function set<K extends keyof typeof form>(klic: K, hodnota: (typeof form)[K]) {
     setForm((f) => ({ ...f, [klic]: hodnota }));
@@ -136,10 +156,16 @@ export function NovyProjektForm({
     setChyba(null);
     setVarovani(null);
     try {
+      const telo: Record<string, unknown> = { ...form };
+      delete telo.datum;
+      // U reklamy je to náš termín dokončení, jinak termín klienta.
+      if (jeReklama) telo.endDate = form.datum;
+      else telo.releaseDate = form.datum;
+
       const res = await fetch('/api/admin/projekty', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(telo),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -288,12 +314,17 @@ export function NovyProjektForm({
         )}
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">{t('novyProjekt.datumVydani')}</span>
+          <span className="text-sm font-body text-ink">
+            {t(jeReklama ? 'novyProjekt.datumDokonceni' : 'novyProjekt.datumVydani')}
+          </span>
           <DatumPole
-            value={form.releaseDate}
-            onChange={(e) => set('releaseDate', e.target.value)}
+            value={form.datum}
+            onChange={(e) => set('datum', e.target.value)}
             className={tridaPole}
           />
+          <span className="text-xs font-body text-muted">
+            {t(jeReklama ? 'novyProjekt.datumDokonceniNapoveda' : 'novyProjekt.datumVydaniNapoveda')}
+          </span>
         </label>
 
         {/* Stejna ikona a stejne klikani jako v prehledu i v karte projektu

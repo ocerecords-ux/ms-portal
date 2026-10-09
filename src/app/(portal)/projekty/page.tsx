@@ -795,6 +795,7 @@ async function InternalProjektySection({
               manazeri={manazeriProFormular}
               herci={herciProFormular.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
               typyProjektu={typyProjektu}
+              typyReklam={typyReklamy}
               typAudioknihy={typAudioknihy}
             />
           ) : null

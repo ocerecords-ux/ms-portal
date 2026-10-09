@@ -41,6 +41,11 @@ const schema = z.object({
   pageCount: z.union([z.string().trim(), z.number()]).optional(),
   /** YYYY-MM-DD. */
   releaseDate: z.string().trim().optional(),
+  /**
+   * Náš termín dokončení, YYYY-MM-DD (8. 10. 2026). U reklamy se zakládací
+   * formulář ptá právě na něj - datum vydání u ní neexistuje.
+   */
+  endDate: z.string().trim().optional(),
   statusName: z.string().trim().max(120).optional(),
   /** Zakladat slozku na Disku? Kdyz uz slozka existuje, da se to vypnout. */
   zalozitSlozku: z.boolean().optional(),
@@ -151,6 +156,7 @@ export async function POST(req: NextRequest) {
         ...(herciIds.length > 0 ? { herci: { connect: herciIds.map((id) => ({ id })) } } : {}),
         pageCount,
         releaseDate: naDatum(d.releaseDate),
+        endDate: naDatum(d.endDate),
         statusName: stav,
         finished: stavJeDokonceny(stav) ?? false,
         driveUrl,
