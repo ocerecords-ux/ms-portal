@@ -19,6 +19,7 @@ import {
 } from '@/lib/calendar';
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
 import { bezTitulu } from '@/lib/jmena';
+import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import type { NepritomnostVKalendari } from '@/lib/nepritomnost';
 import { SOLO_PORADY } from '@/lib/porady';
@@ -264,9 +265,12 @@ export default async function KalendarPage({
     : [[], []];
 
   // Tituly pred a za jmenem se u hercu nevypisuji (zadani 15. 9. 2026).
+  // Soujmenovci se v nabídce rozliší městem (9. 10. 2026) - jinak nejde
+  // poznat, kterého Ondřeje Nováka do události zapisuji.
+  const rozlis = await nactiRozliseniHercu();
   const herci = lideProUdalost
     .filter((u) => u.role === 'HEREC')
-    .map((u) => ({ id: u.id, label: bezTitulu(u.name) || u.email }));
+    .map((u) => ({ id: u.id, label: rozlis(u.id, bezTitulu(u.name) || u.email) }));
   const zvukari = lideProUdalost
     .filter((u) => u.role === 'ZVUKAR' || u.takyZvukar)
     /**

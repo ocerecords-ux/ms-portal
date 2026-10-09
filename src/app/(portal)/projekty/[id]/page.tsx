@@ -74,6 +74,7 @@ import { PoznamkyProjektu } from './PoznamkyProjektu';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { ProgresNataceniKarta } from './ProgresNataceniKarta';
 import { bezTitulu } from '@/lib/jmena';
+import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, formatDatumCas, prelozit, prelozitS } from '@/lib/jazyk';
 
@@ -338,7 +339,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const progresNataceni = ukazatProgres
     ? ((await nactiProgresNataceni([{ id: caflouProjectId, herciIds: herciProjektu }])).get(caflouProjectId) ?? null)
     : null;
-  const jmenoHerce = new Map(herciUctu.map((h) => [h.id, bezTitulu(h.name) || h.email]));
+  /**
+   * Dva herci téhož jména se v bublinách rozliší městem (9. 10. 2026).
+   * Na kartě herce ani na dokladech se jméno nemění - viz lib/rozliseniHercu.ts.
+   */
+  const rozlis = await nactiRozliseniHercu();
+  const jmenoHerce = new Map<string, string>(
+    herciUctu.map((h) => [h.id, rozlis(h.id, bezTitulu(h.name) || h.email)] as [string, string]),
+  );
 
   const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
   const showBudget =
@@ -482,7 +490,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           companyId: k.companyId,
         }))}
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
-        herci={herciUctu.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
+        herci={herciUctu.map((h) => ({ id: h.id, label: rozlis(h.id, bezTitulu(h.name) || h.email) }))}
         dotoceniHercu={dotoceniPodleHerce}
         normostranyHercu={normostranyPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}
@@ -708,7 +716,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           sessionsFromPages={sessionsForPages(project?.pageCount ?? 0, calendarSettings.pagesPerSession)}
           stranNaFrekvenci={calendarSettings.pagesPerSession}
           narratorFromCaflou={project?.narrator ?? null}
-          herci={herci.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
+          herci={herci.map((h) => ({ id: h.id, label: rozlis(h.id, bezTitulu(h.name) || h.email) }))}
           studios={studia.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
           defaultActorUserId={meta?.actorUserId ?? null}
           normostranyHercu={normostranyPodleHerce}

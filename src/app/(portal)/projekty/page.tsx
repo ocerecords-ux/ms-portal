@@ -38,6 +38,7 @@ import { nactiTerminyProjektu } from '@/lib/terminyKlientaServer';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 import { bezTitulu } from '@/lib/jmena';
+import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { slozStavNabidky, stavyNabidekZDokladu } from '@/lib/nabidkaStavServer';
 import { dokladyUProjektu } from '@/lib/dokladyUProjektuServer';
 
@@ -155,6 +156,12 @@ export default async function ProjektyPage() {
       : [],
   );
 
+  /**
+   * Dva herci téhož jména se v bublinách rozliší městem (9. 10. 2026) -
+   * jedno načtení pro celou stránku, viz lib/rozliseniHercu.ts.
+   */
+  const rozlis = await nactiRozliseniHercu();
+
   /** Z metadat projektu udělá řádek tabulky - stejně pro obě záložky. */
   const naRadek = (p: (typeof firemniMeta)[number]): DisplayProject => ({
     id: Number(p.caflouProjectId),
@@ -174,7 +181,7 @@ export default async function ProjektyPage() {
       ...p.herci.filter((h) => h.id === p.actorUserId),
       ...p.herci.filter((h) => h.id !== p.actorUserId),
     ].map((h) => ({
-      jmeno: bezTitulu(h.name) || h.email,
+      jmeno: rozlis(h.id, bezTitulu(h.name) || h.email),
       // Zelena linka „dotoceno" uz i u klienta (zadani 14. 9. 2026).
       dotoceno: dotoceniKlienta.has(`${p.caflouProjectId}:${h.id}`),
     })),
@@ -577,6 +584,12 @@ async function InternalProjektySection({
   ]);
 
   /**
+   * Dva herci téhož jména se v bublinách rozliší městem (9. 10. 2026) -
+   * jedno načtení pro celou stránku, viz lib/rozliseniHercu.ts.
+   */
+  const rozlis = await nactiRozliseniHercu();
+
+  /**
    * STAV NABÍDKY U REKLAM (zadání 23. 9. 2026: „chtěl bych někde vidět (jen
    * já) v přehledu i v detailu projektu, že je nabídka schválena"). Značka se
    * vykreslí jen tomu, kdo to má zaškrtnuté na kartě - zatím jen Ondřej.
@@ -681,7 +694,7 @@ async function InternalProjektySection({
           ...m.herci.filter((h) => h.id === m.actorUserId),
           ...m.herci.filter((h) => h.id !== m.actorUserId),
         ].map((h) => ({
-          jmeno: bezTitulu(h.name) || h.email,
+          jmeno: rozlis(h.id, bezTitulu(h.name) || h.email),
           dotoceno: dotoceni.has(`${m.caflouProjectId}:${h.id}`),
           // Zapis bez herce patri jedinemu herci projektu - stejne pravidlo
           // jako v detailu.
@@ -690,7 +703,7 @@ async function InternalProjektySection({
             (m.herci.length === 1 ? strany.get(`${m.caflouProjectId}:`) : undefined) ??
             null,
         })),
-        herciJmenaText: m.herci.map((h) => bezTitulu(h.name) || h.email).join(' '),
+        herciJmenaText: m.herci.map((h) => rozlis(h.id, bezTitulu(h.name) || h.email)).join(' '),
         licence: m.licence.map((l) => ({ nazev: l.nazev, ikona: l.ikona })),
         // Nabídka - jen u reklam a jen tomu, kdo ji vidí.
         nabidka:
@@ -714,7 +727,7 @@ async function InternalProjektySection({
         finished: m.finished,
         // Prednost ma pridelený ucet herce; text z Caflou je jen zaloha,
         // dokud ucet prirazeny neni (zadani 10. 9. 2026).
-        narrator: m.actor ? bezTitulu(m.actor.name) || m.actor.email : m.narrator,
+        narrator: m.actor ? rozlis(m.actor.id, bezTitulu(m.actor.name) || m.actor.email) : m.narrator,
       },
     ]),
   );
@@ -793,7 +806,7 @@ async function InternalProjektySection({
                 companyId: k.companyId,
               }))}
               manazeri={manazeriProFormular}
-              herci={herciProFormular.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
+              herci={herciProFormular.map((h) => ({ id: h.id, label: rozlis(h.id, bezTitulu(h.name) || h.email) }))}
               typyProjektu={typyProjektu}
               typyReklam={typyReklamy}
               typAudioknihy={typAudioknihy}
