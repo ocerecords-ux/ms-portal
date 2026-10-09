@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { buildIcs } from '@/lib/ics';
 import { sendPozvankaNataceniEmail } from '@/lib/email';
@@ -252,6 +253,62 @@ function kdySlovy(nataceni: NataceniData, timezone: string, jazyk: 'cs' | 'en'):
   return `${den}, ${cas(start)}–${cas(end)}`;
 }
 
+/**
+ * KALENDÁŘOVÝ ZÁZNAM PRO HOSTA. Jeden skládací bod pro obojí: přílohu mailu
+ * i odkaz „Přidat do kalendáře" (9. 10. 2026). Kdyby si každý stavěl svůj,
+ * rozejdou se - a host by měl v kalendáři jiný čas, než mu přišel v mailu.
+ */
+export function icsProHosta(nataceni: NataceniData, host: HostData, nazevProjektu: string): string {
+  const misto = adresaNaRadek(nataceni.studioNazev, nataceni.adresa);
+  return buildIcs(nazevProjektu, [
+    {
+      // Stálé UID: po přesunu termínu si kalendář opraví tentýž záznam,
+      // místo aby hostovi přibyl druhý.
+      uid: `nataceni-host-${nataceni.id}@msportal.cz`,
+      // Tentýž posunutý čas jako v mailu - host si termín uloží jedním
+      // klepnutím a nesmí si do kalendáře dostat čas herce.
+      start: casKlienta(nataceni.start),
+      end: new Date(nataceni.end),
+      summary: `Natáčení — ${nazevProjektu}`,
+      location: host.online ? nataceni.hovorOdkaz || misto : misto,
+      description: [
+        nataceni.hovorOdkaz ? `Připojení: ${nataceni.hovorOdkaz}` : '',
+        nataceni.parkovani?.trim() ? `Parkování: ${nataceni.parkovani.trim()}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      updatedAt: new Date(),
+    },
+  ]);
+}
+
+/**
+ * ODKAZ „Přidat do kalendáře" (9. 10. 2026: „mělo by tam jít přidat tu událost
+ * do kalendáře někde i s odkazem"). Příloha .ics sama nestačí: část schránek
+ * ji schová mezi přílohy a na telefonu se klepnutím neotevře. Token se
+ * vyrobí při prvním odeslání a dál se drží - po přesunu termínu vede tentýž
+ * odkaz na opravený záznam, takže starý mail nezastará.
+ */
+async function kalendarOdkaz(hostId: string, baseUrl: string): Promise<string | null> {
+  try {
+    // Token se čte rovnou z databáze, ne z HostData - to jde až do prohlížeče
+    // a odkaz z mailu v něm nemá co dělat.
+    const radek = await prisma.hostNataceni.findUnique({
+      where: { id: hostId },
+      select: { kalendarToken: true },
+    });
+    let token = radek?.kalendarToken ?? null;
+    if (!token) {
+      token = randomBytes(24).toString('base64url');
+      await prisma.hostNataceni.update({ where: { id: hostId }, data: { kalendarToken: token } });
+    }
+    return `${baseUrl}/api/nataceni-kalendar/${token}`;
+  } catch (err) {
+    console.error(`Odkaz do kalendáře pro hosta ${hostId} se nepodařilo připravit:`, err);
+    return null;
+  }
+}
+
 export type VysledekPozvanek = {
   odeslano: number;
   chyby: { email: string; duvod: string }[];
@@ -281,6 +338,7 @@ export async function posliPozvanky(
     ? nataceni.hoste.filter((h) => pozvankaJeNaPoslani(h, nataceni.start))
     : nataceni.hoste;
 
+  const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
   const vysledek: VysledekPozvanek = { odeslano: 0, chyby: [] };
 
   for (const host of komu) {
@@ -291,36 +349,13 @@ export async function posliPozvanky(
      */
     const zmena = Boolean(host.pozvankaAt);
     const kdy = kdySlovy(nataceni, pasmo, 'cs');
-    const misto = adresaNaRadek(nataceni.studioNazev, nataceni.adresa);
 
-    const ics = {
-      nazev: 'nataceni.ics',
-      obsah: buildIcs(nazevProjektu, [
-        {
-          // Stálé UID: po přesunu termínu si kalendář opraví tentýž záznam,
-          // místo aby hostovi přibyl druhý.
-          uid: `nataceni-host-${nataceni.id}@msportal.cz`,
-          // Tentýž posunutý čas jako v mailu - host si termín uloží jedním
-          // klepnutím a nesmí si do kalendáře dostat čas herce.
-          start: casKlienta(nataceni.start),
-          end: new Date(nataceni.end),
-          summary: `Natáčení — ${nazevProjektu}`,
-          location: host.online ? nataceni.hovorOdkaz || misto : misto,
-          description: [
-            nataceni.hovorOdkaz ? `Připojení: ${nataceni.hovorOdkaz}` : '',
-            nataceni.parkovani?.trim() ? `Parkování: ${nataceni.parkovani.trim()}` : '',
-          ]
-            .filter(Boolean)
-            .join('\n'),
-          updatedAt: new Date(),
-        },
-      ]),
-    };
+    const ics = { nazev: 'nataceni.ics', obsah: icsProHosta(nataceni, host, nazevProjektu) };
+    const kalendarUrl = await kalendarOdkaz(host.id, baseUrl);
 
     try {
       const odeslano = await sendPozvankaNataceniEmail({
         to: host.email,
-        hostName: host.jmeno,
         projectName: nazevProjektu,
         actorName: nataceni.actorName,
         kdy,
@@ -329,6 +364,7 @@ export async function posliPozvanky(
         mapaUrl: nataceni.mapaUrl,
         parkovani: nataceni.parkovani,
         hovorOdkaz: nataceni.hovorOdkaz,
+        kalendarUrl,
         zmena,
         ics,
         odpovedNa: volby.odpovedNa ?? null,

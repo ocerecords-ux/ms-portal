@@ -2554,6 +2554,12 @@ model HostNataceni {
   /// Poslední chyba odeslání, ať je u řádku vidět, proč pozvánka nedošla.
   chybaOdeslani String?
 
+  /// ODKAZ „Pridat do kalendare“ V POZVANCE (9. 10. 2026). Vlastni nahodny
+  /// token, ne id: id se objevuje v odpovedich API a odkaz z mailu casto
+  /// skonci preposlany dal. Vznika az pri prvnim odeslani pozvanky, proto je
+  /// volitelny - starsi hoste ho dostanou pri dalsim poslani.
+  kalendarToken String? @unique
+
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

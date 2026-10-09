@@ -135,33 +135,35 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     en: 'CHANGED time: recording {projekt} — {kdy}',
   },
   'mail.pozvankaNataceni.preheader': { cs: '{kdy}, {studio}.', en: '{kdy}, {studio}.' },
-  'mail.pozvankaNataceni.nadpis': { cs: 'Zveme vás na natáčení', en: 'You are invited to the recording' },
-  'mail.pozvankaNataceni.nadpisZmena': { cs: 'Natáčení se přesunulo', en: 'The recording has moved' },
   // JEDEN TEXT PRO VŠECHNY (9. 10. 2026) - klient se na poslední chvíli
   // rozmyslí, že nepřijde osobně, ale připojí se, a pozvánka mu pak nesmí
   // tvrdit, že se těšíme ve studiu.
   'mail.pozvankaNataceni.uvod': {
-    cs: 'posíláme vám pozvánku na natáčení v našem studiu.',
-    en: 'here is your invitation to a recording session at our studio.',
+    cs: 'Dobrý den, zasíláme Vám pozvánku na natáčení v našem studiu.',
+    en: 'Hello, here is your invitation to a recording session at our studio.',
   },
   'mail.pozvankaNataceni.uvodZmena': {
-    cs: 'Termín natáčení se změnil. Platí ten níž, ten starý zahoďte.',
-    en: 'The recording has been rescheduled. The time below is the one that applies; please discard the earlier one.',
+    cs: 'Dobrý den, termín natáčení se změnil. Platí ten níž, ten starý zahoďte.',
+    en: 'Hello, the recording has been rescheduled. The time below is the one that applies; please discard the earlier one.',
   },
   'mail.pozvankaNataceni.kdy': { cs: 'Kdy', en: 'When' },
   'mail.pozvankaNataceni.kde': { cs: 'Kde', en: 'Where' },
   'mail.pozvankaNataceni.projekt': { cs: 'Projekt', en: 'Project' },
   'mail.pozvankaNataceni.herec': { cs: 'Herec', en: 'Narrator' },
   'mail.pozvankaNataceni.parkovani': { cs: 'Parkování', en: 'Parking' },
-  'mail.pozvankaNataceni.pripojitSe': { cs: 'Připojit se k natáčení', en: 'Join the recording' },
+  'mail.pozvankaNataceni.pripojitSe': {
+    cs: 'Připojit se k natáčení online',
+    en: 'Join the recording online',
+  },
+  'mail.pozvankaNataceni.pridatDoKalendare': { cs: 'Přidat do kalendáře', en: 'Add to calendar' },
   'mail.pozvankaNataceni.otevritMapu': { cs: 'Otevřít v mapách', en: 'Open in maps' },
   'mail.pozvankaNataceni.odkazPlati': {
     cs: 'Odkaz platí po celou dobu natáčení, otevřete ho klidně o pár minut dřív.',
     en: 'The link works for the whole session, so feel free to open it a few minutes early.',
   },
   'mail.pozvankaNataceni.kalendar': {
-    cs: 'V příloze je soubor pro kalendář — otevřením si termín uložíte.',
-    en: 'A calendar file is attached — open it to save the session.',
+    cs: 'Totéž najdete v příloze mailu. Když termín přesuneme, odkaz už povede na nový čas.',
+    en: 'The same file is attached. If we move the session, this link will already point to the new time.',
   },
   'mail.pozvankaNataceni.kdyzNeco': {
     cs: 'Kdyby se něco změnilo, ozvěte se nám odpovědí na tenhle e-mail.',
