@@ -3157,13 +3157,19 @@ export async function sendCenikEmail(input: CenikEmailInput) {
 // pozvánka na natáčení, která bude obsahovat link pro natáčení online
 // a adresu studia s mapkou a infem o parkování").
 //
-// JEDEN MAIL, DVĚ PODOBY. Kdo přijde do studia, čte nejdřív adresu, mapu
-// a parkování; kdo se připojuje na dálku, čte nejdřív odkaz. Druhá půlka
-// zůstává jako doplněk - host si to rozmyslí a nemusí psát, kde to je.
+// JEDNA PODOBA MAILU (9. 10. 2026: „Nechal bych jen jednu verzi mailu. Klient
+// často třeba rozmyslí, na poslední chvíli, že nepřijde osobně ale připojí
+// se"). Pořadí se proto podle hosta nepřehazuje: nejdřív přehled, pod ním
+// připojení k natáčení a teprve nakonec mapa. Kdo si to ráno rozmyslí, má
+// obojí v témže mailu a nemusí nic hledat ani psát produkci.
 //
 // PŘESUN TERMÍNU se posílá TÝMŽ mailem, jen s jiným nadpisem a předmětem.
 // Vlastní šablona na změnu by se dřív nebo později rozešla s tou původní
 // a host by dostal dvě různě vypadající zprávy o jedné věci.
+//
+// ČAS V MAILU UŽ JE POSUNUTÝ o rezervu na nachystání a zvukovou zkoušku -
+// skládá ho hosteNataceniServer podle REZERVA_KLIENTA_MIN, tady se jen
+// vypisuje.
 // ===========================================================================
 
 export type PozvankaNataceniInput = {
@@ -3171,15 +3177,15 @@ export type PozvankaNataceniInput = {
   jazyk?: Jazyk;
   hostName: string | null;
   projectName: string;
-  /** „úterý 7. 10. 2026, 10:00–13:00" - skládá hosteNataceniServer. */
+  /** Herec té frekvence - klient podle něj pozná, o které natáčení jde. */
+  actorName: string | null;
+  /** „úterý 7. 10. 2026, 11:45–13:00" - skládá hosteNataceniServer, už s rezervou. */
   kdy: string;
   studioName: string;
   adresa: string | null;
   mapaUrl: string | null;
   parkovani: string | null;
   hovorOdkaz: string | null;
-  /** Host se připojuje na dálku. */
-  online: boolean;
   /** Termín se posunul - jiný nadpis a předmět, jinak tentýž mail. */
   zmena: boolean;
   /** Soubor pro kalendář. */
@@ -3188,32 +3194,41 @@ export type PozvankaNataceniInput = {
   odpovedNa?: string | null;
 };
 
-function pozvankaKdeBlok(input: PozvankaNataceniInput, jazyk: Jazyk): string {
-  const radky = [
-    `<tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kde')}</td><td class="value">${escapeHtml(
-      [input.studioName, input.adresa?.trim()].filter(Boolean).join(' · '),
-    )}</td></tr>`,
+/**
+ * PŘEHLED V POŘADÍ, V JAKÉM SE ČTE (9. 10. 2026): projekt, herec, kde, kdy,
+ * parkování. Prázdné řádky se vynechají - host nemá luštit „Parkování: —".
+ * Jeden seznam pro HTML i textovou verzi, aby se nemohly rozejít.
+ */
+function pozvankaPrehled(input: PozvankaNataceniInput): { klic: string; hodnota: string }[] {
+  const radky: { klic: string; hodnota: string }[] = [
+    { klic: 'mail.pozvankaNataceni.projekt', hodnota: input.projectName },
   ];
-  if (input.parkovani?.trim()) {
-    radky.push(
-      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.parkovani')}</td><td class="value">${escapeHtml(
-        input.parkovani.trim(),
-      )}</td></tr>`,
-    );
+  if (input.actorName?.trim()) {
+    radky.push({ klic: 'mail.pozvankaNataceni.herec', hodnota: input.actorName.trim() });
   }
-  return `<table role="presentation" class="field-table">${radky.join('')}</table>`;
+  radky.push({
+    klic: 'mail.pozvankaNataceni.kde',
+    hodnota: [input.studioName, input.adresa?.trim()].filter(Boolean).join(' · '),
+  });
+  radky.push({ klic: 'mail.pozvankaNataceni.kdy', hodnota: input.kdy });
+  if (input.parkovani?.trim()) {
+    radky.push({ klic: 'mail.pozvankaNataceni.parkovani', hodnota: input.parkovani.trim() });
+  }
+  return radky;
 }
 
 export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string {
   const jazyk = input.jazyk ?? 'cs';
   const mapa = odkazNaMapu(input.adresa, input.mapaUrl);
 
-  const kdyBlok = `<table role="presentation" class="field-table">
-    <tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdy')}</td><td class="value">${escapeHtml(input.kdy)}</td></tr>
-    <tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.projekt')}</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
-  </table>`;
+  const prehled = `<table role="presentation" class="field-table">${pozvankaPrehled(input)
+    .map(
+      (r) =>
+        `<tr><td class="label">${prelozitEmail(jazyk, r.klic)}</td><td class="value">${escapeHtml(r.hodnota)}</td></tr>`,
+    )
+    .join('')}</table>`;
 
-  const online = input.hovorOdkaz
+  const pripojeni = input.hovorOdkaz
     ? `<div class="cta-row"><a href="${escapeHtml(input.hovorOdkaz)}" class="cta">${prelozitEmail(
         jazyk,
         'mail.pozvankaNataceni.pripojitSe',
@@ -3221,17 +3236,12 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
     <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.odkazPlati')}</p>`
     : '';
 
-  const misto = `${pozvankaKdeBlok(input, jazyk)}${
-    mapa
-      ? `<div class="cta-row"><a href="${escapeHtml(mapa)}" class="cta-dark">${prelozitEmail(
-          jazyk,
-          'mail.pozvankaNataceni.otevritMapu',
-        )}</a></div>`
-      : ''
-  }`;
-
-  // Co host potřebuje první, je nahoře - viz komentář nad typem.
-  const telo = input.online ? `${online}${misto}` : `${misto}${online}`;
+  const naMapu = mapa
+    ? `<div class="cta-row"><a href="${escapeHtml(mapa)}" class="cta-dark">${prelozitEmail(
+        jazyk,
+        'mail.pozvankaNataceni.otevritMapu',
+      )}</a></div>`
+    : '';
 
   return emailShell({
     jazyk,
@@ -3241,23 +3251,16 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
       studio: input.studioName,
     }),
     body: `
-    <span class="badge">${escapeHtml(input.projectName)}</span>
     <h2>${escapeHtml(
       prelozitEmail(jazyk, input.zmena ? 'mail.pozvankaNataceni.nadpisZmena' : 'mail.pozvankaNataceni.nadpis'),
     )}</h2>
     <p>${escapeHtml(pozdravPosty(jazyk, input.hostName))}</p>
     <p>${escapeHtml(
-      prelozitEmail(
-        jazyk,
-        input.zmena
-          ? 'mail.pozvankaNataceni.uvodZmena'
-          : input.online
-            ? 'mail.pozvankaNataceni.uvodOnline'
-            : 'mail.pozvankaNataceni.uvodOsobne',
-      ),
+      prelozitEmail(jazyk, input.zmena ? 'mail.pozvankaNataceni.uvodZmena' : 'mail.pozvankaNataceni.uvod'),
     )}</p>
-    ${kdyBlok}
-    ${telo}
+    ${prehled}
+    ${pripojeni}
+    ${naMapu}
     ${input.ics ? `<p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kalendar')}</p>` : ''}
     <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco')}</p>
   `,
@@ -3273,6 +3276,24 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
   const jazyk = input.jazyk ?? 'cs';
   const mapa = odkazNaMapu(input.adresa, input.mapaUrl);
 
+  // Textová verze drží tentýž přehled i pořadí jako HTML. Prázdné řádky se
+  // tu nefiltrují - bez nich by z mailu byl jeden odstavec.
+  const radkyTextu: string[] = [
+    pozdravPosty(jazyk, input.hostName),
+    '',
+    prelozitEmail(jazyk, input.zmena ? 'mail.pozvankaNataceni.uvodZmena' : 'mail.pozvankaNataceni.uvod'),
+    '',
+    ...pozvankaPrehled(input).map((r) => `${prelozitEmail(jazyk, r.klic)}: ${r.hodnota}`),
+    '',
+  ];
+  if (input.hovorOdkaz) {
+    radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.pripojitSe')}: ${input.hovorOdkaz}`);
+  }
+  if (mapa) {
+    radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.otevritMapu')}: ${mapa}`);
+  }
+  radkyTextu.push('', prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco'));
+
   await transport.sendMail({
     ...odesilatelMediaspace(input.odpovedNa ?? null),
     to: input.to,
@@ -3280,31 +3301,7 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
       projekt: input.projectName,
       kdy: input.kdy,
     }),
-    text: [
-      pozdravPosty(jazyk, input.hostName),
-      '',
-      prelozitEmail(
-        jazyk,
-        input.zmena
-          ? 'mail.pozvankaNataceni.uvodZmena'
-          : input.online
-            ? 'mail.pozvankaNataceni.uvodOnline'
-            : 'mail.pozvankaNataceni.uvodOsobne',
-      ),
-      '',
-      `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdy')}: ${input.kdy}`,
-      `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.projekt')}: ${input.projectName}`,
-      `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kde')}: ${[input.studioName, input.adresa?.trim()]
-        .filter(Boolean)
-        .join(' · ')}`,
-      input.parkovani?.trim() ? `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.parkovani')}: ${input.parkovani.trim()}` : '',
-      mapa ? `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.otevritMapu')}: ${mapa}` : '',
-      input.hovorOdkaz ? `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.pripojitSe')}: ${input.hovorOdkaz}` : '',
-      '',
-      prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco'),
-    ]
-      .filter(Boolean)
-      .join('\n'),
+    text: radkyTextu.join('\n'),
     html: buildPozvankaNataceniHtml(input),
     /**
      * Příloha jde jako `text/calendar`, ne jako obyčejný soubor - jinak ji

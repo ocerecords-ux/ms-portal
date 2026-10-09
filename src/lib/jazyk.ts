@@ -4816,6 +4816,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- kalendář: bublina s detailem události ---
   'kalendar.kliknutimZavrit': { cs: 'Klikni pro zavření', en: 'Click to close' },
+  'kalendar.klientSePripoji': { cs: 'Klient se připojí {cas}', en: 'Client joins at {cas}' },
   'kalendar.herecJmeno': { cs: 'Herec: {jmeno}', en: 'Narrator: {jmeno}' },
   'kalendar.projektNeni': { cs: 'Projekt není vyplněný.', en: 'The project is not filled in.' },
   'kalendar.projektNeniSDvojklikem': {
@@ -5542,7 +5543,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.zalozka.PROJEKT': { cs: 'Projekty', en: 'Projects' },
   'chat.zalozka.SOUKROMA': { cs: 'Soukromé', en: 'Private' },
   'chat.zalozka.SKUPINA': { cs: 'Skupiny', en: 'Groups' },
+  'chat.zalozka.DOTAZ': { cs: 'Dotazy klientů', en: 'Client questions' },
   'chat.zalozka.UKOLY': { cs: 'Úkoly', en: 'Tasks' },
+  'chat.zadneDotazy': { cs: 'Zatím se nikdo na nic neptá.', en: 'No one has asked anything yet.' },
 
   // Oddělovač dnů a čas u zprávy (lib/chat.ts).
   'chat.den.dnes': { cs: 'Dnes', en: 'Today' },

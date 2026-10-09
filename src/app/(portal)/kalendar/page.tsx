@@ -462,6 +462,9 @@ export default async function KalendarPage({
       rezieRucne: b.rezieOnline,
       externi: jeExterni(b.zvukarUserId),
       hovorOdkaz: odkazHovoru.get(b.studioId) ?? null,
+      // Hosté na natáčení (9. 10. 2026) - v detailu události se ukáže, v kolik
+      // se klient připojí a na jaké maily pozvánka šla.
+      hoste: b.hoste,
       // Rozepsané údaje pro úpravu události (zadání 14. 9. 2026).
       udalost: {
         caflouProjectId: b.caflouProjectId,

@@ -29,8 +29,19 @@ export const CHAT_TABS: { kind: ConversationKind; label: string }[] = [
 export const ZALOZKA_UKOLY = 'UKOLY' as const;
 export type ZalozkaChatu = ConversationKind | typeof ZALOZKA_UKOLY;
 
+/**
+ * DOTAZY KLIENTŮ MAJÍ VLASTNÍ ZÁLOŽKU ZPĚT (zadání 9. 10. 2026: „možná bych
+ * pro to udělal speciální kategorii a ikonu na horní liště chatu“).
+ *
+ * Od 18. 9. 2026 se schovávaly pod kanály projektů, což stačilo, dokud na ně
+ * chodilo upozornění. Nechodilo žádné, takže se na dotaz přišlo jen tím, že
+ * si jich někdo všiml v seznamu. Teď mají svou ikonu v liště, červený
+ * odznak a všechno, co přijde, se ozve — je to jediné místo v chatu, kde
+ * čeká KLIENT.
+ */
 export const CHAT_ZALOZKY: { klic: ZalozkaChatu; label: string }[] = [
   ...CHAT_TABS.map((t) => ({ klic: t.kind as ZalozkaChatu, label: t.label })),
+  { klic: 'DOTAZ' as ZalozkaChatu, label: 'Dotazy klientů' },
   { klic: ZALOZKA_UKOLY, label: 'Úkoly' },
 ];
 

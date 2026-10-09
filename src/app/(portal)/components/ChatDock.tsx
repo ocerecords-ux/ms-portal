@@ -2546,9 +2546,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
           >
             <IkonaZalozky kind={z.klic} />
             {nove > 0 && (
+              /* DOTAZ KLIENTA ČERVENĚ (9. 10. 2026: „chtělo by to i nějak
+                 zvýraznit třeba červeně. Je to důležitá věc“). Zelená tečka
+                 u čtyř ikon vedle sebe řekne „něco přibylo“; červená řekne
+                 „tohle nenechávej ležet“. */
               <span
                 aria-hidden="true"
-                className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-green ring-2 ring-brand-purple"
+                className={`absolute top-1 right-1 w-2 h-2 rounded-full ring-2 ring-brand-purple ${
+                  z.klic === 'DOTAZ' ? 'bg-danger' : 'bg-brand-green'
+                }`}
               />
             )}
           </button>
@@ -3622,40 +3628,44 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.zadneProjekty')}</p>
               )}
 
-              {/* DOTAZY KLIENTŮ (zadání 18. 9. 2026). Vlastní záložku už nemají
-                  - jsou tady, pod kanály projektů, kam svým obsahem patří.
-                  Kdyby zmizely úplně, neměl by na otázku klienta kdo odpovědět. */}
-              {tab === 'PROJEKT' && dotazy.length > 0 && (
-                <>
-                  <span className="mt-3 mb-1 px-1 font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
-                    {t('chat.dotazyKlientu')}
-                  </span>
-                  {dotazy.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setOpenId(c.id)}
-                      className={`text-left rounded-lg px-2.5 py-1.5 transition-colors flex items-center justify-between gap-2 ${
-                        c.id === openId ? 'bg-tint text-brand-purpleDark' : 'hover:bg-field text-ink'
-                      }`}
-                    >
-                      <span className="font-heading text-sm truncate">{c.label}</span>
-                      {c.unread > 0 && (
-                        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
-                          {c.unread}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </>
+              {/* DOTAZY KLIENTŮ MAJÍ VLASTNÍ ZÁLOŽKU (9. 10. 2026). Od 18. 9.
+                  se schovávaly pod kanály projektů - to stačilo, dokud na ně
+                  chodilo upozornění. Nechodilo žádné, takže se na dotaz přišlo
+                  jen náhodou. Červená je tu záměrně: je to jediné místo
+                  v chatu, kde čeká KLIENT. */}
+              {tab === 'DOTAZ' && dotazy.length === 0 && (
+                <p className="text-sm font-body text-muted m-0 px-1">{t('chat.zadneDotazy')}</p>
               )}
+              {tab === 'DOTAZ' &&
+                dotazy.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setOpenId(c.id)}
+                    className={`text-left rounded-lg border-l-[3px] px-2.5 py-1.5 transition-colors flex items-center justify-between gap-2 ${
+                      c.id === openId
+                        ? 'border-danger bg-dangerTint text-danger'
+                        : c.unread > 0
+                          ? 'border-danger bg-dangerTint/60 text-ink hover:bg-dangerTint'
+                          : 'border-transparent text-ink hover:bg-field'
+                    }`}
+                  >
+                    <span className="font-heading text-sm truncate">{c.label}</span>
+                    {c.unread > 0 && (
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-heading font-bold leading-[18px] text-center">
+                        {c.unread}
+                      </span>
+                    )}
+                  </button>
+                ))}
 
-              {tab !== 'PROJEKT' && tab !== ZALOZKA_UKOLY && vZalozce.length === 0 && !novy && (
+              {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && vZalozce.length === 0 && !novy && (
                 <p className="text-sm font-body text-muted m-0 px-1">
                   {tab === 'SOUKROMA' ? t('chat.zadneSoukrome') : t('chat.zadneSkupiny')}
                 </p>
               )}
               {tab !== 'PROJEKT' &&
+                tab !== 'DOTAZ' &&
                 tab !== ZALOZKA_UKOLY &&
                 vZalozce.map((c) => (
                   <RadekKonverzace
@@ -3746,7 +3756,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
             {/* Kanaly k projektum se nezakladaji rucne - berou se z aktivnich
                 projektu, takze tlacitko dava smysl jen u zbylych dvou zalozek. */}
-            {tab !== 'PROJEKT' && tab !== ZALOZKA_UKOLY && (
+            {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && (
               <div className="border-t border-line p-2">
                 <button
                   type="button"
@@ -4755,6 +4765,16 @@ function IkonaZalozky({ kind }: { kind: ZalozkaChatu }) {
     return (
       <svg {...spolecne}>
         <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+      </svg>
+    );
+  }
+  if (kind === 'DOTAZ') {
+    // Bublina s otaznikem - jedine misto v chatu, kde ceka KLIENT.
+    return (
+      <svg {...spolecne}>
+        <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+        <path d="M9.6 8.6a2.4 2.4 0 1 1 3.3 2.2c-.6.3-.9.8-.9 1.4v.3" />
+        <path d="M12 15.1h.01" />
       </svg>
     );
   }

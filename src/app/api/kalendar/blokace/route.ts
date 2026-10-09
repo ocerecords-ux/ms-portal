@@ -9,6 +9,7 @@ import { BLOCK_KIND_LABELS, jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudi
 import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { kdyAnglicky, oznamKlientovi } from '@/lib/bookingServer';
 import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
+import { preklopReklamuPodlePlanu } from '@/lib/planReklamyServer';
 
 /**
  * Blokace založená přímo z kalendáře dvojklikem (zprava uzivatele 9. 9. 2026:
@@ -225,6 +226,14 @@ export async function POST(req: NextRequest) {
       kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
     });
 
+
+    /**
+     * REKLAMA SE PŘEKLOPÍ NA „NATÁČÍME", JAK JE NAPLÁNOVÁNO (9. 10. 2026) -
+     * viz lib/planReklamyServer.ts. Tichá funkce: když to reklama není nebo
+     * ještě nemají termín všichni herci, nestane se nic.
+     */
+    await preklopReklamuPodlePlanu(block.caflouProjectId);
+
     return NextResponse.json(block, { status: 201 });
   } catch (err) {
     console.error('POST /api/kalendar/blokace selhalo:', err);
@@ -372,6 +381,14 @@ export async function PATCH(req: NextRequest) {
         kdyAnglicky(puvodni.start, puvodni.end, await pasmoStudia(puvodni.studioId)),
       );
     }
+
+
+    /**
+     * REKLAMA SE PŘEKLOPÍ NA „NATÁČÍME", JAK JE NAPLÁNOVÁNO (9. 10. 2026) -
+     * viz lib/planReklamyServer.ts. Tichá funkce: když to reklama není nebo
+     * ještě nemají termín všichni herci, nestane se nic.
+     */
+    await preklopReklamuPodlePlanu(upravena.caflouProjectId);
 
     return NextResponse.json(upravena);
   } catch (err) {

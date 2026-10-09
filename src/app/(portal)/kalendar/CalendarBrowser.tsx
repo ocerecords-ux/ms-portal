@@ -21,6 +21,7 @@ import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 
 /** Červený rámeček události, kde je režie na dálku (zadání 23. 9. 2026). */
 const BARVA_REZIE = '#ef4444';
+import { casKlienta } from '@/lib/hosteNataceni';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -203,6 +204,12 @@ export type CalendarEvent = {
   rezieRucne?: boolean | null;
   /** Odkaz na videohovor studia (23. 9. 2026) - ikona režie je proklik. */
   hovorOdkaz?: string | null;
+  /**
+   * HOSTÉ NA NATÁČENÍ (9. 10. 2026: „potreboval bych to dostat do kalendare
+   * k te udalosti. Ze se klient pripoji 11:45 a ty jejich maily z pozvanek").
+   * Čas si detail spočítá přes casKlienta, ať je stejný jako v mailu.
+   */
+  hoste?: { jmeno: string | null; email: string; online: boolean }[];
 };
 
 /**
@@ -3804,6 +3811,18 @@ function DetailUdalosti({
           </p>
           {u?.actorName && !event.title.includes(u.actorName) && (
             <p className="m-0 text-sm font-heading">{t('kalendar.herecJmeno', { jmeno: u.actorName })}</p>
+          )}
+          {/* HOSTÉ NA NATÁČENÍ (9. 10. 2026). Čas klienta je o rezervu později
+              než začátek dohodnutý s hercem - totéž číslo, které odejde v pozvánce. */}
+          {(event.hoste?.length ?? 0) > 0 && (
+            <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/15">
+              <p className="m-0 text-sm font-heading tabular-nums">
+                {t('kalendar.klientSePripoji', { cas: cas(casKlienta(event.start).toISOString()) })}
+              </p>
+              <p className="m-0 text-xs font-body opacity-80 break-words">
+                {(event.hoste ?? []).map((h) => (h.jmeno?.trim() ? `${h.jmeno.trim()} · ${h.email}` : h.email)).join(', ')}
+              </p>
+            </div>
           )}
           {/* Střih převzatý z Googlu projekt nemá - ať je jasné proč a co s tím
               (21. 9. 2026). */}

@@ -3,6 +3,8 @@ import { userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
 import { MAX_PRILOHA_KLIENTA_BYTES, smiKlientPriloha, type ChatPriloha } from '@/lib/chatPrilohy';
 import { overPrilohu } from '@/lib/storage';
+import { notifyMany } from '@/lib/notifications';
+import { posliPush } from '@/lib/pushServer';
 
 /**
  * Dotazy klienta k projektu (zadání 11. 9. 2026: „chtěl bych přidat
@@ -270,7 +272,92 @@ export async function posliDotaz(
     prisma.conversation.update({ where: { id: kanal.id }, data: { lastMessageAt: new Date() } }),
   ]);
 
+  await dejVedetTymu(kanal.id, caflouProjectId, projectName, userId, telo, prilohy.length);
+
   return { ok: true };
+}
+
+/**
+ * DOTAZ KLIENTA SE MUSÍ OZVÁT (zadání 9. 10. 2026: „Helči a Karolíně
+ * nevyskakují notifikace na dotazy klientů… je to důležitá věc“).
+ *
+ * Do teď se dotaz jen uložil do kanálu a nikomu u nás necinklo — kdo se
+ * zrovna nedíval do MS chatu, nevěděl o něm. Teď chodí upozornění pod
+ * zvonek i do telefonu.
+ *
+ * NEFILTRUJE SE PODLE NASTAVENÍ CHATU. Obecná nastavení (tiché hodiny,
+ * ztlumené kanály) platí na náš vlastní provoz; dotaz od klienta je jiná
+ * kategorie a má dojít vždycky.
+ *
+ * DOROVNÁ I ČLENSTVÍ. Kanál dostane členy ve chvíli založení, takže kdo
+ * dostal právo „Dostává dotazy klientů“ až později, do starších kanálů
+ * vůbec neviděl. Při každém dotazu se chybějící příjemci doplní — tím se
+ * to spítne i zpětně, bez zásahu do databáze rukou.
+ *
+ * NIKDY NEVYHAZUJE: dotaz už je uložený a chyba při rozesílání nesmí
+ * klientovi vrátit, že se zpráva neodeslala.
+ */
+async function dejVedetTymu(
+  conversationId: string,
+  caflouProjectId: string,
+  projectName: string,
+  autorId: string,
+  telo: string,
+  pocetPriloh: number,
+): Promise<void> {
+  try {
+    const prijemci = await prijemciDotazu();
+
+    const uzClenove = await prisma.conversationMember.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+    const maji = new Set(uzClenove.map((c) => c.userId));
+    const chybejici = prijemci.filter((id) => !maji.has(id));
+    if (chybejici.length > 0) {
+      await prisma.conversationMember
+        .createMany({
+          data: chybejici.map((uid) => ({ conversationId, userId: uid })),
+          skipDuplicates: true,
+        })
+        .catch((err) => console.error('Doplneni clenu kanalu dotazu selhalo:', err));
+    }
+
+    // Autor je klient, ale pro jistotu - at si sam sobe necinkne.
+    const komu = [...new Set([...prijemci, ...uzClenove.map((c) => c.userId)])].filter(
+      (id) => id !== autorId,
+    );
+    if (komu.length === 0) return;
+
+    const kdo = await prisma.user.findUnique({
+      where: { id: autorId },
+      select: { name: true, email: true },
+    });
+    const jmeno = kdo ? userLabel(kdo) : 'Klient';
+    const nahled = telo
+      ? telo.replace(/:ms-[a-z-]+:/g, '').trim().slice(0, 140)
+      : pocetPriloh === 1
+        ? 'Poslal(a) přílohu'
+        : 'Poslal(a) přílohy';
+    const odkaz = `/chat?konverzace=${conversationId}`;
+
+    await notifyMany(komu, {
+      kind: 'dotaz-klienta',
+      title: `Dotaz klienta: ${projectName}`,
+      body: `${jmeno}: ${nahled}`,
+      url: odkaz,
+    });
+
+    void posliPush(komu, {
+      titulek: `Dotaz klienta — ${projectName}`,
+      text: `${jmeno}: ${nahled}`,
+      odkaz,
+      // Další dotaz z téhož kanálu přepíše předchozí upozornění.
+      znacka: `dotaz-${caflouProjectId}`,
+    });
+  } catch (err) {
+    console.error('Upozorneni na dotaz klienta selhalo:', err);
+  }
 }
 
 /**

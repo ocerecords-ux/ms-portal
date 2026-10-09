@@ -137,13 +137,12 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
   'mail.pozvankaNataceni.preheader': { cs: '{kdy}, {studio}.', en: '{kdy}, {studio}.' },
   'mail.pozvankaNataceni.nadpis': { cs: 'Zveme vás na natáčení', en: 'You are invited to the recording' },
   'mail.pozvankaNataceni.nadpisZmena': { cs: 'Natáčení se přesunulo', en: 'The recording has moved' },
-  'mail.pozvankaNataceni.uvodOsobne': {
-    cs: 'Těšíme se na vás ve studiu. Níž je adresa, mapa a jak to u nás je s parkováním.',
-    en: 'We look forward to seeing you at the studio. Below are the address, a map and how parking works here.',
-  },
-  'mail.pozvankaNataceni.uvodOnline': {
-    cs: 'Natáčení budete sledovat na dálku — stačí v čase níž otevřít odkaz.',
-    en: 'You will be joining remotely — just open the link at the time below.',
+  // JEDEN TEXT PRO VŠECHNY (9. 10. 2026) - klient se na poslední chvíli
+  // rozmyslí, že nepřijde osobně, ale připojí se, a pozvánka mu pak nesmí
+  // tvrdit, že se těšíme ve studiu.
+  'mail.pozvankaNataceni.uvod': {
+    cs: 'posíláme vám pozvánku na natáčení v našem studiu.',
+    en: 'here is your invitation to a recording session at our studio.',
   },
   'mail.pozvankaNataceni.uvodZmena': {
     cs: 'Termín natáčení se změnil. Platí ten níž, ten starý zahoďte.',
@@ -152,6 +151,7 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
   'mail.pozvankaNataceni.kdy': { cs: 'Kdy', en: 'When' },
   'mail.pozvankaNataceni.kde': { cs: 'Kde', en: 'Where' },
   'mail.pozvankaNataceni.projekt': { cs: 'Projekt', en: 'Project' },
+  'mail.pozvankaNataceni.herec': { cs: 'Herec', en: 'Narrator' },
   'mail.pozvankaNataceni.parkovani': { cs: 'Parkování', en: 'Parking' },
   'mail.pozvankaNataceni.pripojitSe': { cs: 'Připojit se k natáčení', en: 'Join the recording' },
   'mail.pozvankaNataceni.otevritMapu': { cs: 'Otevřít v mapách', en: 'Open in maps' },

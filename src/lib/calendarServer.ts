@@ -158,6 +158,13 @@ export type Occupancy = {
     note: string | null;
     /** Ruční výjimka pro ikonu režie (23. 9. 2026). */
     rezieOnline: boolean | null;
+    /**
+     * HOSTÉ NA NATÁČENÍ (9. 10. 2026: „potřeboval bych to dostat do kalendáře
+     * k té události. Že se klient připojí 11:45 a ty jejich maily
+     * z pozvánek“). Čas si kalendář spočítá sám přes casKlienta, tady jen
+     * jmenovitě kdo je pozvaný.
+     */
+    hoste: { jmeno: string | null; email: string; online: boolean }[];
   }[];
 };
 
@@ -192,6 +199,9 @@ export async function loadOccupancy(
     prisma.studioBlock.findMany({
       where: { studioId: { in: studioIds }, start: { lt: to }, end: { gt: from } },
       orderBy: { start: 'asc' },
+      include: {
+        hoste: { orderBy: { createdAt: 'asc' }, select: { jmeno: true, email: true, online: true } },
+      },
     }),
   ]);
 
@@ -230,6 +240,7 @@ export async function loadOccupancy(
       zvukarName: b.zvukarName,
       note: b.note,
       rezieOnline: b.rezieOnline,
+      hoste: (b.hoste ?? []).map((h) => ({ jmeno: h.jmeno, email: h.email, online: h.online })),
     })),
   };
 }

@@ -33,6 +33,8 @@ export type NataceniData = {
   start: string;
   end: string;
   nazev: string;
+  /** Herec té frekvence - jde do přehledu v pozvánce. */
+  actorName: string | null;
   studioId: string;
   studioNazev: string;
   studioBarva: string | null;
@@ -45,6 +47,24 @@ export type NataceniData = {
   hovorOdkaz: string | null;
   hoste: HostData[];
 };
+
+/**
+ * REZERVA PRO KLIENTA (zadání 9. 10. 2026: „Necháváme si rezervu 15 min.
+ * o kterou posouváme pozvánku s klientem. Abychom se stíhli nachystat
+ * a udělat zvukovou zkoušku“).
+ *
+ * Produkce se s hercem dohodne na 11:30, klientovi se pošle 11:45. Jedno
+ * číslo na jednom místě: mail, kalendářová příloha hosta i řádek u události
+ * v kalendáři berou čas odsud, takže se nemůžou rozejít. V kalendáři studia
+ * zůstává doba dohodnutá s hercem - rezerva je ta první čtvrthodina, ne čas
+ * navíc.
+ */
+export const REZERVA_KLIENTA_MIN = 15;
+
+/** Čas, který se říká klientovi - začátek natáčení plus rezerva na zvukovou zkoušku. */
+export function casKlienta(start: string | Date): Date {
+  return new Date(new Date(start).getTime() + REZERVA_KLIENTA_MIN * 60_000);
+}
 
 /**
  * ODKAZ STUDIA JAKO VÝCHOZÍ (rozhodnutí 30. 9. 2026). Každé studio má svůj

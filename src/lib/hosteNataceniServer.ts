@@ -3,6 +3,7 @@ import { buildIcs } from '@/lib/ics';
 import { sendPozvankaNataceniEmail } from '@/lib/email';
 import {
   adresaNaRadek,
+  casKlienta,
   platnyHovorOdkaz,
   pozvankaJeNaPoslani,
   type HostData,
@@ -26,6 +27,7 @@ type BlokZDb = {
   start: Date;
   end: Date;
   title: string;
+  actorName: string | null;
   hovorOdkaz: string | null;
   studio: {
     id: string;
@@ -53,6 +55,7 @@ const VYBER_BLOKU = {
   start: true,
   end: true,
   title: true,
+  actorName: true,
   hovorOdkaz: true,
   studio: {
     select: {
@@ -98,6 +101,7 @@ function naNataceni(b: BlokZDb): NataceniData {
     start: b.start.toISOString(),
     end: b.end.toISOString(),
     nazev: b.title,
+    actorName: b.actorName,
     studioId: b.studio.id,
     studioNazev: b.studio.name,
     studioBarva: b.studio.color,
@@ -223,9 +227,13 @@ export async function nastavHovorOdkaz(blockId: string, odkaz: string | null): P
 /**
  * ČAS SLOVY V PÁSMU STUDIA. London točí v jiném pásmu než Brno a hostovi má
  * v mailu stát hodina, kterou uvidí na dveřích studia - ne ta pražská.
+ *
+ * Začátek je už POSUNUTÝ o rezervu na nachystání a zvukovou zkoušku
+ * (REZERVA_KLIENTA_MIN) - hostovi se nikde nesmí objevit čas dohodnutý
+ * s hercem. Konec zůstává, natáčení se kvůli rezervě neprodlužuje.
  */
 function kdySlovy(nataceni: NataceniData, timezone: string, jazyk: 'cs' | 'en'): string {
-  const start = new Date(nataceni.start);
+  const start = casKlienta(nataceni.start);
   const end = new Date(nataceni.end);
   const den = new Intl.DateTimeFormat(jazyk === 'en' ? 'en-GB' : 'cs-CZ', {
     weekday: 'long',
@@ -292,7 +300,9 @@ export async function posliPozvanky(
           // Stálé UID: po přesunu termínu si kalendář opraví tentýž záznam,
           // místo aby hostovi přibyl druhý.
           uid: `nataceni-host-${nataceni.id}@msportal.cz`,
-          start: new Date(nataceni.start),
+          // Tentýž posunutý čas jako v mailu - host si termín uloží jedním
+          // klepnutím a nesmí si do kalendáře dostat čas herce.
+          start: casKlienta(nataceni.start),
           end: new Date(nataceni.end),
           summary: `Natáčení — ${nazevProjektu}`,
           location: host.online ? nataceni.hovorOdkaz || misto : misto,
@@ -312,13 +322,13 @@ export async function posliPozvanky(
         to: host.email,
         hostName: host.jmeno,
         projectName: nazevProjektu,
+        actorName: nataceni.actorName,
         kdy,
         studioName: nataceni.studioNazev,
         adresa: nataceni.adresa,
         mapaUrl: nataceni.mapaUrl,
         parkovani: nataceni.parkovani,
         hovorOdkaz: nataceni.hovorOdkaz,
-        online: host.online,
         zmena,
         ics,
         odpovedNa: volby.odpovedNa ?? null,

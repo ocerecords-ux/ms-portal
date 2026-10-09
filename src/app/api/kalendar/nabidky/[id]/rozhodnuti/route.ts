@@ -9,6 +9,7 @@ import { checkSlot, recordEvent } from '@/lib/calendarServer';
 import { minutesInZone, minutesToTime } from '@/lib/calendar';
 import { sendRecordingDecisionEmail } from '@/lib/email';
 import { notify } from '@/lib/notifications';
+import { preklopReklamuPodlePlanu } from '@/lib/planReklamyServer';
 
 /**
  * Rozhodnutí produkce o výběru herce (zadani 8. 9. 2026).
@@ -280,6 +281,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         url: '/moje-terminy',
       });
     }
+
+    /**
+     * REKLAMA SE PŘEKLOPÍ NA „NATÁČÍME", JAK JE NAPLÁNOVÁNO (9. 10. 2026) -
+     * viz lib/planReklamyServer.ts. U audioknihy se nestane nic.
+     */
+    await preklopReklamuPodlePlanu(request.caflouProjectId);
 
     return NextResponse.json({ ok: true });
   } catch (err) {
