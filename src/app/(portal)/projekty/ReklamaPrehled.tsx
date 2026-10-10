@@ -8,6 +8,7 @@ import { stavProKlientaReklamy } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony } from '@/lib/ikonyTypu';
 import { ZnackyDokladuKlienta } from '@/lib/dokladyKlienta';
 import type { DokladKlienta } from '@/lib/dokladyKlientaServer';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 /**
@@ -191,16 +192,16 @@ export function ReklamaPrehled({
             {okno.dokumenty.length > 1 && (
               <a
                 href={`/api/projects/${encodeURIComponent(okno.projektId)}/dokumenty/zip`}
-                title="Stáhne všechny dokumenty zakázky v jednom archivu"
+                title={t('reklamaPrehled.stahnoutVseTitle')}
                 className="shrink-0 text-xs font-heading font-semibold text-brand-purple no-underline hover:underline"
               >
-                Stáhnout vše
+                {t('disk.stahnoutVse')}
               </a>
             )}
           </div>
           <div className="p-3 flex flex-col gap-2 max-h-72 overflow-y-auto">
             {okno.dokumenty.length === 0 && (
-              <p className="text-sm font-body text-muted m-0">Zatím tu žádný dokument není.</p>
+              <p className="text-sm font-body text-muted m-0">{t('reklamaPrehled.zadnyDokument')}</p>
             )}
             {okno.dokumenty.map((d) => (
               <div
@@ -209,7 +210,7 @@ export function ReklamaPrehled({
               >
                 <span className="min-w-0">
                   <span className="block text-xs font-heading text-muted">
-                    {d.druh === 'RL' ? 'Rodný list' : 'Licenční list'}
+                    {d.druh === 'RL' ? t('projekty.sl.rodnyList') : t('projekt.zalozka.licencniList')}
                   </span>
                   <span className="block text-sm font-body text-ink truncate">{d.nazev}</span>
                 </span>
@@ -218,7 +219,7 @@ export function ReklamaPrehled({
                   download
                   className="shrink-0 bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 no-underline hover:bg-brand-purpleDeep transition-colors"
                 >
-                  Stáhnout
+                  {t('obecne.stahnout')}
                 </a>
               </div>
             ))}
@@ -268,16 +269,16 @@ function Tabulka({
         <table className="w-full min-w-[820px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <th className="text-left px-4 py-3.5">Projekt</th>
-              <th className="text-left px-4 py-3.5">Stav</th>
-              <th className="text-left px-4 py-3.5">Herec</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.projekt')}</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.stav')}</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.herecReklamy')}</th>
               {/* „Typ projektu" tu od 1. 10. 2026 není - je z něj ikona
                   u názvu a uvolněné místo zabraly Doklady. */}
-              <th className="text-left px-4 py-3.5">Licence</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Doklady</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Dokončení</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Složka</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Připomínkovat</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.licence')}</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">{prelozit(jazyk, 'projekty.sl.doklady')}</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">{prelozit(jazyk, 'projekty.sl.dokonceni')}</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">{prelozit(jazyk, 'projekty.sl.slozka')}</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">{prelozit(jazyk, 'projekty.sl.pripominkovat')}</th>
             </tr>
           </thead>
           <tbody>
@@ -348,8 +349,10 @@ function Tabulka({
                                 top: r.bottom + MEZERA_OKNA,
                               });
                             }}
-                            title={`Dokumenty ke stažení (${listy.length})`}
-                            aria-label={`Dokumenty ke stažení (${listy.length})`}
+                            title={prelozitS(jazyk, 'reklamaPrehled.dokumentyKeStazeni', { pocet: listy.length })}
+                            aria-label={prelozitS(jazyk, 'reklamaPrehled.dokumentyKeStazeni', {
+                              pocet: listy.length,
+                            })}
                             className="shrink-0 inline-flex items-center gap-1 rounded-pill border border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight px-2 py-1 cursor-pointer hover:border-brand-purple transition-colors"
                           >
                             <svg
@@ -394,7 +397,7 @@ function Tabulka({
                         href={`/nahravky?projekt=${encodeURIComponent(id)}`}
                         className="text-brand-purple font-heading text-xs no-underline hover:underline"
                       >
-                        Otevřít složku
+                        {prelozit(jazyk, 'reklamaPrehled.otevritSlozku')}
                       </Link>
                     ) : (
                       <span className="text-sm text-muted">—</span>
@@ -412,7 +415,7 @@ function Tabulka({
                         rel="noopener noreferrer"
                         className="inline-block bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 no-underline hover:bg-brand-purpleDeep transition-colors"
                       >
-                        Připomínkovat
+                        {prelozit(jazyk, 'projekty.sl.pripominkovat')}
                       </a>
                     ) : (
                       <span className="text-sm text-muted">—</span>

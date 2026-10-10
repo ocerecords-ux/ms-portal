@@ -468,7 +468,7 @@ export function Tabule({
                   <span style={{ width: 210, flexShrink: 0, fontSize: 26, fontWeight: 600, color: BARVY.sedy }}>
                     {cas(new Date(r.od))} – {cas(new Date(r.do))}
                   </span>
-                  <span style={{ fontSize: 26, color: BARVY.sedy }}>Volno</span>
+                  <span style={{ fontSize: 26, color: BARVY.sedy }}>{prelozit(jazyk, 'tabule.volno')}</span>
                 </div>
               ) : (
                 <div
@@ -904,14 +904,17 @@ function OstatniStudia({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
-      <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>OSTATNÍ STUDIA</span>
+      <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>
+        {prelozit(jazyk, 'tabule.ostatniStudia')}
+      </span>
       {ostatni.map((s) => {
         const bezi = s.probiha && Date.parse(s.probiha.do) > tedMs;
         const jinePasmo = s.casovePasmo !== domaciPasmo;
+        // „do" a „od" jsou součástí věty, takže jeden klíč se značkou (pravidlo 7).
         const cas = bezi
-          ? `do ${hodina(s.probiha!.do, s.casovePasmo)}`
+          ? prelozitS(jazyk, 'tabule.doCasu', { cas: hodina(s.probiha!.do, s.casovePasmo) })
           : s.dalsi
-            ? `od ${hodina(s.dalsi.od, s.casovePasmo)}`
+            ? prelozitS(jazyk, 'tabule.odCasu', { cas: hodina(s.dalsi.od, s.casovePasmo) })
             : '';
         return (
           <div

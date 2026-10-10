@@ -10,7 +10,7 @@ import {
   type SloupecTabulky,
 } from '@/app/(portal)/components/RaditelnaTabulka';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
-import { ZKRATKA_CASTI, jeCastFaktury } from '@/lib/fakturaCast';
+import { jeCastFaktury, zkratkaCasti } from '@/lib/fakturaCast';
 import {
   kdyOdesla,
   kdyPujde,
@@ -124,10 +124,10 @@ export function FakturyTabulka({
           </span>
           {jeCastFaktury(r.cast) && (
             <span
-              title="Interní označení — na faktuře se to nikde neobjeví."
+              title={t('faktura.castTabulkaTitle')}
               className="inline-flex items-center mt-1 text-[11px] font-heading font-semibold px-2 py-0.5 rounded-pill bg-field text-muted border border-line"
             >
-              {ZKRATKA_CASTI[r.cast]}
+              {zkratkaCasti(r.cast, jazyk)}
             </span>
           )}
         </>
@@ -171,7 +171,7 @@ export function FakturyTabulka({
        * stojí pod tím tiše, ať je vidět, že se něco děje.
        */
       key: 'upominka',
-      label: 'Upomínka',
+      label: t('faktura.sloupecUpominka'),
       // Řadí se podle toho, co je na spadnutí - a teprve pak podle toho,
       // kolik už toho odešlo.
       hodnota: (r) =>
@@ -189,21 +189,21 @@ export function FakturyTabulka({
               <span
                 title={
                   sviti
-                    ? 'Odejde klientovi automaticky. Když nemá, zastavte to v Doklady → Upomínky.'
-                    : 'Termín automatické upomínky.'
+                    ? t('faktura.upominkaAutomaticky')
+                    : t('faktura.upominkaTermin')
                 }
                 className={`inline-flex items-center self-start text-[11px] font-heading font-semibold px-2 py-0.5 rounded-pill whitespace-nowrap ${
                   sviti ? 'bg-dangerTint text-danger' : 'bg-field text-muted border border-line'
                 }`}
               >
-                {kdyPujde(r.upominka.dalsi)}
+                {kdyPujde(r.upominka.dalsi, jazyk)}
               </span>
             )}
             <span className="text-[11px] font-body text-muted tabular-nums">
               {posledni
-                ? `${posledni.poradi}. šla ${kdyOdesla(posledni.kdy)}`
+                ? t('faktura.upominkaSla', { poradi: posledni.poradi, kdy: kdyOdesla(posledni.kdy, jazyk) })
                 : r.upominka.dalsi
-                  ? popisPoradi(r.upominka.dalsi.poradi)
+                  ? popisPoradi(r.upominka.dalsi.poradi, jazyk)
                   : ''}
             </span>
           </span>
@@ -293,7 +293,7 @@ export function FakturyTabulka({
       // a projektu (zadání 15. 9. 2026).
       hledat={(r) =>
         `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.odberatel} ${r.stav} ${
-          jeCastFaktury(r.cast) ? ZKRATKA_CASTI[r.cast] : ''
+          jeCastFaktury(r.cast) ? zkratkaCasti(r.cast, jazyk) : ''
         }`
       }
       hledatPlaceholder={t('faktura.hledatPlaceholder')}
@@ -312,9 +312,9 @@ export function FakturyTabulka({
         },
         {
           key: 'cast',
-          label: 'Část zakázky',
-          moznosti: moznostiZ(radky, (r) => (jeCastFaktury(r.cast) ? ZKRATKA_CASTI[r.cast] : null)),
-          vyhovuje: (r, h) => jeCastFaktury(r.cast) && ZKRATKA_CASTI[r.cast] === h,
+          label: t('faktura.filtrCast'),
+          moznosti: moznostiZ(radky, (r) => (jeCastFaktury(r.cast) ? zkratkaCasti(r.cast, jazyk) : null)),
+          vyhovuje: (r, h) => jeCastFaktury(r.cast) && zkratkaCasti(r.cast, jazyk) === h,
         },
         {
           key: 'stav',

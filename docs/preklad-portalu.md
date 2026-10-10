@@ -82,6 +82,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [x] |
 | 7f | 4. 10. | Obrazovky, které nebyly v žádné dávce — Procesy, Složky na Disku, Bruno, Nastavení, Zprávy portálu, Doplnit dotočeno, zbylé karty na detailu projektu a režim pro nevidomé v přeposlechu | [x] |
 | 7g | 9. 10. | Komponenty v `src/lib`, kam skript nikdy nemířil — popisky ikon typů projektu, značky nabídky a faktury u názvu projektu, doklady klienta, ruční značka nabídky u reklam, detail procesu | [x] |
+| 7h | 10. 10. | Řetězce, na které se kontrolní skript nikdy nezeptal — hlavičky tabulek, `title`, `aria-label` a placeholdery: přehled reklam u klienta, přehled projektů (jazyk do buněk), lišta, tabule, část zakázky u faktur, upomínky, banka, složky na Disku u uživatele | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -916,6 +917,124 @@ zůstává živý `index.lock` k přejmenování a v `.git` leží `index 2` …
 `_smeti` a `objects/maintenance.lock`. **Ke smazání z počítače:**
 `rm .git/*.lock .git/index\ [0-9]` a `git rm --cached stubs/prisma-client.d.ts`
 (lístek z dávky 7a).
+
+### Dávka 7h je HOTOVÁ (10. 10. 2026)
+
+Tabulka byla po 7g znovu celá zaškrtnutá a večer se zase našlo na dávku:
+**osm obrazovek, šestnáct souborů a slovník +53 klíčů (5 239 → 5 292)**.
+Dnešní práce (hosté na natáčení, pozvánky, čekárna) přitom **přeložená
+přišla** — nové obrazovky už s překladem počítají. Co se našlo, leží
+v portálu dýl a **minul to kontrolní skript**, protože se pořád ptal špatně:
+„které soubory neobsahují volání překladu". Takový soubor skoro žádný není;
+chybí jedna hlavička tabulky, jeden tooltip, jeden placeholder.
+
+**Co se přeložilo:**
+
+- `projekty/ReklamaPrehled.tsx` — **přehled, který vidí klient reklam.**
+  Celá vnitřní `Tabulka` nepřekládala nic: hlavička (Projekt, Stav, Herec,
+  Licence, Doklady, Dokončení, Složka, Připomínkovat), „Otevřít složku",
+  „Připomínkovat" i okno s dokumenty („Zatím tu žádný dokument není.",
+  „Stáhnout vše", Rodný/Licenční list). Anglický klient reklam tu měl
+  českou tabulku. Herec je tady **voice actor**, ne narrator (slovníček),
+  takže vlastní klíč `projekty.sl.herecReklamy`.
+- `projekty/shared.tsx` — `AdminProjectsTable` měla hlavičku natvrdo
+  (`ProjectsTable` vedle ní ji přitom překládá od dávky 1). A `bunkaSloupce`
+  jazyk UMĚLA už od dávky 5, jen jí ho nikdo nedával: `InternalProjectsTable`
+  ho teď bere propem z `InternalProjectsBrowser` (`useJazyk()` tam je) a
+  posílá dál do buněk, `SortableHeader`u i do tlačítka „Upravit sloupce".
+  Tím se rozsvítily i věci, co jen tiše čekaly na jazyk — bublinky ikon typu,
+  odznak přeposlechu, značky dokladů, stav projektu a **datumy** (`formatDate`
+  bez jazyka = české datum v anglickém portálu).
+- `components/Topbar.tsx` — „Domů na Projekty" a „Načíst stránku znovu".
+  Jediná dvě místa v liště, kam dávka 0 nedosáhla, protože to nejsou texty,
+  ale `title`.
+- `projekty/page.tsx` — `<h1>Projekty</h1>` natvrdo. Klíč `projekty.nadpis`
+  existoval od dávky 1, jen ho nadpis nepoužíval.
+- `tabule/[klic]/Tabule.tsx` — „Volno", „OSTATNÍ STUDIA" a hlavně **„do" a
+  „od" u času cizích studií**: byla to slepená věta (`` `do ${hodina(…)}` ``),
+  teď jeden klíč se značkou `{cas}` (pravidlo 7).
+- `lib/fakturaCast.ts` + `FakturyTabulka.tsx` + `faktury/[id]/InvoiceEditor.tsx`
+  — značka, kolikátá část zakázky faktura je. Číselník se překládá **podle
+  kódu** (`faktura.cast.*`, `faktura.castZkratka.*`), české `POPIS_CASTI`
+  a `ZKRATKA_CASTI` zůstávají zdrojem pravdy. Pozor: zkratka se v tabulce
+  používá i jako hodnota filtru, takže musí všude projít tímtéž `zkratkaCasti()`
+  — jinak filtr v angličtině nenajde nic. `dokladyUProjektu()` dostala jazyk,
+  protože značku dopisuje do bublinky u názvu zakázky.
+- `lib/upominkaStav.ts` + sloupec Upomínka v `FakturyTabulka.tsx` — „dnes
+  ráno", „zítra ráno", „{poradi}. upomínka", „{poradi}. šla {kdy}" a datum,
+  které se formátovalo natvrdo `'cs-CZ'`. Čeština zůstává výchozí, takže
+  volající bez jazyka (náhledová routa, viz níž) se nemusel měnit.
+- `admin/doklady/banka/BankaKlient.tsx` — pruh o automatickém párování
+  z pošty a celé nahrání výpisu (ABO/GPC) mluvilo česky. Hláška po nahrání je
+  **výčet**, ne věta: každá část je svůj klíč se značkou `{pocet}` a tečky
+  mezi nimi dává až kód. Věta „jak to zapnout v Air Bank" jde přes `sKody`
+  se třemi značkami.
+- `admin/users/[id]/UserEditForm.tsx` — „Složky na Disku" a jejich nápověda.
+  V kódu u nich stál lístek „přidá se do nejbližší dávky" (slovník si tehdy
+  brala jiná dávka); lístek je splacený a komentář zkrácený.
+
+**Co zůstává české schválně:**
+
+- `admin/studia/StudiosManager.tsx` — placeholdery adresy a parkování.
+  Pole „Parkování" a „Parkování anglicky" stojí vedle sebe a každé drží text
+  v jednom jazyce, takže český příklad u českého pole je správně.
+- `admin/wikipedie/UdajeForm.tsx` a `ProjectMetaForm.tsx` — placeholdery jsou
+  ukázky OBSAHU, který je česky (text na českou Wikipedii, tiráž audioknihy).
+- `faktury/nova/page.tsx`, `lib/contracts.ts`, Brunova příručka — viz dávky
+  4, 6 a 7g.
+
+**Co se našlo a NEDĚLALO se to (vlastní úkol, ne večerní dávka):**
+
+1. **`src/app/api/nahled/doklad/route.ts` je celý česky** — a není to hláška,
+   skládá řádky do bublinky náhledu dokladu („Stav", „Odeslané upomínky",
+   „Další upomínka"). Totéž `api/klient/doklady/nahled` a `api/kalendar/*`.
+   Pravidlo „v `api/**` nejsou rozhraní" tady neplatí: tyhle routy vracejí
+   TEXT NA OBRAZOVKU. Je to na vlastní dávku, protože se k nim musí dostat
+   jazyk (cookie čte server, takže `nactiJazyk()` v routě).
+2. **`HostNataceni.chybaOdeslani` se ukládá do databáze česky**
+   (`lib/hosteNataceniServer.ts`: „Pošta portálu není nastavená.",
+   „Pozvánku se nepodařilo odeslat.") a `HosteNataceni.tsx` to vypisuje.
+   Co je jednou uložené, jazyk nezmění — **tatáž třída problému jako
+   `notify()` v dávce 6.** Správně se má ukládat KÓD a text se má vykreslit
+   až při čtení.
+
+**Poučení pro příští kontrolu — ptát se na ŘETĚZCE, ne na soubory.** Skript
+z 7g už hledal napříč `src` a bez ohledu na diakritiku, ale pořád počítal
+řádky v souboru. Dnešní nález byl jinde: v `title`, `aria-label`,
+`placeholder`, `label` a v textu uzlu JSX. Tenhle skript najde přesně to a je
+v něm málo šumu (spustit z korene repozitáře, `python3`):
+
+```python
+import os, re
+PROPS = ('placeholder', 'aria-label', 'title', 'alt', 'label')
+for root, dirs, files in os.walk('src'):
+    dirs[:] = [d for d in dirs if d != 'api']
+    for fn in files:
+        if not fn.endswith('.tsx'):
+            continue
+        p = os.path.join(root, fn)
+        src = re.sub(r'/\*.*?\*/', '', open(p, encoding='utf-8').read(), flags=re.S)
+        for i, l in enumerate(src.split('\n'), 1):
+            s = re.sub(r'//.*$', '', l)
+            for pr in PROPS:
+                for m in re.finditer(pr + r'=(["\'])([^"\']{2,})\1', s):
+                    print(f'{p}:{i} [{pr}] {m.group(2)}')
+            for m in re.finditer(r'>([^<>{}]{2,})<', s):
+                t = m.group(1).strip()
+                if len(t) > 1 and re.search(r'[A-Za-z]', t):
+                    print(f'{p}:{i} [jsx] {t}')
+```
+
+Vyjde kolem 160 řádků a většina je v pořádku (Mediaspace, „MS portal",
+studiové obrazovky, které jsou anglicky vždycky, a útržky kódu uvnitř `{}`).
+Projít se to dá očima za pět minut — a je to **jediná kontrola, která najde
+soubor, co překládá 99 % a na jednom `title` zapomněl.**
+
+**Zámky v `.git`:** mazání pořád není povolené, takže po commitu zůstává
+`index.lock` k přejmenování. Ke smazání z počítače (lístek roste od 7g):
+`rm .git/*.lock .git/index\ [0-9]` a `git rm --cached stubs/prisma-client.d.ts`
+(ten lístek je z dávky 7a — `stubs/` je v `.gitignore`, ale soubor je dál
+sledovaný, takže se při každé kontrole ukazuje jako změněný).
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

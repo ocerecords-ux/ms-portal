@@ -853,7 +853,7 @@ function MenuListu({
             <input
               value={media}
               onChange={(e) => onMedia(e.target.value)}
-              placeholder="Rádio, Online"
+              placeholder={t('licencniList.mediaPlaceholder')}
               className="rounded-lg border border-line bg-field px-2 py-1.5 text-sm font-heading text-ink outline-none focus:border-brand-purple"
             />
           </label>

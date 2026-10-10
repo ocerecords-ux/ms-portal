@@ -966,7 +966,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     ? (
         await prisma.user.findUnique({ where: { id: session.user.id }, select: { vidiBanku: true } })
       )?.vidiBanku
-      ? (await dokladyUProjektu([caflouProjectId])).get(caflouProjectId) ?? null
+      ? (await dokladyUProjektu([caflouProjectId], jazyk)).get(caflouProjectId) ?? null
       : null
     : null;
 

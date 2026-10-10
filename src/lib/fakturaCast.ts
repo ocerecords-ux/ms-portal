@@ -16,7 +16,12 @@
  * někdo další, zaškrtne se mu to a nikdo nesahá do kódu.
  *
  * Soubor je bez Prismy, ať ho vezme přehled, tabulka i editor.
+ *
+ * ANGLICKY PODLE KÓDU (dávka 7h). České popisy zůstávají zdrojem pravdy,
+ * překlad se bere ze slovníku podle klíče `faktura.cast.*` - stejně jako
+ * u stavů projektu, ne podle českého textu.
  */
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 export const CASTI_FAKTURY = ['PRVNI', 'DRUHA'] as const;
 export type CastFaktury = (typeof CASTI_FAKTURY)[number];
@@ -33,13 +38,18 @@ export const ZKRATKA_CASTI: Record<CastFaktury, string> = {
   DRUHA: '2. část',
 };
 
+/** Plný popis v jazyce uživatele - do nabídky volby a do bublinky. */
+export function popisCasti(kod: CastFaktury, jazyk: Jazyk = 'cs'): string {
+  return prelozit(jazyk, `faktura.cast.${kod}`);
+}
+
 export function jeCastFaktury(hodnota: string | null | undefined): hodnota is CastFaktury {
   return !!hodnota && (CASTI_FAKTURY as readonly string[]).includes(hodnota);
 }
 
 /** Zkratka pro cokoliv z databáze; co značku nemá, vrátí prázdno. */
-export function zkratkaCasti(hodnota: string | null | undefined): string | null {
-  return jeCastFaktury(hodnota) ? ZKRATKA_CASTI[hodnota] : null;
+export function zkratkaCasti(hodnota: string | null | undefined, jazyk: Jazyk = 'cs'): string | null {
+  return jeCastFaktury(hodnota) ? prelozit(jazyk, `faktura.castZkratka.${hodnota}`) : null;
 }
 
 /**

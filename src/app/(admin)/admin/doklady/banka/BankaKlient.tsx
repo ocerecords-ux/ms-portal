@@ -113,19 +113,21 @@ export function BankaKlient({
       const res = await fetch('/api/admin/banka/import', { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Výpis se nepodařilo načíst.');
+        setChyba(data?.error || t('banka.vypisNepodarilo'));
         return;
       }
+      // Každá část je svůj klíč se značkou (pravidlo 7) - není to jedna
+      // věta, ale výčet oddělený tečkami, který se poskládá až tady.
       const casti = [
-        `Výpis načten: ${data.stazeno} pohybů`,
-        data.nove ? `${data.nove} nových` : 'nic nového',
-        data.sparovano ? `${data.sparovano} spárováno` : null,
-        data.navrhy ? `${data.navrhy} čeká na potvrzení` : null,
+        t('banka.vypisNacten', { pocet: data.stazeno }),
+        data.nove ? t('banka.vypisNovych', { pocet: data.nove }) : t('banka.vypisNicNoveho'),
+        data.sparovano ? t('banka.vypisSparovano', { pocet: data.sparovano }) : null,
+        data.navrhy ? t('banka.vypisNavrhy', { pocet: data.navrhy }) : null,
       ].filter(Boolean);
       setHlaska(`${casti.join(' · ')}.`);
       router.refresh();
     } catch {
-      setChyba('Výpis se nepodařilo načíst.');
+      setChyba(t('banka.vypisNepodarilo'));
     } finally {
       setBusy(null);
     }
@@ -265,14 +267,20 @@ export function BankaKlient({
 
       <div className="rounded-card border border-line bg-tint px-4 py-3 text-sm font-body text-ink">
         <p className="m-0 font-semibold">
-          {posta.nastaveno ? 'Platby se páruji samy z upozornění banky' : 'Automatické párování zatím neběží'}
+          {posta.nastaveno ? t('banka.parovaniBezi') : t('banka.parovaniNebezi')}
         </p>
         <p className="m-0 mt-1 text-muted">
           {posta.nastaveno
-            ? `Portál se dívá do schránky každé dvě minuty.${
-                posta.posledniKontrolaAt ? ` Naposledy ${posta.posledniKontrolaAt}.` : ' Zatím se nedíval.'
+            ? `${t('banka.parovaniKazdeDveMinuty')} ${
+                posta.posledniKontrolaAt
+                  ? t('banka.parovaniNaposledy', { kdy: posta.posledniKontrolaAt })
+                  : t('banka.parovaniZatimNedival')
               }`
-            : 'V Air Bank zapněte u účtu „Info o dění na účtu" a nechte si posílat e-mail při každé změně zůstatku. Schránku pak portálu předáte proměnnými BANKA_IMAP_HOST, BANKA_IMAP_USER a BANKA_IMAP_PASSWORD.'}
+            : sKody(t('banka.parovaniJakZapnout'), {
+                kod1: 'BANKA_IMAP_HOST',
+                kod2: 'BANKA_IMAP_USER',
+                kod3: 'BANKA_IMAP_PASSWORD',
+              })}
         </p>
         {posta.posledniChyba && <p className="m-0 mt-1 text-status-danger">{posta.posledniChyba}</p>}
       </div>
@@ -295,9 +303,9 @@ export function BankaKlient({
                 dotažení historie a na záchranu, kdyby výpadek spolkl e-mail. */}
             <label
               className={`${vedlejsi} cursor-pointer ${busy !== null ? 'opacity-60 pointer-events-none' : ''}`}
-              title="Na doplnění historie nebo když se něco ztratí. Výpis stáhněte v internetovém bankovnictví ve formátu ABO (GPC). Tentýž soubor jde nahrát vícekrát, nic se nezdvojí."
+              title={t('banka.nahratVypisTitle')}
             >
-              {busy === 'import' ? 'Načítám…' : 'Nahrát výpis'}
+              {busy === 'import' ? t('banka.nahravam') : t('banka.nahratVypis')}
               <input
                 type="file"
                 accept=".gpc,.abo,.txt,text/plain"

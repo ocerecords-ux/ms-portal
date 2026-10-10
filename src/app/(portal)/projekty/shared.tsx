@@ -568,12 +568,12 @@ export function AdminProjectsTable({
           </colgroup>
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <th className="text-left px-4 py-3.5">Projekt</th>
-              <th className="text-left px-4 py-3.5">Firma</th>
-              <th className="text-left px-4 py-3.5">Stav</th>
-              <th className="text-right px-4 py-3.5">Normostrany</th>
-              <th className="text-left px-4 py-3.5">Dokončení</th>
-              <th className="text-left px-4 py-3.5">Vydání</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.projekt')}</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.firma')}</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.stav')}</th>
+              <th className="text-right px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.normostrany')}</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.dokonceni')}</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.vydani')}</th>
             </tr>
           </thead>
           <tbody>
@@ -602,10 +602,10 @@ export function AdminProjectsTable({
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} statusName={p.statusName} />
+                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} statusName={p.statusName} jazyk={jazyk} />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {formatDate(p.releaseDate)}
+                  {formatDate(p.releaseDate, jazyk)}
                 </td>
               </tr>
             ))}
@@ -824,8 +824,11 @@ function bunkaSloupce(
   key: string,
   muzeMenit: boolean,
   manazeri: { id: string; label: string }[],
-  // Tabulka pro administraci - ta zatím jazyk nemá (layout v (admin) není
-  // obalený JazykProviderem, patří to do dávky 5), takže výchozí čeština.
+  /**
+   * Od dávky 7h jazyk opravdu chodí: `InternalProjectsTable` ho bere propem
+   * z `InternalProjectsBrowser`, který stojí v (portal) a `useJazyk()` má.
+   * Výchozí čeština zůstává pro případ, že by tabulku vzal někdo bez jazyka.
+   */
   jazyk: Jazyk = 'cs',
 ) {
   const id = String(p.id);
@@ -882,7 +885,7 @@ function bunkaSloupce(
                   odkaz={`/projekty/${p.id}?zalozka=preposlech`}
                   druh="PREPOSLECH"
                   id={String(p.id)}
-                  popis="Klik ukáže náhled přeposlechu"
+                  popis={prelozit(jazyk, 'prehledProjektu.nahledPreposlechu')}
                 >
                   <OdznakPreposlechu stav={p.meta?.preposlech} jazyk={jazyk} />
                 </NahledIkony>
@@ -972,7 +975,7 @@ function bunkaSloupce(
           pole="managerUserId"
           hodnota={p.meta?.managerUserId ?? ''}
           moznosti={manazeri.map((m) => ({ hodnota: m.id, popisek: m.label }))}
-          prazdnyPopisek="— nevybráno —"
+          prazdnyPopisek={prelozit(jazyk, 'obecne.nevybrano')}
           deti={obsah}
         />
       ) : (
@@ -1019,13 +1022,14 @@ function bunkaSloupce(
           datum={p.endDate}
           hotovo={p.finished}
           statusName={p.statusName}
+          jazyk={jazyk}
           obsah={
             muzeMenit ? (
               <UpravitelneDatum
                 caflouProjectId={id}
                 pole="endDate"
                 hodnota={proInput(p.endDate)}
-                popisek={formatDate(p.endDate)}
+                popisek={formatDate(p.endDate, jazyk)}
               />
             ) : undefined
           }
@@ -1037,16 +1041,16 @@ function bunkaSloupce(
           caflouProjectId={id}
           pole="releaseDate"
           hodnota={proInput(p.releaseDate)}
-          popisek={formatDate(p.releaseDate)}
+          popisek={formatDate(p.releaseDate, jazyk)}
         />
       ) : (
-        formatDate(p.releaseDate)
+        formatDate(p.releaseDate, jazyk)
       );
     case 'driveUrl':
       // Jen tlacitko, adresa se neukazuje - v tabulce by rozhodila sirku
       // sloupcu (zadani 10. 9. 2026).
       return p.meta?.driveUrl ? (
-        <OdkazTlacitko url={p.meta.driveUrl} popisek="Složka" varianta="ikona" />
+        <OdkazTlacitko url={p.meta.driveUrl} popisek={prelozit(jazyk, 'projekty.sl.slozka')} varianta="ikona" />
       ) : (
         <span className="text-muted">—</span>
       );
@@ -1243,9 +1247,12 @@ function SortableHeader({
   onLabelChange,
   onMove,
   onHide,
+  jazyk = 'cs',
 }: {
   sloupec: ColumnSetting;
   index: number;
+  /** Jazyk propem, ne hookem - tabulku skládá i server (pravidlo 8). */
+  jazyk?: Jazyk;
   sort: ProjectSort;
   onSort: (key: ProjectSortKey) => void;
   editing?: boolean;
@@ -1294,7 +1301,7 @@ function SortableHeader({
           onDragEnd={() => {
             taheny = null;
           }}
-          title="Přetažením změníte pořadí"
+          title={prelozit(jazyk, 'prehledProjektu.pretazenimPoradi')}
           className="group inline-flex items-center gap-1.5 rounded-lg border border-dashed border-white/60 bg-white/10 px-1.5 py-1 cursor-grab active:cursor-grabbing hover:bg-white/20 hover:border-white transition-colors"
         >
           <span
@@ -1545,8 +1552,11 @@ export function InternalProjectsTable({
   canEditStatus = false,
   manazeri = [],
   uzke = false,
+  jazyk = 'cs',
 }: {
   projects: InternalProject[];
+  /** Jazyk propem, ne hookem - tabulku skládá i server (pravidlo 8). */
+  jazyk?: Jazyk;
   emptyText: string;
   /**
    * Telefon: tri sloupce a zadna minimalni sirka, takze se tabulka vejde
@@ -1604,6 +1614,7 @@ export function InternalProjectsTable({
                   onLabelChange={onLabelChange}
                   onMove={onMoveColumn}
                   onHide={onHideColumn}
+                  jazyk={jazyk}
                 />
               ))}
               {/* Tri tecky primo ve fialove liste (zadani 9. 9. 2026) - stejne
@@ -1621,8 +1632,8 @@ export function InternalProjectsTable({
                     <button
                       type="button"
                       onClick={onStartEditing}
-                      title="Upravit sloupce"
-                      aria-label="Upravit sloupce"
+                      title={prelozit(jazyk, 'prehledProjektu.upravitSloupce')}
+                      aria-label={prelozit(jazyk, 'prehledProjektu.upravitSloupce')}
                       className="w-7 h-7 rounded-full text-brand-green hover:bg-white/15 inline-flex flex-col items-center justify-center gap-[3px] transition-colors"
                     >
                       <span className="w-[3px] h-[3px] rounded-full bg-current" />
@@ -1649,7 +1660,7 @@ export function InternalProjectsTable({
                     key={sloupec.key}
                     className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-0 text-sm font-heading truncate'}
                   >
-                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri)}
+                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri, jazyk)}
                   </td>
                 ))}
                 {canEditColumns && <td />}

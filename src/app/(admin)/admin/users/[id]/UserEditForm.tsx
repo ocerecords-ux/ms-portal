@@ -528,13 +528,11 @@ export function UserEditForm({
             chodí i klienti. Kdo složku nemá zaškrtnutou, tomu se v Nahrávkách
             ani nenabídne - o její existenci se z portálu nedozví.
 
-            Texty jsou zatím jen česky: slovník (lib/jazyk.ts) si právě bere
-            překladová dávka a psát do něj ze dvou stran by se nepotkalo.
-            Přidá se do nejbližší dávky. */}
+            Přeloženo v dávce 7h (10. 10. 2026). */}
         <div className="w-full">
           <AdminField
-            label="Složky na Disku"
-            hint="Které složky tenhle člověk uvidí v Nahrávkách. Prázdno znamená žádnou složku navíc - složku své firmy vidí klient dál. Práva na samotném Google Disku se tím nemění."
+            label={t('uzivatel.poleSlozkyDisku')}
+            hint={t('uzivatel.slozkyDiskuNapoveda')}
           >
             <div className="flex flex-wrap gap-2">
               {slozkyDisku.map((slozka) => (

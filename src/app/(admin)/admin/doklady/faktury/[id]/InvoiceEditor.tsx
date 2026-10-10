@@ -24,7 +24,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, formatDatumCas, prelozitKolem, type Jazyk } from '@/lib/jazyk';
-import { CASTI_FAKTURY, POPIS_CASTI, type CastFaktury } from '@/lib/fakturaCast';
+import { CASTI_FAKTURY, popisCasti, type CastFaktury } from '@/lib/fakturaCast';
 
 type Item = {
   description: string;
@@ -1099,6 +1099,8 @@ export function InvoiceEditor({
  * vytištěné faktuře se neobjeví nic.
  */
 function CastZakazky({ id, vychozi }: { id: string; vychozi: CastFaktury | null }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [cast, setCast] = useState<CastFaktury | null>(vychozi);
   const [uklada, setUklada] = useState(false);
   const [chyba, setChyba] = useState(false);
@@ -1127,24 +1129,24 @@ function CastZakazky({ id, vychozi }: { id: string; vychozi: CastFaktury | null 
 
   return (
     <label className="inline-flex items-center gap-1.5 text-xs font-body text-muted">
-      <span className="sr-only">Část zakázky (interní)</span>
+      <span className="sr-only">{t('faktura.castPopisek')}</span>
       <select
         value={cast ?? ''}
         disabled={uklada}
         onChange={(e) => void zmen(e.target.value)}
-        title="Jen pro nás — na faktuře se to nikde neobjeví."
+        title={t('faktura.castTitle')}
         className={`rounded-pill border px-2.5 py-1 text-xs font-heading font-semibold bg-field text-ink ${
           chyba ? 'border-danger' : 'border-line'
         }`}
       >
-        <option value="">Celá zakázka</option>
+        <option value="">{t('faktura.castCelaZakazka')}</option>
         {CASTI_FAKTURY.map((k) => (
           <option key={k} value={k}>
-            {POPIS_CASTI[k]}
+            {popisCasti(k, jazyk)}
           </option>
         ))}
       </select>
-      {chyba && <span className="text-danger">neuloženo</span>}
+      {chyba && <span className="text-danger">{t('faktura.castNeulozeno')}</span>}
     </label>
   );
 }

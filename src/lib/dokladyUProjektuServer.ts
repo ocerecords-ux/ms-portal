@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { zkratkaCasti } from '@/lib/fakturaCast';
+import type { Jazyk } from '@/lib/jazyk';
 import {
   PRAZDNE_DOKLADY,
   type DokladyProjektu,
@@ -27,6 +28,8 @@ function lepsiFaktura(a: StavFakturyDokladu, b: StavFakturyDokladu): StavFaktury
 
 export async function dokladyUProjektu(
   caflouProjectIds: string[],
+  /** Značka části zakázky v bublince se od dávky 7h překládá podle kódu. */
+  jazyk: Jazyk = 'cs',
 ): Promise<Map<string, DokladyProjektu>> {
   const vysledek = new Map<string, DokladyProjektu>();
   const ids = Array.from(new Set(caflouProjectIds.filter(Boolean)));
@@ -85,7 +88,7 @@ export async function dokladyUProjektu(
     zaznam.faktura = lepsiFaktura(zaznam.faktura, stav);
     // U zakázky na dvě části je v bublince vidět, o kterou z nich jde
     // (29. 9. 2026) - jinak jsou v přehledu dvě stejně vypadající faktury.
-    const cast = zkratkaCasti(f.interniCast);
+    const cast = zkratkaCasti(f.interniCast, jazyk);
     zaznam.fakturaCisla.push(cast ? `${f.number} — ${cast}` : f.number);
   }
 

@@ -10112,6 +10112,120 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   /* --- Dávka 7g: kontakt u firemní zakázky --- */
   'projekty.kontaktVy': { cs: 'vy', en: 'you' },
+
+  /* --- Dávka 7h: přehled reklam u klienta (projekty/ReklamaPrehled.tsx) --- */
+  'projekty.sl.firma': { cs: 'Firma', en: 'Company' },
+  'projekty.sl.licence': { cs: 'Licence', en: 'Licences' },
+  'projekty.sl.slozka': { cs: 'Složka', en: 'Folder' },
+  'projekty.sl.pripominkovat': { cs: 'Připomínkovat', en: 'Add comments' },
+  /**
+   * U REKLAM JE HEREC „VOICE ACTOR", U AUDIOKNIH „NARRATOR" (slovníček
+   * v docs/preklad-portalu.md) - proto vlastní klíč, ne `projekty.sl.herec`.
+   */
+  'projekty.sl.herecReklamy': { cs: 'Herec', en: 'Voice actor' },
+  'reklamaPrehled.stahnoutVseTitle': {
+    cs: 'Stáhne všechny dokumenty zakázky v jednom archivu',
+    en: 'Downloads every document for the job in a single archive',
+  },
+  'reklamaPrehled.zadnyDokument': {
+    cs: 'Zatím tu žádný dokument není.',
+    en: 'There are no documents here yet.',
+  },
+  'reklamaPrehled.dokumentyKeStazeni': {
+    cs: 'Dokumenty ke stažení ({pocet})',
+    en: 'Documents to download ({pocet})',
+  },
+  'reklamaPrehled.otevritSlozku': { cs: 'Otevřít složku', en: 'Open the folder' },
+
+  /* --- Dávka 7h: hlavička a úpravy sloupců v přehledu projektů (projekty/shared.tsx) --- */
+  'prehledProjektu.pretazenimPoradi': { cs: 'Přetažením změníte pořadí', en: 'Drag to change the order' },
+  'prehledProjektu.upravitSloupce': { cs: 'Upravit sloupce', en: 'Edit the columns' },
+
+  /* --- Dávka 7h: horní lišta portálu (components/Topbar.tsx) --- */
+  'listou.domuNaProjekty': { cs: 'Domů na Projekty', en: 'Home to Projects' },
+  'listou.nacistZnovu': { cs: 'Načíst stránku znovu', en: 'Reload the page' },
+
+  /* --- Dávka 7h: tabule ve studiu (app/tabule) --- */
+  'tabule.volno': { cs: 'Volno', en: 'Free' },
+  'tabule.ostatniStudia': { cs: 'OSTATNÍ STUDIA', en: 'OTHER STUDIOS' },
+  'tabule.doCasu': { cs: 'do {cas}', en: 'until {cas}' },
+  'tabule.odCasu': { cs: 'od {cas}', en: 'from {cas}' },
+
+  /* --- Dávka 7h: licenční list - média --- */
+  'licencniList.mediaPlaceholder': { cs: 'Rádio, Online', en: 'Radio, Online' },
+
+  /* --- Dávka 7h: kolikátá část zakázky je faktura (lib/fakturaCast.ts) --- */
+  'faktura.cast.PRVNI': { cs: 'První část', en: 'First part' },
+  'faktura.cast.DRUHA': { cs: 'Druhá část', en: 'Second part' },
+  'faktura.castZkratka.PRVNI': { cs: '1. část', en: 'Part 1' },
+  'faktura.castZkratka.DRUHA': { cs: '2. část', en: 'Part 2' },
+  'faktura.castCelaZakazka': { cs: 'Celá zakázka', en: 'The whole job' },
+  'faktura.castPopisek': { cs: 'Část zakázky (interní)', en: 'Part of the job (internal)' },
+  'faktura.castTitle': {
+    cs: 'Jen pro nás — na faktuře se to nikde neobjeví.',
+    en: 'For us only — it never appears on the invoice.',
+  },
+  'faktura.castTabulkaTitle': {
+    cs: 'Interní označení — na faktuře se to nikde neobjeví.',
+    en: 'An internal marker — it never appears on the invoice.',
+  },
+  'faktura.castNeulozeno': { cs: 'neuloženo', en: 'not saved' },
+
+  /* --- Dávka 7h: banka - nahrání výpisu a párování z pošty (admin/doklady/banka) --- */
+  'banka.nahratVypis': { cs: 'Nahrát výpis', en: 'Upload a statement' },
+  'banka.nahravam': { cs: 'Načítám…', en: 'Reading…' },
+  'banka.nahratVypisTitle': {
+    cs: 'Na doplnění historie nebo když se něco ztratí. Výpis stáhněte v internetovém bankovnictví ve formátu ABO (GPC). Tentýž soubor jde nahrát vícekrát, nic se nezdvojí.',
+    en: 'For filling in the history, or when something goes missing. Download the statement from your internet banking in the ABO (GPC) format. The same file can be uploaded more than once, nothing is duplicated.',
+  },
+  'banka.vypisNepodarilo': { cs: 'Výpis se nepodařilo načíst.', en: 'The statement could not be read.' },
+  'banka.vypisNacten': { cs: 'Výpis načten: {pocet} pohybů', en: 'Statement read: {pocet} transactions' },
+  'banka.vypisNovych': { cs: '{pocet} nových', en: '{pocet} new' },
+  'banka.vypisNicNoveho': { cs: 'nic nového', en: 'nothing new' },
+  'banka.vypisSparovano': { cs: '{pocet} spárováno', en: '{pocet} matched' },
+  'banka.vypisNavrhy': { cs: '{pocet} čeká na potvrzení', en: '{pocet} awaiting confirmation' },
+  'banka.parovaniBezi': {
+    cs: 'Platby se páruji samy z upozornění banky',
+    en: 'Payments are matched automatically from the bank’s alerts',
+  },
+  'banka.parovaniNebezi': {
+    cs: 'Automatické párování zatím neběží',
+    en: 'Automatic matching is not running yet',
+  },
+  'banka.parovaniKazdeDveMinuty': {
+    cs: 'Portál se dívá do schránky každé dvě minuty.',
+    en: 'The portal checks the mailbox every two minutes.',
+  },
+  'banka.parovaniNaposledy': { cs: 'Naposledy {kdy}.', en: 'Last checked {kdy}.' },
+  'banka.parovaniZatimNedival': { cs: 'Zatím se nedíval.', en: 'It has not checked yet.' },
+  'banka.parovaniJakZapnout': {
+    cs: 'V Air Bank zapněte u účtu „Info o dění na účtu" a nechte si posílat e-mail při každé změně zůstatku. Schránku pak portálu předáte proměnnými {kod1}, {kod2} a {kod3}.',
+    en: 'In Air Bank, turn on “Account activity info” and have an email sent on every change of balance. You then pass the mailbox on to the portal in {kod1}, {kod2} and {kod3}.',
+  },
+
+  /* --- Dávka 7h: složky na Disku u uživatele (admin/users/[id]) --- */
+  'uzivatel.poleSlozkyDisku': { cs: 'Složky na Disku', en: 'Drive folders' },
+  'uzivatel.slozkyDiskuNapoveda': {
+    cs: 'Které složky tenhle člověk uvidí v Nahrávkách. Prázdno znamená žádnou složku navíc - složku své firmy vidí klient dál. Práva na samotném Google Disku se tím nemění.',
+    en: 'Which folders this person will see in Recordings. Empty means no extra folders — the client still sees their own company’s folder. Permissions on Google Drive itself are not changed by this.',
+  },
+
+  /* --- Dávka 7h: upomínky v přehledu faktur (lib/upominkaStav.ts, FakturyTabulka) --- */
+  'faktura.sloupecUpominka': { cs: 'Upomínka', en: 'Reminder' },
+  'faktura.filtrCast': { cs: 'Část zakázky', en: 'Part of the job' },
+  'faktura.upominkaAutomaticky': {
+    cs: 'Odejde klientovi automaticky. Když nemá, zastavte to v Doklady → Upomínky.',
+    en: 'It goes to the client automatically. If it should not, stop it in Documents → Reminders.',
+  },
+  'faktura.upominkaTermin': { cs: 'Termín automatické upomínky.', en: 'The date of the automatic reminder.' },
+  'faktura.upominkaSla': { cs: '{poradi}. šla {kdy}', en: 'no. {poradi} sent {kdy}' },
+  'upominka.poradi': { cs: '{poradi}. upomínka', en: 'Reminder {poradi}' },
+  'upominka.dnesRano': { cs: 'dnes ráno', en: 'this morning' },
+  'upominka.zitraRano': { cs: 'zítra ráno', en: 'tomorrow morning' },
+  'prehledProjektu.nahledPreposlechu': {
+    cs: 'Klik ukáže náhled přeposlechu',
+    en: 'Click to see a proof-listening preview',
+  },
 };
 
 /**

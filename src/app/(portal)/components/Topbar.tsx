@@ -327,7 +327,7 @@ export function Topbar({
         <a
           href="/projekty"
           className="no-underline"
-          title="Domů na Projekty"
+          title={t('listou.domuNaProjekty')}
         >
           <span className="font-body text-brand-green font-semibold text-lg sm:text-3xl whitespace-nowrap">
             MS portal
@@ -337,8 +337,8 @@ export function Topbar({
         <button
           type="button"
           onClick={() => window.location.reload()}
-          title="Načíst stránku znovu"
-          aria-label="Načíst stránku znovu"
+          title={t('listou.nacistZnovu')}
+          aria-label={t('listou.nacistZnovu')}
           className="flex items-center cursor-pointer"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}

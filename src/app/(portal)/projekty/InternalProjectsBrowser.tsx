@@ -498,6 +498,7 @@ export function InternalProjectsBrowser({
       <InternalProjectsTable
         sort={sort}
         onSort={handleSort}
+        jazyk={jazyk}
         projects={visible}
         columns={zobrazene}
         uzke={uzkaObrazovka && !editing}

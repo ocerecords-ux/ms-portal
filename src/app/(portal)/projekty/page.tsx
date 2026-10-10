@@ -667,7 +667,7 @@ async function InternalProjektySection({
     : new Map();
 
   const dokladyMapa = vidiDoklady
-    ? await dokladyUProjektu(projects.map((p) => String(p.id)))
+    ? await dokladyUProjektu(projects.map((p) => String(p.id)), jazyk)
     : new Map();
 
   const metaById = new Map(
@@ -775,7 +775,9 @@ async function InternalProjektySection({
         {/* Na telefonu bez nadpisu (21. 9. 2026: „nápis Projekty taky. Stačí,
             když to svítí zaškrtlé nahoře v nabídce na panelu"). */}
         <div className="flex items-center gap-3">
-          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
+            {prelozit(jazyk, 'projekty.nadpis')}
+          </h1>
           {/* OZUBENÉ KOLO (zadání 28. 9. 2026) - texty zpráv, které z portálu
               chodí klientovi při změně stavu. Vidí ho jen Žůžo-labůžo: na
               stránce nastavení stejně nikdo jiný neskončí. */}
