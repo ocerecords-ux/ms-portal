@@ -716,6 +716,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           sessionsFromPages={sessionsForPages(project?.pageCount ?? 0, calendarSettings.pagesPerSession)}
           stranNaFrekvenci={calendarSettings.pagesPerSession}
           narratorFromCaflou={project?.narrator ?? null}
+          jeReklama={jeRadiovySpot || druhNotifikaceFirmy(company) === 'REKLAMA'}
           herci={herci.map((h) => ({ id: h.id, label: rozlis(h.id, bezTitulu(h.name) || h.email) }))}
           studios={studia.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
           defaultActorUserId={meta?.actorUserId ?? null}

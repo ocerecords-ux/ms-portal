@@ -50,6 +50,7 @@ export function RecordingSection({
   sessionsFromPages,
   stranNaFrekvenci,
   narratorFromCaflou,
+  jeReklama,
   herci,
   studios,
   defaultActorUserId,
@@ -66,6 +67,13 @@ export function RecordingSection({
   /** Kolik normostran je jedna frekvence (z Ceníků) - pro přepočet u herce. */
   stranNaFrekvenci: number;
   narratorFromCaflou: string | null;
+  /**
+   * REKLAMA SE NEMĚŘÍ NA NORMOSTRANY (zadání 10. 10. 2026: „u těch reklam
+   * v natáčecím plánu nemá co dělat počet normostran"). Spot má stopáž, ne
+   * rozsah textu - věta o normostranách u něj jen matla, ať už hlásila přepočet,
+   * nebo že z Caflou nedorazily.
+   */
+  jeReklama: boolean;
   herci: { id: string; label: string }[];
   studios: { id: string; name: string; color?: string | null }[];
   defaultActorUserId: string | null;
@@ -307,6 +315,26 @@ export function RecordingSection({
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
 
+  /**
+   * Podnadpis plánu. U reklamy se věta o normostranách vynechá celá (10. 10.
+   * 2026) - zůstane jen herec z Caflou, a když není ani ten, nevykreslí se
+   * prázdný odstavec.
+   */
+  const popisPlanu = [
+    jeReklama
+      ? ''
+      : pageCount != null && pageCount > 0
+        ? t(klicFrekvenci(sessionsFromPages), { ns: pageCount, pocet: sessionsFromPages })
+        : t('natacPlan.bezNormostran'),
+    // Klíč nese oddělovač na začátku kvůli předchozímu lepení - tady se spojuje
+    // až `join`em, ať herec sám o sobě nezačíná tečkou.
+    narratorFromCaflou
+      ? t('natacPlan.hercPodleCaflou', { jmeno: narratorFromCaflou }).replace(/^[\s·]+/, '')
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -314,12 +342,7 @@ export function RecordingSection({
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
             {t('natacPlan.nadpis')}
           </h2>
-          <p className="text-sm font-body text-muted m-0 mt-1">
-            {pageCount != null && pageCount > 0
-              ? t(klicFrekvenci(sessionsFromPages), { ns: pageCount, pocet: sessionsFromPages })
-              : t('natacPlan.bezNormostran')}
-            {narratorFromCaflou ? t('natacPlan.hercPodleCaflou', { jmeno: narratorFromCaflou }) : ''}
-          </p>
+          {popisPlanu && <p className="text-sm font-body text-muted m-0 mt-1">{popisPlanu}</p>}
         </div>
         {canManage && !open && (
           <button
