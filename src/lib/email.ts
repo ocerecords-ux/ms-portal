@@ -3206,7 +3206,11 @@ export type PozvankaNataceniInput = {
 
 /**
  * PŘEHLED V POŘADÍ, V JAKÉM SE ČTE (9. 10. 2026): projekt, herec, kde, kdy,
- * parkování. Prázdné řádky se vynechají - host nemá luštit „Parkování: —".
+ * účastníci. Prázdné řádky se vynechají - host nemá luštit „Herec: —".
+ *
+ * PARKOVÁNÍ UŽ TU NENÍ (10. 10. 2026) - stojí až pod tlačítkem na připojení,
+ * u mapy. Je to nejdelší údaj z celého mailu a tlačil to hlavní, co má host
+ * udělat, pod okraj obrazovky.
  * Jeden seznam pro HTML i textovou verzi, aby se nemohly rozejít.
  */
 function pozvankaPrehled(input: PozvankaNataceniInput): { klic: string; hodnota: string }[] {
@@ -3221,9 +3225,6 @@ function pozvankaPrehled(input: PozvankaNataceniInput): { klic: string; hodnota:
     hodnota: [input.studioName, input.adresa?.trim()].filter(Boolean).join(' · '),
   });
   radky.push({ klic: 'mail.pozvankaNataceni.kdy', hodnota: input.kdy });
-  if (input.parkovani?.trim()) {
-    radky.push({ klic: 'mail.pozvankaNataceni.parkovani', hodnota: input.parkovani.trim() });
-  }
   /**
    * Sám host se v seznamu taky objeví - stejně jako v kopii mailu; vynechat ho
    * by znamenalo, že každý vidí jiný seznam a nikdo neví, kdo je úplná sestava.
@@ -3265,6 +3266,15 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
     <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.odkazPlati')}</p>`
     : '';
 
+  // Parkování až za připojením, u mapy (10. 10. 2026) - obojí řeší cestu do
+  // studia a týká se jen toho, kdo přijede.
+  const parkovaniBlok = input.parkovani?.trim()
+    ? `<table role="presentation" class="field-table"><tr><td class="label">${prelozitEmail(
+        jazyk,
+        'mail.pozvankaNataceni.parkovani',
+      )}</td><td class="value">${escapeHtml(input.parkovani.trim()).replace(/\n/g, '<br>')}</td></tr></table>`
+    : '';
+
   const naMapu = mapa
     ? `<div class="cta-row"><a href="${escapeHtml(mapa)}" class="cta-dark">${prelozitEmail(
         jazyk,
@@ -3295,6 +3305,7 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
     )}</p>
     ${prehled}
     ${pripojeni}
+    ${parkovaniBlok}
     ${naMapu}
     ${doKalendare}
     <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco')}</p>
@@ -3325,6 +3336,9 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
   ];
   if (input.hovorOdkaz) {
     radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.pripojitSe')}: ${input.hovorOdkaz}`);
+  }
+  if (input.parkovani?.trim()) {
+    radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.parkovani')}: ${input.parkovani.trim()}`);
   }
   if (mapa) {
     radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.otevritMapu')}: ${mapa}`);

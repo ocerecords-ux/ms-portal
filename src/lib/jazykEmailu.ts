@@ -142,9 +142,11 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     cs: 'Dobrý den, zasíláme Vám pozvánku na natáčení v našem studiu.',
     en: 'Hello, here is your invitation to a recording session at our studio.',
   },
+  // Jen holé sdělení (10. 10. 2026) - nový čas je hned pod tím v přehledu
+  // a věta o tom, co s tím starým, klienta jen poučovala.
   'mail.pozvankaNataceni.uvodZmena': {
-    cs: 'Dobrý den, termín natáčení se změnil. Platí ten níž, ten starý zahoďte.',
-    en: 'Hello, the recording has been rescheduled. The time below is the one that applies; please discard the earlier one.',
+    cs: 'Dobrý den, termín natáčení se změnil.',
+    en: 'Hello, the recording has been rescheduled.',
   },
   'mail.pozvankaNataceni.kdy': { cs: 'Kdy', en: 'When' },
   'mail.pozvankaNataceni.kde': { cs: 'Kde', en: 'Where' },
