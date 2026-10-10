@@ -396,6 +396,11 @@ export type VysledekPozvanek = {
 };
 
 /**
+ * ČAS SE DOPOČÍTÁVÁ AŽ TADY, při každém odeslání znovu - `kdySlovy` i příloha
+ * do kalendáře berou začátek přes `casKlienta`. Po přesunu termínu tak rezerva
+ * na nachystání a zvukovou zkoušku platí i v nové pozvánce, aniž by si ji
+ * volající musel přičítat sám.
+ *
  * POŠLE POZVÁNKY. `jenNove` (výchozí) vynechá ty, komu už pozvánka na tenhle
  * čas odešla - produkce tak může po přidání dalšího člověka kliknout znovu
  * a ostatním mail nepřijde podruhé. Když se termín posunul, do „nových" spadne
@@ -405,6 +410,13 @@ export async function posliPozvanky(
   blockId: string,
   volby: {
     jenNove?: boolean;
+    /**
+     * Jen těm, komu pozvánka UŽ někdy šla - po přesunu termínu v kalendáři
+     * (10. 10. 2026). Kdo pozvánku ještě nedostal, ji automaticky nedostane
+     * ani teď: produkce hází hosty k termínu průběžně a nesmí se stát, že jim
+     * mail odejde dřív, než je se seznamem hotová.
+     */
+    jenJizPozvani?: boolean;
     odpovedNa?: string | null;
     projectName?: string | null;
     /** Kdo odeslání spustil - do historie. */
@@ -421,9 +433,11 @@ export async function posliPozvanky(
   const pasmo = (studio as { timezone: string } | null)?.timezone || 'Europe/Prague';
 
   const nazevProjektu = volby.projectName?.trim() || nataceni.nazev;
-  const komu = (volby.jenNove ?? true)
-    ? nataceni.hoste.filter((h) => pozvankaJeNaPoslani(h, nataceni.start))
-    : nataceni.hoste;
+  const komu = volby.jenJizPozvani
+    ? nataceni.hoste.filter((h) => h.pozvankaAt)
+    : (volby.jenNove ?? true)
+      ? nataceni.hoste.filter((h) => pozvankaJeNaPoslani(h, nataceni.start))
+      : nataceni.hoste;
 
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
   const vysledek: VysledekPozvanek = { odeslano: 0, chyby: [] };

@@ -10,6 +10,7 @@ import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { kdyAnglicky, oznamKlientovi } from '@/lib/bookingServer';
 import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
 import { preklopReklamuPodlePlanu } from '@/lib/planReklamyServer';
+import { posliPozvanky } from '@/lib/hosteNataceniServer';
 
 /**
  * Blokace založená přímo z kalendáře dvojklikem (zprava uzivatele 9. 9. 2026:
@@ -380,6 +381,36 @@ export async function PATCH(req: NextRequest) {
         'ZMENA',
         kdyAnglicky(puvodni.start, puvodni.end, await pasmoStudia(puvodni.studioId)),
       );
+    }
+
+    /**
+     * PŘESUN TERMÍNU PŘEPOŠLE POZVÁNKY HOSTŮM (zadání 10. 10. 2026: „byla by
+     * dobrá aktualizace, když se přesune termín nebo se posune čas natáčení.
+     * Asi bych to dělal automaticky po posunu v kalendáři“).
+     *
+     * Do teď se u hosta jen rozsvítilo „termín se posunul“ a produkce musela
+     * klepnout na Poslat pozvánky - kdo na to zapomněl, poslal klienta do
+     * studia ve starý čas. Mail je týž jako první pozvánka, jen začíná tím,
+     * že platí nový termín, a nese nový čas už s rezervou - dopočítá si ji
+     * posliPozvanky přes casKlienta.
+     *
+     * JEN TĚM, KOMU POZVÁNKA UŽ ŠLA. Host přidaný mezitím nedostane mail jen
+     * proto, že někdo hnul kalendářem - první pozvánku posílá produkce sáma.
+     *
+     * NESMÍ TO SHODIT ULOŽENÍ. Když pošta nejede, událost je už přesunutá
+     * a opravit se dá jedině tím, že se to dá ručně poslat znovu.
+     */
+    if (zmenaCasu && (upravena.kind as string) === 'NATACENI') {
+      try {
+        await posliPozvanky(upravena.id, {
+          jenJizPozvani: true,
+          odpovedNa: session.user.email ?? null,
+          projectName: upravena.projectName,
+          odeslalId: session.user.id ?? null,
+        });
+      } catch (err) {
+        console.error(`Přeposlání pozvánek po přesunu natáčení ${upravena.id} selhalo:`, err);
+      }
     }
 
 
