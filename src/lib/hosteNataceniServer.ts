@@ -52,6 +52,7 @@ type BlokZDb = {
     pozvankaAt: Date | null;
     pozvankaStart: Date | null;
     chybaOdeslani: string | null;
+    odeslane: { odeslanoAt: Date; email: string; zmena: boolean }[];
   }[];
 };
 
@@ -86,6 +87,11 @@ const VYBER_BLOKU = {
       pozvankaAt: true,
       pozvankaStart: true,
       chybaOdeslani: true,
+      // Historie odeslaných pozvánek (10. 10. 2026) - od nejnovější.
+      odeslane: {
+        orderBy: { odeslanoAt: 'desc' },
+        select: { odeslanoAt: true, email: true, zmena: true },
+      },
     },
   },
 } as const;
@@ -100,6 +106,11 @@ function naHosta(h: BlokZDb['hoste'][number]): HostData {
     pozvankaAt: h.pozvankaAt?.toISOString() ?? null,
     pozvankaStart: h.pozvankaStart?.toISOString() ?? null,
     chybaOdeslani: h.chybaOdeslani,
+    historie: (h.odeslane ?? []).map((o) => ({
+      kdy: o.odeslanoAt.toISOString(),
+      email: o.email,
+      zmena: o.zmena,
+    })),
   };
 }
 
@@ -392,7 +403,13 @@ export type VysledekPozvanek = {
  */
 export async function posliPozvanky(
   blockId: string,
-  volby: { jenNove?: boolean; odpovedNa?: string | null; projectName?: string | null } = {},
+  volby: {
+    jenNove?: boolean;
+    odpovedNa?: string | null;
+    projectName?: string | null;
+    /** Kdo odeslání spustil - do historie. */
+    odeslalId?: string | null;
+  } = {},
 ): Promise<VysledekPozvanek> {
   const nalezeno = await nactiNataceni(blockId);
   if (!nalezeno) return { odeslano: 0, chyby: [{ email: '', duvod: 'Natáčení se nepodařilo načíst.' }] };
@@ -467,6 +484,27 @@ export async function posliPozvanky(
           chybaOdeslani: null,
         },
       });
+      /**
+       * ZÁPIS DO HISTORIE (10. 10. 2026). Záměrně až po úspěšném odeslání:
+       * seznam má říkat, co komu opravdu došlo, ne co jsme zkusili. Kdyby
+       * zápis selžal, pozvánka už stejně je pryč - proto to ukládání nesmí
+       * shodit celé posílání.
+       */
+      await prisma.pozvankaHostaLog
+        .create({
+          data: {
+            hostId: host.id,
+            email: host.email,
+            start: new Date(nataceni.start),
+            jazyk,
+            zmena,
+            odeslalId: volby.odeslalId ?? null,
+          },
+        })
+        .catch((err) => {
+          console.error(`Zápis historie pozvánky pro ${host.email} selhal:`, err);
+          return null;
+        });
       vysledek.odeslano += 1;
     } catch (err) {
       console.error(`Pozvánka na natáčení pro ${host.email} neodešla:`, err);

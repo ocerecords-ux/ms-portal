@@ -119,10 +119,13 @@ function dalsiKlic(): string {
  * fialově, čeština ne, a vypadalo to jako zapnutý příznak místo volby ze
  * dvou rovnocenných možností. Obyčejný rozbalovací seznam vypadá pro oba
  * jazyky stejně a rovnou je v něm vidět, že se vybírá JAZYK, ne příznak.
+ *
+ * JEN VLAJKA A ZKRATKA (10. 10. 2026: „trošku tam utíká grafika“) - celé názvy
+ * jazyků tlačily řádek hosta do šířky a políčko na e-mail se zužovalo.
  */
 const JAZYKY_POZVANKY = [
-  { kod: 'cs' as const, vlajka: '🇨🇿', klic: 'hoste.jazykCs' },
-  { kod: 'en' as const, vlajka: '🇬🇧', klic: 'hoste.jazykEn' },
+  { kod: 'cs' as const, popisek: '🇨🇿 CZ' },
+  { kod: 'en' as const, popisek: '🇬🇧 EN' },
 ];
 
 function VyberJazyka({
@@ -150,7 +153,7 @@ function VyberJazyka({
     >
       {JAZYKY_POZVANKY.map((j) => (
         <option key={j.kod} value={j.kod}>
-          {`${j.vlajka} ${t(j.klic)}`}
+          {j.popisek}
         </option>
       ))}
     </select>
@@ -546,6 +549,7 @@ function RadekHosta({
   const t = usePreklad();
   const [potvrzuji, setPotvrzuji] = useState(false);
   const [upravuje, setUpravuje] = useState(false);
+  const [historie, setHistorie] = useState(false);
   const [email, setEmail] = useState(host.email);
   const ceka = pozvankaJeNaPoslani(host, start);
 
@@ -622,7 +626,22 @@ function RadekHosta({
         trida="px-2 py-1 text-[11px]"
       />
 
-      {host.pozvankaAt && !ceka && (
+      {/* HISTORIE ODESLANÝCH POZVÁNEK (10. 10. 2026: „měly by být ještě nějaké
+          historie - časy, kdy a v kolik hodin odešla POZVÁNKA na daný mail").
+          V řádku jen poslední odeslání, zbytek po rozkliknutí - u hosta, kterému
+          se posílalo pětkrát, by seznam jinak přerostl samotného hosta. */}
+      {host.historie.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setHistorie((h) => !h)}
+          title={t('hoste.historieNapoveda')}
+          className="text-[11px] font-body text-muted underline underline-offset-2 bg-transparent border-0 p-0 cursor-pointer"
+        >
+          {t('hoste.pozvankaOdeslana', { kdy: kdyOdeslano(host.historie[0].kdy) })}
+          {host.historie.length > 1 ? ` · ${t('hoste.historiePocet', { pocet: host.historie.length })}` : ''}
+        </button>
+      )}
+      {host.pozvankaAt && host.historie.length === 0 && !ceka && (
         <span className="text-[11px] font-body text-muted">
           {t('hoste.pozvankaOdeslana', {
             kdy: new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(
@@ -662,6 +681,30 @@ function RadekHosta({
           {potvrzuji ? t('hoste.opravduSmazat') : t('hoste.smazat')}
         </button>
       )}
+
+      {historie && host.historie.length > 0 && (
+        <ul className="list-none p-0 m-0 mt-1 w-full basis-full flex flex-col gap-0.5 border-t border-line pt-1.5">
+          {host.historie.map((o) => (
+            <li key={`${o.kdy}-${o.email}`} className="text-[11px] font-body text-muted tabular-nums">
+              {kdyOdeslano(o.kdy)}
+              {/* Adresa se už mohla změnit - u starších odeslání musí být vidět ta tehdejší. */}
+              {o.email.trim().toLowerCase() !== host.email.trim().toLowerCase() ? ` · ${o.email}` : ''}
+              {o.zmena ? ` · ${t('hoste.historieZmena')}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
     </li>
   );
+}
+
+/** „10. 10. 14:32" - den a hodina; rok se u pozvánky řešit nemusí. */
+function kdyOdeslano(iso: string): string {
+  return new Intl.DateTimeFormat('cs-CZ', {
+    day: 'numeric',
+    month: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(iso));
 }

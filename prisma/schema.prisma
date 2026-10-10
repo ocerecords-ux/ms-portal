@@ -2570,11 +2570,45 @@ model HostNataceni {
   /// volitelny - starsi hoste ho dostanou pri dalsim poslani.
   kalendarToken String? @unique
 
+  /// Kdy a na jakou adresu pozvanka odesla - cela historie (10. 10. 2026).
+  odeslane   PozvankaHostaLog[]
+
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([blockId])
+}
+
+/// HISTORIE ODESLANYCH POZVANEK (zadani 10. 10. 2026: „u tech pozvanek by mely
+/// byt jeste nejake historie - casy, kdy a v kolik hodin odesla POZVANKA na
+/// dany mail").
+///
+/// `HostNataceni.pozvankaAt` drzi jen POSLEDNI odeslani - podle nej se pozna,
+/// komu uz pozvanka sla. Produkce ale potrebuje vedet i to, co bylo predtim:
+/// kolikrat se posilalo, kdy a na jakou adresu, kdyz se mezitim opravila.
+///
+/// Adresa i cas zacatku se ukladaji jako OTISK vedle vazby, stejne jako
+/// u nabidek terminu a smluv: oboje se u hosta da zmenit a zaznam o tom, co
+/// komu kdy opravdu odeslo, se menit nesmi.
+model PozvankaHostaLog {
+  id     String       @id @default(cuid())
+  hostId String
+  host   HostNataceni @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  /// Na kterou adresu to tehdy slo.
+  email      String
+  odeslanoAt DateTime @default(now())
+  /// Na jaky zacatek nataceni pozvanka platila.
+  start      DateTime
+  /// Jazyk, ve kterem mail odesel (cs / en).
+  jazyk      String?
+  /// Slo o presun terminu, ne o prvni pozvanku.
+  zmena      Boolean  @default(false)
+  /// Kdo odeslani spustil; prazdne u automatu.
+  odeslalId  String?
+
+  @@index([hostId, odeslanoAt])
 }
 
 /// Převzatá událost z Google kalendáře, kterou tým v portálu SMAZAL

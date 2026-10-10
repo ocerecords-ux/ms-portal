@@ -49,6 +49,7 @@ export async function POST(
     jenNove: !vsem,
     odpovedNa: session.user.email ?? null,
     projectName: (meta as { name: string | null } | null)?.name ?? null,
+    odeslalId: session.user.id ?? null,
   });
 
   const nove = await nactiNataceni(blockId);

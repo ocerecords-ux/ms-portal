@@ -31,6 +31,12 @@ export type HostData = {
   /** Na jaký začátek natáčení byla ta pozvánka. */
   pozvankaStart: string | null;
   chybaOdeslani: string | null;
+  /**
+   * HISTORIE ODESLANÝCH POZVÁNEK (10. 10. 2026), od nejnovější. `pozvankaAt`
+   * říká jen, kdy šla poslední; tohle, kolikrát a na jakou adresu se posílalo -
+   * adresa se dá opravit a záznam o tom, co komu odkdy odkud odeslo, zůstává.
+   */
+  historie: { kdy: string; email: string; zmena: boolean }[];
 };
 
 export type NataceniData = {

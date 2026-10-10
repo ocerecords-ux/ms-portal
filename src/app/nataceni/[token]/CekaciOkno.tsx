@@ -25,6 +25,7 @@ export function CekaciOkno({
   konec,
   pasmo,
   herec,
+  ucastnici,
   hovorOdkaz,
 }: {
   jazyk: Jazyk;
@@ -32,6 +33,8 @@ export function CekaciOkno({
   konec: string;
   pasmo: string;
   herec: string | null;
+  /** Všichni pozvaní - týž seznam jako v pozvánce. */
+  ucastnici: string[];
   hovorOdkaz: string | null;
 }) {
   const t = (klic: string, hodnoty?: Record<string, string | number>) =>
@@ -67,9 +70,18 @@ export function CekaciOkno({
       new Date(iso),
     );
 
+  /**
+   * V TABULCE UŽ JEN HEREC A ÚČASTNÍCI (10. 10. 2026). Čas stojí nad odpočtem,
+   * takže ho řádek „Kdy“ opakoval o dva centimetry níž.
+   */
   const radky: { popisek: string; hodnota: string }[] = [];
   if (herec?.trim()) radky.push({ popisek: t('cekarna.herec'), hodnota: herec.trim() });
-  radky.push({ popisek: t('cekarna.kdy'), hodnota: `${den}, ${cas(zacatek)}–${cas(konec)}` });
+  if (ucastnici.length > 1) {
+    radky.push({
+      popisek: t('cekarna.ucastnici'),
+      hodnota: ucastnici.map((u, i) => `${i + 1}. ${u}`).join('\n'),
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,6 +92,11 @@ export function CekaciOkno({
           bezi ? 'border-brand-green bg-brand-green/10' : 'border-line bg-surface'
         }`}
       >
+        {/* DATUM A ČAS NAD ODPOČTEM (10. 10. 2026) - odpočet říká, za jak dlouho,
+            tohle, kdy přesně. Jedno bez druhého se špatně kontroluje. */}
+        <p className="text-sm font-heading text-ink m-0 mb-4">
+          {den}, {cas(zacatek)}–{cas(konec)}
+        </p>
         {ted === null ? (
           <p className="font-heading text-sm text-muted m-0">{t('cekarna.nacitam')}</p>
         ) : doslo ? (
@@ -129,7 +146,7 @@ export function CekaciOkno({
             <dt className="text-xs font-heading text-brand-green uppercase tracking-wide sm:w-32 shrink-0 m-0">
               {r.popisek}
             </dt>
-            <dd className="text-sm font-body text-ink m-0">{r.hodnota}</dd>
+            <dd className="text-sm font-body text-ink m-0 whitespace-pre-line break-all">{r.hodnota}</dd>
           </div>
         ))}
       </dl>

@@ -41,6 +41,8 @@ export default async function CekarnaNataceni({ params }: { params: { token: str
             // Adresa, mapa ani parkování se tu už nevypisují (10. 10. 2026) -
             // kdo je na téhle stránce, připojuje se na dálku a cestu má v pozvánce.
             studio: { select: { timezone: true, hovorOdkaz: true } },
+            // Kdo ještě je pozvaný (10. 10. 2026) - týž seznam jako v pozvánce.
+            hoste: { orderBy: { createdAt: 'asc' }, select: { email: true } },
           },
         },
       },
@@ -81,6 +83,7 @@ export default async function CekarnaNataceni({ params }: { params: { token: str
           konec={b.end.toISOString()}
           pasmo={studio.timezone || 'Europe/Prague'}
           herec={b.actorName}
+          ucastnici={(b.hoste ?? []).map((h) => h.email.trim()).filter(Boolean)}
           hovorOdkaz={platnyHovorOdkaz(b.hovorOdkaz, studio.hovorOdkaz)}
         />
       </div>
