@@ -3186,8 +3186,15 @@ export type PozvankaNataceniInput = {
   studioName: string;
   adresa: string | null;
   mapaUrl: string | null;
-  parkovani: string | null;
   hovorOdkaz: string | null;
+  /**
+   * PARKOVÁNÍ SE ZATÍM NEPOSÍLÁ (10. 10. 2026) - u některých studií je to pět
+   * řádků o zónách a závorách a tlačilo to zbytek mailu pod okraj obrazovky;
+   * sbalit se to v poště spolehlivě nedá (Gmail i Outlook `<details>` zahodí).
+   * Text zůstává uložený u studia (česky i anglicky), jen ho pozvánka zatím
+   * nenese - až se vymyslí kam s ním, vezme se odtamtud.
+   */
+
   /**
    * VŠICHNI POZVANÍ (10. 10. 2026: „potřeboval bych, ať ostatní nějak vidí, kdo
    * tam je“). Pozvánky chodí každému zvlášť, ne v kopii - tenhle řádek dělá
@@ -3266,15 +3273,6 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
     <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.odkazPlati')}</p>`
     : '';
 
-  // Parkování až za připojením, u mapy (10. 10. 2026) - obojí řeší cestu do
-  // studia a týká se jen toho, kdo přijede.
-  const parkovaniBlok = input.parkovani?.trim()
-    ? `<table role="presentation" class="field-table"><tr><td class="label">${prelozitEmail(
-        jazyk,
-        'mail.pozvankaNataceni.parkovani',
-      )}</td><td class="value">${escapeHtml(input.parkovani.trim()).replace(/\n/g, '<br>')}</td></tr></table>`
-    : '';
-
   const naMapu = mapa
     ? `<div class="cta-row"><a href="${escapeHtml(mapa)}" class="cta-dark">${prelozitEmail(
         jazyk,
@@ -3305,7 +3303,6 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
     )}</p>
     ${prehled}
     ${pripojeni}
-    ${parkovaniBlok}
     ${naMapu}
     ${doKalendare}
     <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco')}</p>
@@ -3336,9 +3333,6 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
   ];
   if (input.hovorOdkaz) {
     radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.pripojitSe')}: ${input.hovorOdkaz}`);
-  }
-  if (input.parkovani?.trim()) {
-    radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.parkovani')}: ${input.parkovani.trim()}`);
   }
   if (mapa) {
     radkyTextu.push(`${prelozitEmail(jazyk, 'mail.pozvankaNataceni.otevritMapu')}: ${mapa}`);

@@ -52,8 +52,12 @@ export type NataceniData = {
   studioBarva: string | null;
   adresa: string | null;
   mapaUrl: string | null;
+  /**
+   * Parkování česky a anglicky z karty studia. ZATÍM SE NEPOSÍLÁ (10. 10. 2026):
+   * u některých studií je to pět řádků a v pozvánce to tlačilo všechno ostatní
+   * pod okraj obrazovky. Text se drží dál, až se vymyslí, kam s ním.
+   */
   parkovani: string | null;
-  /** Parkování anglicky (10. 10. 2026); prázdné = použije se česká věta. */
   parkovaniEn: string | null;
   /** Odkaz na hovor zapsaný u tohohle natáčení; null = bere se ze studia. */
   hovorOdkazVlastni: string | null;
