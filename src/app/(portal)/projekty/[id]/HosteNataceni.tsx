@@ -25,12 +25,18 @@ import {
  * později rozešel - hostům by pak chodily časy, které ve studiu neplatí.
  * Proto tahle karta ukazuje, co v kalendáři k projektu opravdu je.
  *
- * KAŽDÝ HOST MÁ SVÁ POLÍČKA (9. 10. 2026: „chci tam samostatná pole. takhle
- * můžou vznikat chyby"). Původně se vkládal jeden text a portál ho rozebíral
- * podle čárek - jméno s čárkou nebo chybějící mezera ale udělaly z jednoho
- * hosta dva a bylo to vidět až v odeslané pozvánce. Rozebírání zůstalo jen na
- * VLOŽENÍ ZE SCHRÁNKY: kdo zkopíruje celý řádek z mailu, dostane ho rozházený
- * do řádků, kde to vidí a může to opravit, než pošle.
+ * STAČÍ E-MAIL, ŘÁDEK NA KAŽDÉHO (9. 10. 2026: „chci tam samostatná pole.
+ * takhle můžou vznikat chyby" a „jméno dej pryč, stačí email"). Původně se
+ * vkládal jeden text a portál ho rozebíral podle čárek - jméno s čárkou nebo
+ * chybějící mezera udělaly z jednoho hosta dva a bylo to vidět až v odeslané
+ * pozvánce. Rozebírání zůstalo jen na VLOŽENÍ ZE SCHRÁNKY: kdo zkopíruje celý
+ * řádek z mailu, dostane ho rozházený do řádků, kde to vidí a může opravit.
+ *
+ * „VE STUDIU / ONLINE" SE UŽ NEPTÁ (9. 10. 2026: „největší procento je online,
+ * a to si pak může člověk vybrat z toho univerzálního emailu"). Od té doby, co
+ * je pozvánka pro oba případy táž, to byl údaj, na který se produkce ptala
+ * dopředu a host si ho stejně rozmyslel. Sloupec `online` v databázi zůstává
+ * kvůli starším záznamům, noví hosté se zapisují s výchozí hodnotou.
  *
  * POZVÁNKA SE POSÍLÁ RUČNĚ, ne při přidání hosta. Produkce napřed naházi
  * všechny, případně dopíše odkaz na hovor, a teprve pak pošle - jinak by
@@ -85,7 +91,7 @@ function kdySlovy(start: string, end: string): string {
 }
 
 /** Jeden rozepsaný host ve formuláři, ještě než se uloží. */
-type NovyHost = { klic: string; jmeno: string; email: string; online: boolean };
+type NovyHost = { klic: string; email: string };
 
 /**
  * Klíč řádku z počítadla, ne z indexu ani z e-mailu: index by při smazání
@@ -97,7 +103,7 @@ function dalsiKlic(): string {
   return `host-${pocitadloRadku}`;
 }
 function prazdnyHost(): NovyHost {
-  return { klic: dalsiKlic(), jmeno: '', email: '', online: false };
+  return { klic: dalsiKlic(), email: '' };
 }
 
 function TerminSHosty({
@@ -170,18 +176,9 @@ function TerminSHosty({
     if (rozebrane.length === 0) return;
     e.preventDefault();
     setNovi((s) => {
-      const puvodniOnline = s[i]?.online ?? false;
       const kopie = [...s];
-      kopie.splice(
-        i,
-        1,
-        ...rozebrane.map((h) => ({
-          klic: dalsiKlic(),
-          jmeno: h.jmeno ?? '',
-          email: h.email,
-          online: puvodniOnline,
-        })),
-      );
+      // Jméno z „Jan Novák <jan@firma.cz>“ se zahodí - portál ho nikde nepoužívá.
+      kopie.splice(i, 1, ...rozebrane.map((h) => ({ klic: dalsiKlic(), email: h.email })));
       return kopie;
     });
   }
@@ -203,9 +200,7 @@ function TerminSHosty({
   async function pridej() {
     const data = await zavolej(`${zaklad}/hoste`, {
       method: 'POST',
-      body: JSON.stringify({
-        hoste: kZapisu.map((h) => ({ jmeno: h.jmeno.trim() || null, email: h.email.trim(), online: h.online })),
-      }),
+      body: JSON.stringify({ hoste: kZapisu.map((h) => ({ email: h.email.trim() })) }),
     });
     if (!data) return;
     setNovi([prazdnyHost()]);
@@ -283,12 +278,6 @@ function TerminSHosty({
               start={nataceni.start}
               canManage={canManage}
               pracuje={pracuje}
-              onUloz={(zmena) =>
-                zavolej(`${zaklad}/hoste/${encodeURIComponent(h.id)}`, {
-                  method: 'PATCH',
-                  body: JSON.stringify(zmena),
-                })
-              }
               onSmaz={() =>
                 zavolej(`${zaklad}/hoste/${encodeURIComponent(h.id)}`, { method: 'DELETE' })
               }
@@ -299,11 +288,11 @@ function TerminSHosty({
 
       {canManage && (
         <>
-          {/* SAMOSTATNÁ POLE NA KAŽDÉHO HOSTA (9. 10. 2026: „chci tam samostatná
-              pole. takhle můžou vznikat chyby"). Jeden slepený řádek s čárkami
-              uměl ze jména „Novák, Jan" udělat dva hosty a bylo to vidět až
-              v odeslané pozvánce. Vložení celé schránky se nezahazuje - rozhází
-              se do řádků, kde to produkce vidí a může to opravit. */}
+          {/* JEN E-MAIL, ŘÁDEK NA KAŽDÉHO (9. 10. 2026: „jméno dej pryč, stačí
+              email“). Jeden slepený řádek s čárkami uměl ze jména „Novák, Jan“
+              udělat dva hosty a bylo to vidět až v odeslané pozvánce. Jméno už se
+              neukládá vůbec - mail oslovuje obecně a nikde se nepoužívalo. Vložení celé schránky se
+              nezahazuje - rozhází se do řádků, kde je produkce vidí a může je opravit. */}
           <div className="flex flex-col gap-2">
             <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
               {t('hoste.pridatNadpis')}
@@ -312,14 +301,7 @@ function TerminSHosty({
             {novi.map((h, i) => {
               const spatny = h.email.trim().length > 0 && !jeEmail(h.email);
               return (
-                <div key={h.klic} className="flex items-start gap-2 flex-wrap sm:flex-nowrap">
-                  <input
-                    value={h.jmeno}
-                    onChange={(e) => uprav(i, { jmeno: e.target.value })}
-                    placeholder={t('hoste.jmeno')}
-                    aria-label={t('hoste.jmeno')}
-                    className="min-w-0 flex-1 rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
-                  />
+                <div key={h.klic} className="flex items-start gap-2">
                   <div className="min-w-0 flex-1 flex flex-col gap-1">
                     <input
                       value={h.email}
@@ -337,26 +319,12 @@ function TerminSHosty({
                     />
                     {spatny && <span className="text-[11px] font-body text-danger">{t('hoste.spatnyEmail')}</span>}
                   </div>
-                  {/* Ve studiu / online se volí u KAŽDÉHO zvlášť - na jedno
-                      natáčení chodí klient osobně a agentura se připojuje. */}
-                  <button
-                    type="button"
-                    onClick={() => uprav(i, { online: !h.online })}
-                    title={t('hoste.prepnoutNapoveda')}
-                    className={`shrink-0 rounded-pill border px-3 py-2 text-xs font-heading font-semibold transition-colors cursor-pointer ${
-                      h.online
-                        ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                        : 'border-line bg-surface text-muted'
-                    }`}
-                  >
-                    {h.online ? t('hoste.online') : t('hoste.osobne')}
-                  </button>
                   <button
                     type="button"
                     onClick={() => odeberRadek(i)}
                     title={t('hoste.smazat')}
                     aria-label={t('hoste.smazat')}
-                    disabled={novi.length === 1 && !h.jmeno && !h.email}
+                    disabled={novi.length === 1 && !h.email}
                     className="shrink-0 rounded-pill border border-line bg-surface text-muted px-3 py-2 text-xs font-heading cursor-pointer disabled:opacity-40"
                   >
                     ×
@@ -493,14 +461,12 @@ function RadekHosta({
   start,
   canManage,
   pracuje,
-  onUloz,
   onSmaz,
 }: {
   host: HostData;
   start: string;
   canManage: boolean;
   pracuje: boolean;
-  onUloz: (zmena: Record<string, unknown>) => void;
   onSmaz: () => void;
 }) {
   const t = usePreklad();
@@ -509,27 +475,10 @@ function RadekHosta({
 
   return (
     <li className="flex items-center gap-2 flex-wrap rounded-lg border border-line bg-field/40 px-3 py-1.5">
-      <span className="font-heading text-sm text-ink">{host.jmeno || host.email}</span>
-      {host.jmeno && <span className="text-xs font-body text-muted">{host.email}</span>}
+      <span className="font-heading text-sm text-ink break-all">{host.email}</span>
       {!jeEmail(host.email) && (
         <span className="text-[11px] font-heading text-status-error">{t('hoste.spatnaAdresa')}</span>
       )}
-
-      <button
-        type="button"
-        disabled={!canManage || pracuje}
-        onClick={() => onUloz({ online: !host.online })}
-        title={t('hoste.prepnoutNapoveda')}
-        className={`rounded-pill border px-2 py-0.5 text-[11px] font-heading font-semibold transition-colors ${
-          canManage ? 'cursor-pointer' : ''
-        } ${
-          host.online
-            ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-            : 'border-line bg-surface text-muted'
-        }`}
-      >
-        {host.online ? t('hoste.online') : t('hoste.osobne')}
-      </button>
 
       {host.pozvankaAt && !ceka && (
         <span className="text-[11px] font-body text-muted">

@@ -154,7 +154,7 @@ export async function nactiNataceni(
  */
 export async function pridejHosty(
   blockId: string,
-  hoste: { jmeno: string | null; email: string; online: boolean }[],
+  hoste: { email: string }[],
   createdById: string | null,
 ): Promise<number> {
   if (hoste.length === 0) return 0;
@@ -176,13 +176,7 @@ export async function pridejHosty(
     if (novi.length === 0) return 0;
 
     await prisma.hostNataceni.createMany({
-      data: novi.map((h) => ({
-        blockId,
-        jmeno: h.jmeno?.trim() || null,
-        email: h.email.trim(),
-        online: h.online,
-        createdById,
-      })),
+      data: novi.map((h) => ({ blockId, email: h.email.trim(), createdById })),
     });
     return novi.length;
   } catch (err) {
@@ -265,7 +259,7 @@ function kdySlovy(nataceni: NataceniData, timezone: string, jazyk: 'cs' | 'en'):
  * i odkaz „Přidat do kalendáře" (9. 10. 2026). Kdyby si každý stavěl svůj,
  * rozejdou se - a host by měl v kalendáři jiný čas, než mu přišel v mailu.
  */
-export function icsProHosta(nataceni: NataceniData, host: HostData, nazevProjektu: string): string {
+export function icsProHosta(nataceni: NataceniData, nazevProjektu: string): string {
   const misto = adresaNaRadek(nataceni.studioNazev, nataceni.adresa);
   return buildIcs(nazevProjektu, [
     {
@@ -277,7 +271,10 @@ export function icsProHosta(nataceni: NataceniData, host: HostData, nazevProjekt
       start: casKlienta(nataceni.start),
       end: new Date(nataceni.end),
       summary: `Natáčení — ${nazevProjektu}`,
-      location: host.online ? nataceni.hovorOdkaz || misto : misto,
+      // Adresa studia, i když se host připojuje na dálku - odkaz na připojení je
+      // hned první v popisu a kalendáře z něj umí udělat tlačítko. Jedna podoba
+      // záznamu pro všechny (9. 10. 2026) - host se rozhoduje sám až podle mailu.
+      location: misto,
       description: [
         nataceni.hovorOdkaz ? `Připojení: ${nataceni.hovorOdkaz}` : '',
         nataceni.parkovani?.trim() ? `Parkování: ${nataceni.parkovani.trim()}` : '',
@@ -357,7 +354,7 @@ export async function posliPozvanky(
     const zmena = Boolean(host.pozvankaAt);
     const kdy = kdySlovy(nataceni, pasmo, 'cs');
 
-    const ics = { nazev: 'nataceni.ics', obsah: icsProHosta(nataceni, host, nazevProjektu) };
+    const ics = { nazev: 'nataceni.ics', obsah: icsProHosta(nataceni, nazevProjektu) };
     const kalendarUrl = await kalendarOdkaz(host.id, baseUrl);
 
     try {

@@ -14,23 +14,16 @@ import { nactiNataceni, pridejHosty } from '@/lib/hosteNataceniServer';
  * vznikat chyby"). Do 9. 10. se posílal jeden text a portál si ho rozebíral
  * podle čárek - jenže jméno s čárkou („Novák, Jan") nebo chybějící mezera
  * udělaly z jednoho hosta dva a chyba byla vidět až v odeslané pozvánce.
- * Teď chodí hotový seznam: jméno, e-mail a kam host přijde, řádek po řádku.
+ * Teď chodí hotový seznam adres, řádek po řádku. Jméno ani „ve studiu/online“
+ * se už neptají (9. 10. 2026: „jméno dej pryč, stačí email“) - mail je pro všechny
+ * týž a host se rozhodne sám, jestli přijde nebo se připojí.
  * Rozebírání textu zůstalo ve formuláři, kde slouží jen k rozházení vložené
  * schránky do řádků - a produkce to vidí a může to opravit, než odešle.
  */
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  hoste: z
-    .array(
-      z.object({
-        jmeno: z.string().trim().max(200).nullable().optional(),
-        email: z.string().trim().min(3).max(320),
-        online: z.boolean().optional(),
-      }),
-    )
-    .min(1)
-    .max(50),
+  hoste: z.array(z.object({ email: z.string().trim().min(3).max(320) })).min(1).max(50),
 });
 
 export async function POST(
@@ -58,9 +51,7 @@ export async function POST(
    * Co neprojde, se vrátí jako `spatne` a produkce to vidí u karty; tiše to
    * zahodit by znamenalo, že si někdo myslí, že pozvánka odešla.
    */
-  const hoste = data.data.hoste
-    .map((h) => ({ jmeno: h.jmeno?.trim() || null, email: h.email.trim(), online: h.online ?? false }))
-    .filter((h) => h.email);
+  const hoste = data.data.hoste.map((h) => ({ email: h.email.trim() })).filter((h) => h.email);
   const spatne = hoste.filter((h) => !jeEmail(h.email)).map((h) => h.email);
   const dobre = hoste.filter((h) => jeEmail(h.email));
 

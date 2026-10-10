@@ -29,17 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   const host = await prisma.hostNataceni
     .findUnique({
       where: { kalendarToken: token },
-      select: {
-        id: true,
-        jmeno: true,
-        email: true,
-        online: true,
-        pozvankaAt: true,
-        pozvankaStart: true,
-        chybaOdeslani: true,
-        blockId: true,
-        block: { select: { projectName: true, title: true } },
-      },
+      select: { blockId: true, block: { select: { projectName: true } } },
     })
     .catch(() => null);
   if (!host) return new NextResponse('Odkaz už neplatí.', { status: 404 });
@@ -48,15 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   if (!nalezeno) return new NextResponse('Termín už v kalendáři není.', { status: 404 });
 
   const nazevProjektu = host.block?.projectName?.trim() || nalezeno.data.nazev;
-  const obsah = icsProHosta(nalezeno.data, {
-    id: host.id,
-    jmeno: host.jmeno,
-    email: host.email,
-    online: host.online,
-    pozvankaAt: host.pozvankaAt?.toISOString() ?? null,
-    pozvankaStart: host.pozvankaStart?.toISOString() ?? null,
-    chybaOdeslani: host.chybaOdeslani,
-  }, nazevProjektu);
+  const obsah = icsProHosta(nalezeno.data, nazevProjektu);
 
   return new NextResponse(obsah, {
     headers: {

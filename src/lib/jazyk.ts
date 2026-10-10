@@ -237,8 +237,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // Hosté na natáčení (30. 9. 2026) - viz projekty/[id]/HosteNataceni.tsx.
   'hoste.nadpis': { cs: 'Hosté na natáčení', en: 'Guests at the recording' },
   'hoste.popis': {
-    cs: 'Klient, agentura nebo zadavatel, kteří u natáčení budou — ve studiu, nebo na dálku. Pozvánka jim pošle čas, adresu s mapou, parkování i odkaz na připojení.',
-    en: 'The customer, agency or orderer attending the recording — at the studio or remotely. The invitation sends them the time, the address with a map, parking and the joining link.',
+    cs: 'Klient, agentura nebo zadavatel, kteří u natáčení budou. Stačí e-mail — pozvánka je pro všechny stejná: čas, adresa s mapou, parkování i odkaz na připojení, ať si host vybere, jestli přijde nebo se připojí.',
+    en: 'The customer, agency or orderer attending the recording. An email is enough — the invitation is the same for everyone: the time, the address with a map, parking and the joining link, so the guest can decide whether to come or join remotely.',
   },
   'hoste.zadneNataceni': {
     cs: 'K projektu zatím není v kalendáři žádné natáčení. Jakmile termín vznikne, objeví se tady i s hosty.',
@@ -257,7 +257,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The address, map and parking are filled in for the studio in Administration → Studios. Without them the invitation only carries the studio name.',
   },
   'hoste.pridatNadpis': { cs: 'Přidat hosty', en: 'Add guests' },
-  'hoste.jmeno': { cs: 'Jméno (nepovinné)', en: 'Name (optional)' },
   'hoste.email': { cs: 'E-mail', en: 'Email' },
   'hoste.dalsiHost': { cs: '+ Další host', en: '+ Another guest' },
   'hoste.spatnyEmail': { cs: 'Tohle nevypadá jako e-mail.', en: 'This does not look like an email.' },
