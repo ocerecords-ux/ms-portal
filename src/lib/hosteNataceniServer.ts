@@ -1,6 +1,8 @@
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { buildIcs } from '@/lib/ics';
+import { prelozitEmail } from '@/lib/jazykEmailu';
+import type { Jazyk } from '@/lib/jazyk';
 import { sendPozvankaNataceniEmail } from '@/lib/email';
 import {
   adresaNaRadek,
@@ -45,6 +47,7 @@ type BlokZDb = {
     jmeno: string | null;
     email: string;
     online: boolean;
+    jazyk: string | null;
     pozvankaAt: Date | null;
     pozvankaStart: Date | null;
     chybaOdeslani: string | null;
@@ -77,6 +80,7 @@ const VYBER_BLOKU = {
       jmeno: true,
       email: true,
       online: true,
+      jazyk: true,
       pozvankaAt: true,
       pozvankaStart: true,
       chybaOdeslani: true,
@@ -90,6 +94,7 @@ function naHosta(h: BlokZDb['hoste'][number]): HostData {
     jmeno: h.jmeno,
     email: h.email,
     online: h.online,
+    jazyk: h.jazyk === 'en' ? 'en' : 'cs',
     pozvankaAt: h.pozvankaAt?.toISOString() ?? null,
     pozvankaStart: h.pozvankaStart?.toISOString() ?? null,
     chybaOdeslani: h.chybaOdeslani,
@@ -154,7 +159,7 @@ export async function nactiNataceni(
  */
 export async function pridejHosty(
   blockId: string,
-  hoste: { email: string }[],
+  hoste: { email: string; jazyk?: 'cs' | 'en' }[],
   createdById: string | null,
 ): Promise<number> {
   if (hoste.length === 0) return 0;
@@ -176,7 +181,7 @@ export async function pridejHosty(
     if (novi.length === 0) return 0;
 
     await prisma.hostNataceni.createMany({
-      data: novi.map((h) => ({ blockId, email: h.email.trim(), createdById })),
+      data: novi.map((h) => ({ blockId, email: h.email.trim(), jazyk: h.jazyk ?? 'cs', createdById })),
     });
     return novi.length;
   } catch (err) {
@@ -187,12 +192,31 @@ export async function pridejHosty(
 
 export async function upravHosta(
   id: string,
-  zmena: { jmeno?: string | null; online?: boolean },
+  zmena: { jmeno?: string | null; online?: boolean; jazyk?: 'cs' | 'en'; email?: string },
 ): Promise<boolean> {
   try {
     const data: Record<string, unknown> = {};
     if (zmena.jmeno !== undefined) data.jmeno = zmena.jmeno?.trim() || null;
     if (zmena.online !== undefined) data.online = zmena.online;
+    if (zmena.jazyk !== undefined) data.jazyk = zmena.jazyk;
+
+    /**
+     * ZMĚNA ADRESY VRACÍ HOSTA MEZI ČEKAJÍČÍ (10. 10. 2026: „měli by jít
+     * upravit, abych mohl třeba změnit mail“). Nová adresa žádnou pozvánku
+     * nedostala - kdyby se razítko o odeslání nechalo, portál by si myslel,
+     * že už jsme ji poslali, a člověk by čekal na mail, který nikdy nepřišel.
+     */
+    const email = zmena.email?.trim();
+    if (email) {
+      const stary = await prisma.hostNataceni.findUnique({ where: { id }, select: { email: true } });
+      if (stary && stary.email.trim().toLowerCase() !== email.toLowerCase()) {
+        data.email = email;
+        data.pozvankaAt = null;
+        data.pozvankaStart = null;
+        data.chybaOdeslani = null;
+      }
+    }
+
     if (Object.keys(data).length === 0) return true;
     await prisma.hostNataceni.update({ where: { id }, data });
     return true;
@@ -259,8 +283,14 @@ function kdySlovy(nataceni: NataceniData, timezone: string, jazyk: 'cs' | 'en'):
  * i odkaz „Přidat do kalendáře" (9. 10. 2026). Kdyby si každý stavěl svůj,
  * rozejdou se - a host by měl v kalendáři jiný čas, než mu přišel v mailu.
  */
-export function icsProHosta(nataceni: NataceniData, nazevProjektu: string): string {
+export function icsProHosta(
+  nataceni: NataceniData,
+  nazevProjektu: string,
+  jazyk: Jazyk = 'cs',
+): string {
   const misto = adresaNaRadek(nataceni.studioNazev, nataceni.adresa);
+  const ucastnici = seznamUcastniku(nataceni);
+  const popisek = (klic: string) => prelozitEmail(jazyk, klic);
   return buildIcs(nazevProjektu, [
     {
       // Stálé UID: po přesunu termínu si kalendář opraví tentýž záznam,
@@ -270,20 +300,36 @@ export function icsProHosta(nataceni: NataceniData, nazevProjektu: string): stri
       // klepnutím a nesmí si do kalendáře dostat čas herce.
       start: casKlienta(nataceni.start),
       end: new Date(nataceni.end),
-      summary: `Natáčení — ${nazevProjektu}`,
+      summary: `${popisek('mail.pozvankaNataceni.kalendarNazev')} — ${nazevProjektu}`,
       // Adresa studia, i když se host připojuje na dálku - odkaz na připojení je
       // hned první v popisu a kalendáře z něj umí udělat tlačítko. Jedna podoba
       // záznamu pro všechny (9. 10. 2026) - host se rozhoduje sám až podle mailu.
       location: misto,
       description: [
-        nataceni.hovorOdkaz ? `Připojení: ${nataceni.hovorOdkaz}` : '',
-        nataceni.parkovani?.trim() ? `Parkování: ${nataceni.parkovani.trim()}` : '',
+        nataceni.hovorOdkaz ? `${popisek('mail.pozvankaNataceni.pripojitSe')}: ${nataceni.hovorOdkaz}` : '',
+        nataceni.parkovani?.trim() ? `${popisek('mail.pozvankaNataceni.parkovani')}: ${nataceni.parkovani.trim()}` : '',
+        ucastnici.length > 1
+          ? `${popisek('mail.pozvankaNataceni.ucastnici')}:\n${ucastnici.map((u, i) => `${i + 1}. ${u}`).join('\n')}`
+          : '',
       ]
         .filter(Boolean)
         .join('\n'),
       updatedAt: new Date(),
     },
   ]);
+}
+
+/**
+ * KDO JEŠTĚ JE POZVANÝ (10. 10. 2026: „potřeboval bych, ať ostatní nějak vidí,
+ * kdo tam je“). Pozvánky chodí každému zvlášť, ne v kopii - jinak by si hosti
+ * mezi sebou začali odpovídat a produkce by o tom nevěděla. Seznam v přehledu
+ * dělá totéž, co kopie: je vidět, kdo u toho bude.
+ *
+ * Jsou to e-mailové adresy, jiný údaj o hostovi portál nemá - a je to táž
+ * informace, kterou by nesla kopie mailu.
+ */
+function seznamUcastniku(nataceni: NataceniData): string[] {
+  return nataceni.hoste.map((h) => h.email.trim()).filter(Boolean);
 }
 
 /**
@@ -352,14 +398,18 @@ export async function posliPozvanky(
      * jako druhá pozvánka na druhé natáčení.
      */
     const zmena = Boolean(host.pozvankaAt);
-    const kdy = kdySlovy(nataceni, pasmo, 'cs');
+    // Jazyk se bere U KAŽDÉHO HOSTA (10. 10. 2026: „co když budeme mít anglicky
+    // mluvící účastníky?“) - na jedno natáčení chodí česká i anglická pozvánka.
+    const jazyk = host.jazyk;
+    const kdy = kdySlovy(nataceni, pasmo, jazyk);
 
-    const ics = { nazev: 'nataceni.ics', obsah: icsProHosta(nataceni, nazevProjektu) };
+    const ics = { nazev: 'nataceni.ics', obsah: icsProHosta(nataceni, nazevProjektu, jazyk) };
     const kalendarUrl = await kalendarOdkaz(host.id, baseUrl);
 
     try {
       const odeslano = await sendPozvankaNataceniEmail({
         to: host.email,
+        jazyk,
         projectName: nazevProjektu,
         actorName: nataceni.actorName,
         kdy,
@@ -368,6 +418,7 @@ export async function posliPozvanky(
         mapaUrl: nataceni.mapaUrl,
         parkovani: nataceni.parkovani,
         hovorOdkaz: nataceni.hovorOdkaz,
+        ucastnici: seznamUcastniku(nataceni),
         kalendarUrl,
         zmena,
         ics,

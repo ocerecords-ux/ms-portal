@@ -23,7 +23,16 @@ import { nactiNataceni, pridejHosty } from '@/lib/hosteNataceniServer';
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  hoste: z.array(z.object({ email: z.string().trim().min(3).max(320) })).min(1).max(50),
+  hoste: z
+    .array(
+      z.object({
+        email: z.string().trim().min(3).max(320),
+        // Jazyk pozvánky (10. 10. 2026); chybějící = čeština.
+        jazyk: z.enum(['cs', 'en']).optional(),
+      }),
+    )
+    .min(1)
+    .max(50),
 });
 
 export async function POST(
@@ -51,7 +60,9 @@ export async function POST(
    * Co neprojde, se vrátí jako `spatne` a produkce to vidí u karty; tiše to
    * zahodit by znamenalo, že si někdo myslí, že pozvánka odešla.
    */
-  const hoste = data.data.hoste.map((h) => ({ email: h.email.trim() })).filter((h) => h.email);
+  const hoste = data.data.hoste
+    .map((h) => ({ email: h.email.trim(), jazyk: h.jazyk ?? ('cs' as const) }))
+    .filter((h) => h.email);
   const spatne = hoste.filter((h) => !jeEmail(h.email)).map((h) => h.email);
   const dobre = hoste.filter((h) => jeEmail(h.email));
 

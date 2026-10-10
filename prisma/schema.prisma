@@ -2554,6 +2554,11 @@ model HostNataceni {
   /// Poslední chyba odeslání, ať je u řádku vidět, proč pozvánka nedošla.
   chybaOdeslani String?
 
+  /// JAZYK POZVANKY (10. 10. 2026: „co kdyz budeme mit anglicky mluvici
+  /// ucastniky?“). Volitelne: prazdne znamena cestinu, at se starsi hoste
+  /// nemuseli nikam dopisovat. Hodnoty jako jinde v portalu - cs / en.
+  jazyk String?
+
   /// ODKAZ „Pridat do kalendare“ V POZVANCE (9. 10. 2026). Vlastni nahodny
   /// token, ne id: id se objevuje v odpovedich API a odkaz z mailu casto
   /// skonci preposlany dal. Vznika az pri prvnim odeslani pozvanky, proto je

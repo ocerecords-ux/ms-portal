@@ -3191,6 +3191,12 @@ export type PozvankaNataceniInput = {
   mapaUrl: string | null;
   parkovani: string | null;
   hovorOdkaz: string | null;
+  /**
+   * VŠICHNI POZVANÍ (10. 10. 2026: „potřeboval bych, ať ostatní nějak vidí, kdo
+   * tam je“). Pozvánky chodí každému zvlášť, ne v kopii - tenhle řádek dělá
+   * totéž, co by dělala kopie, aniž by si hosti začali odpovídat mimo produkci.
+   */
+  ucastnici?: string[];
   /** Odkaz „Přidat do kalendáře" - vyrábí hosteNataceniServer, null = jen příloha. */
   kalendarUrl?: string | null;
   /** Termín se posunul - jiný nadpis a předmět, jinak tentýž mail. */
@@ -3221,6 +3227,21 @@ function pozvankaPrehled(input: PozvankaNataceniInput): { klic: string; hodnota:
   if (input.parkovani?.trim()) {
     radky.push({ klic: 'mail.pozvankaNataceni.parkovani', hodnota: input.parkovani.trim() });
   }
+  /**
+   * Sám host se v seznamu taky objeví - stejně jako v kopii mailu; vynechat ho
+   * by znamenalo, že každý vidí jiný seznam a nikdo neví, kdo je úplná sestava.
+   *
+   * POD SEBOU A OČÍSLOVANÍ (10. 10. 2026: „at víme, kolik jich tam je“) - šest
+   * adres na jedné řádce oddělených čárkami se nečte a počítat by se musely
+   * očima.
+   */
+  const ucastnici = (input.ucastnici ?? []).map((u) => u.trim()).filter(Boolean);
+  if (ucastnici.length > 1) {
+    radky.push({
+      klic: 'mail.pozvankaNataceni.ucastnici',
+      hodnota: ucastnici.map((u, i) => `${i + 1}. ${u}`).join('\n'),
+    });
+  }
   return radky;
 }
 
@@ -3231,7 +3252,11 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
   const prehled = `<table role="presentation" class="field-table">${pozvankaPrehled(input)
     .map(
       (r) =>
-        `<tr><td class="label">${prelozitEmail(jazyk, r.klic)}</td><td class="value">${escapeHtml(r.hodnota)}</td></tr>`,
+        // Zalomení v hodnotě se musí překlopit na <br> až PO escapování - seznam
+        // účastníků (a parkování psané na víc řádků) by jinak splynul do jedné věty.
+        `<tr><td class="label">${prelozitEmail(jazyk, r.klic)}</td><td class="value">${escapeHtml(
+          r.hodnota,
+        ).replace(/\n/g, '<br>')}</td></tr>`,
     )
     .join('')}</table>`;
 
@@ -3294,7 +3319,11 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
   const radkyTextu: string[] = [
     prelozitEmail(jazyk, input.zmena ? 'mail.pozvankaNataceni.uvodZmena' : 'mail.pozvankaNataceni.uvod'),
     '',
-    ...pozvankaPrehled(input).map((r) => `${prelozitEmail(jazyk, r.klic)}: ${r.hodnota}`),
+    ...pozvankaPrehled(input).map((r) =>
+      r.hodnota.includes('\n')
+        ? `${prelozitEmail(jazyk, r.klic)}:\n${r.hodnota}`
+        : `${prelozitEmail(jazyk, r.klic)}: ${r.hodnota}`,
+    ),
     '',
   ];
   if (input.hovorOdkaz) {

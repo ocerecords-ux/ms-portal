@@ -151,6 +151,9 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
   'mail.pozvankaNataceni.projekt': { cs: 'Projekt', en: 'Project' },
   'mail.pozvankaNataceni.herec': { cs: 'Herec', en: 'Narrator' },
   'mail.pozvankaNataceni.parkovani': { cs: 'Parkování', en: 'Parking' },
+  'mail.pozvankaNataceni.ucastnici': { cs: 'Účastníci', en: 'Attendees' },
+  // Název záznamu v kalendáři hosta - krátký, před něj se lepí název projektu.
+  'mail.pozvankaNataceni.kalendarNazev': { cs: 'Natáčení', en: 'Recording' },
   'mail.pozvankaNataceni.pripojitSe': {
     cs: 'Připojit se k natáčení online',
     en: 'Join the recording online',

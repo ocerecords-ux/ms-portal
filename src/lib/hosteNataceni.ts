@@ -20,6 +20,12 @@ export type HostData = {
   email: string;
   /** Připojí se na dálku; jinak přijde do studia. */
   online: boolean;
+  /**
+   * JAZYK POZVÁNKY (10. 10. 2026: „co když budeme mít anglicky mluvící
+   * účastníky?“). V databázi může být prázdno (starší hosté) - sem už
+   * se doplňuje čeština, ať to nemusí řešit každé místo zvlášť.
+   */
+  jazyk: 'cs' | 'en';
   /** Kdy mu naposledy odešla pozvánka (ISO), null = ještě nešla. */
   pozvankaAt: string | null;
   /** Na jaký začátek natáčení byla ta pozvánka. */

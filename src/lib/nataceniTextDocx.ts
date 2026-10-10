@@ -25,7 +25,6 @@ import {
 
 /** Barvy značky bez mřížky - tak je chce WordprocessingML. */
 const FIALOVA = '6B2AF0';
-const FIALOVA_SVETLA = 'D9CCFF';
 const ZELENA = '1FDF67';
 const INKOUST = '201A33';
 const SEDA = '6B6880';
@@ -137,10 +136,7 @@ function hlavicka(podklady: PodkladyTextu, logo: ObrazekVDokumentu | null): stri
 
   const vlevo =
     odstavec(run('NATÁČECÍ LIST', { velikost: 8, barva: ZELENA, tucne: true, rozpal: 1.6 })) +
-    odstavec(run(podklady.projekt, { velikost: 19, barva: BILA, tucne: true }), { nad: 4 }) +
-    (podklady.klient
-      ? odstavec(run(podklady.klient, { velikost: 10, barva: FIALOVA_SVETLA }), { nad: 2 })
-      : '');
+    odstavec(run(podklady.projekt, { velikost: 19, barva: BILA, tucne: true }), { nad: 4 });
 
   const vpravo = odstavec(logo ? obrazek(logo) : '', { vpravo: true });
 

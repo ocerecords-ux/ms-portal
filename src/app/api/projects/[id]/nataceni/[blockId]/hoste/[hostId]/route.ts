@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { canManageCalendar } from '@/lib/roles';
+import { jeEmail } from '@/lib/hosteNataceni';
 import { nactiNataceni, smazHosta, upravHosta } from '@/lib/hosteNataceniServer';
 
 /** Úprava a smazání jednoho hosta (zadání 30. 9. 2026). */
@@ -11,6 +12,10 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({
   jmeno: z.string().trim().max(200).nullable().optional(),
   online: z.boolean().optional(),
+  /** Jazyk pozvánky (10. 10. 2026) - přehází se už přidanému hostovi. */
+  jazyk: z.enum(['cs', 'en']).optional(),
+  /** Oprava adresy (10. 10. 2026) - překlep se dá spravit bez mazání a přidávání. */
+  email: z.string().trim().min(3).max(320).optional(),
 });
 
 /**
@@ -42,6 +47,25 @@ export async function PATCH(
   const telo = await req.json().catch(() => null);
   const data = schema.safeParse(telo);
   if (!data.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+
+  /**
+   * Adresa se kontroluje toutéž funkcí jako při přidávání a nesmí se krýt
+   * s jiným hostem téhož natáčení - jinak by jednomu člověku došly dvě
+   * pozvánky a v přehledu účastníků by stál dvakrát.
+   */
+  const email = data.data.email?.trim();
+  if (email !== undefined) {
+    if (!jeEmail(email)) {
+      return NextResponse.json({ error: 'Tohle nevypadá jako e-mail.' }, { status: 400 });
+    }
+    const stav = await nactiNataceni(blockId);
+    const kolize = stav?.data.hoste.some(
+      (h) => h.id !== hostId && h.email.trim().toLowerCase() === email.toLowerCase(),
+    );
+    if (kolize) {
+      return NextResponse.json({ error: 'Tahle adresa u natáčení už je.' }, { status: 409 });
+    }
+  }
 
   if (!(await upravHosta(hostId, data.data))) {
     return NextResponse.json({ error: 'Hosta se nepodařilo uložit.' }, { status: 500 });

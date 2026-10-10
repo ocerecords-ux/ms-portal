@@ -128,7 +128,6 @@ export async function podkladyNataceciTextu(
     vzor: { uvod: vzor.uvod ?? null, blok: vzor.blok },
     podklady: {
       projekt: nazevProjektu,
-      klient: meta.company?.name || meta.companyName || '',
       upraveno: (posledni?.updatedAt ?? new Date()).toLocaleDateString('cs-CZ', {
         timeZone: 'Europe/Prague',
       }),

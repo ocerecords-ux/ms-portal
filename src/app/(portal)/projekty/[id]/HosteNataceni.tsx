@@ -91,7 +91,7 @@ function kdySlovy(start: string, end: string): string {
 }
 
 /** Jeden rozepsaný host ve formuláři, ještě než se uloží. */
-type NovyHost = { klic: string; email: string };
+type NovyHost = { klic: string; email: string; jazyk: 'cs' | 'en' };
 
 /**
  * Klíč řádku z počítadla, ne z indexu ani z e-mailu: index by při smazání
@@ -102,8 +102,43 @@ function dalsiKlic(): string {
   pocitadloRadku += 1;
   return `host-${pocitadloRadku}`;
 }
+/**
+ * ČEŠTINA / ANGLIČTINA jedním klepnutím. Dva stavy, ne rozbalovací seznam:
+ * jiný jazyk než ty dva portál stejně neumí a v řádku je místo jen na odznak.
+ */
+function PrepinacJazyka({
+  jazyk,
+  onZmena,
+  vypnuto,
+  trida,
+}: {
+  jazyk: 'cs' | 'en';
+  onZmena: (jazyk: 'cs' | 'en') => void;
+  vypnuto?: boolean;
+  trida: string;
+}) {
+  const t = usePreklad();
+  return (
+    <button
+      type="button"
+      disabled={vypnuto}
+      onClick={() => onZmena(jazyk === 'cs' ? 'en' : 'cs')}
+      title={t('hoste.jazykNapoveda')}
+      className={`shrink-0 rounded-pill border font-heading font-semibold transition-colors ${trida} ${
+        vypnuto ? '' : 'cursor-pointer'
+      } ${
+        jazyk === 'en'
+          ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+          : 'border-line bg-surface text-muted'
+      }`}
+    >
+      {jazyk === 'en' ? t('hoste.jazykEn') : t('hoste.jazykCs')}
+    </button>
+  );
+}
+
 function prazdnyHost(): NovyHost {
-  return { klic: dalsiKlic(), email: '' };
+  return { klic: dalsiKlic(), email: '', jazyk: 'cs' };
 }
 
 function TerminSHosty({
@@ -178,7 +213,8 @@ function TerminSHosty({
     setNovi((s) => {
       const kopie = [...s];
       // Jméno z „Jan Novák <jan@firma.cz>“ se zahodí - portál ho nikde nepoužívá.
-      kopie.splice(i, 1, ...rozebrane.map((h) => ({ klic: dalsiKlic(), email: h.email })));
+      const jazyk = s[i]?.jazyk ?? 'cs';
+      kopie.splice(i, 1, ...rozebrane.map((h) => ({ klic: dalsiKlic(), email: h.email, jazyk })));
       return kopie;
     });
   }
@@ -200,7 +236,7 @@ function TerminSHosty({
   async function pridej() {
     const data = await zavolej(`${zaklad}/hoste`, {
       method: 'POST',
-      body: JSON.stringify({ hoste: kZapisu.map((h) => ({ email: h.email.trim() })) }),
+      body: JSON.stringify({ hoste: kZapisu.map((h) => ({ email: h.email.trim(), jazyk: h.jazyk })) }),
     });
     if (!data) return;
     setNovi([prazdnyHost()]);
@@ -278,6 +314,12 @@ function TerminSHosty({
               start={nataceni.start}
               canManage={canManage}
               pracuje={pracuje}
+              onUloz={(zmena) =>
+                zavolej(`${zaklad}/hoste/${encodeURIComponent(h.id)}`, {
+                  method: 'PATCH',
+                  body: JSON.stringify(zmena),
+                })
+              }
               onSmaz={() =>
                 zavolej(`${zaklad}/hoste/${encodeURIComponent(h.id)}`, { method: 'DELETE' })
               }
@@ -319,6 +361,14 @@ function TerminSHosty({
                     />
                     {spatny && <span className="text-[11px] font-body text-danger">{t('hoste.spatnyEmail')}</span>}
                   </div>
+                  {/* JAZYK POZVÁNKY (10. 10. 2026: „co když budeme mít anglicky
+                      mluvící účastníky?“). U každého zvlášť - na jedno natáčení
+                      chodí česká i anglická pozvánka. */}
+                  <PrepinacJazyka
+                    jazyk={h.jazyk}
+                    onZmena={(j) => uprav(i, { jazyk: j })}
+                    trida="px-3 py-2 text-xs"
+                  />
                   <button
                     type="button"
                     onClick={() => odeberRadek(i)}
@@ -461,17 +511,81 @@ function RadekHosta({
   start,
   canManage,
   pracuje,
+  onUloz,
   onSmaz,
 }: {
   host: HostData;
   start: string;
   canManage: boolean;
   pracuje: boolean;
+  onUloz: (zmena: Record<string, unknown>) => void;
   onSmaz: () => void;
 }) {
   const t = usePreklad();
   const [potvrzuji, setPotvrzuji] = useState(false);
+  const [upravuje, setUpravuje] = useState(false);
+  const [email, setEmail] = useState(host.email);
   const ceka = pozvankaJeNaPoslani(host, start);
+
+  /**
+   * ÚPRAVA PŘIDANÉHO HOSTA (10. 10. 2026: „měli by jít upravit, abych mohl
+   * třeba změnit mail a jazyk"). Překlep se do teď spravoval jen smazáním
+   * a přidáním znovu - a s hostem zmizelo i to, že mu pozvánka už odešla.
+   *
+   * Jazyk se přehazuje rovnou klepnutím na odznak, adresa až přes Upravit:
+   * rozepsaná adresa je půl minuty nerozeznatelná od překlepu, takže se
+   * ukládá na potvrzení.
+   */
+  const zmenena = email.trim() !== host.email.trim();
+  const spatny = email.trim().length > 0 && !jeEmail(email);
+
+  function uloz() {
+    if (zmenena) onUloz({ email: email.trim() });
+    setUpravuje(false);
+  }
+
+  if (upravuje) {
+    return (
+      <li className="flex items-center gap-2 flex-wrap rounded-lg border border-line bg-field/40 px-3 py-1.5">
+        <input
+          value={email}
+          type="email"
+          inputMode="email"
+          autoFocus
+          onChange={(e) => setEmail(e.target.value)}
+          aria-label={t('hoste.email')}
+          aria-invalid={spatny || undefined}
+          className={`min-w-0 flex-1 rounded-card border bg-field px-2 py-1 text-ink font-body text-sm outline-none focus:border-brand-purple ${
+            spatny ? 'border-danger' : 'border-line'
+          }`}
+        />
+        <PrepinacJazyka
+          jazyk={host.jazyk}
+          onZmena={(j) => onUloz({ jazyk: j })}
+          vypnuto={pracuje}
+          trida="px-2 py-0.5 text-[11px]"
+        />
+        <button
+          type="button"
+          onClick={uloz}
+          disabled={pracuje || spatny || email.trim().length === 0}
+          className="shrink-0 rounded-pill bg-brand-purple text-white font-heading font-semibold text-[11px] px-3 py-1 border-0 cursor-pointer disabled:opacity-50"
+        >
+          {t('obecne.ulozit')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setEmail(host.email);
+            setUpravuje(false);
+          }}
+          className="shrink-0 rounded-pill border border-line bg-surface text-muted font-heading font-semibold text-[11px] px-2 py-1 cursor-pointer"
+        >
+          {t('obecne.zrusit')}
+        </button>
+      </li>
+    );
+  }
 
   return (
     <li className="flex items-center gap-2 flex-wrap rounded-lg border border-line bg-field/40 px-3 py-1.5">
@@ -479,6 +593,12 @@ function RadekHosta({
       {!jeEmail(host.email) && (
         <span className="text-[11px] font-heading text-status-error">{t('hoste.spatnaAdresa')}</span>
       )}
+      <PrepinacJazyka
+        jazyk={host.jazyk}
+        onZmena={(j) => onUloz({ jazyk: j })}
+        vypnuto={!canManage || pracuje}
+        trida="px-2 py-0.5 text-[11px]"
+      />
 
       {host.pozvankaAt && !ceka && (
         <span className="text-[11px] font-body text-muted">
@@ -500,9 +620,22 @@ function RadekHosta({
         <button
           type="button"
           disabled={pracuje}
+          onClick={() => {
+            setEmail(host.email);
+            setUpravuje(true);
+          }}
+          className="ml-auto shrink-0 rounded-pill border-0 bg-transparent text-muted text-xs font-heading cursor-pointer hover:text-ink transition-colors disabled:opacity-50"
+        >
+          {t('obecne.upravit')}
+        </button>
+      )}
+      {canManage && (
+        <button
+          type="button"
+          disabled={pracuje}
           onClick={() => (potvrzuji ? onSmaz() : setPotvrzuji(true))}
           onBlur={() => setPotvrzuji(false)}
-          className="ml-auto shrink-0 rounded-pill border-0 bg-transparent text-muted text-xs font-heading cursor-pointer hover:text-status-error transition-colors disabled:opacity-50"
+          className="shrink-0 rounded-pill border-0 bg-transparent text-muted text-xs font-heading cursor-pointer hover:text-status-error transition-colors disabled:opacity-50"
         >
           {potvrzuji ? t('hoste.opravduSmazat') : t('hoste.smazat')}
         </button>

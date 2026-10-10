@@ -19,7 +19,6 @@
 
 /** Barvy značky - tytéž hodnoty jako v tailwind.config (brand.*). */
 const FIALOVA = '#6B2AF0';
-const FIALOVA_SVETLA = '#D9CCFF';
 const ZELENA = '#1FDF67';
 const INKOUST = '#201a33';
 const SEDA = '#6b6880';
@@ -28,7 +27,6 @@ const LINKA = '#E3E0EC';
 /** Co se dá do vzoru napsat jako proměnná. */
 export const PROMENNE_NATACENI = [
   { klic: 'projekt', popis: 'Název projektu' },
-  { klic: 'klient', popis: 'Název firmy klienta' },
   { klic: 'upraveno', popis: 'Datum poslední úpravy listu' },
   { klic: 'spot', popis: 'Název výstupu (jen v bloku spotu)' },
   { klic: 'delka', popis: 'Délka spotu - 30s, 2min. (jen v bloku spotu)' },
@@ -58,8 +56,8 @@ export const MISTO_NA_TEXT = '[text spotu]';
 const ZNACKA_TEXTU = '@@MSTEXT@@';
 
 /**
- * VÝCHOZÍ PODOBA VZORU. Úvod je schválně prázdný - název projektu, klienta
- * i datum úpravy nese hlavička listu, takže v textu by stály podruhé.
+ * VÝCHOZÍ PODOBA VZORU. Úvod je schválně prázdný - název projektu i datum
+ * úpravy nese hlavička listu, takže v textu by stály podruhé.
  */
 export const VYCHOZI_VZOR_NATACENI = {
   nazev: 'Natáčecí list',
@@ -94,7 +92,6 @@ export type VystupProText = {
 
 export type PodkladyTextu = {
   projekt: string;
-  klient: string;
   /** Kdy se naposledy měnily výstupy - místo dnešního data (26. 9. 2026). */
   upraveno: string;
   /** Absolutní adresa loga - v dokumentu na Disku i v náhledu v portálu. */
@@ -181,7 +178,6 @@ function hlavicka(podklady: PodkladyTextu): string {
 <td bgcolor="${FIALOVA}" style="background-color:${FIALOVA};padding:16pt 6pt 16pt 18pt;vertical-align:middle">
 <p style="margin:0;font-family:Arial,sans-serif;font-size:8pt;letter-spacing:1.6pt;color:${ZELENA};text-transform:uppercase"><b>NATÁČECÍ LIST</b></p>
 <p style="margin:5pt 0 0;font-family:Arial,sans-serif;font-size:19pt;line-height:1.15;color:#ffffff"><b>${escapeHtml(podklady.projekt)}</b></p>
-${podklady.klient ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-size:10pt;color:${FIALOVA_SVETLA}">${escapeHtml(podklady.klient)}</p>` : ''}
 </td>
 <td bgcolor="${FIALOVA}" align="right" width="210" style="background-color:${FIALOVA};padding:16pt 18pt 16pt 6pt;vertical-align:middle;text-align:right;width:158pt">${logo}</td>
 </tr>
@@ -227,7 +223,6 @@ export function rozeberList(
 ): ListNataceni {
   const spolecne = {
     projekt: podklady.projekt,
-    klient: podklady.klient,
     upraveno: podklady.upraveno,
   };
 

@@ -237,8 +237,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // Hosté na natáčení (30. 9. 2026) - viz projekty/[id]/HosteNataceni.tsx.
   'hoste.nadpis': { cs: 'Hosté na natáčení', en: 'Guests at the recording' },
   'hoste.popis': {
-    cs: 'Klient, agentura nebo zadavatel, kteří u natáčení budou. Stačí e-mail — pozvánka je pro všechny stejná: čas, adresa s mapou, parkování i odkaz na připojení, ať si host vybere, jestli přijde nebo se připojí.',
-    en: 'The customer, agency or orderer attending the recording. An email is enough — the invitation is the same for everyone: the time, the address with a map, parking and the joining link, so the guest can decide whether to come or join remotely.',
+    cs: 'Klient, agentura nebo zadavatel, kteří u natáčení budou. Stačí e-mail a jazyk — pozvánka pak nese čas, adresu s mapou, parkování, odkaz na připojení i seznam ostatních pozvaných. Každému chodí vlastní mail, ne kopie.',
+    en: 'The customer, agency or orderer attending the recording. An email and a language are enough — the invitation then carries the time, the address with a map, parking, the joining link and the list of everyone invited. Each person gets their own email, not a copy.',
   },
   'hoste.zadneNataceni': {
     cs: 'K projektu zatím není v kalendáři žádné natáčení. Jakmile termín vznikne, objeví se tady i s hosty.',
@@ -258,6 +258,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'hoste.pridatNadpis': { cs: 'Přidat hosty', en: 'Add guests' },
   'hoste.email': { cs: 'E-mail', en: 'Email' },
+  'hoste.jazykCs': { cs: 'CZ', en: 'CZ' },
+  'hoste.jazykEn': { cs: 'EN', en: 'EN' },
+  'hoste.jazykNapoveda': {
+    cs: 'V jakém jazyce má hostovi pozvánka přijít. Klepnutím přepnete mezi češtinou a angličtinou.',
+    en: 'Which language the invitation should be sent in. Click to switch between Czech and English.',
+  },
   'hoste.dalsiHost': { cs: '+ Další host', en: '+ Another guest' },
   'hoste.spatnyEmail': { cs: 'Tohle nevypadá jako e-mail.', en: 'This does not look like an email.' },
   'hoste.vlozeniNapoveda': {
