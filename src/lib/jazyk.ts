@@ -248,10 +248,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'cekarna.pripojit': { cs: 'Připojit se k natáčení', en: 'Join the recording' },
   'cekarna.odkazRucne': { cs: 'Nebo si otevřete odkaz sami:', en: 'Or open the link yourself:' },
   'cekarna.herec': { cs: 'Herec', en: 'Narrator' },
-  'cekarna.kde': { cs: 'Kde', en: 'Where' },
   'cekarna.kdy': { cs: 'Kdy', en: 'When' },
-  'cekarna.parkovani': { cs: 'Parkování', en: 'Parking' },
-  'cekarna.mapa': { cs: 'Otevřít v mapách', en: 'Open in maps' },
   'cekarna.kdyzNeco': {
     cs: 'Kdyby se něco změnilo, ozvěte se nám odpovědí na pozvánku.',
     en: 'If anything changes, just reply to the invitation.',

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { prelozit } from '@/lib/jazyk';
-import { adresaNaRadek, casKlienta, odkazNaMapu, platnyHovorOdkaz } from '@/lib/hosteNataceni';
+import { casKlienta, platnyHovorOdkaz } from '@/lib/hosteNataceni';
 import { CekaciOkno } from './CekaciOkno';
 
 /**
@@ -38,17 +38,9 @@ export default async function CekarnaNataceni({ params }: { params: { token: str
             actorName: true,
             projectName: true,
             hovorOdkaz: true,
-            studio: {
-              select: {
-                name: true,
-                timezone: true,
-                adresa: true,
-                mapaUrl: true,
-                parkovani: true,
-                parkovaniEn: true,
-                hovorOdkaz: true,
-              },
-            },
+            // Adresa, mapa ani parkování se tu už nevypisují (10. 10. 2026) -
+            // kdo je na téhle stránce, připojuje se na dálku a cestu má v pozvánce.
+            studio: { select: { timezone: true, hovorOdkaz: true } },
           },
         },
       },
@@ -60,7 +52,6 @@ export default async function CekarnaNataceni({ params }: { params: { token: str
   const b = host.block;
   const jazyk = host.jazyk === 'en' ? 'en' : 'cs';
   const studio = b.studio;
-  const parkovani = (jazyk === 'en' ? studio.parkovaniEn?.trim() || studio.parkovani : studio.parkovani) ?? null;
 
   return (
     <main className="min-h-screen bg-paper">
@@ -70,6 +61,8 @@ export default async function CekarnaNataceni({ params }: { params: { token: str
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-14 w-auto" />
       </header>
+      {/* Zelený pruh jako v hlavičce mailu - klient pozná, že je to totéž. */}
+      <div className="h-1 bg-brand-green" aria-hidden="true" />
 
       <div className="max-w-2xl mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col gap-6">
         <div>
@@ -88,9 +81,6 @@ export default async function CekarnaNataceni({ params }: { params: { token: str
           konec={b.end.toISOString()}
           pasmo={studio.timezone || 'Europe/Prague'}
           herec={b.actorName}
-          studio={adresaNaRadek(studio.name, studio.adresa)}
-          mapaUrl={odkazNaMapu(studio.adresa, studio.mapaUrl)}
-          parkovani={parkovani}
           hovorOdkaz={platnyHovorOdkaz(b.hovorOdkaz, studio.hovorOdkaz)}
         />
       </div>
