@@ -257,6 +257,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The address, map and parking are filled in for the studio in Administration → Studios. Without them the invitation only carries the studio name.',
   },
   'hoste.pridatNadpis': { cs: 'Přidat hosty', en: 'Add guests' },
+  'hoste.jmeno': { cs: 'Jméno (nepovinné)', en: 'Name (optional)' },
+  'hoste.email': { cs: 'E-mail', en: 'Email' },
+  'hoste.dalsiHost': { cs: '+ Další host', en: '+ Another guest' },
+  'hoste.spatnyEmail': { cs: 'Tohle nevypadá jako e-mail.', en: 'This does not look like an email.' },
+  'hoste.vlozeniNapoveda': {
+    cs: 'Vložení víc adres najednou se rozhází do řádků.',
+    en: 'Pasting several addresses at once spreads them across the rows.',
+  },
   'hoste.pridatPrazdne': {
     cs: 'Jan Novák <jan@firma.cz>, petra@agentura.cz — vložte klidně celý řádek z mailu',
     en: 'Jan Novák <jan@firma.cz>, petra@agency.com — paste a whole line from an email if you like',
@@ -276,6 +284,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Coming to the studio, or joining remotely — the invitation leads with the address or the link accordingly.',
   },
   'hoste.odkazNadpis': { cs: 'Odkaz na připojení k tomuhle natáčení', en: 'Joining link for this session' },
+  'hoste.odkazChybi': {
+    cs: 'Studio nemá vyplněný odkaz na videohovor — v pozvánce nebude tlačítko na připojení.',
+    en: 'The studio has no video call link — the invitation will have no join button.',
+  },
   'hoste.odkazZeStudia': {
     cs: 'Prázdné = pošle se odkaz studia.',
     en: 'Empty = the studio link is sent.',

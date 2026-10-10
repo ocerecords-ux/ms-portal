@@ -154,8 +154,7 @@ export async function nactiNataceni(
  */
 export async function pridejHosty(
   blockId: string,
-  hoste: { jmeno: string | null; email: string }[],
-  online: boolean,
+  hoste: { jmeno: string | null; email: string; online: boolean }[],
   createdById: string | null,
 ): Promise<number> {
   if (hoste.length === 0) return 0;
@@ -165,7 +164,15 @@ export async function pridejHosty(
       select: { email: true },
     });
     const uz = new Set((stavajici as { email: string }[]).map((h) => h.email.toLowerCase()));
-    const novi = hoste.filter((h) => !uz.has(h.email.toLowerCase()));
+    // Duplicitu hlídá i samotná dávka: ve dvou řádcích formuláře může skončit
+    // tatáž adresa a createMany by pak u natáčení nechal dva stejné hosty.
+    const novi: typeof hoste = [];
+    for (const h of hoste) {
+      const klic = h.email.trim().toLowerCase();
+      if (!klic || uz.has(klic)) continue;
+      uz.add(klic);
+      novi.push(h);
+    }
     if (novi.length === 0) return 0;
 
     await prisma.hostNataceni.createMany({
@@ -173,7 +180,7 @@ export async function pridejHosty(
         blockId,
         jmeno: h.jmeno?.trim() || null,
         email: h.email.trim(),
-        online,
+        online: h.online,
         createdById,
       })),
     });

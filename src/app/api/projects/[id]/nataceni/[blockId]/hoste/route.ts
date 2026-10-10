@@ -3,22 +3,34 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { canManageCalendar } from '@/lib/roles';
-import { rozeberAdresy } from '@/lib/hosteNataceni';
+import { jeEmail } from '@/lib/hosteNataceni';
 import { nactiNataceni, pridejHosty } from '@/lib/hosteNataceniServer';
 
 /**
  * PŘIDÁNÍ HOSTŮ K NATÁČENÍ (zadání 30. 9. 2026: „potřebuju tam naházet
  * i více lidí").
  *
- * Posílá se JEDEN TEXT, ne seznam: produkce zkopíruje adresy z mailu nebo
- * z tabulky a vloží je najednou. Rozebrání je v lib/hosteNataceni.ts, ať
- * formulář může ukázat stejný výsledek ještě před odesláním.
+ * KAŽDÝ HOST ZVLÁŠŤ (9. 10. 2026: „chci tam samostatná pole. takhle můžou
+ * vznikat chyby"). Do 9. 10. se posílal jeden text a portál si ho rozebíral
+ * podle čárek - jenže jméno s čárkou („Novák, Jan") nebo chybějící mezera
+ * udělaly z jednoho hosta dva a chyba byla vidět až v odeslané pozvánce.
+ * Teď chodí hotový seznam: jméno, e-mail a kam host přijde, řádek po řádku.
+ * Rozebírání textu zůstalo ve formuláři, kde slouží jen k rozházení vložené
+ * schránky do řádků - a produkce to vidí a může to opravit, než odešle.
  */
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  adresy: z.string().min(1).max(5000),
-  online: z.boolean().optional(),
+  hoste: z
+    .array(
+      z.object({
+        jmeno: z.string().trim().max(200).nullable().optional(),
+        email: z.string().trim().min(3).max(320),
+        online: z.boolean().optional(),
+      }),
+    )
+    .min(1)
+    .max(50),
 });
 
 export async function POST(
@@ -41,20 +53,25 @@ export async function POST(
   const data = schema.safeParse(telo);
   if (!data.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 
-  const { hoste, spatne } = rozeberAdresy(data.data.adresy);
-  if (hoste.length === 0) {
+  /**
+   * Adresy se kontrolují ZNOVU tady, ne jen ve formuláři - stejnou funkcí.
+   * Co neprojde, se vrátí jako `spatne` a produkce to vidí u karty; tiše to
+   * zahodit by znamenalo, že si někdo myslí, že pozvánka odešla.
+   */
+  const hoste = data.data.hoste
+    .map((h) => ({ jmeno: h.jmeno?.trim() || null, email: h.email.trim(), online: h.online ?? false }))
+    .filter((h) => h.email);
+  const spatne = hoste.filter((h) => !jeEmail(h.email)).map((h) => h.email);
+  const dobre = hoste.filter((h) => jeEmail(h.email));
+
+  if (dobre.length === 0) {
     return NextResponse.json(
       { error: 'Žádná z adres nevypadá jako e-mail.', spatne },
       { status: 400 },
     );
   }
 
-  const pridano = await pridejHosty(
-    blockId,
-    hoste,
-    data.data.online ?? false,
-    session.user.id ?? null,
-  );
+  const pridano = await pridejHosty(blockId, dobre, session.user.id ?? null);
 
   const nove = await nactiNataceni(blockId);
   return NextResponse.json({ pridano, spatne, nataceni: nove?.data ?? null });

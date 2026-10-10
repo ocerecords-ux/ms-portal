@@ -25,9 +25,12 @@ import {
  * později rozešel - hostům by pak chodily časy, které ve studiu neplatí.
  * Proto tahle karta ukazuje, co v kalendáři k projektu opravdu je.
  *
- * ADRESY SE VKLÁDAJÍ JAKO TEXT. Produkce zkopíruje řádek z mailu („Jan Novák
- * <jan@firma.cz>, petra@agentura.cz") a vloží ho celý; portál si ho rozebere
- * sám. Vypisovat lidi po jednom by u pěti hostů zdržovalo.
+ * KAŽDÝ HOST MÁ SVÁ POLÍČKA (9. 10. 2026: „chci tam samostatná pole. takhle
+ * můžou vznikat chyby"). Původně se vkládal jeden text a portál ho rozebíral
+ * podle čárek - jméno s čárkou nebo chybějící mezera ale udělaly z jednoho
+ * hosta dva a bylo to vidět až v odeslané pozvánce. Rozebírání zůstalo jen na
+ * VLOŽENÍ ZE SCHRÁNKY: kdo zkopíruje celý řádek z mailu, dostane ho rozházený
+ * do řádků, kde to vidí a může to opravit, než pošle.
  *
  * POZVÁNKA SE POSÍLÁ RUČNĚ, ne při přidání hosta. Produkce napřed naházi
  * všechny, případně dopíše odkaz na hovor, a teprve pak pošle - jinak by
@@ -81,6 +84,22 @@ function kdySlovy(start: string, end: string): string {
   return `${den}, ${cas(s)}–${cas(e)}`;
 }
 
+/** Jeden rozepsaný host ve formuláři, ještě než se uloží. */
+type NovyHost = { klic: string; jmeno: string; email: string; online: boolean };
+
+/**
+ * Klíč řádku z počítadla, ne z indexu ani z e-mailu: index by při smazání
+ * prostředního řádku přehodil Reactu obsah políček a e-mail se během psaní mění.
+ */
+let pocitadloRadku = 0;
+function dalsiKlic(): string {
+  pocitadloRadku += 1;
+  return `host-${pocitadloRadku}`;
+}
+function prazdnyHost(): NovyHost {
+  return { klic: dalsiKlic(), jmeno: '', email: '', online: false };
+}
+
 function TerminSHosty({
   caflouProjectId,
   nataceni,
@@ -97,9 +116,9 @@ function TerminSHosty({
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [hlaska, setHlaska] = useState<string | null>(null);
-  const [adresy, setAdresy] = useState('');
-  const [online, setOnline] = useState(false);
+  const [novi, setNovi] = useState<NovyHost[]>(() => [prazdnyHost()]);
   const [odkaz, setOdkaz] = useState(nataceni.hovorOdkazVlastni ?? '');
+  const [upravujeOdkaz, setUpravujeOdkaz] = useState(false);
 
   const zaklad = `/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni/${encodeURIComponent(nataceni.id)}`;
   const ceka = pocetKPoslani(nataceni);
@@ -126,16 +145,70 @@ function TerminSHosty({
     }
   }
 
-  /** Co se z vloženého textu opravdu přidá - vidět je to hned, ne až po odeslání. */
-  const nahled = adresy.trim() ? rozeberAdresy(adresy) : null;
+  /** Řádky, které mají co odeslat - prázdný řádek na konci se tiho ignoruje. */
+  const kZapisu = novi.filter((h) => h.email.trim().length > 0);
+  const maChybu = kZapisu.some((h) => !jeEmail(h.email));
+
+  function uprav(i: number, zmena: Partial<NovyHost>) {
+    setNovi((s) => s.map((h, j) => (j === i ? { ...h, ...zmena } : h)));
+  }
+
+  function odeberRadek(i: number) {
+    // Poslední řádek se nemazá, jen vyprázdní - jinak by formulář zmizel.
+    setNovi((s) => (s.length === 1 ? [prazdnyHost()] : s.filter((_, j) => j !== i)));
+  }
+
+  /**
+   * VLOŽENÍ VÍC ADRES NAJEDNOU. Produkce pořád kopíruje celý řádek z mailu -
+   * místo aby skončil v jednom políčku, rozhodí se do řádků, kde je vidět
+   * a dá se opravit. Jedna adresa bez oddělovače se vloží úplně obyčejně.
+   */
+  function vlozeniDoRadku(i: number, e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData('text');
+    if (!text || !/[,;\n]/.test(text)) return;
+    const { hoste: rozebrane } = rozeberAdresy(text);
+    if (rozebrane.length === 0) return;
+    e.preventDefault();
+    setNovi((s) => {
+      const puvodniOnline = s[i]?.online ?? false;
+      const kopie = [...s];
+      kopie.splice(
+        i,
+        1,
+        ...rozebrane.map((h) => ({
+          klic: dalsiKlic(),
+          jmeno: h.jmeno ?? '',
+          email: h.email,
+          online: puvodniOnline,
+        })),
+      );
+      return kopie;
+    });
+  }
+
+  /**
+   * Prázdné políčko = smazat vlastní odkaz a vrátit se k odkazu studia; to je
+   * jediný způsob, jak se vlastní odkaz zruší, takže se tu nesmí „uložení
+   * prázdného“ přeskočit jako žádná změna.
+   */
+  async function ulozOdkaz() {
+    const nove = odkaz.trim() || null;
+    if (nove !== (nataceni.hovorOdkazVlastni ?? null)) {
+      const data = await zavolej(zaklad, { method: 'PATCH', body: JSON.stringify({ hovorOdkaz: nove }) });
+      if (!data) return;
+    }
+    setUpravujeOdkaz(false);
+  }
 
   async function pridej() {
     const data = await zavolej(`${zaklad}/hoste`, {
       method: 'POST',
-      body: JSON.stringify({ adresy, online }),
+      body: JSON.stringify({
+        hoste: kZapisu.map((h) => ({ jmeno: h.jmeno.trim() || null, email: h.email.trim(), online: h.online })),
+      }),
     });
     if (!data) return;
-    setAdresy('');
+    setNovi([prazdnyHost()]);
     const spatne = (data.spatne as string[]) ?? [];
     setHlaska(
       spatne.length
@@ -226,71 +299,159 @@ function TerminSHosty({
 
       {canManage && (
         <>
+          {/* SAMOSTATNÁ POLE NA KAŽDÉHO HOSTA (9. 10. 2026: „chci tam samostatná
+              pole. takhle můžou vznikat chyby"). Jeden slepený řádek s čárkami
+              uměl ze jména „Novák, Jan" udělat dva hosty a bylo to vidět až
+              v odeslané pozvánce. Vložení celé schránky se nezahazuje - rozhází
+              se do řádků, kde to produkce vidí a může to opravit. */}
           <div className="flex flex-col gap-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-                {t('hoste.pridatNadpis')}
-              </span>
-              <textarea
-                value={adresy}
-                rows={2}
-                onChange={(e) => setAdresy(e.target.value)}
-                placeholder={t('hoste.pridatPrazdne')}
-                className="w-full resize-y rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
-              />
-            </label>
+            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+              {t('hoste.pridatNadpis')}
+            </span>
 
-            {nahled && (
-              <p className="text-[11px] font-body text-muted m-0">
-                {t('hoste.nahled', { pocet: nahled.hoste.length })}
-                {nahled.spatne.length > 0 && ` · ${t('hoste.nahledSpatne', { zbytek: nahled.spatne.join(', ') })}`}
-              </p>
-            )}
+            {novi.map((h, i) => {
+              const spatny = h.email.trim().length > 0 && !jeEmail(h.email);
+              return (
+                <div key={h.klic} className="flex items-start gap-2 flex-wrap sm:flex-nowrap">
+                  <input
+                    value={h.jmeno}
+                    onChange={(e) => uprav(i, { jmeno: e.target.value })}
+                    placeholder={t('hoste.jmeno')}
+                    aria-label={t('hoste.jmeno')}
+                    className="min-w-0 flex-1 rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
+                  />
+                  <div className="min-w-0 flex-1 flex flex-col gap-1">
+                    <input
+                      value={h.email}
+                      type="email"
+                      inputMode="email"
+                      autoComplete="off"
+                      onChange={(e) => uprav(i, { email: e.target.value })}
+                      onPaste={(e) => vlozeniDoRadku(i, e)}
+                      placeholder={t('hoste.email')}
+                      aria-label={t('hoste.email')}
+                      aria-invalid={spatny || undefined}
+                      className={`w-full rounded-card border bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple ${
+                        spatny ? 'border-danger' : 'border-line'
+                      }`}
+                    />
+                    {spatny && <span className="text-[11px] font-body text-danger">{t('hoste.spatnyEmail')}</span>}
+                  </div>
+                  {/* Ve studiu / online se volí u KAŽDÉHO zvlášť - na jedno
+                      natáčení chodí klient osobně a agentura se připojuje. */}
+                  <button
+                    type="button"
+                    onClick={() => uprav(i, { online: !h.online })}
+                    title={t('hoste.prepnoutNapoveda')}
+                    className={`shrink-0 rounded-pill border px-3 py-2 text-xs font-heading font-semibold transition-colors cursor-pointer ${
+                      h.online
+                        ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+                        : 'border-line bg-surface text-muted'
+                    }`}
+                  >
+                    {h.online ? t('hoste.online') : t('hoste.osobne')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => odeberRadek(i)}
+                    title={t('hoste.smazat')}
+                    aria-label={t('hoste.smazat')}
+                    disabled={novi.length === 1 && !h.jmeno && !h.email}
+                    className="shrink-0 rounded-pill border border-line bg-surface text-muted px-3 py-2 text-xs font-heading cursor-pointer disabled:opacity-40"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
 
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Osobně / online se volí pro celou vloženou skupinu - u jednotlivce
-                  se pak dá přehodit klepnutím na odznak v řádku. */}
               <button
                 type="button"
-                onClick={() => setOnline((o) => !o)}
-                title={t('hoste.prepnoutNapoveda')}
-                className={`rounded-pill border px-3 py-1 text-xs font-heading font-semibold transition-colors cursor-pointer ${
-                  online
-                    ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                    : 'border-line bg-surface text-muted'
-                }`}
+                onClick={() => setNovi((s) => [...s, prazdnyHost()])}
+                className="rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
               >
-                {online ? t('hoste.online') : t('hoste.osobne')}
+                {t('hoste.dalsiHost')}
               </button>
               <button
                 type="button"
                 onClick={pridej}
-                disabled={pracuje || !nahled || nahled.hoste.length === 0}
+                disabled={pracuje || kZapisu.length === 0 || maChybu}
                 className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-4 py-1.5 border-0 cursor-pointer disabled:opacity-50"
               >
                 {t('hoste.pridat')}
               </button>
+              <span className="text-[11px] font-body text-muted">{t('hoste.vlozeniNapoveda')}</span>
             </div>
           </div>
 
-          <label className="flex flex-col gap-1">
+          {/* ODKAZ NA PŘIPOJENÍ JE VIDĚT, NE SCHOVANÝ V POLÍČKU (9. 10. 2026:
+              „ten odkaz na připojení by tam měl normálně nějak svítit. a mít
+              u toho tlačítko upravit"). Do teď to bylo prázdné pole s odkazem
+              studia jen jako našeptaný placeholder - nedalo se poznat, co
+              hostovi opravdu odejde, a klepnutím se to rovnou přepisovalo.
+              Teď je odkaz vypsaný a proklikatelný a mění se až po Upravit. */}
+          <div className="flex flex-col gap-1">
             <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
               {t('hoste.odkazNadpis')}
             </span>
-            <input
-              value={odkaz}
-              onChange={(e) => setOdkaz(e.target.value)}
-              onBlur={() => {
-                if ((odkaz.trim() || null) === (nataceni.hovorOdkazVlastni ?? null)) return;
-                zavolej(zaklad, { method: 'PATCH', body: JSON.stringify({ hovorOdkaz: odkaz.trim() || null }) });
-              }}
-              placeholder={nataceni.hovorOdkaz ?? 'https://meet.google.com/…'}
-              className="w-full rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
-            />
+
+            {upravujeOdkaz ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  value={odkaz}
+                  autoFocus
+                  onChange={(e) => setOdkaz(e.target.value)}
+                  placeholder="https://meet.google.com/…"
+                  className="min-w-0 flex-1 rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
+                />
+                <button
+                  type="button"
+                  onClick={ulozOdkaz}
+                  disabled={pracuje}
+                  className="shrink-0 rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-4 py-1.5 border-0 cursor-pointer disabled:opacity-50"
+                >
+                  {t('obecne.ulozit')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOdkaz(nataceni.hovorOdkazVlastni ?? '');
+                    setUpravujeOdkaz(false);
+                  }}
+                  className="shrink-0 rounded-pill border border-line bg-surface text-muted font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
+                >
+                  {t('obecne.zrusit')}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                {nataceni.hovorOdkaz ? (
+                  <a
+                    href={nataceni.hovorOdkaz}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 break-all font-body text-sm text-brand-purple no-underline hover:underline"
+                  >
+                    {nataceni.hovorOdkaz}
+                  </a>
+                ) : (
+                  <span className="font-body text-sm text-muted">{t('hoste.odkazChybi')}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setUpravujeOdkaz(true)}
+                  className="shrink-0 rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
+                >
+                  {t('obecne.upravit')}
+                </button>
+              </div>
+            )}
+
             <span className="text-[11px] font-body text-muted">
               {nataceni.hovorOdkazVlastni ? t('hoste.odkazVlastni') : t('hoste.odkazZeStudia')}
             </span>
-          </label>
+          </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
