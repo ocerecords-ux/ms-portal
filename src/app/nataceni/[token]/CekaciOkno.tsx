@@ -17,7 +17,8 @@ import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
  *
  * CO TU NENÍ: adresa, parkování ani mapa (10. 10. 2026). Kdo je na téhle
  * stránce, připojuje se na dálku - cestu a parkování má v pozvánce a tady by
- * mu jen zabíraly obrazovku.
+ * mu jen zabíraly obrazovku. Ze stejného důvodu tu není vypsaný odkaz do
+ * hovoru ani věta o odpovědi na pozvánku - stránka má mít jedno tlačítko.
  */
 export function CekaciOkno({
   jazyk,
@@ -76,7 +77,9 @@ export function CekaciOkno({
    */
   const radky: { popisek: string; hodnota: string }[] = [];
   if (herec?.trim()) radky.push({ popisek: t('cekarna.herec'), hodnota: herec.trim() });
-  if (ucastnici.length > 1) {
+  // Seznam i při jediném pozvaném (10. 10. 2026: „chybí tam ještě ti účastníci“) -
+  // host chce vědět, že ještě nikdo další pozvaný není.
+  if (ucastnici.length > 0) {
     radky.push({
       popisek: t('cekarna.ucastnici'),
       hodnota: ucastnici.map((u, i) => `${i + 1}. ${u}`).join('\n'),
@@ -116,28 +119,18 @@ export function CekaciOkno({
       </div>
 
       {hovorOdkaz && (
-        <div className="flex flex-col gap-2">
-          <a
-            href={hovorOdkaz}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`block text-center rounded-pill px-6 py-4 font-heading font-semibold text-base no-underline transition-colors ${
-              bezi
-                ? 'bg-brand-green text-brand-purpleDark hover:bg-brand-greenDeep'
-                : 'bg-brand-purple text-white hover:bg-brand-purpleDeep'
-            }`}
-          >
-            {t('cekarna.pripojit')}
-          </a>
-          {/* Odkaz i textem - kdyby tlačítko neotevřelo nové okno, klient si ho
-              zkopíruje. Kvůli naší mezistránce nesmí nikdo zmeškat natáčení. */}
-          <p className="text-xs font-body text-muted m-0 text-center break-all">
-            {t('cekarna.odkazRucne')}{' '}
-            <a href={hovorOdkaz} target="_blank" rel="noopener noreferrer" className="text-brand-purple">
-              {hovorOdkaz}
-            </a>
-          </p>
-        </div>
+        <a
+          href={hovorOdkaz}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`block text-center rounded-pill px-6 py-4 font-heading font-semibold text-base no-underline transition-colors ${
+            bezi
+              ? 'bg-brand-green text-brand-purpleDark hover:bg-brand-greenDeep'
+              : 'bg-brand-purple text-white hover:bg-brand-purpleDeep'
+          }`}
+        >
+          {t('cekarna.pripojit')}
+        </a>
       )}
 
       <dl className="m-0 rounded-card border border-line bg-surface divide-y divide-line">
@@ -150,8 +143,6 @@ export function CekaciOkno({
           </div>
         ))}
       </dl>
-
-      <p className="text-xs font-body text-muted m-0">{t('cekarna.kdyzNeco')}</p>
     </div>
   );
 }
