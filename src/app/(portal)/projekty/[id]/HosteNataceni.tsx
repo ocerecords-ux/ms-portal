@@ -111,10 +111,21 @@ function dalsiKlic(): string {
   return `host-${pocitadloRadku}`;
 }
 /**
- * ČEŠTINA / ANGLIČTINA jedním klepnutím. Dva stavy, ne rozbalovací seznam:
- * jiný jazyk než ty dva portál stejně neumí a v řádku je místo jen na odznak.
+ * JAZYK POZVÁNKY SE VYBÍRÁ ZE SEZNAMU (10. 10. 2026: „ať se to vybírá ze
+ * seznamu jazyků, aby to bylo na stejné úrovni ten CZ a EN. Teď je CZ bez
+ * linky a EN s linkou. Nechápu to").
+ *
+ * Do teď to byl přepínač se dvěma podobami - vybraná angličtina svítila
+ * fialově, čeština ne, a vypadalo to jako zapnutý příznak místo volby ze
+ * dvou rovnocenných možností. Obyčejný rozbalovací seznam vypadá pro oba
+ * jazyky stejně a rovnou je v něm vidět, že se vybírá JAZYK, ne příznak.
  */
-function PrepinacJazyka({
+const JAZYKY_POZVANKY = [
+  { kod: 'cs' as const, vlajka: '🇨🇿', klic: 'hoste.jazykCs' },
+  { kod: 'en' as const, vlajka: '🇬🇧', klic: 'hoste.jazykEn' },
+];
+
+function VyberJazyka({
   jazyk,
   onZmena,
   vypnuto,
@@ -127,21 +138,22 @@ function PrepinacJazyka({
 }) {
   const t = usePreklad();
   return (
-    <button
-      type="button"
+    <select
+      value={jazyk}
       disabled={vypnuto}
-      onClick={() => onZmena(jazyk === 'cs' ? 'en' : 'cs')}
+      onChange={(e) => onZmena(e.target.value === 'en' ? 'en' : 'cs')}
       title={t('hoste.jazykNapoveda')}
-      className={`shrink-0 rounded-pill border font-heading font-semibold transition-colors ${trida} ${
+      aria-label={t('hoste.jazykNapoveda')}
+      className={`shrink-0 rounded-pill border border-line bg-surface text-ink font-heading font-semibold outline-none focus:border-brand-purple disabled:opacity-50 ${trida} ${
         vypnuto ? '' : 'cursor-pointer'
-      } ${
-        jazyk === 'en'
-          ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-          : 'border-line bg-surface text-muted'
       }`}
     >
-      {jazyk === 'en' ? t('hoste.jazykEn') : t('hoste.jazykCs')}
-    </button>
+      {JAZYKY_POZVANKY.map((j) => (
+        <option key={j.kod} value={j.kod}>
+          {`${j.vlajka} ${t(j.klic)}`}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -374,7 +386,7 @@ function TerminSHosty({
                   {/* JAZYK POZVÁNKY (10. 10. 2026: „co když budeme mít anglicky
                       mluvící účastníky?“). U každého zvlášť - na jedno natáčení
                       chodí česká i anglická pozvánka. */}
-                  <PrepinacJazyka
+                  <VyberJazyka
                     jazyk={h.jazyk}
                     onZmena={(j) => uprav(i, { jazyk: j })}
                     trida="px-3 py-2 text-xs"
@@ -569,11 +581,11 @@ function RadekHosta({
             spatny ? 'border-danger' : 'border-line'
           }`}
         />
-        <PrepinacJazyka
+        <VyberJazyka
           jazyk={host.jazyk}
           onZmena={(j) => onUloz({ jazyk: j })}
           vypnuto={pracuje}
-          trida="px-2 py-0.5 text-[11px]"
+          trida="px-2 py-1 text-[11px]"
         />
         <button
           type="button"
@@ -603,11 +615,11 @@ function RadekHosta({
       {!jeEmail(host.email) && (
         <span className="text-[11px] font-heading text-status-error">{t('hoste.spatnaAdresa')}</span>
       )}
-      <PrepinacJazyka
+      <VyberJazyka
         jazyk={host.jazyk}
         onZmena={(j) => onUloz({ jazyk: j })}
         vypnuto={!canManage || pracuje}
-        trida="px-2 py-0.5 text-[11px]"
+        trida="px-2 py-1 text-[11px]"
       />
 
       {host.pozvankaAt && !ceka && (
