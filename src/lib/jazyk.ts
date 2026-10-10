@@ -235,6 +235,27 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekt.zalozka.doklady': { cs: 'Doklady', en: 'Documents' },
 
   // Hosté na natáčení (30. 9. 2026) - viz projekty/[id]/HosteNataceni.tsx.
+  /* ČEKACÍ OKNO PŘED NATÁČENÍM (10. 10. 2026) - veřejná stránka pro hosta,
+     na kterou vede tlačítko z pozvánky. Čte ji klient, ne tým. */
+  'cekarna.stitek': { cs: 'Natáčení ve studiu', en: 'Recording session' },
+  'cekarna.nacitam': { cs: 'Počítáme čas…', en: 'Working out the time…' },
+  'cekarna.zacneZa': { cs: 'Začínáme za', en: 'Starting in' },
+  'cekarna.prave': { cs: 'Začínáme — můžete se připojit.', en: 'We are starting — you can join now.' },
+  'cekarna.poKonci': {
+    cs: 'Tohle natáčení už skončilo. Kdyby ještě běželo, odkaz níž pořád platí.',
+    en: 'This session has ended. If it is still running, the link below works.',
+  },
+  'cekarna.pripojit': { cs: 'Připojit se k natáčení', en: 'Join the recording' },
+  'cekarna.odkazRucne': { cs: 'Nebo si otevřete odkaz sami:', en: 'Or open the link yourself:' },
+  'cekarna.herec': { cs: 'Herec', en: 'Narrator' },
+  'cekarna.kde': { cs: 'Kde', en: 'Where' },
+  'cekarna.kdy': { cs: 'Kdy', en: 'When' },
+  'cekarna.parkovani': { cs: 'Parkování', en: 'Parking' },
+  'cekarna.mapa': { cs: 'Otevřít v mapách', en: 'Open in maps' },
+  'cekarna.kdyzNeco': {
+    cs: 'Kdyby se něco změnilo, ozvěte se nám odpovědí na pozvánku.',
+    en: 'If anything changes, just reply to the invitation.',
+  },
   'hoste.nadpis': { cs: 'Hosté na natáčení', en: 'Guests at the recording' },
   'hoste.popis': {
     cs: 'Klient, agentura nebo zadavatel, kteří u natáčení budou. Stačí e-mail a jazyk — pozvánka pak nese čas, adresu s mapou, parkování, odkaz na připojení i seznam ostatních pozvaných. Každému chodí vlastní mail, ne kopie.',

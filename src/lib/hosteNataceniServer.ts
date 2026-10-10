@@ -347,13 +347,16 @@ function seznamUcastniku(nataceni: NataceniData): string[] {
 }
 
 /**
- * ODKAZ „Přidat do kalendáře" (9. 10. 2026: „mělo by tam jít přidat tu událost
- * do kalendáře někde i s odkazem"). Příloha .ics sama nestačí: část schránek
- * ji schová mezi přílohy a na telefonu se klepnutím neotevře. Token se
- * vyrobí při prvním odeslání a dál se drží - po přesunu termínu vede tentýž
- * odkaz na opravený záznam, takže starý mail nezastará.
+ * ODKAZY, KTERÉ HOSTOVI JDOU V MAILU. Oba nesou týž náhodný token, vyrobený
+ * při prvním odeslání a dál držený - po přesunu termínu vedou tytéž odkazy ze
+ * starého mailu na opravený záznam, takže pozvánka nezastará.
+ *
+ *  - `kalendar` (9. 10. 2026) vrátí .ics. Příloha sama nestačí: část schránek
+ *    ji schová mezi přílohy a na telefonu se klepnutím neotevře.
+ *  - `cekarna` (10. 10. 2026) je naše obrandovaná stránka s odpočtem a souhrnem,
+ *    na kterou vede tlačítko „Připojit se“ místo odkazu rovnou do hovoru.
  */
-async function kalendarOdkaz(hostId: string, baseUrl: string): Promise<string | null> {
+async function odkazyHosta(hostId: string, baseUrl: string): Promise<{ kalendar: string; cekarna: string } | null> {
   try {
     // Token se čte rovnou z databáze, ne z HostData - to jde až do prohlížeče
     // a odkaz z mailu v něm nemá co dělat.
@@ -366,9 +369,12 @@ async function kalendarOdkaz(hostId: string, baseUrl: string): Promise<string | 
       token = randomBytes(24).toString('base64url');
       await prisma.hostNataceni.update({ where: { id: hostId }, data: { kalendarToken: token } });
     }
-    return `${baseUrl}/api/nataceni-kalendar/${token}`;
+    return {
+      kalendar: `${baseUrl}/api/nataceni-kalendar/${token}`,
+      cekarna: `${baseUrl}/nataceni/${token}`,
+    };
   } catch (err) {
-    console.error(`Odkaz do kalendáře pro hosta ${hostId} se nepodařilo připravit:`, err);
+    console.error(`Odkazy pro hosta ${hostId} se nepodařilo připravit:`, err);
     return null;
   }
 }
@@ -418,7 +424,7 @@ export async function posliPozvanky(
     const kdy = kdySlovy(nataceni, pasmo, jazyk);
 
     const ics = { nazev: 'nataceni.ics', obsah: icsProHosta(nataceni, nazevProjektu, jazyk) };
-    const kalendarUrl = await kalendarOdkaz(host.id, baseUrl);
+    const odkazy = await odkazyHosta(host.id, baseUrl);
 
     try {
       const odeslano = await sendPozvankaNataceniEmail({
@@ -431,9 +437,14 @@ export async function posliPozvanky(
         adresa: nataceni.adresa,
         mapaUrl: nataceni.mapaUrl,
         parkovani: parkovaniProHosta(nataceni, jazyk),
-        hovorOdkaz: nataceni.hovorOdkaz,
+        /**
+         * Tlačítko v mailu vede do čekárny, ne rovnou do hovoru (10. 10. 2026).
+         * Kdyby se odkaz nepodařilo připravit, pošle se odkaz do hovoru přímo -
+         * raději bez naší stránky než bez možnosti se připojit.
+         */
+        hovorOdkaz: nataceni.hovorOdkaz ? (odkazy?.cekarna ?? nataceni.hovorOdkaz) : null,
         ucastnici: seznamUcastniku(nataceni),
-        kalendarUrl,
+        kalendarUrl: odkazy?.kalendar ?? null,
         zmena,
         ics,
         odpovedNa: volby.odpovedNa ?? null,
