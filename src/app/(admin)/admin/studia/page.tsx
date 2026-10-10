@@ -113,6 +113,7 @@ export default async function StudiaPage({ searchParams }: { searchParams?: { in
         adresa: s.adresa ?? null,
         mapaUrl: s.mapaUrl ?? null,
         parkovani: s.parkovani ?? null,
+        parkovaniEn: s.parkovaniEn ?? null,
         hours: s.hours.map((h) => ({
           weekday: h.weekday,
           startMinutes: h.startMinutes,

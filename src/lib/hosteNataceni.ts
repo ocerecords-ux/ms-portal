@@ -47,6 +47,8 @@ export type NataceniData = {
   adresa: string | null;
   mapaUrl: string | null;
   parkovani: string | null;
+  /** Parkování anglicky (10. 10. 2026); prázdné = použije se česká věta. */
+  parkovaniEn: string | null;
   /** Odkaz na hovor zapsaný u tohohle natáčení; null = bere se ze studia. */
   hovorOdkazVlastni: string | null;
   /** Co se opravdu pošle - vlastní odkaz, jinak odkaz studia. */

@@ -26,6 +26,7 @@ const schema = z.object({
   adresa: z.string().trim().max(500).nullable().optional(),
   mapaUrl: z.string().trim().max(1000).nullable().optional(),
   parkovani: z.string().trim().max(1000).nullable().optional(),
+  parkovaniEn: z.string().trim().max(1000).nullable().optional(),
   hours: z.array(hodinySchema).max(7).optional(),
 });
 
@@ -58,6 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.adresa !== undefined) data.adresa = d.adresa || null;
     if (d.mapaUrl !== undefined) data.mapaUrl = d.mapaUrl || null;
     if (d.parkovani !== undefined) data.parkovani = d.parkovani || null;
+    if (d.parkovaniEn !== undefined) data.parkovaniEn = d.parkovaniEn || null;
 
     await prisma.$transaction(async (tx) => {
       await tx.studio.update({ where: { id: params.id }, data });

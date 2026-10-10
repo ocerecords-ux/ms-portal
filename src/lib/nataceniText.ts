@@ -170,7 +170,7 @@ function odstavce(text: string, styl: string, stylPrvniho?: string): string {
  */
 function hlavicka(podklady: PodkladyTextu): string {
   const logo = podklady.logoUrl
-    ? `<img src="${escapeHtml(podklady.logoUrl)}" alt="Mediaspace" height="56" style="height:42pt">`
+    ? `<img src="${escapeHtml(podklady.logoUrl)}" alt="Mediaspace" height="77" style="height:58pt">`
     : '';
 
   return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">

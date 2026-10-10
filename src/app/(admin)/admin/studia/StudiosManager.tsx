@@ -21,6 +21,7 @@ type Studio = {
   adresa: string | null;
   mapaUrl: string | null;
   parkovani: string | null;
+  parkovaniEn: string | null;
   hours: Hodiny[];
   presets: { label: string; startMinutes: number; endMinutes: number }[];
 };
@@ -240,6 +241,21 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                   defaultValue={otevrene.parkovani ?? ''}
                   placeholder="Ve dvoře za závorou, kód 1234. Na ulici je modrá zóna."
                   onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { parkovani: e.target.value })}
+                  className={inputClass}
+                />
+              </label>
+              {/* ANGLICKÁ VERZE PARKOVÁNÍ (10. 10. 2026). Vlastní text, ne strojový
+                  překlad: věta o zóně, závoře nebo kódu se doslova nepřeloží a klient
+                  podle ní hledá místo. */}
+              <label className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-4">
+                <span className="text-sm font-body text-ink">
+                  {t('studia.parkovaniEn')}
+                  <span className="text-muted font-normal"> · {t('studia.parkovaniEnPopis')}</span>
+                </span>
+                <input
+                  defaultValue={otevrene.parkovaniEn ?? ''}
+                  placeholder="In the courtyard behind the barrier, code 1234. Blue zone on the street."
+                  onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { parkovaniEn: e.target.value })}
                   className={inputClass}
                 />
               </label>

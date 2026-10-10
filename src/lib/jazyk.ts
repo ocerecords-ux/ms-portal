@@ -4453,6 +4453,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'věta pro hosta — kde zaparkuje a co ho čeká',
     en: 'a sentence for the guest — where to park and what to expect',
   },
+  'studia.parkovaniEn': { cs: 'Parkování anglicky', en: 'Parking in English' },
+  'studia.parkovaniEnPopis': {
+    cs: 'použije se v anglické pozvánce; prázdné = pošle se česká věta',
+    en: 'used in English invitations; empty = the Czech sentence is sent',
+  },
   'studia.zalozit': { cs: 'Založit', en: 'Create' },
   'studia.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
 

@@ -2272,6 +2272,11 @@ model Studio {
   /// Odkaz do map. Prázdné = odkaz se složí z adresy.
   mapaUrl        String?
   parkovani      String?
+  /// PARKOVANI ANGLICKY (10. 10. 2026: „to info o parkovani se musi prelozit
+  /// taky"). Vlastni text, ne strojovy preklad: veta o zone, zavore nebo kodu
+  /// se nepreklada doslova a klient podle ni hleda misto. Prazdne = v anglicke
+  /// pozvance se pouzije ceska veta, at radek nikdy nechybi uplne.
+  parkovaniEn    String?
 
   parentStudioId String?
   parentStudio   Studio?  @relation("StudioRooms", fields: [parentStudioId], references: [id])

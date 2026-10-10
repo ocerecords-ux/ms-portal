@@ -41,6 +41,7 @@ type BlokZDb = {
     adresa: string | null;
     mapaUrl: string | null;
     parkovani: string | null;
+    parkovaniEn: string | null;
   };
   hoste: {
     id: string;
@@ -71,6 +72,7 @@ const VYBER_BLOKU = {
       adresa: true,
       mapaUrl: true,
       parkovani: true,
+      parkovaniEn: true,
     },
   },
   hoste: {
@@ -114,6 +116,7 @@ function naNataceni(b: BlokZDb): NataceniData {
     adresa: b.studio.adresa,
     mapaUrl: b.studio.mapaUrl,
     parkovani: b.studio.parkovani,
+    parkovaniEn: b.studio.parkovaniEn,
     hovorOdkazVlastni: b.hovorOdkaz,
     hovorOdkaz: platnyHovorOdkaz(b.hovorOdkaz, b.studio.hovorOdkaz),
     hoste: (b.hoste ?? []).map(naHosta),
@@ -290,6 +293,7 @@ export function icsProHosta(
 ): string {
   const misto = adresaNaRadek(nataceni.studioNazev, nataceni.adresa);
   const ucastnici = seznamUcastniku(nataceni);
+  const parkovani = parkovaniProHosta(nataceni, jazyk);
   const popisek = (klic: string) => prelozitEmail(jazyk, klic);
   return buildIcs(nazevProjektu, [
     {
@@ -307,7 +311,7 @@ export function icsProHosta(
       location: misto,
       description: [
         nataceni.hovorOdkaz ? `${popisek('mail.pozvankaNataceni.pripojitSe')}: ${nataceni.hovorOdkaz}` : '',
-        nataceni.parkovani?.trim() ? `${popisek('mail.pozvankaNataceni.parkovani')}: ${nataceni.parkovani.trim()}` : '',
+        parkovani?.trim() ? `${popisek('mail.pozvankaNataceni.parkovani')}: ${parkovani.trim()}` : '',
         ucastnici.length > 1
           ? `${popisek('mail.pozvankaNataceni.ucastnici')}:\n${ucastnici.map((u, i) => `${i + 1}. ${u}`).join('\n')}`
           : '',
@@ -317,6 +321,16 @@ export function icsProHosta(
       updatedAt: new Date(),
     },
   ]);
+}
+
+/**
+ * PARKOVÁNÍ V JAZYCE HOSTA (10. 10. 2026: „to info o parkování se musí přeložit
+ * taky"). Když u studia anglická verze není vyplněná, pošle se česká - řádek
+ * o parkování raději česky než vůbec; klient s ním stejně mluví s obsluhou.
+ */
+function parkovaniProHosta(nataceni: NataceniData, jazyk: Jazyk): string | null {
+  if (jazyk === 'en') return nataceni.parkovaniEn?.trim() || nataceni.parkovani;
+  return nataceni.parkovani;
 }
 
 /**
@@ -416,7 +430,7 @@ export async function posliPozvanky(
         studioName: nataceni.studioNazev,
         adresa: nataceni.adresa,
         mapaUrl: nataceni.mapaUrl,
-        parkovani: nataceni.parkovani,
+        parkovani: parkovaniProHosta(nataceni, jazyk),
         hovorOdkaz: nataceni.hovorOdkaz,
         ucastnici: seznamUcastniku(nataceni),
         kalendarUrl,

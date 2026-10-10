@@ -171,9 +171,15 @@ export type ObrazekVDokumentu = {
   vyskaPx: number;
 };
 
-/** Obrázek v odstavci. Míry se ve Wordu udávají v EMU (914 400 na palec). */
+/**
+ * Obrázek v odstavci. Míry se ve Wordu udávají v EMU (914 400 na palec).
+ *
+ * Větší než do 10. 10. 2026 („logo … by mohlo být maličko větší, teď to moc
+ * nejde přečíst“) - značka má písmena jako svislé pruhy a v původních 1,5 cm
+ * splynula v čáru. Musí to sedět s výškou v náhledu (hlavicka v nataceniText.ts).
+ */
 function obrazek(logo: ObrazekVDokumentu): string {
-  const vyskaCm = 1.5;
+  const vyskaCm = 2.05;
   const EMU_NA_CM = 360000;
   const vyska = Math.round(vyskaCm * EMU_NA_CM);
   const sirka = Math.round((vyska * logo.sirkaPx) / Math.max(1, logo.vyskaPx));
