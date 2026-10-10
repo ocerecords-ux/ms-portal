@@ -250,6 +250,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Komu pozvánka ještě nešla — nebo komu se od ní posunul termín.',
     en: 'Who has not been sent an invitation yet — or whose session has moved since.',
   },
+  'hoste.casKlientaNapoveda': {
+    cs: 'Čas, který dostane klient — začátek z kalendáře plus 15 minut na nachystání a zvukovou zkoušku. Konec je podle kalendáře.',
+    en: 'The time the client is given — the calendar start plus 15 minutes for setup and a sound check. The end time is the one in the calendar.',
+  },
   'hoste.mapa': { cs: 'mapa', en: 'map' },
   'hoste.bezAdresy': { cs: 'Studio nemá vyplněnou adresu', en: 'The studio has no address filled in' },
   'hoste.bezAdresyNapoveda': {

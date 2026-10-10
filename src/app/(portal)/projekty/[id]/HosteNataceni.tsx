@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '../../components/JazykProvider';
 import {
+  casKlienta,
   jeEmail,
   odkazNaMapu,
   pocetKPoslani,
@@ -76,9 +77,16 @@ export function HosteNataceni({
   );
 }
 
-/** „úterý 7. 10., 10:00–13:00" - v prohlížeči, takže v pásmu toho, kdo se dívá. */
+/**
+ * „úterý 7. 10., 10:15–13:00" - v prohlížeči, takže v pásmu toho, kdo se dívá.
+ *
+ * ČAS KLIENTA, NE ČAS Z KALENDÁŘE (10. 10. 2026: „ten čas bych tady měl už
+ * vidět posunutý o těch 15 min"). Začátek je o rezervu na nachystání a zvukovou
+ * zkoušku později - ať produkce vidí přesně to číslo, které hostovi odejde
+ * v pozvánce, a nemusí si ho počítat. Konec zůstává podle kalendáře.
+ */
 function kdySlovy(start: string, end: string): string {
-  const s = new Date(start);
+  const s = casKlienta(start);
   const e = new Date(end);
   const den = new Intl.DateTimeFormat('cs-CZ', {
     weekday: 'long',
@@ -269,7 +277,9 @@ function TerminSHosty({
           style={{ background: nataceni.studioBarva || '#7B55FF' }}
           aria-hidden
         />
-        <span className="font-heading font-semibold text-ink">{kdySlovy(nataceni.start, nataceni.end)}</span>
+        <span className="font-heading font-semibold text-ink" title={t('hoste.casKlientaNapoveda')}>
+          {kdySlovy(nataceni.start, nataceni.end)}
+        </span>
         <span className="text-sm font-body text-muted">{nataceni.studioNazev}</span>
         {nataceni.hoste.length > 0 && (
           <span className="rounded-pill bg-brand-purple/15 border border-brand-purple/40 text-brand-purpleDeep dark:text-brand-purpleLight px-2 py-0.5 text-[11px] font-heading font-semibold tabular-nums">
