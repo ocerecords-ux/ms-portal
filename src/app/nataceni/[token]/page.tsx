@@ -57,9 +57,8 @@ export default async function CekarnaNataceni({ params }: { params: { token: str
 
   return (
     <main className="min-h-screen bg-paper">
-      <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-6 flex items-center gap-3 sm:gap-4">
-        <span className="font-body text-brand-green font-semibold text-2xl sm:text-3xl">Mediaspace</span>
-        <span className="w-px h-8 sm:h-10 bg-white/40" aria-hidden="true" />
+      {/* Jen značka, bez názvu vedle ní (10. 10. 2026) - stejně jako v mailu. */}
+      <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-6 flex items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-14 w-auto" />
       </header>

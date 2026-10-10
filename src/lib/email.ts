@@ -635,13 +635,10 @@ function emailShell(options: { tag: string; preheader: string; body: string; jaz
 <table role="presentation" class="wrap" width="100%"><tr><td>
   <table role="presentation" class="card" width="560">
     <tr><td class="hero">
-      <table role="presentation"><tr>
-        <td class="word">Mediaspace</td>
-        <td><span class="rule"></span></td>
-        <td style="padding-left:14px;">
-          <img class="logo" src="${baseUrl}${LOGO_GIF_PATH}" width="96" height="96" alt="Mediaspace" />
-        </td>
-      </tr></table>
+      <!-- JEN ZNAČKA, BEZ NÁZVU VEDLE NÍ (10. 10. 2026: „nahoře se duplikuje to
+           logo, klidně ho nechme jen animované“) - zelené „Mediaspace“ a logo
+           říkaly totéž dvakrát vedle sebe. Název firmy zůstává v patičce. -->
+      <img class="logo" src="${baseUrl}${LOGO_GIF_PATH}" width="96" height="96" alt="Mediaspace" />
       <div class="tag">${escapeHtml(options.tag)}</div>
       <div class="bar"></div>
     </td></tr>
