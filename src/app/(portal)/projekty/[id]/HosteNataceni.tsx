@@ -256,6 +256,24 @@ function TerminSHosty({
     setUpravujeOdkaz(false);
   }
 
+  /**
+   * ZKUŠEBNÍ PULT (zadání 11. 10. 2026: „nešlo by ještě obrndovat nějak to
+   * prostředí pro natáčení? Abychom měli otevřený přímo na levo text z výstupů
+   * a v pravo okna účastníků").
+   *
+   * NENÍ TO BĚŽNÝ PROVOZ. Pozvánky pořád vedou do Google Meetu (rozhodnutí
+   * 11. 10. 2026: „Zatím ale nechme běžný provoz na Google Meet. Překlopíme to,
+   * až to bude dávat smysl") - tohle tlačítko je jediná cesta dovnitř, aby se
+   * dalo vyzkoušet nanečisto.
+   *
+   * Odkaz se otevře v novém okně; zkopírovat se dá pravým klepnutím.
+   */
+  async function otevriPult() {
+    const data = await zavolej(`${zaklad}/pult`, { method: 'POST' });
+    const url = data?.url ? String(data.url) : '';
+    if (url) window.open(url, '_blank', 'noopener');
+  }
+
   async function pridej() {
     const data = await zavolej(`${zaklad}/hoste`, {
       method: 'POST',
@@ -494,6 +512,29 @@ function TerminSHosty({
             <span className="text-[11px] font-body text-muted">
               {nataceni.hovorOdkazVlastni ? t('hoste.odkazVlastni') : t('hoste.odkazZeStudia')}
             </span>
+          </div>
+
+          {/* ZKUŠEBNÍ PULT (11. 10. 2026). Schválně oddělený a popsaný jako
+              zkouška - do pozvánek nejde a nesmí se splynout s odkazem výše,
+              který klientovi opravdu odchází. */}
+          <div className="flex flex-col gap-1 rounded-card border border-dashed border-line p-3">
+            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+              Naše natáčecí prostředí – zkouška
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => void otevriPult()}
+                disabled={pracuje}
+                className="rounded-pill border border-brand-purple bg-surface text-brand-purple font-heading font-semibold text-xs px-4 py-1.5 cursor-pointer disabled:opacity-50"
+              >
+                Otevřít zkušební pult
+              </button>
+              <span className="text-[11px] font-body text-muted">
+                Text z výstupů vlevo, účastníci vpravo. Do pozvánek se neposílá – ty
+                pořád vedou do Google Meetu.
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">

@@ -4767,6 +4767,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.poleKdoPronajima': { cs: 'Kdo si studio pronajímá', en: 'Who is hiring the studio' },
   'kalendar.pronajemPlaceholder': { cs: 'Jméno nebo firma', en: 'Name or company' },
 
+  // --- kalendář: klient na natáčení (11. 10. 2026) ---
+  'kalendar.klientRezerva': {
+    cs: 'O {minut} min později než začátek — týmž časem jde pozvánka klientovi.',
+    en: 'Later than the start by {minut} min — that is the time in the invitation, too.',
+  },
+  'kalendar.odkazNataceciPlan': { cs: 'Natáčecí plán — hosté a pozvánky', en: 'Recording plan — guests and invitations' },
+
   // --- kalendář: režie na dálku ---
   'kalendar.rezieNaDalku': { cs: 'Režie na dálku', en: 'Remote direction' },
   'kalendar.rezieNaDalkuPopis': {

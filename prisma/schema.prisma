@@ -2503,6 +2503,17 @@ model StudioBlock {
   /// Celodenni rezervace - v mrizce se kresli pres celou oteviraci dobu.
   celyDen       Boolean @default(false)
 
+  /// NAŠE NATÁČECÍ PROSTŘEDÍ – ZKOUŠKA (zadani 11. 10. 2026: „neslo by
+  /// obrandovat to prostredi pro nataceni? Vlevo text z vystupu, vpravo okna
+  /// ucastniku"). Nahodny token jedne mistnosti; kdo ma odkaz, je uvnitr.
+  /// Vznika az prvnim otevrenim pultu, proto je volitelny.
+  ///
+  /// BEZNY PROVOZ ZUSTAVA NA GOOGLE MEET (rozhodnuti 11. 10. 2026) - tohle se
+  /// zatim jen zkousi a do pozvanek se nikde neposila.
+  pultToken   String?  @unique
+  /// Signalizace naseho hovoru - viz model PultZprava.
+  pultZpravy  PultZprava[]
+
   /// ODKAZ NA HOVOR JEN PRO TOHLE NATÁČENÍ (30. 9. 2026). Prázdné = použije se
   /// odkaz studia. Přepisuje se tam, kde klient posílá vlastní místnost.
   hovorOdkaz  String?
@@ -2578,6 +2589,38 @@ model HostNataceni {
   updatedAt   DateTime @updatedAt
 
   @@index([blockId])
+}
+
+/// SIGNALIZACE NASEHO NATACECIHO PULTU (zadani 11. 10. 2026).
+///
+/// Video uz jede primo mezi prohlizeci (WebRTC), ale nez se najdou, musi si
+/// vymenit popis spojeni. Na to se obvykle drzi otevreny WebSocket - jenze
+/// Vercel dlouhe spojeni neudrzi a dalsi sluzbu kvuli tomu zavadet nechceme.
+/// Tohle je proto obycejna POSTOVNI SCHRANKA: kdo chce neco rict, zapise
+/// radek, protejsek si ho jednou za chvili vyzvedne a radek zmizi.
+///
+/// Je to POMALEJSI, ale jen pri navazovani - jakmile spojeni stoji, tudy uz
+/// nic nechodi a obraz se zvukem jde mimo nas server. Zaznamy jsou kratkodobe
+/// a mazou se, jakmile je protejsek precte nebo kdyz zestarnou.
+model PultZprava {
+  id      String      @id @default(cuid())
+  blockId String
+  block   StudioBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  /// Nahodne id ucastnika v ramci jednoho otevreni stranky (ne ucet).
+  odKoho  String
+  /// Komu je zprava urcena; prazdne = vsem v mistnosti (ohlaseni prichodu).
+  komu    String?
+  /// Co to je: ahoj / odchod / nabidka / odpoved / cesta (ICE).
+  druh    String
+  /// Telo zpravy (SDP nebo ICE kandidat) jako JSON text.
+  telo    String      @db.Text
+  /// Jmeno do dlazdice - herec, zvukar nebo e-mail hosta.
+  jmeno   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([blockId, createdAt])
 }
 
 /// HISTORIE ODESLANYCH POZVANEK (zadani 10. 10. 2026: „u tech pozvanek by mely

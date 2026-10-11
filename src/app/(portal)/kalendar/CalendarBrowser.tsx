@@ -21,7 +21,24 @@ import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 
 /** Červený rámeček události, kde je režie na dálku (zadání 23. 9. 2026). */
 const BARVA_REZIE = '#ef4444';
-import { casKlienta } from '@/lib/hosteNataceni';
+
+/**
+ * ČAS, KTERÝ SE ŘÍKÁ KLIENTOVI - z políčka „Od" v okně úpravy (11. 10. 2026).
+ *
+ * Počítá se rovnou z textu „11:30", ne z data: políčko drží STĚNOVÝ ČAS
+ * studia, takže přičtení čtvrthodiny tu nemůže nic zkazit ani v Londýně.
+ * Rozepsaný nebo prázdný čas vrátí `null` a řádek se zatím nevykreslí.
+ */
+function casKlientaZPole(od: string): string | null {
+  const shoda = /^(\d{1,2}):(\d{2})$/.exec(od.trim());
+  if (!shoda) return null;
+  const minuty = Number(shoda[1]) * 60 + Number(shoda[2]) + REZERVA_KLIENTA_MIN;
+  if (!Number.isFinite(minuty) || minuty >= 24 * 60) return null;
+  const h = Math.floor(minuty / 60);
+  const m = minuty % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+import { REZERVA_KLIENTA_MIN, casKlienta } from '@/lib/hosteNataceni';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -3119,6 +3136,36 @@ function UdalostForm({
             <span className="block text-xs text-muted">{t('kalendar.rezieNaDalkuPopis')}</span>
           </span>
         </label>
+      )}
+
+      {/* ČAS KLIENTA A CESTA K HOSTŮM (zadání 11. 10. 2026: „tady by mělo být
+          taky nějak vidět, že se připojuje klient a v kolik. a taky by tam
+          mohl být u toho proklik na natáčecí plán, kde se dají udělat
+          úpravy").
+
+          V kalendáři je čas STUDIA - herec i zvukař přicházejí na 11:30.
+          Klientovi se ale říká o čtvrthodinu později a přesně tohle číslo mu
+          odejde v pozvánce; kdo událost posouvá, musí ho vidět tady, ne si ho
+          dopočítávat. Hosty samotné (kdo přijde, v jakém jazyce mu psát,
+          odeslané pozvánky) spravuje natáčecí plán projektu - odtud tam vede
+          odkaz, ať se kvůli jednomu mailu nehledá projekt ručně. */}
+      {jeNataceni && casKlientaZPole(od) && (
+        <div className="flex flex-col gap-1 rounded-lg border border-line bg-field px-3 py-2.5">
+          <span className="text-sm font-body text-ink">
+            {t('kalendar.klientSePripoji', { cas: casKlientaZPole(od) as string })}
+          </span>
+          <span className="text-xs font-body text-muted">
+            {t('kalendar.klientRezerva', { minut: String(REZERVA_KLIENTA_MIN) })}
+          </span>
+          {projektId && (
+            <Link
+              href={`/projekty/${encodeURIComponent(projektId)}?zalozka=frekvence`}
+              className="text-xs font-heading font-semibold text-brand-purple no-underline hover:underline mt-0.5"
+            >
+              {t('kalendar.odkazNataceciPlan')}
+            </Link>
+          )}
+        </div>
       )}
 
       {/* Poznamka / vzkaz (19. 9. 2026) - u frekvence i u rucni udalosti. */}
