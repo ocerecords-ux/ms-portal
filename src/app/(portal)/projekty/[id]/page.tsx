@@ -41,6 +41,9 @@ import { RecordingSection } from './RecordingSection';
 import { HosteNataceni } from './HosteNataceni';
 import { nactiNataceniProjektu } from '@/lib/hosteNataceniServer';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
+import { PrezentaceSection } from './PrezentaceSection';
+import { nactiPrezentaceProjektu } from '@/lib/prezentaceServer';
+import { nactiKnihovnu } from '@/lib/ukazkyServer';
 import { ProtokolNataceni } from './ProtokolNataceni';
 import { VykazyProjektu, type BonusRadek, type VykazRadek } from './VykazyProjektu';
 import { CerpaniPoDruzich } from './CerpaniPoDruzich';
@@ -692,6 +695,32 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    */
   const nataceniSHosty = await nactiNataceniProjektu(caflouProjectId);
 
+  /**
+   * NABÍDKOVÁ PREZENTACE (zadání 11. 10. 2026: „potřebuju udělat takový maker
+   * cenových nabídek obrandovaných, které pošlu jedním odkazem na klienta…
+   * asi bych to chtěl tvořit někde pod projektem").
+   *
+   * Načítá se jen pro vlastní lidi - klient na projektu tuhle záložku nemá
+   * co hledat, prezentaci dostává hotovou odkazem.
+   */
+  const prezentace = isInternalRole(session.user.role) ? (
+    <PrezentaceSection
+      caflouProjectId={caflouProjectId}
+      pocatecni={await nactiPrezentaceProjektu(caflouProjectId)}
+      knihovna={await nactiKnihovnu()}
+      nabidky={(
+        await prisma.offer
+          .findMany({
+            where: { caflouProjectId },
+            orderBy: { issueDate: 'desc' },
+            select: { id: true, number: true, subject: true },
+          })
+          .catch(() => [])
+      ).map((n) => ({ id: n.id, cislo: n.number, predmet: n.subject }))}
+      zakladAdresy={(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}
+    />
+  ) : null;
+
   const frekvence = (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
@@ -898,6 +927,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       label: prelozit(jazyk, 'projekt.zalozka.frekvence'),
       count: recordingRequests.length,
       content: frekvence,
+    });
+  }
+  if (prezentace) {
+    tabs.push({
+      key: 'prezentace',
+      label: prelozit(jazyk, 'projekt.zalozka.prezentace'),
+      content: prezentace,
     });
   }
   // Zalozka JEN u radioveho spotu (zadani 10. 9. 2026: "hudba ve spotu bude

@@ -82,6 +82,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/nastaveni/projekty': ['ADMIN'],
   '/admin/nastaveni/doklady': ['ADMIN'],
   '/admin/vzory-nataceni': ['ADMIN'],
+  // Knihovna ukazek do nabidkovych prezentaci (11. 10. 2026). Nahrava je
+  // produkce, ne jen Zuzo-labuzo - kdo delá nabidku, potrebuje i ukazky.
+  '/admin/ukazky': ['ADMIN', 'PRODUKCE'],
+  '/admin/vzor-prezentace': ['ADMIN', 'PRODUKCE'],
   '/admin/zpravy-portalu': ['ADMIN'],
   '/admin/users': ['ADMIN'],
   '/admin/ceniky': ['ADMIN'],

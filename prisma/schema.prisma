@@ -607,6 +607,10 @@ model User {
   socialniPribehy   SocialniPribeh[]    @relation("PribehAutor")
   pribehyVyrizene   SocialniPribeh[]    @relation("PribehVyridil")
   hudbaDoPribehu    PribehHudba[]       @relation("HudbaNahral")
+  /// Nabidkove prezentace (11. 10. 2026) - knihovna ukazek a prezentace.
+  ukazkyJakoHerec     UkazkaNabidky[]     @relation("UkazkyHerce")
+  nahraneUkazky       UkazkaNabidky[]     @relation("UkazkyNahral")
+  vytvorenePrezentace PrezentaceNabidky[] @relation("PrezentaceVytvoril")
 }
 
 model Order {
@@ -1658,6 +1662,8 @@ model Offer {
   rejectedAt     DateTime?
 
   items   OfferItem[]
+  /// Prezentace, ktere si z teto nabidky berou ceny (11. 10. 2026).
+  prezentace PrezentaceNabidky[]
   /// Faktury z teto nabidky. VIC NEZ JEDNA (zadani 15. 9. 2026: „kdyz bude
   /// nabidka na nejakou cenu a my to pak castecne vyfakturujeme... jestli to
   /// bude v pohode, kdyz z jedne nabidky udelam dve faktury"). Do 15. 9. 2026
@@ -4703,4 +4709,157 @@ model DiskovaSlozka {
   updatedAt DateTime @updatedAt
 
   @@index([poradi])
+}
+
+/// KNIHOVNA UKAZEK PRO NABIDKOVE PREZENTACE (zadani 11. 10. 2026: "potrebuju
+/// udelat takovy maker cenovych nabidek obrandovanych, ktere poslu jednim
+/// odkazem na klienta").
+///
+/// PROC KNIHOVNA A NE PRILOHY U KAZDE NABIDKY: tytez reference a tataz dema
+/// herců chodi klientum porad dokola. Kdyby se nahravaly ke kazde nabidce
+/// zvlast, hledaly by se po discich, zabiraly misto a casem by se rozesly.
+/// Takhle se nahraji jednou a v prezentaci se jen zaskrtnou.
+model UkazkaNabidky {
+  id String @id @default(cuid())
+
+  /// REFERENCE = ukazka z minuleho projektu, HEREC = demo hlasu.
+  druh  String
+  nazev String
+  /// Radek pod nazvem - u reference klient a co to bylo, u herce popis hlasu.
+  popis String? @db.Text
+
+  /// Volitelna vazba na ucet herce; jmeno drzime i textove v `nazev`, aby
+  /// ukazka zustala citelna, kdyz ucet zmizi.
+  herecId String?
+  herec   User?   @relation("UkazkyHerce", fields: [herecId], references: [id], onDelete: SetNull)
+
+  /// Klic v ulozisti; soubor se vydava pres /api/ukazky/<id>/soubor.
+  url          String @db.Text
+  nazevSouboru String
+  typSouboru   String
+  velikost     Int    @default(0)
+  /// Delka ve vterinach - spocita ji prohlizec pri nahrani.
+  delka        Int    @default(0)
+
+  /// Stitky oddelene carkou (zena, muz, reklama, audiokniha) - jen na hledani.
+  stitky String @default("")
+
+  /// Vyrazena ukazka se uz nenabizi, ale nemaze se - prezentace, ve kterych
+  /// uz je, na ni odkazuji.
+  aktivni Boolean @default(true)
+  poradi  Int     @default(0)
+
+  nahralId String?
+  nahral   User?   @relation("UkazkyNahral", fields: [nahralId], references: [id], onDelete: SetNull)
+
+  vPrezentacich PrezentaceUkazka[]
+  vybranaV      PrezentaceNabidky[] @relation("VybranyHerec")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([druh, aktivni, poradi])
+}
+
+/// VZOR TEXTU PREZENTACE (zadani 11. 10. 2026). Podminky spoluprace -
+/// licence, terminy dodani - jsou u vsech nabidek skoro stejne; psat je
+/// pokazde znovu znamena, ze se casem rozejdou. Navrh reseni se z vzoru jen
+/// predvyplni a u projektu dopise.
+model VzorPrezentace {
+  id    String @id @default(cuid())
+  nazev String @unique
+
+  navrhReseni String? @db.Text
+  podminky    String? @db.Text
+
+  active  Boolean @default(true)
+  vychozi Boolean @default(false)
+  poradi  Int     @default(100)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, poradi])
+}
+
+/// NABIDKOVA PREZENTACE PRO KLIENTA (zadani 11. 10. 2026).
+///
+/// Stoji VEDLE dokladove nabidky (model Offer), nenahrazuje ji. Doklad ma
+/// cislo, polozky a ucetni platnost; tohle je to, co klient opravdu otevre -
+/// nazev projektu, reference k poslechu, navrh reseni, dema hercu, ceny
+/// natazene z dokladu a podminky spoluprace.
+///
+/// CENY SE NEOPISUJI. Berou se z navazane nabidky (offerId) pri kazdem
+/// otevreni; kdyz se doklad opravi, prezentace se opravi s nim a nemuze se
+/// stat, ze klient vidi jine cislo nez faktura.
+model PrezentaceNabidky {
+  id String @id @default(cuid())
+
+  caflouProjectId String
+  /// Nazev projektu jako otisk - projekt se v Caflou muze prejmenovat.
+  projectName String
+  /// Jak se ma klient jmenovat na prezentaci (nemusi byt nazev firmy z dokladu).
+  klientNazev String @default("")
+
+  /// Nahodny token v odkazu - jedina vec, ktera na stranku pousti.
+  token String @unique
+
+  /// Nadpis a podtitul nad celou prezentaci; prazdne = nazev projektu.
+  nadpis   String?
+  podtitul String? @db.Text
+
+  navrhReseni String? @db.Text
+  podminky    String? @db.Text
+
+  /// Doklad, ze ktereho se berou ceny. Prazdne = cenova cast se nevykresli.
+  offerId String?
+  offer   Offer?  @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  /// Dokud neni zverejnena, odkaz vraci 404 - at se klientovi neotevre
+  /// rozdelana prezentace, kdyby odkaz nekdo poslal driv.
+  zverejneno Boolean @default(false)
+
+  /// Jestli klient smi primo z prezentace schvalit a vybrat herce.
+  lzeSchvalit Boolean @default(true)
+
+  /// Ze se na to klient vubec podival - bez toho se musi ptat mailem.
+  prvniOtevreni    DateTime?
+  posledniOtevreni DateTime?
+  pocetOtevreni    Int       @default(0)
+
+  /// Odpoved klienta primo z prezentace.
+  schvalenoAt    DateTime?
+  schvalilJmeno  String?
+  odmitnutoAt    DateTime?
+  /// Kterého herce si klient vybral (zadani 11. 10. 2026) - at se rovnou vi,
+  /// s kym planovat, a nemusi se to dohledavat v mailu.
+  vybranyHerecId String?
+  vybranyHerec   UkazkaNabidky? @relation("VybranyHerec", fields: [vybranyHerecId], references: [id], onDelete: SetNull)
+  vybranoAt      DateTime?
+
+  ukazky PrezentaceUkazka[]
+
+  vytvorilId String?
+  vytvoril   User?   @relation("PrezentaceVytvoril", fields: [vytvorilId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caflouProjectId])
+}
+
+/// Ktera ukazka z knihovny je v ktere prezentaci a v jakem poradi.
+model PrezentaceUkazka {
+  id           String @id @default(cuid())
+  prezentaceId String
+  prezentace   PrezentaceNabidky @relation(fields: [prezentaceId], references: [id], onDelete: Cascade)
+  ukazkaId     String
+  ukazka       UkazkaNabidky     @relation(fields: [ukazkaId], references: [id], onDelete: Cascade)
+
+  /// REFERENCE nebo HEREC - tataz ukazka muze slouzit v obou sekcich.
+  sekce  String
+  poradi Int    @default(0)
+
+  @@unique([prezentaceId, ukazkaId, sekce])
+  @@index([prezentaceId, sekce, poradi])
 }

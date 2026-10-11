@@ -27,6 +27,9 @@ const ZALOZKY = [
   { href: '/admin/nastaveni/firmy/zpravy-portalu', nazev: 'Zprávy z portálu' },
   { href: '/admin/nastaveni/firmy/ceniky', nazev: 'Ceníky' },
   { href: '/admin/nastaveni/firmy/vzory-nataceni', nazev: 'Vzory natáčení' },
+  // Nabidkove prezentace (11. 10. 2026) - knihovna ukazek a vzor textu.
+  { href: '/admin/nastaveni/firmy/ukazky', nazev: 'Ukázky do nabídek' },
+  { href: '/admin/nastaveni/firmy/vzor-prezentace', nazev: 'Vzor prezentace' },
 ];
 
 export default async function NastaveniFiremLayout({ children }: { children: React.ReactNode }) {

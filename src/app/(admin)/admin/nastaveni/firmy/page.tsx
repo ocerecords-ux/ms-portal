@@ -30,6 +30,16 @@ const POPISY: { klicNazvu: string; klicPopisu: string; cesta: string }[] = [
     klicPopisu: 'nastaveniFirmy.vzoryNataceniPopis',
     cesta: '/admin/nastaveni/firmy/vzory-nataceni',
   },
+  {
+    klicNazvu: 'nastaveniFirmy.ukazky',
+    klicPopisu: 'nastaveniFirmy.ukazkyPopis',
+    cesta: '/admin/nastaveni/firmy/ukazky',
+  },
+  {
+    klicNazvu: 'nastaveniFirmy.vzorPrezentace',
+    klicPopisu: 'nastaveniFirmy.vzorPrezentacePopis',
+    cesta: '/admin/nastaveni/firmy/vzor-prezentace',
+  },
 ];
 
 export default function NastaveniFiremPrehled() {

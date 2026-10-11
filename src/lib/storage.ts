@@ -844,3 +844,29 @@ export async function stahniZUloziste(key: string): Promise<{ bytes: Buffer; mim
     return null;
   }
 }
+
+/**
+ * Podepsaná adresa na nahrání UKÁZKY DO KNIHOVNY NABÍDEK (11. 10. 2026).
+ * Stejný důvod jako u hudby: soubor jde z prohlížeče rovnou do úložiště,
+ * protože reference s obrazem snadno přeroste limit Vercelu (4,5 MB).
+ */
+export async function podepsanyUploadUkazky(
+  fileName: string,
+  mime: string,
+): Promise<{ key: string; uploadUrl: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const key = `ukazky-nabidek/${randomUUID()}-${bezpecnyNazev(fileName)}`;
+  const uploadUrl = await getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: mime || 'application/octet-stream',
+    }),
+    { expiresIn: PLATNOST_UPLOADU },
+  );
+  return { key, uploadUrl };
+}

@@ -226,6 +226,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekt.zalozka.prehled': { cs: 'Přehled', en: 'Overview' },
   'projekt.zalozka.rozpocet': { cs: 'Rozpočet', en: 'Budget' },
   'projekt.zalozka.frekvence': { cs: 'Natáčecí plán', en: 'Recording schedule' },
+  'projekt.zalozka.prezentace': { cs: 'Prezentace', en: 'Proposal' },
   'projekt.zalozka.rodnyList': { cs: 'Rodný list', en: 'Advert record' },
   'projekt.zalozka.licencniList': { cs: 'Licenční list', en: 'Licence sheet' },
   'projekt.zalozka.pripominky': { cs: 'Připomínky', en: 'Comments' },
@@ -9849,6 +9850,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'nastaveni.zalozka./admin/nastaveni/firmy/zpravy-portalu': { cs: 'Zprávy z portálu', en: 'Messages from the portal' },
   'nastaveni.zalozka./admin/nastaveni/firmy/ceniky': { cs: 'Ceníky', en: 'Price lists' },
   'nastaveni.zalozka./admin/nastaveni/firmy/vzory-nataceni': { cs: 'Vzory natáčení', en: 'Recording templates' },
+  'nastaveni.zalozka./admin/nastaveni/firmy/ukazky': { cs: 'Ukázky do nabídek', en: 'Showreel library' },
+  'nastaveni.zalozka./admin/nastaveni/firmy/vzor-prezentace': { cs: 'Vzor prezentace', en: 'Proposal template' },
 
   'nastaveni.zpetDoDokladu': { cs: '← Zpět do dokladů', en: '← Back to invoicing' },
   'nastaveni.zpetNaFirmy': { cs: '← Zpět na firmy', en: '← Back to companies' },
@@ -9892,6 +9895,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Předlohy natáčecích textů, ze kterých se skládá dokument k natáčení.',
     en: 'The recording text templates the recording document is built from.',
   },
+  'nastaveniFirmy.ukazky': { cs: 'Ukázky do nabídek', en: 'Showreel library' },
+  'nastaveniFirmy.ukazkyPopis': {
+    cs: 'Reference z minulých projektů a dema herců. Nahrajete je jednou; v nabídkové prezentaci u projektu je pak jen zaškrtnete.',
+    en: 'References from past projects and narrator demos. Upload once, then just tick them in a project’s proposal.',
+  },
+  'nastaveniFirmy.vzorPrezentace': { cs: 'Vzor prezentace', en: 'Proposal template' },
+  'nastaveniFirmy.vzorPrezentacePopis': {
+    cs: 'Návrh řešení a podmínky spolupráce, které se předvyplní do každé nové nabídkové prezentace.',
+    en: 'The proposed approach and terms pre-filled into every new client proposal.',
+  },
+
 
   // --- připomínky Heleny k plánování s herci (2. a 5. 10. 2026) ---
   'nabidkaTerminu.upomenout': { cs: 'Upomenout herce', en: 'Remind the actor' },
