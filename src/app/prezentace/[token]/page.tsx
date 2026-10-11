@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { computeTotals, formatMoney } from '@/lib/doklady';
 import { nactiProKlienta, zapisOtevreni } from '@/lib/prezentaceServer';
+import { nactiJazyk } from '@/lib/jazykServer';
 import { Prezentace } from './Prezentace';
 
 /**
@@ -19,6 +20,7 @@ import { Prezentace } from './Prezentace';
 export const dynamic = 'force-dynamic';
 
 export default async function PrezentacePage({ params }: { params: { token: string } }) {
+  const jazyk = nactiJazyk();
   const data = await nactiProKlienta(params.token);
   if (!data) notFound();
 
@@ -50,15 +52,15 @@ export default async function PrezentacePage({ params }: { params: { token: stri
           popis: p.popis,
           mnozstvi: p.mnozstvi,
           jednotka: p.jednotka,
-          cena: formatMoney(Math.round(p.mnozstvi * p.cenaZaJednotku), mena),
+          cena: formatMoney(Math.round(p.mnozstvi * p.cenaZaJednotku), mena, jazyk),
         })),
-        bezDph: formatMoney(soucty?.exVat ?? 0, mena),
-        dph: formatMoney(soucty?.vat ?? 0, mena),
-        celkem: formatMoney(soucty?.incVat ?? 0, mena),
-        sleva: soucty && soucty.sleva > 0 ? formatMoney(soucty.sleva, mena) : null,
+        bezDph: formatMoney(soucty?.exVat ?? 0, mena, jazyk),
+        dph: formatMoney(soucty?.vat ?? 0, mena, jazyk),
+        celkem: formatMoney(soucty?.incVat ?? 0, mena, jazyk),
+        sleva: soucty && soucty.sleva > 0 ? formatMoney(soucty.sleva, mena, jazyk) : null,
         slevaPopis: soucty?.slevaPopis ?? null,
       }
     : null;
 
-  return <Prezentace token={params.token} data={data} cenik={cenik} />;
+  return <Prezentace token={params.token} data={data} cenik={cenik} jazyk={jazyk} />;
 }

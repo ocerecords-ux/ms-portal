@@ -10247,6 +10247,288 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Klik ukáže náhled přeposlechu',
     en: 'Click to see a proof-listening preview',
   },
+
+  /* --- Dávka 7i: nabídkové prezentace, knihovna ukázek a natáčecí pult (11. 10. 2026) --- */
+  'obecne.zpetAdministrace': { cs: 'Administrace', en: 'Administration' },
+
+  /* Knihovna ukázek - Administrace → Ukázky do nabídek */
+  'ukazky.nadpis': { cs: 'Ukázky do nabídek', en: 'Samples for quotes' },
+  'ukazky.uvod': {
+    cs: 'Reference z minulých projektů a dema herců. Nahrajete je sem jednou; v nabídkové prezentaci u projektu je pak jen zaškrtnete. Vyřazená ukázka se nenabízí, ale v prezentacích, kde už je, zůstane - klient je otevírá i za týden.',
+    en: 'Samples of past work and voice demos. You upload them here once; after that you just tick them in the quote presentation on the project. A sample you remove is no longer offered, but it stays in the presentations that already use it — clients open those a week later too.',
+  },
+  'ukazky.sekceReference': { cs: 'Naše reference', en: 'Our work' },
+  'ukazky.sekceHlasy': { cs: 'Dema herců', en: 'Voice demos' },
+  'ukazky.hledat': {
+    cs: 'Hledat v názvu, popisu i štítcích',
+    en: 'Search names, descriptions and tags',
+  },
+  'ukazky.nahrat': { cs: 'Nahrát ukázky', en: 'Upload samples' },
+  'ukazky.nahravam': { cs: 'Nahrávám {nazev}…', en: 'Uploading {nazev}…' },
+  'ukazky.nahratNapoveda': {
+    cs: 'MP3, M4A, WAV, MP4 nebo MOV, nejvýš 60 MB. Vybrat jich můžete víc najednou; název se dá hned přepsat.',
+    en: 'MP3, M4A, WAV, MP4 or MOV, 60 MB at most. You can pick several at once; the name can be changed straight away.',
+  },
+  'ukazky.nicNesedi': { cs: 'Nic nesedí.', en: 'Nothing matches.' },
+  'ukazky.prazdno': {
+    cs: 'Zatím tu nic není — nahrajte první ukázku.',
+    en: 'Nothing here yet — upload the first sample.',
+  },
+  'ukazky.poleNazev': {
+    cs: 'Název — třeba „Kofola — vánoční spot“',
+    en: 'Name — for example „Kofola — Christmas advert“',
+  },
+  'ukazky.polePopis': {
+    cs: 'Řádek pod názvem — u reference co to bylo, u herce popis hlasu',
+    en: 'The line under the name — what the job was, or what the voice is like',
+  },
+  'ukazky.poleStitky': {
+    cs: 'Štítky po čárce — žena, teplý hlas, reklama',
+    en: 'Tags separated by commas — female, warm voice, advert',
+  },
+  'ukazky.vyradit': { cs: 'Vyřadit', en: 'Remove' },
+  'ukazky.vyraditNapoveda': {
+    cs: 'Vyřadit z nabízených. V už odeslaných prezentacích zůstane.',
+    en: 'Stop offering it. It stays in the presentations already sent.',
+  },
+  'ukazky.chybaTyp': {
+    cs: '{nazev}: tenhle typ souboru jako ukázku nebereme.',
+    en: '{nazev}: we do not take this type of file as a sample.',
+  },
+  'ukazky.chybaVelikost': {
+    cs: '{nazev}: soubor je moc velký (nejvýš 60 MB).',
+    en: '{nazev}: the file is too large (60 MB at most).',
+  },
+  'ukazky.chybaAdresa': {
+    cs: 'Adresu pro nahrání se nepodařilo připravit.',
+    en: 'The upload address could not be prepared.',
+  },
+  'ukazky.chybaUloziste': {
+    cs: '{nazev}: nahrání do úložiště se nepovedlo.',
+    en: '{nazev}: the upload to storage failed.',
+  },
+  'ukazky.chybaZapis': { cs: 'Ukázku se nepodařilo uložit.', en: 'The sample could not be saved.' },
+  'ukazky.chybaNahrani': { cs: '{nazev}: nahrání se nepovedlo.', en: '{nazev}: the upload failed.' },
+  'ukazky.neulozeno': { cs: 'Uložení se nepovedlo.', en: 'Saving failed.' },
+
+  /* Vzor textů nabídkové prezentace - Administrace → Vzor nabídkové prezentace */
+  'vzorPrezentace.nadpis': { cs: 'Vzor nabídkové prezentace', en: 'Quote presentation template' },
+  'vzorPrezentace.uvod': {
+    cs: 'Předvyplní se do každé nové prezentace u projektu. Změna se do už hotových prezentací nepropíše — co klient jednou dostal, zůstane, jak to bylo.',
+    en: 'This is pre-filled into every new presentation on a project. A change does not reach presentations that already exist — what the client has been sent stays as it was.',
+  },
+  'vzorPrezentace.navrh': { cs: 'Návrh řešení', en: 'Proposed approach' },
+  'vzorPrezentace.navrhNapoveda': {
+    cs: 'Kostra, kterou u projektu dopíšete. Odstavce oddělte prázdným řádkem; řádek začínající pomlčkou se klientovi vykreslí jako odrážka.',
+    en: 'The outline you finish off on the project. Separate paragraphs with a blank line; a line starting with a dash is shown to the client as a bullet point.',
+  },
+  'vzorPrezentace.podminky': { cs: 'Podmínky spolupráce', en: 'Terms of engagement' },
+  'vzorPrezentace.podminkyNapoveda': {
+    cs: 'Licence, termíny dodání, platba, storno. Tohle je ta část, která má být u všech nabídek stejná.',
+    en: 'Licence, delivery dates, payment, cancellation. This is the part that should read the same on every quote.',
+  },
+  'vzorPrezentace.ulozit': { cs: 'Uložit vzor', en: 'Save the template' },
+  'vzorPrezentace.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'vzorPrezentace.neulozeno': { cs: 'Uložení se nepovedlo.', en: 'Saving failed.' },
+
+  /* Sestavení nabídkové prezentace u projektu */
+  'prezentace.uvod': {
+    cs: 'Obrandovaná nabídka na jednom odkazu: reference k poslechu, návrh řešení, hlasy herců, ceny z dokladu a podmínky spolupráce. Klient ji otevře bez přihlašování a může rovnou schválit i vybrat hlas.',
+    en: 'A branded quote on a single link: samples to listen to, the proposed approach, voices to choose from, prices from the document and the terms of engagement. The client opens it without signing in and can approve it and pick a voice right there.',
+  },
+  'prezentace.nova': { cs: 'Nová prezentace', en: 'New presentation' },
+  'prezentace.zadna': { cs: 'Zatím tu žádná není.', en: 'There are none yet.' },
+  'prezentace.rozdelana': { cs: 'rozdělaná', en: 'draft' },
+  'prezentace.schvalena': { cs: 'schváleno', en: 'approved' },
+  'prezentace.odmitnuta': { cs: 'odmítnuto', en: 'declined' },
+  'prezentace.sNabidkou': { cs: 'nabídka {cislo}', en: 'quote {cislo}' },
+  'prezentace.bezCen': { cs: 'bez cen', en: 'no prices' },
+  'prezentace.pocetReferenci': { cs: '{pocet} referencí', en: '{pocet} samples of work' },
+  'prezentace.pocetHlasu': { cs: '{pocet} hlasů', en: '{pocet} voices' },
+  'prezentace.otevreno': { cs: 'otevřeno {pocet}×', en: 'opened {pocet}×' },
+  'prezentace.neotevreno': { cs: 'klient zatím neotevřel', en: 'the client has not opened it yet' },
+  'prezentace.vybranyHlas': { cs: 'vybrán hlas: {jmeno}', en: 'voice chosen: {jmeno}' },
+  'prezentace.chybaZalozit': {
+    cs: 'Prezentaci se nepodařilo založit.',
+    en: 'The presentation could not be created.',
+  },
+  'prezentace.chybaNacist': {
+    cs: 'Prezentaci se nepodařilo načíst.',
+    en: 'The presentation could not be loaded.',
+  },
+  'prezentace.neulozeno': { cs: 'Uložení se nepovedlo.', en: 'Saving failed.' },
+  'prezentace.nesmazano': { cs: 'Smazání se nepovedlo.', en: 'Deleting failed.' },
+  'prezentace.zpetNaSeznam': { cs: 'Zpět na seznam', en: 'Back to the list' },
+  'prezentace.stahnoutZObehu': { cs: 'Stáhnout z oběhu', en: 'Unpublish' },
+  'prezentace.zverejnit': { cs: 'Zveřejnit', en: 'Publish' },
+  'prezentace.odkazProKlienta': { cs: 'Odkaz pro klienta', en: 'Link for the client' },
+  'prezentace.zkopirovat': { cs: 'Zkopírovat', en: 'Copy' },
+  'prezentace.nezverejnena': {
+    cs: 'Zatím nezveřejněná — komu odkaz pošlete, uvidí „nenalezeno“.',
+    en: 'Not published yet — anyone you send the link to will see „not found“.',
+  },
+  'prezentace.schvalenoKdy': { cs: 'Schváleno {kdy}', en: 'Approved {kdy}' },
+  'prezentace.klientVybralHlas': { cs: 'Klient vybral hlas:', en: 'The client chose a voice:' },
+  'prezentace.poleNadpis': { cs: 'Název na prezentaci', en: 'Title on the presentation' },
+  'prezentace.poleNadpisNapoveda': {
+    cs: 'Prázdné = název projektu.',
+    en: 'Empty = the project name.',
+  },
+  'prezentace.poleKlient': { cs: 'Klient', en: 'Client' },
+  'prezentace.poleKlientNapoveda': {
+    cs: 'Jak se má jmenovat v hlavičce — „pro …“.',
+    en: 'How it should read in the header — „for …“.',
+  },
+  'prezentace.poleUvod': { cs: 'Úvodní věta', en: 'Opening line' },
+  'prezentace.poleUvodNapoveda': {
+    cs: 'Pod nadpisem. Jedna dvě věty, o co jde.',
+    en: 'Below the title. A sentence or two on what this is about.',
+  },
+  'prezentace.reference': { cs: 'Naše reference', en: 'Our work' },
+  'prezentace.referenceNapoveda': {
+    cs: 'Ukázky z minulých projektů. Spravují se v Administraci → Ukázky do nabídek.',
+    en: 'Samples from past projects. They are managed in Administration → Samples for quotes.',
+  },
+  'prezentace.navrh': { cs: 'Návrh řešení', en: 'Proposed approach' },
+  'prezentace.navrhNapoveda': {
+    cs: 'Odstavce oddělte prázdným řádkem; řádek začínající pomlčkou se vykreslí jako odrážka.',
+    en: 'Separate paragraphs with a blank line; a line starting with a dash is shown as a bullet point.',
+  },
+  'prezentace.hlasy': { cs: 'Nabídka hlasů', en: 'Voice options' },
+  'prezentace.hlasyNapoveda': {
+    cs: 'Dema herců. Klient si může jeden vybrat a přijde vám o tom oznámení.',
+    en: 'Voice demos. The client can pick one and you get a notification about it.',
+  },
+  'prezentace.cena': { cs: 'Cenová nabídka', en: 'Quote' },
+  'prezentace.cenaNapoveda': {
+    cs: 'Položky se berou z dokladu u projektu — když ho opravíte, opraví se i prezentace.',
+    en: 'The line items come from the document on the project — correct that and the presentation follows.',
+  },
+  'prezentace.bezCenVolba': { cs: 'Bez cen', en: 'No prices' },
+  'prezentace.zadnaNabidka': {
+    cs: 'U projektu zatím žádná nabídka není — založte ji v Dokladech.',
+    en: 'There is no quote on the project yet — create one in Documents.',
+  },
+  'prezentace.podminky': { cs: 'Podmínky spolupráce', en: 'Terms of engagement' },
+  'prezentace.podminkyNapoveda': {
+    cs: 'Licence, termíny dodání, platba. Předvyplněné ze vzoru.',
+    en: 'Licence, delivery dates, payment. Pre-filled from the template.',
+  },
+  'prezentace.lzeSchvalit': {
+    cs: 'Klient může schválit a vybrat hlas přímo z prezentace',
+    en: 'The client can approve it and choose a voice straight from the presentation',
+  },
+  'prezentace.lzeSchvalitNapoveda': {
+    cs: 'Schválení se propíše i do dokladu a přijde vám oznámení.',
+    en: 'The approval is written to the document as well and you get a notification.',
+  },
+  'prezentace.smazat': { cs: 'Smazat prezentaci', en: 'Delete the presentation' },
+  'prezentace.knihovnaPrazdna': {
+    cs: 'Knihovna je zatím prázdná — nahrajte ukázky v Administraci.',
+    en: 'The library is empty so far — upload samples in Administration.',
+  },
+  'prezentace.hledatVKnihovne': { cs: 'Hledat v knihovně', en: 'Search the library' },
+
+  /* Prezentace očima klienta - veřejná stránka na odkazu */
+  'prezentaceKlient.znacka': { cs: 'Cenová nabídka', en: 'Quote' },
+  'prezentaceKlient.pro': { cs: 'pro {klient}', en: 'for {klient}' },
+  'prezentaceKlient.reference': { cs: 'Naše reference', en: 'Our work' },
+  'prezentaceKlient.referencePopis': {
+    cs: 'Poslechněte si, co jsme dělali jinde.',
+    en: 'Have a listen to what we have done elsewhere.',
+  },
+  'prezentaceKlient.navrh': { cs: 'Návrh řešení', en: 'Proposed approach' },
+  'prezentaceKlient.hlasy': { cs: 'Nabídka hlasů', en: 'Voice options' },
+  'prezentaceKlient.hlasyPopisVyber': {
+    cs: 'Poslechněte si je a klepněte na ten, který vám sedí — rovnou se nám to ozve.',
+    en: 'Have a listen and tap the one that suits you — it reaches us straight away.',
+  },
+  'prezentaceKlient.hlasyPopis': {
+    cs: 'Poslechněte si je a dejte nám vědět, který vám sedí.',
+    en: 'Have a listen and let us know which one suits you.',
+  },
+  'prezentaceKlient.vybratHlas': { cs: 'Vybrat tenhle hlas', en: 'Choose this voice' },
+  'prezentaceKlient.hlasVybran': { cs: '✓ Tenhle hlas chceme', en: '✓ This is the voice we want' },
+  'prezentaceKlient.cena': { cs: 'Cenová nabídka', en: 'Quote' },
+  'prezentaceKlient.sleva': { cs: 'Sleva', en: 'Discount' },
+  'prezentaceKlient.bezDph': { cs: 'Bez DPH', en: 'Excl. VAT' },
+  'prezentaceKlient.dph': { cs: 'DPH', en: 'VAT' },
+  'prezentaceKlient.celkem': { cs: 'Celkem s DPH', en: 'Total incl. VAT' },
+  'prezentaceKlient.cisloNabidky': { cs: 'Nabídka č. {cislo}', en: 'Quote no. {cislo}' },
+  'prezentaceKlient.platiDo': { cs: 'platí do {datum}', en: 'valid until {datum}' },
+  'prezentaceKlient.podminky': { cs: 'Podmínky spolupráce', en: 'Terms of engagement' },
+  'prezentaceKlient.kontakt': { cs: 'Vaše kontaktní osoba', en: 'Your contact' },
+  'prezentaceKlient.schvalenoSJmenem': {
+    cs: '✓ Nabídku jste schválili — děkujeme, {jmeno}. Ozveme se vám s termíny.',
+    en: '✓ You have approved the quote — thank you, {jmeno}. We will be in touch about dates.',
+  },
+  'prezentaceKlient.schvaleno': {
+    cs: '✓ Nabídku jste schválili, děkujeme. Ozveme se vám s termíny.',
+    en: '✓ You have approved the quote, thank you. We will be in touch about dates.',
+  },
+  'prezentaceKlient.vaseJmeno': { cs: 'Vaše jméno', en: 'Your name' },
+  'prezentaceKlient.potvrdit': { cs: 'Potvrdit schválení', en: 'Confirm the approval' },
+  'prezentaceKlient.zpet': { cs: 'Zpět', en: 'Back' },
+  'prezentaceKlient.sediVam': {
+    cs: 'Sedí vám to? Schvalte to rovnou tady.',
+    en: 'Happy with it? You can approve it right here.',
+  },
+  'prezentaceKlient.mamZajem': { cs: 'Mám zájem, schvaluji', en: 'Yes please, I approve' },
+  'prezentaceKlient.chybaOdeslani': {
+    cs: 'Nepovedlo se to odeslat. Zkuste to prosím znovu.',
+    en: 'It could not be sent. Please try again.',
+  },
+  'prezentaceKlient.prehrat': { cs: 'Přehrát', en: 'Play' },
+  'prezentaceKlient.zastavit': { cs: 'Zastavit', en: 'Pause' },
+
+  /* Natáčecí pult - veřejná stránka na odkazu, zkušební provoz */
+  'pult.zkusebniProvoz': { cs: 'zkušební provoz', en: 'trial run' },
+  'pult.nadpis': { cs: 'Vstup do natáčení', en: 'Joining the recording session' },
+  'pult.uvod': {
+    cs: 'Napište, jak vás mají ostatní vidět. Kamera a mikrofon se zapnou až po klepnutí.',
+    en: 'Type the name others should see. The camera and microphone only come on once you tap.',
+  },
+  'pult.jmeno': { cs: 'Jméno', en: 'Name' },
+  'pult.vstoupit': { cs: 'Vstoupit do natáčení', en: 'Join the session' },
+  'pult.textKNataceni': { cs: 'Text k natáčení', en: 'Recording script' },
+  'pult.mensiPismo': { cs: 'Menší písmo', en: 'Smaller text' },
+  'pult.vetsiPismo': { cs: 'Větší písmo', en: 'Larger text' },
+  'pult.bezVystupu': {
+    cs: 'Projekt nemá výstupy s textem — doplňte je v záložce Výstupy a stránku načtěte znovu.',
+    en: 'The project has no deliverables with a script — add them on the Deliverables tab and reload the page.',
+  },
+  'pult.bezTextu': { cs: 'Bez textu.', en: 'No script.' },
+  'pult.samotny': {
+    cs: 'Zatím jste tu sám. Pošlete ostatním tento odkaz.',
+    en: 'You are the only one here so far. Send the others this link.',
+  },
+  'pult.ja': { cs: 'Já', en: 'Me' },
+  'pult.ucastnik': { cs: 'Účastník', en: 'Participant' },
+  'pult.spojuji': { cs: 'spojuji…', en: 'connecting…' },
+  'pult.mikrofonZapnuty': { cs: 'Mikrofon zapnutý', en: 'Microphone on' },
+  'pult.mikrofonVypnuty': { cs: 'Mikrofon vypnutý', en: 'Microphone off' },
+  'pult.kameraZapnuta': { cs: 'Kamera zapnutá', en: 'Camera on' },
+  'pult.kameraVypnuta': { cs: 'Kamera vypnutá', en: 'Camera off' },
+  'pult.zvukBezUprav': {
+    cs: 'Zvuk jde bez potlačení echa, redukce šumu a automatické hlasitosti — tedy tak, jak ho pouští mikrofon.',
+    en: 'The audio comes through with no echo cancellation, no noise suppression and no automatic gain — exactly as the microphone sends it.',
+  },
+  'pult.bezPreposilani': {
+    cs: 'Přeposílací server (TURN) není nastavený — na přísnější firemní síti se spojení nemusí navázat.',
+    en: 'The relay server (TURN) is not set up — on a stricter corporate network the connection may not get through.',
+  },
+  'pult.chybaBezPreposilani': {
+    cs: 'Spojení se nepodařilo navázat napřímo a přeposílací server (TURN) není nastavený — na téhle síti to bez něj nepůjde.',
+    en: 'A direct connection could not be made and the relay server (TURN) is not set up — on this network it will not work without one.',
+  },
+  'pult.chybaZnovu': {
+    cs: 'Spojení s jedním z účastníků vypadlo, zkouším ho navázat znovu.',
+    en: 'The connection to one of the participants dropped — reconnecting.',
+  },
+  'pult.chybaKamera': {
+    cs: 'Nepodařilo se zapnout kameru nebo mikrofon. Zkontrolujte povolení v prohlížeči.',
+    en: 'The camera or microphone could not be turned on. Check the permissions in your browser.',
+  },
 };
 
 /**

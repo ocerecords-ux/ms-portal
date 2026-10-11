@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { podkladyNataceciTextu } from '@/lib/nataceniTextServer';
+import { nactiJazyk } from '@/lib/jazykServer';
 import { Pult } from './Pult';
 
 /**
@@ -23,6 +24,7 @@ import { Pult } from './Pult';
 export const dynamic = 'force-dynamic';
 
 export default async function PultNataceni({ params }: { params: { token: string } }) {
+  const jazyk = nactiJazyk();
   const blok = await prisma.studioBlock
     .findUnique({
       where: { pultToken: params.token },
@@ -69,6 +71,7 @@ export default async function PultNataceni({ params }: { params: { token: string
       pasmo={blok.studio?.timezone || 'Europe/Prague'}
       uvod={podklad && podklad.ok ? podklad.vzor.uvod : null}
       spoty={spoty}
+      jazyk={jazyk}
     />
   );
 }

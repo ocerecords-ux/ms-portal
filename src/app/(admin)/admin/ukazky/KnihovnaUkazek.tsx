@@ -14,6 +14,7 @@ import {
   type Sekce,
   type UkazkaData,
 } from '@/lib/prezentaceNabidky';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * SPRÁVA KNIHOVNY UKÁZEK (11. 10. 2026).
@@ -27,6 +28,7 @@ import {
  * a v prezentaci je pak u každé ukázky vidět, do čeho klient jde.
  */
 export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
+  const t = usePreklad();
   const [ukazky, setUkazky] = useState<UkazkaData[]>(pocatecni);
   const [druh, setDruh] = useState<Sekce>(SEKCE.reference);
   const [hledani, setHledani] = useState('');
@@ -46,11 +48,11 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
     for (const soubor of Array.from(soubory)) {
       const typ = typUkazky(soubor);
       if (!typ) {
-        setChyba(`${soubor.name}: tenhle typ souboru jako ukázku nebereme.`);
+        setChyba(t('ukazky.chybaTyp', { nazev: soubor.name }));
         continue;
       }
       if (soubor.size > MAX_UKAZKA_BYTES) {
-        setChyba(`${soubor.name}: soubor je moc velký (nejvýš 60 MB).`);
+        setChyba(t('ukazky.chybaVelikost', { nazev: soubor.name }));
         continue;
       }
 
@@ -67,7 +69,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
           error?: string;
         };
         if (!podpis.ok || !data.uploadUrl || !data.key) {
-          setChyba(data.error || 'Adresu pro nahrání se nepodařilo připravit.');
+          setChyba(data.error || t('ukazky.chybaAdresa'));
           continue;
         }
 
@@ -77,7 +79,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
           body: soubor,
         });
         if (!nahrano.ok) {
-          setChyba(`${soubor.name}: nahrání do úložiště se nepovedlo.`);
+          setChyba(t('ukazky.chybaUloziste', { nazev: soubor.name }));
           continue;
         }
 
@@ -99,13 +101,13 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
           error?: string;
         };
         if (!zapis.ok || !zapsano.ukazka) {
-          setChyba(zapsano.error || 'Ukázku se nepodařilo uložit.');
+          setChyba(zapsano.error || t('ukazky.chybaZapis'));
           continue;
         }
         setUkazky((s) => [zapsano.ukazka as UkazkaData, ...s]);
       } catch (err) {
         console.error('Nahrání ukázky selhalo:', err);
-        setChyba(`${soubor.name}: nahrání se nepovedlo.`);
+        setChyba(t('ukazky.chybaNahrani', { nazev: soubor.name }));
       } finally {
         setNahravam(null);
       }
@@ -122,7 +124,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
     });
     const data = (await res.json().catch(() => ({}))) as { ukazka?: UkazkaData; error?: string };
     if (!res.ok || !data.ukazka) {
-      setChyba(data.error || 'Uložení se nepovedlo.');
+      setChyba(data.error || t('ukazky.neulozeno'));
       return;
     }
     setUkazky((s) => s.map((u) => (u.id === id ? (data.ukazka as UkazkaData) : u)));
@@ -132,8 +134,8 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 flex-wrap">
         {[
-          { kod: SEKCE.reference as Sekce, popisek: 'Naše reference' },
-          { kod: SEKCE.herec as Sekce, popisek: 'Dema herců' },
+          { kod: SEKCE.reference as Sekce, popisek: t('ukazky.sekceReference') },
+          { kod: SEKCE.herec as Sekce, popisek: t('ukazky.sekceHlasy') },
         ].map((z) => (
           <button
             key={z.kod}
@@ -151,18 +153,17 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
         <input
           value={hledani}
           onChange={(e) => setHledani(e.target.value)}
-          placeholder="Hledat v názvu, popisu i štítcích"
+          placeholder={t('ukazky.hledat')}
           className="ml-auto min-w-[220px] flex-1 max-w-sm rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
         />
       </div>
 
       <label className="rounded-card border border-dashed border-line bg-surface p-4 flex flex-col gap-1 cursor-pointer hover:border-brand-purple">
         <span className="font-heading font-semibold text-sm text-ink">
-          {nahravam ? `Nahrávám ${nahravam}…` : 'Nahrát ukázky'}
+          {nahravam ? t('ukazky.nahravam', { nazev: nahravam }) : t('ukazky.nahrat')}
         </span>
         <span className="font-body text-xs text-muted">
-          MP3, M4A, WAV, MP4 nebo MOV, nejvýš 60 MB. Vybrat jich můžete víc najednou; název se dá
-          hned přepsat.
+          {t('ukazky.nahratNapoveda')}
         </span>
         <input
           ref={vstup}
@@ -178,7 +179,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
 
       {videt.length === 0 ? (
         <p className="font-body text-sm text-muted m-0">
-          {hledani ? 'Nic nesedí.' : 'Zatím tu nic není — nahrajte první ukázku.'}
+          {hledani ? t('ukazky.nicNesedi') : t('ukazky.prazdno')}
         </p>
       ) : (
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
@@ -198,6 +199,7 @@ function RadekUkazky({
   ukazka: UkazkaData;
   onUloz: (zmeny: Record<string, unknown>) => void;
 }) {
+  const t = usePreklad();
   const [upravuje, setUpravuje] = useState(false);
   const [nazev, setNazev] = useState(ukazka.nazev);
   const [popis, setPopis] = useState(ukazka.popis ?? '');
@@ -210,20 +212,20 @@ function RadekUkazky({
           <input
             value={nazev}
             onChange={(e) => setNazev(e.target.value)}
-            placeholder="Název — třeba „Kofola — vánoční spot“"
+            placeholder={t('ukazky.poleNazev')}
             className="rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
           />
           <textarea
             value={popis}
             onChange={(e) => setPopis(e.target.value)}
             rows={2}
-            placeholder="Řádek pod názvem — u reference co to bylo, u herce popis hlasu"
+            placeholder={t('ukazky.polePopis')}
             className="rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
           />
           <input
             value={stitky}
             onChange={(e) => setStitky(e.target.value)}
-            placeholder="Štítky po čárce — žena, teplý hlas, reklama"
+            placeholder={t('ukazky.poleStitky')}
             className="rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
           />
           <div className="flex items-center gap-2">
@@ -235,7 +237,7 @@ function RadekUkazky({
               }}
               className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-4 py-1.5 border-0 cursor-pointer"
             >
-              Uložit
+              {t('obecne.ulozit')}
             </button>
             <button
               type="button"
@@ -247,7 +249,7 @@ function RadekUkazky({
               }}
               className="rounded-pill border border-line bg-surface text-muted font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
             >
-              Zrušit
+              {t('obecne.zrusit')}
             </button>
           </div>
         </div>
@@ -282,15 +284,15 @@ function RadekUkazky({
             onClick={() => setUpravuje(true)}
             className="shrink-0 rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
           >
-            Upravit
+            {t('obecne.upravit')}
           </button>
           <button
             type="button"
             onClick={() => onUloz({ aktivni: false })}
-            title="Vyřadit z nabízených. V už odeslaných prezentacích zůstane."
+            title={t('ukazky.vyraditNapoveda')}
             className="shrink-0 rounded-pill border border-line bg-surface text-danger font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
           >
-            Vyřadit
+            {t('ukazky.vyradit')}
           </button>
         </div>
       )}

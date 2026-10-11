@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { delkaSlovy, jeVideo, odkazNaUkazku, type UkazkaData } from '@/lib/prezentaceNabidky';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * PŘEHRÁVAČ UKÁZKY V PREZENTACI (zadání 11. 10. 2026: „tady bych dal MP3
@@ -22,10 +23,13 @@ import { delkaSlovy, jeVideo, odkazNaUkazku, type UkazkaData } from '@/lib/preze
  */
 export function Prehravac({
   ukazka,
+  jazyk,
   hraje,
   onHraje,
 }: {
   ukazka: UkazkaData;
+  /** Veřejná stránka stojí mimo JazykProvider - jazyk chodí propem. */
+  jazyk: Jazyk;
   hraje: boolean;
   onHraje: () => void;
 }) {
@@ -119,7 +123,9 @@ export function Prehravac({
         <button
           type="button"
           onClick={prepni}
-          aria-label={bezi ? 'Zastavit' : 'Přehrát'}
+          aria-label={
+            bezi ? prelozit(jazyk, 'prezentaceKlient.zastavit') : prelozit(jazyk, 'prezentaceKlient.prehrat')
+          }
           className="shrink-0 w-11 h-11 rounded-full bg-brand-green text-black border-0 cursor-pointer flex items-center justify-center transition-transform hover:scale-105"
         >
           {bezi ? (

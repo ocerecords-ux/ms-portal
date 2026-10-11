@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
 import { nactiKnihovnu } from '@/lib/ukazkyServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 import { KnihovnaUkazek } from './KnihovnaUkazek';
 
 /**
@@ -18,6 +20,7 @@ import { KnihovnaUkazek } from './KnihovnaUkazek';
 export const dynamic = 'force-dynamic';
 
 export default async function UkazkyPage() {
+  const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) redirect('/projekty');
 
@@ -26,14 +29,12 @@ export default async function UkazkyPage() {
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin" className="text-muted text-sm font-heading no-underline">
-        ← Administrace
+        ← {prelozit(jazyk, 'obecne.zpetAdministrace')}
       </Link>
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Ukázky do nabídek</h1>
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{prelozit(jazyk, 'ukazky.nadpis')}</h1>
         <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">
-          Reference z minulých projektů a dema herců. Nahrajete je sem jednou; v nabídkové
-          prezentaci u projektu je pak jen zaškrtnete. Vyřazená ukázka se nenabízí, ale
-          v prezentacích, kde už je, zůstane - klient je otevírá i za týden.
+          {prelozit(jazyk, 'ukazky.uvod')}
         </p>
       </div>
       <KnihovnaUkazek pocatecni={ukazky} />

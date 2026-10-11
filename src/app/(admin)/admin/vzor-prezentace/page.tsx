@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
 import { nactiVzorPrezentace } from '@/lib/prezentaceVzor';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 import { VzorPrezentaceEditor } from './VzorPrezentaceEditor';
 
 /**
@@ -20,6 +22,7 @@ import { VzorPrezentaceEditor } from './VzorPrezentaceEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function VzorPrezentacePage() {
+  const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) redirect('/projekty');
 
@@ -28,13 +31,12 @@ export default async function VzorPrezentacePage() {
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin" className="text-muted text-sm font-heading no-underline">
-        ← Administrace
+        ← {prelozit(jazyk, 'obecne.zpetAdministrace')}
       </Link>
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Vzor nabídkové prezentace</h1>
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{prelozit(jazyk, 'vzorPrezentace.nadpis')}</h1>
         <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">
-          Předvyplní se do každé nové prezentace u projektu. Změna se do už hotových prezentací
-          nepropíše — co klient jednou dostal, zůstane, jak to bylo.
+          {prelozit(jazyk, 'vzorPrezentace.uvod')}
         </p>
       </div>
       <VzorPrezentaceEditor

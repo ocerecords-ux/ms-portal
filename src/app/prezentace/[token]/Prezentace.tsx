@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { PrezentaceProKlienta } from '@/lib/prezentaceServer';
+import { formatDatum, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 import { Prehravac } from './Prehravac';
 
 /**
@@ -32,11 +33,16 @@ export function Prezentace({
   token,
   data,
   cenik,
+  jazyk,
 }: {
   token: string;
   data: PrezentaceProKlienta;
   cenik: Cenik | null;
+  /** Veřejná stránka stojí mimo JazykProvider - jazyk chodí propem. */
+  jazyk: Jazyk;
 }) {
+  const t = (klic: string, hodnoty?: Record<string, string | number>) =>
+    hodnoty ? prelozitS(jazyk, klic, hodnoty) : prelozit(jazyk, klic);
   const [hraje, setHraje] = useState<string | null>(null);
   const [vybrany, setVybrany] = useState<string | null>(data.vybranyHerecId);
   const [schvaleno, setSchvaleno] = useState<string | null>(data.schvalenoAt);
@@ -56,12 +62,12 @@ export function Prezentace({
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        setChyba(d.error || 'Nepovedlo se to odeslat. Zkuste to prosím znovu.');
+        setChyba(d.error || t('prezentaceKlient.chybaOdeslani'));
         return false;
       }
       return true;
     } catch {
-      setChyba('Nepovedlo se to odeslat. Zkuste to prosím znovu.');
+      setChyba(t('prezentaceKlient.chybaOdeslani'));
       return false;
     } finally {
       setPracuje(false);
@@ -82,11 +88,15 @@ export function Prezentace({
 
   /** Sekce se číslují podle toho, které jsou vyplněné - ne napevno. */
   const sekce: { klic: string; nazev: string }[] = [
-    data.reference.length > 0 ? { klic: 'reference', nazev: 'Naše reference' } : null,
-    data.navrhReseni?.trim() ? { klic: 'navrh', nazev: 'Návrh řešení' } : null,
-    data.herci.length > 0 ? { klic: 'herci', nazev: 'Nabídka hlasů' } : null,
-    cenik ? { klic: 'cena', nazev: 'Cenová nabídka' } : null,
-    data.podminky?.trim() ? { klic: 'podminky', nazev: 'Podmínky spolupráce' } : null,
+    data.reference.length > 0
+      ? { klic: 'reference', nazev: t('prezentaceKlient.reference') }
+      : null,
+    data.navrhReseni?.trim() ? { klic: 'navrh', nazev: t('prezentaceKlient.navrh') } : null,
+    data.herci.length > 0 ? { klic: 'herci', nazev: t('prezentaceKlient.hlasy') } : null,
+    cenik ? { klic: 'cena', nazev: t('prezentaceKlient.cena') } : null,
+    data.podminky?.trim()
+      ? { klic: 'podminky', nazev: t('prezentaceKlient.podminky') }
+      : null,
   ].filter(Boolean) as { klic: string; nazev: string }[];
 
   const cislo = (klic: string) => sekce.findIndex((s) => s.klic === klic) + 1;
@@ -104,14 +114,14 @@ export function Prezentace({
 
           <div className="flex flex-col gap-3">
             <span className="inline-flex self-start items-center gap-2 rounded-pill bg-white/15 text-white font-heading font-semibold text-[11px] uppercase tracking-wider px-3 py-1">
-              Cenová nabídka
+              {t('prezentaceKlient.znacka')}
             </span>
             <h1 className="font-display text-4xl sm:text-6xl text-white m-0 leading-[1.05]">
               {data.nadpis}
             </h1>
             {data.klientNazev && (
               <p className="font-heading text-white/80 text-lg sm:text-xl m-0">
-                pro {data.klientNazev}
+                {t('prezentaceKlient.pro', { klient: data.klientNazev })}
               </p>
             )}
             {data.podtitul?.trim() && (
@@ -141,11 +151,21 @@ export function Prezentace({
 
       <div className="max-w-4xl mx-auto px-6 sm:px-10 py-12 sm:py-16 flex flex-col gap-14 sm:gap-20 pb-40">
         {data.reference.length > 0 && (
-          <Sekce id="reference" cislo={cislo('reference')} nazev="Naše reference" popis="Poslechněte si, co jsme dělali jinde.">
+          <Sekce
+            id="reference"
+            cislo={cislo('reference')}
+            nazev={t('prezentaceKlient.reference')}
+            popis={t('prezentaceKlient.referencePopis')}
+          >
             <div className="flex flex-col gap-3">
               {data.reference.map((u) => (
                 <Karta key={u.id}>
-                  <Prehravac ukazka={u} hraje={hraje === u.id} onHraje={() => setHraje(u.id)} />
+                  <Prehravac
+                    ukazka={u}
+                    jazyk={jazyk}
+                    hraje={hraje === u.id}
+                    onHraje={() => setHraje(u.id)}
+                  />
                 </Karta>
               ))}
             </div>
@@ -153,7 +173,7 @@ export function Prezentace({
         )}
 
         {data.navrhReseni?.trim() && (
-          <Sekce id="navrh" cislo={cislo('navrh')} nazev="Návrh řešení">
+          <Sekce id="navrh" cislo={cislo('navrh')} nazev={t('prezentaceKlient.navrh')}>
             <Proza text={data.navrhReseni} />
           </Sekce>
         )}
@@ -162,17 +182,22 @@ export function Prezentace({
           <Sekce
             id="herci"
             cislo={cislo('herci')}
-            nazev="Nabídka hlasů"
+            nazev={t('prezentaceKlient.hlasy')}
             popis={
               data.lzeSchvalit
-                ? 'Poslechněte si je a klepněte na ten, který vám sedí — rovnou se nám to ozve.'
-                : 'Poslechněte si je a dejte nám vědět, který vám sedí.'
+                ? t('prezentaceKlient.hlasyPopisVyber')
+                : t('prezentaceKlient.hlasyPopis')
             }
           >
             <div className="flex flex-col gap-3">
               {data.herci.map((u) => (
                 <Karta key={u.id} zvyrazneno={vybrany === u.id}>
-                  <Prehravac ukazka={u} hraje={hraje === u.id} onHraje={() => setHraje(u.id)} />
+                  <Prehravac
+                    ukazka={u}
+                    jazyk={jazyk}
+                    hraje={hraje === u.id}
+                    onHraje={() => setHraje(u.id)}
+                  />
                   {data.lzeSchvalit && (
                     <button
                       type="button"
@@ -184,7 +209,9 @@ export function Prezentace({
                           : 'bg-surface text-ink border-line hover:border-brand-purple'
                       }`}
                     >
-                      {vybrany === u.id ? '✓ Tenhle hlas chceme' : 'Vybrat tenhle hlas'}
+                      {vybrany === u.id
+                        ? t('prezentaceKlient.hlasVybran')
+                        : t('prezentaceKlient.vybratHlas')}
                     </button>
                   )}
                 </Karta>
@@ -197,7 +224,7 @@ export function Prezentace({
           <Sekce
             id="cena"
             cislo={cislo('cena')}
-            nazev="Cenová nabídka"
+            nazev={t('prezentaceKlient.cena')}
             popis={cenik.predmet || undefined}
           >
             <div className="rounded-card border border-line bg-surface overflow-hidden">
@@ -226,16 +253,18 @@ export function Prezentace({
               <div className="bg-field px-4 sm:px-6 py-4 flex flex-col gap-1.5">
                 {cenik.sleva && (
                   <Radek
-                    popisek={cenik.slevaPopis || 'Sleva'}
+                    popisek={cenik.slevaPopis || t('prezentaceKlient.sleva')}
                     hodnota={`− ${cenik.sleva}`}
                     zelena
                   />
                 )}
-                <Radek popisek="Bez DPH" hodnota={cenik.bezDph} />
-                <Radek popisek="DPH" hodnota={cenik.dph} />
+                <Radek popisek={t('prezentaceKlient.bezDph')} hodnota={cenik.bezDph} />
+                <Radek popisek={t('prezentaceKlient.dph')} hodnota={cenik.dph} />
                 <div className="h-px bg-line my-1" />
                 <div className="flex items-baseline justify-between gap-4">
-                  <span className="font-heading font-semibold text-ink text-base">Celkem s DPH</span>
+                  <span className="font-heading font-semibold text-ink text-base">
+                    {t('prezentaceKlient.celkem')}
+                  </span>
                   <span className="font-display text-2xl sm:text-3xl text-ink tabular-nums">
                     {cenik.celkem}
                   </span>
@@ -244,14 +273,17 @@ export function Prezentace({
             </div>
 
             <p className="font-body text-xs text-muted m-0 mt-2">
-              Nabídka č. {cenik.cislo}
-              {cenik.platiDo && ` · platí do ${new Date(cenik.platiDo).toLocaleDateString('cs-CZ')}`}
+              {t('prezentaceKlient.cisloNabidky', { cislo: cenik.cislo })}
+              {cenik.platiDo &&
+                ` · ${t('prezentaceKlient.platiDo', {
+                  datum: formatDatum(jazyk, new Date(cenik.platiDo), ''),
+                })}`}
             </p>
           </Sekce>
         )}
 
         {data.podminky?.trim() && (
-          <Sekce id="podminky" cislo={cislo('podminky')} nazev="Podmínky spolupráce">
+          <Sekce id="podminky" cislo={cislo('podminky')} nazev={t('prezentaceKlient.podminky')}>
             <Proza text={data.podminky} />
           </Sekce>
         )}
@@ -261,7 +293,7 @@ export function Prezentace({
         {data.manazer?.jmeno && (
           <div className="rounded-card border border-line bg-surface p-5 sm:p-6 flex flex-col gap-1">
             <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-              Vaše kontaktní osoba
+              {t('prezentaceKlient.kontakt')}
             </span>
             <p className="font-heading font-semibold text-ink text-lg m-0">{data.manazer.jmeno}</p>
             <div className="flex items-center gap-4 flex-wrap font-body text-sm">
@@ -286,7 +318,9 @@ export function Prezentace({
           <div className="max-w-4xl mx-auto px-6 sm:px-10 py-3 flex items-center gap-3 flex-wrap">
             {schvaleno ? (
               <p className="m-0 font-heading font-semibold text-sm text-brand-greenDeep">
-                ✓ Nabídku jste schválili{jmeno.trim() ? ` — děkujeme, ${jmeno.trim()}` : ', děkujeme'}. Ozveme se vám s termíny.
+                {jmeno.trim()
+                  ? t('prezentaceKlient.schvalenoSJmenem', { jmeno: jmeno.trim() })
+                  : t('prezentaceKlient.schvaleno')}
               </p>
             ) : ptaSeNaJmeno ? (
               <>
@@ -294,7 +328,7 @@ export function Prezentace({
                   value={jmeno}
                   autoFocus
                   onChange={(e) => setJmeno(e.target.value)}
-                  placeholder="Vaše jméno"
+                  placeholder={t('prezentaceKlient.vaseJmeno')}
                   className="min-w-0 flex-1 max-w-xs rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
                 />
                 <button
@@ -303,27 +337,27 @@ export function Prezentace({
                   disabled={pracuje}
                   className="rounded-pill bg-brand-green text-black font-heading font-semibold text-sm px-5 py-2.5 border-0 cursor-pointer disabled:opacity-50"
                 >
-                  Potvrdit schválení
+                  {t('prezentaceKlient.potvrdit')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPtaSeNaJmeno(false)}
                   className="rounded-pill border border-line bg-surface text-muted font-heading font-semibold text-sm px-4 py-2 cursor-pointer"
                 >
-                  Zpět
+                  {t('prezentaceKlient.zpet')}
                 </button>
               </>
             ) : (
               <>
                 <span className="font-body text-sm text-muted">
-                  Sedí vám to? Schvalte to rovnou tady.
+                  {t('prezentaceKlient.sediVam')}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPtaSeNaJmeno(true)}
                   className="ml-auto rounded-pill bg-brand-green text-black font-heading font-semibold text-sm px-5 py-2.5 border-0 cursor-pointer transition-transform hover:scale-[1.02]"
                 >
-                  Mám zájem, schvaluji
+                  {t('prezentaceKlient.mamZajem')}
                 </button>
               </>
             )}

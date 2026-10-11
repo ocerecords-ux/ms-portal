@@ -11,6 +11,7 @@ import {
   zacinamJa,
   type ZpravaPultu,
 } from '@/lib/pultNataceni';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * PULT - TEXT VLEVO, LIDI VPRAVO (zadání 11. 10. 2026).
@@ -49,6 +50,7 @@ export function Pult({
   pasmo,
   uvod,
   spoty,
+  jazyk,
 }: {
   token: string;
   nazevProjektu: string;
@@ -59,7 +61,10 @@ export function Pult({
   pasmo: string;
   uvod: string | null;
   spoty: Spot[];
+  /** Veřejná stránka stojí mimo JazykProvider - jazyk chodí propem. */
+  jazyk: Jazyk;
 }) {
+  const t = useCallback((klic: string) => prelozit(jazyk, klic), [jazyk]);
   const [jmeno, setJmeno] = useState('');
   const [uvnitr, setUvnitr] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -146,16 +151,14 @@ export function Pult({
         if (pc.iceConnectionState === 'failed') {
           pc.restartIce();
           setChyba(
-            preposilani === false
-              ? 'Spojení se nepodařilo navázat napřímo a přeposílací server (TURN) není nastavený — na téhle síti to bez něj nepůjde.'
-              : 'Spojení s jedním z účastníků vypadlo, zkouším ho navázat znovu.',
+            preposilani === false ? t('pult.chybaBezPreposilani') : t('pult.chybaZnovu'),
           );
         }
       };
 
       return pc;
     },
-    [posli, preposilani],
+    [posli, preposilani, t],
   );
 
   const nabidni = useCallback(
@@ -200,7 +203,10 @@ export function Pult({
               : u,
           );
         }
-        return [...p, { id: kdo, jmeno: z.jmeno || 'Účastník', stream: null, naposledy: Date.now() }];
+        return [
+          ...p,
+          { id: kdo, jmeno: z.jmeno || t('pult.ucastnik'), stream: null, naposledy: Date.now() },
+        ];
       });
 
       if (z.druh === 'ahoj') {
@@ -246,7 +252,7 @@ export function Pult({
         await pc.addIceCandidate(cesta).catch(() => null);
       }
     },
-    [dosypCesty, ja, nabidni, posli, spojeniS],
+    [dosypCesty, ja, nabidni, posli, spojeniS, t],
   );
 
   /** Vstup do místnosti: kamera, mikrofon, ohlášení a chození pro zprávy. */
@@ -283,7 +289,7 @@ export function Pult({
       await posli('ahoj', null);
     } catch (err) {
       console.error('Kameru nebo mikrofon se nepodařilo zapnout:', err);
-      setChyba('Nepodařilo se zapnout kameru nebo mikrofon. Zkontrolujte povolení v prohlížeči.');
+      setChyba(t('pult.chybaKamera'));
     }
   }
 
@@ -386,20 +392,20 @@ export function Pult({
 
   const kdy = useMemo(() => {
     const f = (d: Date) =>
-      new Intl.DateTimeFormat('cs-CZ', {
+      new Intl.DateTimeFormat(kodJazyka(jazyk), {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
         timeZone: pasmo,
       }).format(d);
-    const den = new Intl.DateTimeFormat('cs-CZ', {
+    const den = new Intl.DateTimeFormat(kodJazyka(jazyk), {
       weekday: 'long',
       day: 'numeric',
       month: 'numeric',
       timeZone: pasmo,
     }).format(new Date(zacatek));
     return `${den}, ${f(new Date(zacatek))}–${f(new Date(konec))}`;
-  }, [konec, pasmo, zacatek]);
+  }, [jazyk, konec, pasmo, zacatek]);
 
   return (
     <main className="min-h-screen bg-paper flex flex-col">
@@ -416,7 +422,7 @@ export function Pult({
           </p>
         </div>
         <span className="ml-auto rounded-pill bg-white/15 text-white font-heading font-semibold text-[11px] px-3 py-1">
-          zkušební provoz
+          {t('pult.zkusebniProvoz')}
         </span>
       </header>
       <div className="h-1 bg-brand-green" aria-hidden="true" />
@@ -429,9 +435,9 @@ export function Pult({
         /* NEJDŘÍV JMÉNO, PAK KAMERA. Ostatní v dlaždicích uvidí jméno, ne „Účastník". */
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-sm flex flex-col gap-3 rounded-card border border-line bg-surface p-6">
-            <h1 className="font-display text-2xl text-ink m-0">Vstup do natáčení</h1>
+            <h1 className="font-display text-2xl text-ink m-0">{t('pult.nadpis')}</h1>
             <p className="font-body text-sm text-muted m-0">
-              Napište, jak vás mají ostatní vidět. Kamera a mikrofon se zapnou až po klepnutí.
+              {t('pult.uvod')}
             </p>
             <input
               value={jmeno}
@@ -439,7 +445,7 @@ export function Pult({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && jmeno.trim()) void vstup();
               }}
-              placeholder="Jméno"
+              placeholder={t('pult.jmeno')}
               className="w-full rounded-card border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
             />
             <button
@@ -448,7 +454,7 @@ export function Pult({
               disabled={!jmeno.trim()}
               className="rounded-pill bg-brand-green text-black font-heading font-semibold text-sm px-5 py-2.5 border-0 cursor-pointer disabled:opacity-40"
             >
-              Vstoupit do natáčení
+              {t('pult.vstoupit')}
             </button>
           </div>
         </div>
@@ -458,14 +464,14 @@ export function Pult({
           <section className="min-h-0 overflow-y-auto p-4 sm:p-8 flex flex-col gap-5 border-b lg:border-b-0 lg:border-r border-line">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-                Text k natáčení
+                {t('pult.textKNataceni')}
               </span>
               {/* Velikost písma: ve studiu se čte z dálky, na notebooku zblízka. */}
               <div className="ml-auto flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setVelikostTextu((v) => Math.max(13, v - 1))}
-                  aria-label="Menší písmo"
+                  aria-label={t('pult.mensiPismo')}
                   className="rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs w-7 h-7 cursor-pointer"
                 >
                   A-
@@ -473,7 +479,7 @@ export function Pult({
                 <button
                   type="button"
                   onClick={() => setVelikostTextu((v) => Math.min(30, v + 1))}
-                  aria-label="Větší písmo"
+                  aria-label={t('pult.vetsiPismo')}
                   className="rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs w-7 h-7 cursor-pointer"
                 >
                   A+
@@ -489,7 +495,7 @@ export function Pult({
 
             {spoty.length === 0 ? (
               <p className="font-body text-sm text-muted m-0">
-                Projekt nemá výstupy s textem — doplňte je v záložce Výstupy a stránku načtěte znovu.
+                {t('pult.bezVystupu')}
               </p>
             ) : (
               spoty.map((s, i) => (
@@ -506,7 +512,7 @@ export function Pult({
                       {s.text}
                     </p>
                   ) : (
-                    <p className="font-body text-sm text-muted m-0">Bez textu.</p>
+                    <p className="font-body text-sm text-muted m-0">{t('pult.bezTextu')}</p>
                   )}
                 </article>
               ))
@@ -518,11 +524,11 @@ export function Pult({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               {ucastnici.length === 0 && (
                 <p className="font-body text-sm text-muted m-0">
-                  Zatím jste tu sám. Pošlete ostatním tento odkaz.
+                  {t('pult.samotny')}
                 </p>
               )}
               {ucastnici.map((u) => (
-                <Dlazdice key={u.id} jmeno={u.jmeno} stream={u.stream} />
+                <Dlazdice key={u.id} jmeno={u.jmeno} stream={u.stream} jazyk={jazyk} />
               ))}
             </div>
 
@@ -536,7 +542,7 @@ export function Pult({
                   className="w-full h-full object-cover"
                 />
                 <span className="absolute bottom-1 left-1 rounded-pill bg-black/60 text-white font-heading text-[10px] px-2 py-0.5">
-                  {jmeno || 'Já'}
+                  {jmeno || t('pult.ja')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -549,7 +555,7 @@ export function Pult({
                       : 'bg-surface text-danger border-danger'
                   }`}
                 >
-                  {mikrofon ? 'Mikrofon zapnutý' : 'Mikrofon vypnutý'}
+                  {mikrofon ? t('pult.mikrofonZapnuty') : t('pult.mikrofonVypnuty')}
                 </button>
                 <button
                   type="button"
@@ -560,21 +566,19 @@ export function Pult({
                       : 'bg-surface text-danger border-danger'
                   }`}
                 >
-                  {kamera ? 'Kamera zapnutá' : 'Kamera vypnutá'}
+                  {kamera ? t('pult.kameraZapnuta') : t('pult.kameraVypnuta')}
                 </button>
               </div>
               {/* Proč to stavíme: zvuk bez úprav prohlížeče, což Meet nedovolí. */}
               <p className="font-body text-[11px] text-muted m-0">
-                Zvuk jde bez potlačení echa, redukce šumu a automatické hlasitosti — tedy tak, jak
-                ho pouští mikrofon.
+                {t('pult.zvukBezUprav')}
               </p>
               {/* ZDA MÁME PŘEPOSÍLÁNÍ (11. 10. 2026). Napsané rovnou, ne až
                   v chybě: kdo ví, že přeposílací server chybí, hledá příčinu
                   v síti a ne v kameře. */}
               {preposilani === false && (
                 <p className="font-body text-[11px] text-muted m-0">
-                  Přeposílací server (TURN) není nastavený — na přísnější firemní síti se spojení
-                  nemusí navázat.
+                  {t('pult.bezPreposilani')}
                 </p>
               )}
             </div>
@@ -586,7 +590,15 @@ export function Pult({
 }
 
 /** Jedna dlaždice účastníka. Stream se přiřazuje přes ref, ne v JSX. */
-function Dlazdice({ jmeno, stream }: { jmeno: string; stream: MediaStream | null }) {
+function Dlazdice({
+  jmeno,
+  stream,
+  jazyk,
+}: {
+  jmeno: string;
+  stream: MediaStream | null;
+  jazyk: Jazyk;
+}) {
   const video = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (video.current && video.current.srcObject !== stream) {
@@ -599,7 +611,7 @@ function Dlazdice({ jmeno, stream }: { jmeno: string; stream: MediaStream | null
       <video ref={video} autoPlay playsInline className="w-full h-full object-cover" />
       {!stream && (
         <span className="absolute inset-0 flex items-center justify-center font-body text-xs text-white/60">
-          spojuji…
+          {prelozit(jazyk, 'pult.spojuji')}
         </span>
       )}
       <span className="absolute bottom-1 left-1 rounded-pill bg-black/60 text-white font-heading text-[10px] px-2 py-0.5">

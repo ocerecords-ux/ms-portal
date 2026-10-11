@@ -9,6 +9,8 @@ import {
   odkazNaUkazku,
   type UkazkaData,
 } from '@/lib/prezentaceNabidky';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
+import { formatDatumCas } from '@/lib/jazyk';
 
 /**
  * SESTAVENÍ NABÍDKOVÉ PREZENTACE (zadání 11. 10. 2026: „asi bych to chtěl
@@ -62,6 +64,7 @@ export function PrezentaceSection({
   nabidky: { id: string; cislo: string; predmet: string | null }[];
   zakladAdresy: string;
 }) {
+  const t = usePreklad();
   const [radky, setRadky] = useState<PrezentaceRadek[]>(pocatecni);
   const [otevrena, setOtevrena] = useState<PrezentaceDetail | null>(null);
   const [pracuje, setPracuje] = useState(false);
@@ -80,7 +83,7 @@ export function PrezentaceSection({
     };
     setPracuje(false);
     if (!res.ok || !data.id) {
-      setChyba(data.error || 'Prezentaci se nepodařilo založit.');
+      setChyba(data.error || t('prezentace.chybaZalozit'));
       return;
     }
     setRadky(data.prezentace ?? radky);
@@ -95,7 +98,7 @@ export function PrezentaceSection({
       error?: string;
     };
     if (!res.ok || !data.prezentace) {
-      setChyba(data.error || 'Prezentaci se nepodařilo načíst.');
+      setChyba(data.error || t('prezentace.chybaNacist'));
       return;
     }
     setOtevrena(data.prezentace);
@@ -115,7 +118,7 @@ export function PrezentaceSection({
     };
     setPracuje(false);
     if (!res.ok || !data.prezentace) {
-      setChyba(data.error || 'Uložení se nepovedlo.');
+      setChyba(data.error || t('prezentace.neulozeno'));
       return;
     }
     setOtevrena(data.prezentace);
@@ -127,7 +130,7 @@ export function PrezentaceSection({
     const res = await fetch(`${zaklad}/${encodeURIComponent(id)}`, { method: 'DELETE' });
     setPracuje(false);
     if (!res.ok) {
-      setChyba('Smazání se nepovedlo.');
+      setChyba(t('prezentace.nesmazano'));
       return;
     }
     setRadky((s) => s.filter((r) => r.id !== id));
@@ -154,9 +157,7 @@ export function PrezentaceSection({
     <div className="flex flex-col gap-4">
       <div className="flex items-start gap-3 flex-wrap">
         <p className="font-body text-sm text-muted m-0 max-w-[62ch]">
-          Obrandovaná nabídka na jednom odkazu: reference k poslechu, návrh řešení, hlasy herců,
-          ceny z dokladu a podmínky spolupráce. Klient ji otevře bez přihlašování a může rovnou
-          schválit i vybrat hlas.
+          {t('prezentace.uvod')}
         </p>
         <button
           type="button"
@@ -164,14 +165,14 @@ export function PrezentaceSection({
           disabled={pracuje}
           className="ml-auto shrink-0 rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-4 py-2 border-0 cursor-pointer disabled:opacity-50"
         >
-          Nová prezentace
+          {t('prezentace.nova')}
         </button>
       </div>
 
       {chyba && <p className="m-0 font-body text-sm text-danger">{chyba}</p>}
 
       {radky.length === 0 ? (
-        <p className="font-body text-sm text-muted m-0">Zatím tu žádná není.</p>
+        <p className="font-body text-sm text-muted m-0">{t('prezentace.zadna')}</p>
       ) : (
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
           {radky.map((r) => (
@@ -181,35 +182,39 @@ export function PrezentaceSection({
             >
               <div className="min-w-0 flex-1">
                 <p className="font-heading font-semibold text-sm text-ink m-0">
-                  {r.nadpis?.trim() || 'Bez názvu'}
+                  {r.nadpis?.trim() || t('projekt.bezNazvu')}
                   {!r.zverejneno && (
                     <span className="ml-2 rounded-pill bg-warnTint text-status-progress px-2 py-0.5 text-[11px]">
-                      rozdělaná
+                      {t('prezentace.rozdelana')}
                     </span>
                   )}
                   {r.schvalenoAt && (
                     <span className="ml-2 rounded-pill bg-brand-green/20 text-brand-greenDeep px-2 py-0.5 text-[11px]">
-                      schváleno
+                      {t('prezentace.schvalena')}
                     </span>
                   )}
                   {r.odmitnutoAt && !r.schvalenoAt && (
                     <span className="ml-2 rounded-pill bg-dangerTint text-danger px-2 py-0.5 text-[11px]">
-                      odmítnuto
+                      {t('prezentace.odmitnuta')}
                     </span>
                   )}
                 </p>
                 <p className="font-body text-xs text-muted m-0 mt-0.5">
                   {[
                     r.klientNazev || null,
-                    r.offerCislo ? `nabídka ${r.offerCislo}` : 'bez cen',
-                    `${r.pocetReferenci} referencí`,
-                    `${r.pocetHercu} hlasů`,
+                    r.offerCislo
+                      ? t('prezentace.sNabidkou', { cislo: r.offerCislo })
+                      : t('prezentace.bezCen'),
+                    t('prezentace.pocetReferenci', { pocet: r.pocetReferenci }),
+                    t('prezentace.pocetHlasu', { pocet: r.pocetHercu }),
                     r.pocetOtevreni > 0
-                      ? `otevřeno ${r.pocetOtevreni}×`
+                      ? t('prezentace.otevreno', { pocet: r.pocetOtevreni })
                       : r.zverejneno
-                        ? 'klient zatím neotevřel'
+                        ? t('prezentace.neotevreno')
                         : null,
-                    r.vybranyHerec ? `vybrán hlas: ${r.vybranyHerec}` : null,
+                    r.vybranyHerec
+                      ? t('prezentace.vybranyHlas', { jmeno: r.vybranyHerec })
+                      : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -220,7 +225,7 @@ export function PrezentaceSection({
                 onClick={() => void otevri(r.id)}
                 className="shrink-0 rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
               >
-                Otevřít
+                {t('obecne.otevrit')}
               </button>
             </li>
           ))}
@@ -251,6 +256,8 @@ function Editor({
   onSmaz: () => void;
   onZpet: () => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [nadpis, setNadpis] = useState(prezentace.nadpis ?? '');
   const [klient, setKlient] = useState(prezentace.klientNazev);
   const [podtitul, setPodtitul] = useState(prezentace.podtitul ?? '');
@@ -266,7 +273,7 @@ function Editor({
           onClick={onZpet}
           className="rounded-pill border border-line bg-surface text-muted font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
         >
-          ← Zpět na seznam
+          ← {t('prezentace.zpetNaSeznam')}
         </button>
         <button
           type="button"
@@ -278,7 +285,7 @@ function Editor({
               : 'bg-brand-green text-black border-transparent'
           }`}
         >
-          {prezentace.zverejneno ? 'Stáhnout z oběhu' : 'Zveřejnit'}
+          {prezentace.zverejneno ? t('prezentace.stahnoutZObehu') : t('prezentace.zverejnit')}
         </button>
       </div>
 
@@ -288,7 +295,7 @@ function Editor({
           a napsané proč - ať se neodešle rozdělaná nabídka. */}
       <div className="rounded-card border border-line bg-field p-3 flex flex-col gap-1">
         <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-          Odkaz pro klienta
+          {t('prezentace.odkazProKlienta')}
         </span>
         <div className="flex items-center gap-2 flex-wrap">
           <a
@@ -304,28 +311,33 @@ function Editor({
             onClick={() => void navigator.clipboard?.writeText(odkaz)}
             className="shrink-0 rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
           >
-            Zkopírovat
+            {t('prezentace.zkopirovat')}
           </button>
         </div>
         {!prezentace.zverejneno && (
           <span className="font-body text-[11px] text-muted">
-            Zatím nezveřejněná — komu odkaz pošlete, uvidí „nenalezeno“.
+            {t('prezentace.nezverejnena')}
           </span>
         )}
         {prezentace.schvalenoAt && (
           <span className="font-body text-[11px] text-brand-greenDeep">
-            Schváleno {new Date(prezentace.schvalenoAt).toLocaleString('cs-CZ')}
+            {t('prezentace.schvalenoKdy', {
+              kdy: formatDatumCas(jazyk, new Date(prezentace.schvalenoAt), ''),
+            })}
             {prezentace.schvalilJmeno ? ` — ${prezentace.schvalilJmeno}` : ''}
           </span>
         )}
         {prezentace.vybranyHerec && (
           <span className="font-body text-[11px] text-ink">
-            Klient vybral hlas: <strong>{prezentace.vybranyHerec}</strong>
+            {t('prezentace.klientVybralHlas')} <strong>{prezentace.vybranyHerec}</strong>
           </span>
         )}
       </div>
 
-      <Pole popisek="Název na prezentaci" napoveda="Prázdné = název projektu.">
+      <Pole
+        popisek={t('prezentace.poleNadpis')}
+        napoveda={t('prezentace.poleNadpisNapoveda')}
+      >
         <input
           value={nadpis}
           onChange={(e) => setNadpis(e.target.value)}
@@ -334,7 +346,7 @@ function Editor({
         />
       </Pole>
 
-      <Pole popisek="Klient" napoveda="Jak se má jmenovat v hlavičce — „pro …“.">
+      <Pole popisek={t('prezentace.poleKlient')} napoveda={t('prezentace.poleKlientNapoveda')}>
         <input
           value={klient}
           onChange={(e) => setKlient(e.target.value)}
@@ -343,7 +355,7 @@ function Editor({
         />
       </Pole>
 
-      <Pole popisek="Úvodní věta" napoveda="Pod nadpisem. Jedna dvě věty, o co jde.">
+      <Pole popisek={t('prezentace.poleUvod')} napoveda={t('prezentace.poleUvodNapoveda')}>
         <textarea
           value={podtitul}
           rows={2}
@@ -354,16 +366,16 @@ function Editor({
       </Pole>
 
       <VyberUkazek
-        nazev="Naše reference"
-        napoveda="Ukázky z minulých projektů. Spravují se v Administraci → Ukázky do nabídek."
+        nazev={t('prezentace.reference')}
+        napoveda={t('prezentace.referenceNapoveda')}
         knihovna={knihovna.filter((u) => u.druh === SEKCE.reference)}
         vybrane={prezentace.vybrane[SEKCE.reference] ?? []}
         onZmena={(ids) => onUloz({ reference: ids })}
       />
 
       <Pole
-        popisek="Návrh řešení"
-        napoveda="Odstavce oddělte prázdným řádkem; řádek začínající pomlčkou se vykreslí jako odrážka."
+        popisek={t('prezentace.navrh')}
+        napoveda={t('prezentace.navrhNapoveda')}
       >
         <textarea
           value={navrh}
@@ -375,23 +387,23 @@ function Editor({
       </Pole>
 
       <VyberUkazek
-        nazev="Nabídka hlasů"
-        napoveda="Dema herců. Klient si může jeden vybrat a přijde vám o tom oznámení."
+        nazev={t('prezentace.hlasy')}
+        napoveda={t('prezentace.hlasyNapoveda')}
         knihovna={knihovna.filter((u) => u.druh === SEKCE.herec)}
         vybrane={prezentace.vybrane[SEKCE.herec] ?? []}
         onZmena={(ids) => onUloz({ herci: ids })}
       />
 
       <Pole
-        popisek="Cenová nabídka"
-        napoveda="Položky se berou z dokladu u projektu — když ho opravíte, opraví se i prezentace."
+        popisek={t('prezentace.cena')}
+        napoveda={t('prezentace.cenaNapoveda')}
       >
         <select
           value={prezentace.offerId ?? ''}
           onChange={(e) => onUloz({ offerId: e.target.value || null })}
           className={VSTUP}
         >
-          <option value="">Bez cen</option>
+          <option value="">{t('prezentace.bezCenVolba')}</option>
           {nabidky.map((n) => (
             <option key={n.id} value={n.id}>
               {n.cislo}
@@ -401,12 +413,12 @@ function Editor({
         </select>
         {nabidky.length === 0 && (
           <span className="font-body text-[11px] text-muted">
-            U projektu zatím žádná nabídka není — založte ji v Dokladech.
+            {t('prezentace.zadnaNabidka')}
           </span>
         )}
       </Pole>
 
-      <Pole popisek="Podmínky spolupráce" napoveda="Licence, termíny dodání, platba. Předvyplněné ze vzoru.">
+      <Pole popisek={t('prezentace.podminky')} napoveda={t('prezentace.podminkyNapoveda')}>
         <textarea
           value={podminky}
           rows={8}
@@ -424,9 +436,9 @@ function Editor({
           className="mt-0.5"
         />
         <span className="text-sm font-body text-ink">
-          Klient může schválit a vybrat hlas přímo z prezentace
+          {t('prezentace.lzeSchvalit')}
           <span className="block text-xs text-muted">
-            Schválení se propíše i do dokladu a přijde vám oznámení.
+            {t('prezentace.lzeSchvalitNapoveda')}
           </span>
         </span>
       </label>
@@ -437,7 +449,7 @@ function Editor({
         disabled={pracuje}
         className="self-start text-sm font-heading font-semibold text-danger bg-transparent border-0 cursor-pointer disabled:opacity-50"
       >
-        Smazat prezentaci
+        {t('prezentace.smazat')}
       </button>
     </div>
   );
@@ -482,6 +494,7 @@ function VyberUkazek({
   vybrane: string[];
   onZmena: (ids: string[]) => void;
 }) {
+  const t = usePreklad();
   const [hledani, setHledani] = useState('');
   const videt = useMemo(
     () => knihovna.filter((u) => hledaniSedi(u, hledani)),
@@ -501,14 +514,14 @@ function VyberUkazek({
 
       {knihovna.length === 0 ? (
         <p className="font-body text-sm text-muted m-0">
-          Knihovna je zatím prázdná — nahrajte ukázky v Administraci.
+          {t('prezentace.knihovnaPrazdna')}
         </p>
       ) : (
         <>
           <input
             value={hledani}
             onChange={(e) => setHledani(e.target.value)}
-            placeholder="Hledat v knihovně"
+            placeholder={t('prezentace.hledatVKnihovne')}
             className={VSTUP}
           />
           <ul className="list-none p-0 m-0 flex flex-col gap-1.5 max-h-80 overflow-y-auto">

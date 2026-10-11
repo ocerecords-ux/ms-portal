@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /** Editor vzoru. Dvě pole a jedno tlačítko - víc tu k rozhodování není. */
 export function VzorPrezentaceEditor({
@@ -10,6 +11,7 @@ export function VzorPrezentaceEditor({
   navrhReseni: string;
   podminky: string;
 }) {
+  const t = usePreklad();
   const [navrh, setNavrh] = useState(navrhReseni);
   const [pod, setPod] = useState(podminky);
   const [stav, setStav] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export function VzorPrezentaceEditor({
       body: JSON.stringify({ navrhReseni: navrh, podminky: pod }),
     });
     setPracuje(false);
-    setStav(res.ok ? 'Uloženo.' : 'Uložení se nepovedlo.');
+    setStav(res.ok ? t('vzorPrezentace.ulozeno') : t('vzorPrezentace.neulozeno'));
   }
 
   const vstup =
@@ -33,19 +35,17 @@ export function VzorPrezentaceEditor({
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-heading font-semibold text-ink">Návrh řešení</span>
+        <span className="text-sm font-heading font-semibold text-ink">{t('vzorPrezentace.navrh')}</span>
         <span className="text-xs font-body text-muted">
-          Kostra, kterou u projektu dopíšete. Odstavce oddělte prázdným řádkem; řádek začínající
-          pomlčkou se klientovi vykreslí jako odrážka.
+          {t('vzorPrezentace.navrhNapoveda')}
         </span>
         <textarea value={navrh} rows={10} onChange={(e) => setNavrh(e.target.value)} className={vstup} />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-heading font-semibold text-ink">Podmínky spolupráce</span>
+        <span className="text-sm font-heading font-semibold text-ink">{t('vzorPrezentace.podminky')}</span>
         <span className="text-xs font-body text-muted">
-          Licence, termíny dodání, platba, storno. Tohle je ta část, která má být u všech nabídek
-          stejná.
+          {t('vzorPrezentace.podminkyNapoveda')}
         </span>
         <textarea value={pod} rows={14} onChange={(e) => setPod(e.target.value)} className={vstup} />
       </label>
@@ -57,7 +57,7 @@ export function VzorPrezentaceEditor({
           disabled={pracuje}
           className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2.5 border-0 cursor-pointer disabled:opacity-50"
         >
-          Uložit vzor
+          {t('vzorPrezentace.ulozit')}
         </button>
         {stav && <span className="font-body text-sm text-muted">{stav}</span>}
       </div>

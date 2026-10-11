@@ -83,6 +83,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7f | 4. 10. | Obrazovky, které nebyly v žádné dávce — Procesy, Složky na Disku, Bruno, Nastavení, Zprávy portálu, Doplnit dotočeno, zbylé karty na detailu projektu a režim pro nevidomé v přeposlechu | [x] |
 | 7g | 9. 10. | Komponenty v `src/lib`, kam skript nikdy nemířil — popisky ikon typů projektu, značky nabídky a faktury u názvu projektu, doklady klienta, ruční značka nabídky u reklam, detail procesu | [x] |
 | 7h | 10. 10. | Řetězce, na které se kontrolní skript nikdy nezeptal — hlavičky tabulek, `title`, `aria-label` a placeholdery: přehled reklam u klienta, přehled projektů (jazyk do buněk), lišta, tabule, část zakázky u faktur, upomínky, banka, složky na Disku u uživatele | [x] |
+| 7i | 11. 10. | Obrazovky z téhož dne, které s překladem nepočítaly — nabídková prezentace pro klienta (veřejná stránka i sestavování u projektu), knihovna ukázek, vzor prezentace a natáčecí pult | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1035,6 +1036,74 @@ soubor, co překládá 99 % a na jednom `title` zapomněl.**
 `rm .git/*.lock .git/index\ [0-9]` a `git rm --cached stubs/prisma-client.d.ts`
 (ten lístek je z dávky 7a — `stubs/` je v `.gitignore`, ale soubor je dál
 sledovaný, takže se při každé kontrole ukazuje jako změněný).
+
+### Dávka 7i je HOTOVÁ (11. 10. 2026)
+
+Tabulka byla po 7h znovu celá zaškrtnutá a večer se zase našlo na dávku —
+tentokrát ale z jiného důvodu než včera: **dnešní práce přišla nepřeložená.**
+Za jeden den vznikly tři celé obrazovky (nabídkové prezentace, knihovna ukázek,
+natáčecí pult) a ani jedna o slovníku nevěděla. **Pět obrazovek, deset souborů,
+slovník +132 klíčů.**
+
+**Co se přeložilo:**
+
+- `prezentace/[token]/Prezentace.tsx` + `Prehravac.tsx` — **nabídková
+  prezentace, kterou dostane klient na odkazu.** Celá stránka mluvila česky:
+  hlavička („Cenová nabídka", „pro …"), všech pět sekcí, přehrávač ukázek
+  i spodní lišta se schválením. Veřejná stránka stojí mimo `JazykProvider`,
+  takže jazyk chodí **propem** z `page.tsx` (`nactiJazyk()`) — stejný vzor jako
+  u veřejné nabídky z dávky 2. Datum platnosti se formátovalo natvrdo
+  `'cs-CZ'`, teď jde přes `formatDatum`; `formatMoney` dostává jazyk, takže
+  anglickému klientovi nesvítí české oddělovače. Věta po schválení je **dva
+  klíče** (se jménem a bez něj), ne slepená — pravidlo 7.
+- `projekty/[id]/PrezentaceSection.tsx` — **sestavování prezentace u projektu.**
+  Nejdelší soubor dávky: seznam prezentací i celý editor. Řádek pod názvem byl
+  slepený z kousků (`` `${r.pocetReferenci} referencí` ``), teď je každá část
+  svůj klíč se značkou. Datum schválení se bere přes `formatDatumCas`.
+- `admin/ukazky/page.tsx` + `KnihovnaUkazek.tsx` — knihovna ukázek. Hlášky
+  k nahrávání nesou název souboru značkou `{nazev}`, ne zřetězením.
+- `admin/vzor-prezentace/page.tsx` + `VzorPrezentaceEditor.tsx` — vzor textů.
+- `nataceni/pult/[token]/page.tsx` + `Pult.tsx` — **natáčecí pult.** Vstupní
+  okno („Vstup do natáčení", jméno), panel s textem k natáčení, přepínače
+  mikrofonu a kamery, dlaždice účastníků i obě hlášky o přeposílacím serveru
+  (TURN). Čas a den v hlavičce se formátovaly natvrdo `'cs-CZ'` — teď přes
+  `kodJazyka(jazyk)`, takže herci z Londýna nesvítí „sobota, 11. 10.".
+  Jazyk chodí propem (veřejná stránka) a `t` je kvůli `useCallback`
+  v závislostech `spojeniS` a `zpracuj`.
+- `obecne.zpetAdministrace` — odkaz „← Administrace" nad nadpisem. Obě nové
+  administrační obrazovky ho mají, takže je to sdílený klíč, ne dvakrát totéž.
+
+**Co zůstává české schválně:** `console.error` v obou nových klientských
+souborech (vzkaz pro nás, ne pro klienta), komentáře a slovo „video" u délky
+ukázky (v britské angličtině je stejné).
+
+**Dvě hlášky typové kontroly navíc — nejsou z dávky.** `prezentaceServer.ts`
+přišel dnešním commitem „Nabidkove prezentace pro klienta" a kontrola u něj
+hlásí TS2345 a TS2739. Ověřeno na čistém HEADu **před** dávkou: hlásí je
+i tam, dávka nepřinesla ani jednu novou. Je to volnost stubů — `findMany`
+se `select`em vrací ve stubu `never[]` a spread v `nactiProUpravy` ztrácí
+vnořené `offer` a `vybranyHerec`; se skutečně vygenerovaným klientem Prismy
+se to srovná (build na Vercelu prošel). Doplněné do
+`docs/preklad-kontrola-zname-hlasky.txt`, ať je diff příští dávky zase prázdný
+— **až se `node_modules` někde objeví, patří to přeověřit.**
+
+**Co se našlo a NEDĚLALO se to (pořád vlastní úkol, ne večerní dávka):**
+
+1. Routy náhledů v `api/**`, které vracejí text na obrazovku — viz dávka 7h.
+2. `HostNataceni.chybaOdeslani` se ukládá do databáze česky — viz dávka 7h.
+3. **Rozdělaná práce v repozitáři se dávce do commitu nepletla.** Večer byly
+   necommitnuté změny v `prezentace/[token]/page.tsx`, `lib/prezentaceServer.ts`
+   a `prisma/navodMapaPortalu.ts` (zvonění při prvním otevření prezentace).
+   Překlad `page.tsx` je proto commitnutý **přes verzi z HEADu** — do indexu
+   šel HEAD + překlad, v pracovní kopii zůstaly Ondřejovy změny i s překladem
+   nad nimi. Nasazená verze tedy nenese nic, co nebylo odsouhlasené; zbylé dva
+   soubory se nedotkly vůbec.
+
+**Poučení: kontrola už nestačí, dokud nové obrazovky nepočítají s překladem.**
+Dnešní nález nebyl zapomenutý kout, byla to práce z téhož dne. Dokud jsou
+nové obrazovky psané natvrdo česky, bude mít večerní úloha každý den co dělat —
+levnější je psát `t('…')` rovnou při psaní obrazovky než ji překládat večer
+ve druhém průchodu.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 
