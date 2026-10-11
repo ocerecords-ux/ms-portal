@@ -22,30 +22,6 @@ import { Pult } from './Pult';
  */
 export const dynamic = 'force-dynamic';
 
-/**
- * KUDY SE PROHLÍŽEČE NAJDOU. STUN je ohláška „tohle je moje adresa" -
- * stačí na většinu sítí a je zdarma.
- *
- * TURN (PŘEPOSÍLÁNÍ) ZATÍM NEMÁME. Přibližně jedno spojení z pěti - firemní
- * sítě, některé mobilní operátoři - se naprímo nenaskládá a bez přeposlání
- * neprojde. Proto se adresa če čte z proměnných prostředí: až bude pult ostře,
- * připojí se TURN bez zásahu do kódu.
- */
-function kudyNaSebe(): RTCIceServer[] {
-  const servery: RTCIceServer[] = [
-    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  ];
-  const turn = process.env.TURN_URL;
-  if (turn) {
-    servery.push({
-      urls: turn.split(',').map((u) => u.trim()).filter(Boolean),
-      username: process.env.TURN_USER || undefined,
-      credential: process.env.TURN_PASS || undefined,
-    });
-  }
-  return servery;
-}
-
 export default async function PultNataceni({ params }: { params: { token: string } }) {
   const blok = await prisma.studioBlock
     .findUnique({
@@ -93,7 +69,6 @@ export default async function PultNataceni({ params }: { params: { token: string
       pasmo={blok.studio?.timezone || 'Europe/Prague'}
       uvod={podklad && podklad.ok ? podklad.vzor.uvod : null}
       spoty={spoty}
-      iceServers={kudyNaSebe()}
     />
   );
 }

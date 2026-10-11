@@ -49,7 +49,6 @@ export function Pult({
   pasmo,
   uvod,
   spoty,
-  iceServers,
 }: {
   token: string;
   nazevProjektu: string;
@@ -60,7 +59,6 @@ export function Pult({
   pasmo: string;
   uvod: string | null;
   spoty: Spot[];
-  iceServers: RTCIceServer[];
 }) {
   const [jmeno, setJmeno] = useState('');
   const [uvnitr, setUvnitr] = useState(false);
@@ -90,6 +88,17 @@ export function Pult({
    */
   const videno = useRef<Map<string, number>>(new Map());
 
+  /**
+   * ADRESY, PŘES KTERÉ SE PROHLÍŽEČE HLEDAJÍ. Vyzvedávají se až při vstupu
+   * (viz /api/pult/[token]/ice), protože údaje k přeposílacímu serveru mají
+   * krátkou platnost a nemají se vypékat do stránky. Než dorazí, platí jen
+   * STUN - s tím se spojí většina lidí a zbytek počká na odpověď.
+   */
+  const ice = useRef<RTCIceServer[]>([
+    { urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] },
+  ]);
+  const [preposilani, setPreposilani] = useState<boolean | null>(null);
+
   const posli = useCallback(
     async (druh: string, telo: unknown, komu?: string | null) => {
       try {
@@ -112,7 +121,7 @@ export function Pult({
       const stare = spojeni.current.get(cizi);
       if (stare) return stare;
 
-      const pc = new RTCPeerConnection({ iceServers });
+      const pc = new RTCPeerConnection({ iceServers: ice.current });
       spojeni.current.set(cizi, pc);
 
       mujStream.current?.getTracks().forEach((t) => pc.addTrack(t, mujStream.current!));
@@ -136,13 +145,17 @@ export function Pult({
       pc.oniceconnectionstatechange = () => {
         if (pc.iceConnectionState === 'failed') {
           pc.restartIce();
-          setChyba('Spojení s někým z účastníků se nepodařilo navázat napřímo (přísná síť).');
+          setChyba(
+            preposilani === false
+              ? 'Spojení se nepodařilo navázat napřímo a přeposílací server (TURN) není nastavený — na téhle síti to bez něj nepůjde.'
+              : 'Spojení s jedním z účastníků vypadlo, zkouším ho navázat znovu.',
+          );
         }
       };
 
       return pc;
     },
-    [iceServers, posli],
+    [posli, preposilani],
   );
 
   const nabidni = useCallback(
@@ -239,6 +252,25 @@ export function Pult({
   /** Vstup do místnosti: kamera, mikrofon, ohlášení a chození pro zprávy. */
   async function vstup() {
     setChyba(null);
+    /**
+     * NEJDŘÍV ADRESY, AŽ POTOM KAMERA. Kdyby se spojení zakládala dřív, než
+     * dorazí údaje k přeposílacímu serveru, založila by se jen se STUNem -
+     * a právě ten na přísných sítích nestačí. Když se vyzvednutí nepovede,
+     * jede se dál jen se STUNem; většině lidí to stačí a kvůli výpadku
+     * jedné služby se natáčení rušit nebude.
+     */
+    try {
+      const res = await fetch(`/api/pult/${encodeURIComponent(token)}/ice`, { cache: 'no-store' });
+      const data = (await res.json()) as { iceServers?: RTCIceServer[]; preposilani?: boolean };
+      if (Array.isArray(data.iceServers) && data.iceServers.length > 0) {
+        ice.current = data.iceServers;
+      }
+      setPreposilani(Boolean(data.preposilani));
+    } catch (err) {
+      console.error('Adresy pro spojení se nepodařilo načíst:', err);
+      setPreposilani(false);
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: ZVUK_STUDIO,
@@ -536,6 +568,15 @@ export function Pult({
                 Zvuk jde bez potlačení echa, redukce šumu a automatické hlasitosti — tedy tak, jak
                 ho pouští mikrofon.
               </p>
+              {/* ZDA MÁME PŘEPOSÍLÁNÍ (11. 10. 2026). Napsané rovnou, ne až
+                  v chybě: kdo ví, že přeposílací server chybí, hledá příčinu
+                  v síti a ne v kameře. */}
+              {preposilani === false && (
+                <p className="font-body text-[11px] text-muted m-0">
+                  Přeposílací server (TURN) není nastavený — na přísnější firemní síti se spojení
+                  nemusí navázat.
+                </p>
+              )}
             </div>
           </section>
         </div>
