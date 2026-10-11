@@ -4769,8 +4769,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- kalendář: klient na natáčení (11. 10. 2026) ---
   'kalendar.klientRezerva': {
-    cs: 'O {minut} min později než začátek — týmž časem jde pozvánka klientovi.',
-    en: 'Later than the start by {minut} min — that is the time in the invitation, too.',
+    cs: 'O {minut} min později než začátek — tenhle čas uvidí klient v pozvánce.',
+    en: '{minut} min after the start — this is the time the client sees in the invitation.',
   },
   'kalendar.odkazNataceciPlan': { cs: 'Natáčecí plán — hosté a pozvánky', en: 'Recording plan — guests and invitations' },
 
