@@ -287,6 +287,9 @@ export default async function ProjektyPage() {
    */
   const terminy = await nactiTerminyProjektu(
     active.map((p) => String(p.id)).concat(firemniActive.map((p) => String(p.id))),
+    // Kdo se dívá (12. 10. 2026) - podle toho se u termínů povolí zaškrtnutí
+    // „Přijdu režírovat". Viz lib/rezieKlientaServer.ts.
+    { userId: session!.user.id, interni: isInternalRole(session!.user.role) },
   );
 
   // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen

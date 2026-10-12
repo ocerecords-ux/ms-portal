@@ -7,6 +7,7 @@ import { nactiPorady } from '@/lib/poradyServer';
 import { utcParts, zonedToUtc } from '@/lib/calendar';
 import { bezTitulu } from '@/lib/jmena';
 import { brunoVyridVzkaz } from '@/lib/brunoOznameni';
+import { jenCoUzPlati } from '@/lib/tasksServer';
 import type { Role } from '@prisma/client';
 
 /**
@@ -292,7 +293,8 @@ async function hledejProjekt(dotaz: string): Promise<string> {
 
 async function mojeUkoly(kdo: KdoSePta): Promise<string> {
   const ukoly = await prisma.task.findMany({
-    where: { userId: kdo.userId, done: false },
+    // Co se má ukázat až před událostí, Bruno taky nevyzradí (12. 10. 2026).
+    where: { userId: kdo.userId, done: false, ...jenCoUzPlati() },
     orderBy: [{ dueDate: 'asc' }, { sortOrder: 'asc' }],
     take: 25,
   });

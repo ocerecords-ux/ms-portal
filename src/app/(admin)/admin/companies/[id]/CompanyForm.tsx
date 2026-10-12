@@ -17,7 +17,17 @@ import { DEFAULT_COUNTRY } from '@/lib/countries';
  * jen dodavatel. Sazba za normostranu se ukazuje jen u klienta, ktery ma
  * zaskrtnute Audioknihy (u reklamnich klientu se bude pocitat z Ceniku).
  */
-export function CompanyForm({ company }: { company: Company }) {
+export function CompanyForm({
+  company,
+  ucty = [],
+}: {
+  company: Company;
+  /**
+   * Účty téhle firmy (12. 10. 2026) - z nich se vybírá, kdo si u ní chodí
+   * režírovat. Prázdné u dodavatele, který přihlašovací účty nemá.
+   */
+  ucty?: { id: string; name: string | null; email: string }[];
+}) {
   const router = useRouter();
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -74,6 +84,18 @@ export function CompanyForm({ company }: { company: Company }) {
    * předvyplní a nabídne značka 1. / 2. část.
    */
   const [naCasti, setNaCasti] = useState(company.fakturujeNaCasti ?? false);
+  /**
+   * REŽII SI DĚLÁ KLIENT (zadání 12. 10. 2026: „u klienta Jan Melvil si chodí
+   * režírovat Veronika González první frekvence vždy sama. Takže já u režie
+   * na dálku nejsem").
+   *
+   * Vybírá se ÚČET, ne jméno: ten člověk si pak v natáčecím plánu zaškrtává,
+   * na které další frekvence přijde, takže ho portál musí poznat podle
+   * přihlášení. První frekvenci každého herce dostane automaticky.
+   */
+  const [rezieKlientaUserId, setRezieKlientaUserId] = useState(
+    (company as { rezieKlientaUserId?: string | null }).rezieKlientaUserId ?? '',
+  );
   // Vyrazeni misto mazani (zadani 10. 9. 2026): na firme visi doklady
   // a projekty, ktere musi zustat citelne.
   const [aktivni, setAktivni] = useState(company.active);
@@ -147,6 +169,7 @@ export function CompanyForm({ company }: { company: Company }) {
                 audioknihyNaKlic: dealsAudiobooks ? naKlic : false,
                 cenuUrcujeKlient: dealsAudiobooks ? cenuUrcujeKlient : false,
                 fakturujeNaCasti: naCasti,
+                rezieKlientaUserId: rezieKlientaUserId || null,
               }
             : {}),
         }),
@@ -370,6 +393,26 @@ export function CompanyForm({ company }: { company: Company }) {
               {t('firma.naCastiVolba')}
             </label>
           </AdminField>
+
+          {/* REŽII SI DĚLÁ KLIENT (12. 10. 2026). Pole se nabízí jen tehdy,
+              když firma vůbec nějaké přihlašovací účty má - jinak není
+              z čeho vybírat. */}
+          {ucty.length > 0 && (
+            <AdminField label={t('firma.rezieKlienta')} hint={t('firma.rezieKlientaHint')}>
+              <select
+                value={rezieKlientaUserId}
+                onChange={(e) => setRezieKlientaUserId(e.target.value)}
+                className="admin-input"
+              >
+                <option value="">{t('firma.rezieKlientaNikdo')}</option>
+                {ucty.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name?.trim() || u.email}
+                  </option>
+                ))}
+              </select>
+            </AdminField>
+          )}
 
           {/* Sazba za normostranu dava smysl jen u audioknih - u reklamnich
               klientu se cena bude pocitat kalkulackou nad Cenikem. A u firmy,

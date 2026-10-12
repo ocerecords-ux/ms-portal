@@ -41,6 +41,8 @@ const schema = z.object({
   zvukarName: z.string().trim().max(200).optional(),
   /** Režie online (23. 9. 2026) - ruční výjimka proti automatu. */
   rezieOnline: z.boolean().optional(),
+  /** Přijde režírovat klient (12. 10. 2026) - ruční výjimka proti automatu. */
+  rezieKlienta: z.boolean().optional(),
   /** Uložit i tak, i když se to s něčím kryje (23. 9. 2026) - viz blokace. */
   presto: z.boolean().optional(),
 });
@@ -127,6 +129,7 @@ export async function PATCH(req: NextRequest) {
           zvukarUserId: d.zvukarUserId || null,
           zvukarName: d.zvukarName || null,
           ...(d.rezieOnline === undefined ? {} : { rezieOnline: d.rezieOnline }),
+          ...(d.rezieKlienta === undefined ? {} : { rezieKlienta: d.rezieKlienta }),
         },
       });
 

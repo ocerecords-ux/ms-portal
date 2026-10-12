@@ -38,6 +38,22 @@ export type UdalostUkolu = {
   kdo: { id: string; jmeno: string } | null;
 };
 
+/**
+ * ÚKOL SE UKÁŽE AŽ PATNÁCT MINUT PŘED UDÁLOSTÍ (zadání 12. 10. 2026: „Peter
+ * zadá přes kalendář zvukaři úkol na zítra: podepiš s hercem smlouvu nebo
+ * vytvoř si cut, ale cvakne mu to až v ten den 15 min. před tím časem").
+ *
+ * Úkol se založí hned - zadavatel ho má v „Zadal jsem" a ví, že je to
+ * vyřízené - ale příjemci v seznamu NENÍ a zvonek mu necinká. Čas, od kdy se
+ * ukáže, drží `Task.viditelnyOd`; „cvaknutí" (zvonek) obstará úloha
+ * v `odemkniUkolyZKalendare` níž, která běží každých pět minut spolu
+ * s připomínkami událostí.
+ *
+ * Stejných patnáct minut jako u připomínky před natáčením - viz
+ * lib/pripominkyUdalostiServer.ts.
+ */
+export const PRED_UDALOSTI_MIN = 15;
+
 /** Kde úkol v databázi hledat - podle druhu události. */
 function kliceUdalosti(u: Pick<UdalostUkolu, 'typ' | 'id'>) {
   return u.typ === 'SLOT' ? { slotId: u.id } : { blockId: u.id };
@@ -67,6 +83,9 @@ export async function synchronizujUkolUdalosti(u: UdalostUkolu): Promise<void> {
       `${casti.year}-${String(casti.month).padStart(2, '0')}-${String(casti.day).padStart(2, '0')}T00:00:00.000Z`,
     );
     const dueTime = minutesToTime(minutesInZone(u.zacatek, u.pasmo));
+    /** Od kdy úkol příjemce uvidí - patnáct minut před začátkem události. */
+    const viditelnyOd = new Date(u.zacatek.getTime() - PRED_UDALOSTI_MIN * 60_000);
+    const uzJeCas = viditelnyOd.getTime() <= Date.now();
 
     const zaznam =
       stavajici ??
@@ -102,13 +121,23 @@ export async function synchronizujUkolUdalosti(u: UdalostUkolu): Promise<void> {
       const stehuje = ukol.userId !== u.zvukarUserId;
       await prisma.task.update({
         where: { id: ukol.id },
-        data: { userId: u.zvukarUserId, title: nazev, dueDate, dueTime },
+        data: { userId: u.zvukarUserId, title: nazev, dueDate, dueTime, viditelnyOd },
       });
       await prisma.kalendarUkol.update({
         where: { id: zaznam.id },
-        data: { userId: u.zvukarUserId },
+        data: { userId: u.zvukarUserId, ...(uzJeCas ? {} : { odemknutoAt: null }) },
       });
-      if (stehuje) await zvonek(u.zvukarUserId, nazev, u.kdo?.jmeno ?? null);
+      /**
+       * Zvonek jen tehdy, když už je úkol vidět. Přestěhovaný úkol, který se
+       * teprve ukáže, zazvoní novému zvukaři sám v odemkniUkolyZKalendare -
+       * jinak by mu cinkalo něco, co v seznamu ještě nemá.
+       */
+      if (stehuje && uzJeCas) {
+        await zvonek(u.zvukarUserId, nazev, u.kdo?.jmeno ?? null);
+        await prisma.kalendarUkol
+          .update({ where: { id: zaznam.id }, data: { odemknutoAt: new Date() } })
+          .catch(() => undefined);
+      }
       return;
     }
 
@@ -123,6 +152,7 @@ export async function synchronizujUkolUdalosti(u: UdalostUkolu): Promise<void> {
         title: nazev,
         dueDate,
         dueTime,
+        viditelnyOd,
         sortOrder: (posledni?.sortOrder ?? 0) + 10,
         zadalId: zaznam.zadalId ?? u.kdo?.id ?? null,
         zadalJmeno: zaznam.zadalJmeno ?? u.kdo?.jmeno ?? null,
@@ -130,12 +160,73 @@ export async function synchronizujUkolUdalosti(u: UdalostUkolu): Promise<void> {
     });
     await prisma.kalendarUkol.update({
       where: { id: zaznam.id },
-      data: { taskId: novy.id, userId: u.zvukarUserId },
+      data: {
+        taskId: novy.id,
+        userId: u.zvukarUserId,
+        odemknutoAt: uzJeCas ? new Date() : null,
+      },
     });
-    await zvonek(u.zvukarUserId, nazev, zaznam.zadalJmeno ?? u.kdo?.jmeno ?? null);
+    // Úkol na zítřek zatím nikomu necinká - zazvoní patnáct minut předem.
+    if (uzJeCas) await zvonek(u.zvukarUserId, nazev, zaznam.zadalJmeno ?? u.kdo?.jmeno ?? null);
   } catch (err) {
     console.error('Úkol z poznámky v kalendáři se nepodařilo srovnat:', err);
   }
+}
+
+/**
+ * „CVAKNUTÍ" ÚKOLŮ, KTERÝM NASTAL ČAS (zadání 12. 10. 2026). Běží každých pět
+ * minut spolu s připomínkami událostí - viz api/cron/pripominky-udalosti.
+ *
+ * Bere úkoly z kalendáře, které ještě nezazvonily a jejichž `viditelnyOd` už
+ * je za námi: příjemci se tím objeví v seznamu (filtruje se podle téhož pole)
+ * a zacinká mu zvonek. Splněný nebo mezitím smazaný úkol se přeskočí a jen se
+ * orazítkuje, ať se na něj úloha neptá pořád dokola.
+ */
+export async function odemkniUkolyZKalendare(): Promise<{ odemceno: number }> {
+  let odemceno = 0;
+  try {
+    const cekajici = await prisma.kalendarUkol.findMany({
+      where: { odemknutoAt: null, taskId: { not: null } },
+      take: 200,
+    });
+    if (cekajici.length === 0) return { odemceno: 0 };
+
+    const ted = new Date();
+    for (const z of cekajici) {
+      const ukol = z.taskId
+        ? await prisma.task.findUnique({ where: { id: z.taskId } }).catch(() => null)
+        : null;
+
+      // Úkol už neexistuje - razítko, ať se k němu úloha nevrací.
+      if (!ukol) {
+        await prisma.kalendarUkol
+          .update({ where: { id: z.id }, data: { odemknutoAt: ted } })
+          .catch(() => undefined);
+        continue;
+      }
+
+      // Ještě nenastal čas - úloha se k němu vrátí za pět minut.
+      if (ukol.viditelnyOd && ukol.viditelnyOd.getTime() > ted.getTime()) continue;
+
+      await prisma.kalendarUkol
+        .update({ where: { id: z.id }, data: { odemknutoAt: ted } })
+        .catch(() => undefined);
+
+      /**
+       * ÚKOLY ZALOŽENÉ PŘED 12. 10. 2026 nemají `viditelnyOd` vyplněné -
+       * zvonek jim zazvonil už tehdy, při zadání. Tady se jim jen dá razítko,
+       * ať se jich úloha nedrží; zvonit podruhé by bylo matoucí.
+       */
+      if (!ukol.viditelnyOd) continue;
+      if (ukol.done) continue;
+
+      await zvonek(ukol.userId, ukol.title, z.zadalJmeno ?? null);
+      odemceno += 1;
+    }
+  } catch (err) {
+    console.error('Odemčení úkolů z kalendáře selhalo:', err);
+  }
+  return { odemceno };
 }
 
 /** Událost zmizela z kalendáře - úkol, který na ní visel, jde pryč s ní. */

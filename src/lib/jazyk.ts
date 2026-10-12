@@ -360,6 +360,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'terminy.odtoceno': { cs: 'odtočeno', en: 'recorded' },
   'terminy.souhrn': { cs: 'odtočeno {odtoceno} z {celkem}', en: '{odtoceno} of {celkem} recorded' },
+  /* Režie klienta v natáčecím plánu (12. 10. 2026). */
+  'terminy.reziePrijdu': { cs: 'Přijdu režírovat', en: 'I will direct' },
+  'terminy.rezieJmeno': { cs: 'Režie: {jmeno}', en: 'Direction: {jmeno}' },
+  'terminy.reziePopis': {
+    cs: 'Režii si u téhle zakázky dělá {jmeno} — u termínů, na které přijde, je to vidět.',
+    en: 'Direction on this title is handled by {jmeno} — the sessions attended are marked.',
+  },
+  'terminy.reziePopisMohu': {
+    cs: 'První frekvenci s každým hercem máte zaškrtnutou automaticky, {jmeno}. Další termíny si zaškrtněte podle toho, na které přijdete.',
+    en: 'The first session with each narrator is ticked automatically, {jmeno}. Tick any further sessions you plan to attend.',
+  },
   'terminy.vseOdtoceno': { cs: 'všechno odtočeno', en: 'all recorded' },
   'terminy.nejblizsi': { cs: 'nejbližší', en: 'next up' },
   // Kde se ten den skončilo (1. 10. 2026) - strana režijního editu.
@@ -1755,6 +1766,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'ukoly.zadane.pro': { cs: 'pro {komu}', en: 'for {komu}' },
   'ukoly.zadane.splneno': { cs: 'splněno', en: 'completed' },
   'ukoly.zadane.splnenoDne': { cs: 'splněno {datum}', en: 'completed {datum}' },
+  /* Úkol z kalendáře se příjemci ukáže až před událostí (12. 10. 2026). */
+  'ukoly.zadane.cvakne': { cs: 'ukáže se {kdy}', en: 'appears {kdy}' },
   'ukoly.zadane.ceka': { cs: 'čeká', en: 'pending' },
   'ukoly.zadane.doTerminu': { cs: 'do {termin}', en: 'due {termin}' },
   'ukoly.zadane.poTerminuDo': { cs: 'po termínu, do {termin}', en: 'overdue, due {termin}' },
@@ -3962,13 +3975,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'uzivatel.poleHodinovaSazba': { cs: 'Hodinová sazba (Kč)', en: 'Hourly rate (CZK)' },
   'uzivatel.hodinovaSazbaHint': {
+    cs: 'z ní se počítají výkazy práce',
+    en: 'timesheets are calculated from it',
+  },
   'uzivatel.poleMzdyEmail': { cs: 'Podklad pro mzdy posílat na', en: 'Send payroll figures to' },
   'uzivatel.mzdyEmailHint': {
     cs: 'Adresa mzdové účetní u lidí na dohodu. Spolu s měsíčním přehledem jí odejde holý podklad — jméno, období, hodiny a částka, nic jiného. Prázdné = neposílá se.',
     en: 'Payroll accountant\u2019s address for people on a work agreement. A bare summary — name, period, hours and amount — goes to them with the monthly report. Empty = nothing is sent.',
-  },
-    cs: 'z ní se počítají výkazy práce',
-    en: 'timesheets are calculated from it',
   },
 
   // --- karta uživatele: studia zvukaře a tabule ---
@@ -4807,8 +4820,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   // {znacka} a {kdo} jsou tučné kousky věty - vysází je vetaSeZnackami.
   'kalendar.ukolZPoznamky': {
-    cs: 'Napište {znacka} a za to, co je potřeba udělat — z poznámky se stane úkol pro {kdo}.',
-    en: 'Type {znacka} followed by what needs doing — the note becomes a task for {kdo}.',
+    cs: 'Napište {znacka} a za to, co je potřeba udělat — z poznámky se stane úkol pro {kdo}. Ukáže se mu patnáct minut před začátkem, ne hned.',
+    en: 'Type {znacka} followed by what needs doing — the note becomes a task for {kdo}. It shows up for them fifteen minutes before the start, not right away.',
   },
   // Značka, kterou hledá chat - v obou jazycích stejná, nepřekládat.
   'kalendar.znackaUkol': { cs: '@úkol', en: '@úkol' },
@@ -4879,6 +4892,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.kliknutimZavrit': { cs: 'Klikni pro zavření', en: 'Click to close' },
   'kalendar.klientSePripoji': { cs: 'Klient se připojí {cas}', en: 'Client joins at {cas}' },
   'kalendar.herecJmeno': { cs: 'Herec: {jmeno}', en: 'Narrator: {jmeno}' },
+  /* --- Režii si dělá klient (12. 10. 2026) --- */
+  'kalendar.rezieKlientaJmeno': { cs: 'Režie: {jmeno}', en: 'Direction: {jmeno}' },
+  'kalendar.rezieKlientaPrijde': {
+    cs: 'Přijde režírovat {jmeno}',
+    en: '{jmeno} is coming to direct',
+  },
+  'kalendar.rezieKlientaPopis': {
+    cs: 'První frekvenci s hercem má zaškrtnutou sama; další si zaškrtává v natáčecím plánu.',
+    en: 'The first session with each narrator is ticked automatically; further ones are chosen in the recording plan.',
+  },
   'kalendar.projektNeni': { cs: 'Projekt není vyplněný.', en: 'The project is not filled in.' },
   'kalendar.projektNeniSDvojklikem': {
     cs: 'Projekt není vyplněný — doplníte ho dvojklikem na událost.',
@@ -6595,6 +6618,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'the order does not work the price out from standard pages — the customer fills it in themselves (both the Standard pages and Price fields stay)',
   },
   'firma.cenuSiNavrhuje': { cs: 'Cenu si navrhuje sám', en: 'They propose the price themselves' },
+  /* Režii si dělá klient (12. 10. 2026) - karta firmy. */
+  'firma.rezieKlienta': { cs: 'Režii si dělá klient', en: 'Client directs the sessions' },
+  'firma.rezieKlientaHint': {
+    cs: 'Kdo od klienta chodí režírovat. První frekvenci s každým hercem dostane automaticky, další si zaškrtne v natáčecím plánu. U takových frekvencí pak nesvítí naše režie na dálku.',
+    en: 'Who from the client comes to direct. They get the first session with each narrator automatically and tick any further ones in the recording plan. Our remote direction is not shown on those sessions.',
+  },
+  'firma.rezieKlientaNikdo': { cs: 'Nikdo — režírujeme my', en: 'Nobody — we direct' },
   'firma.naCasti': { cs: 'Fakturujeme na dvě části', en: 'We invoice in two parts' },
   'firma.naCastiHint': {
     cs: 'po podpisu smlouvy polovina, zbytek potom — u faktury z nabídky se pak předvyplní naše interní značka 1. / 2. část; na dokladu se netiskne',

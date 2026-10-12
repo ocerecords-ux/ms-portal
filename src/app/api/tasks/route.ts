@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
-import { loadZadaneMnou } from '@/lib/tasksServer';
+import { jenCoUzPlati, loadZadaneMnou } from '@/lib/tasksServer';
 import { CAS_UKOLU } from '@/lib/terminUkolu';
 
 // Ukoly na profilu clena tymu Mediaspace (zadani 5. 9. 2026).
@@ -33,7 +33,8 @@ export async function GET() {
     }
 
     const tasks = await prisma.task.findMany({
-      where: { userId: session.user.id },
+      // Úkol z kalendáře se ukáže až 15 minut před událostí (12. 10. 2026).
+      where: { userId: session.user.id, ...jenCoUzPlati() },
       orderBy: [{ done: 'asc' }, { dueDate: 'asc' }, { sortOrder: 'asc' }],
       take: 200,
     });

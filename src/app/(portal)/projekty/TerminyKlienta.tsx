@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { usePreklad } from '../components/JazykProvider';
 import type { TerminKlienta } from '@/lib/terminyKlientaServer';
 
@@ -74,10 +75,36 @@ export function TlacitkoTerminu({
 }
 
 /** Rozbalený seznam termínů - vykresluje se ve vlastním řádku pod projektem. */
-export function SeznamTerminu({ terminy }: { terminy: TerminKlienta[] }) {
+export function SeznamTerminu({ terminy: vychozi }: { terminy: TerminKlienta[] }) {
   const t = usePreklad();
+  /**
+   * REŽIE KLIENTA SE ZAŠKRTÁVÁ ROVNOU TADY (zadání 12. 10. 2026). Stav si
+   * seznam drží u sebe a na server posílá jen tu jednu změnu - celá stránka
+   * se kvůli zaškrtnutí nenačítá znovu.
+   */
+  const [terminy, setTerminy] = useState<TerminKlienta[]>(vychozi);
+  const [uklada, setUklada] = useState<string | null>(null);
   const pristi = terminy.find((x) => !x.odtoceno) ?? null;
   const odtoceno = terminy.filter((x) => x.odtoceno).length;
+  /** Jméno toho, kdo za klienta režíruje - u firmy bez nastavení prázdné. */
+  const reziser = terminy.find((x) => x.rezieKlientaJmeno)?.rezieKlientaJmeno ?? null;
+
+  async function prepniRezii(x: TerminKlienta) {
+    if (!x.muzuOznacit || uklada) return;
+    const prijde = !x.rezieKlienta;
+    setUklada(x.id);
+    // Zaškrtne se hned, ať to nedrhne; když server odmítne, vrátí se zpět.
+    setTerminy((s) => s.map((y) => (y.id === x.id ? { ...y, rezieKlienta: prijde } : y)));
+    const res = await fetch('/api/terminy/rezie-klienta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: x.id, prijde }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      setTerminy((s) => s.map((y) => (y.id === x.id ? { ...y, rezieKlienta: !prijde } : y)));
+    }
+    setUklada(null);
+  }
 
   return (
     // `max-w`: seznam se nemá roztahovat přes celou tabulku, jinak mezi
@@ -93,6 +120,16 @@ export function SeznamTerminu({ terminy }: { terminy: TerminKlienta[] }) {
             : t('terminy.souhrn', { odtoceno, celkem: terminy.length })}
         </span>
       </div>
+
+      {/* REŽIE KLIENTA (12. 10. 2026) - jedna věta, ať je jasné, co ta
+          zaškrtávátka u termínů znamenají. První frekvence je zaškrtnutá sama. */}
+      {reziser && (
+        <p className="m-0 text-[11px] font-body text-muted">
+          {terminy.some((x) => x.muzuOznacit)
+            ? t('terminy.reziePopisMohu', { jmeno: reziser })
+            : t('terminy.reziePopis', { jmeno: reziser })}
+        </p>
+      )}
 
       {/*
         Prostě seznam, jeden termín na řádek (1. 10. 2026: „a ten seznam
@@ -112,6 +149,28 @@ export function SeznamTerminu({ terminy }: { terminy: TerminKlienta[] }) {
             </span>
             {x.herec && <span className="text-xs font-body">{x.herec}</span>}
             <span className="text-[11px] font-body text-muted">{x.studio}</span>
+            {/* „Přijdu režírovat" (12. 10. 2026). Kdo na to nemá právo, vidí
+                jen značku u termínů, na které režie klienta přijde. */}
+            {x.rezieKlientaJmeno &&
+              (x.muzuOznacit ? (
+                <label className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-heading cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={x.rezieKlienta}
+                    disabled={uklada === x.id}
+                    onChange={() => prepniRezii(x)}
+                  />
+                  <span className={x.rezieKlienta ? 'text-brand-purple' : 'text-muted'}>
+                    {t('terminy.reziePrijdu')}
+                  </span>
+                </label>
+              ) : (
+                x.rezieKlienta && (
+                  <span className="shrink-0 text-[11px] font-heading text-brand-purple">
+                    {t('terminy.rezieJmeno', { jmeno: x.rezieKlientaJmeno })}
+                  </span>
+                )
+              ))}
             {/*
               KDE SE TEN DEN SKONČILO (1. 10. 2026: „bylo by super, kdyby byly
               zaznačeny strany v pdf, na které se v ten den skončilo").

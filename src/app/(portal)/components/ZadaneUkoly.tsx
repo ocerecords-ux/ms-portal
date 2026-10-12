@@ -28,7 +28,19 @@ export type ZadanyUkolVSeznamu = {
   splnenoAt: string | null;
   komu: string;
   zdrojKonverzaceId: string | null;
+  /** Úkol z kalendáře, který příjemci „cvakne" až před událostí (12. 10. 2026). */
+  cvakneAt?: string | null;
 };
+
+/** „13. 10. v 9:45" - kdy se úkol příjemci objeví. */
+const kdyCvakne = (jazyk: Jazyk, iso: string) =>
+  new Intl.DateTimeFormat(kodJazyka(jazyk), {
+    day: 'numeric',
+    month: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(iso));
 
 const datum = (jazyk: Jazyk, iso: string) =>
   new Intl.DateTimeFormat(kodJazyka(jazyk), { day: 'numeric', month: 'numeric' }).format(new Date(iso));
@@ -91,6 +103,14 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
                       termin: popisTerminu(u.dueDate, u.dueTime, jazyk),
                     })
                   : t('ukoly.zadane.ceka')}
+                {/* Úkol z kalendáře se příjemci ukáže až před událostí
+                    (12. 10. 2026) - ať zadavatel neřeší, proč ho zvukař nevidí. */}
+                {u.cvakneAt && (
+                  <span className="text-muted">
+                    {' · '}
+                    {t('ukoly.zadane.cvakne', { kdy: kdyCvakne(jazyk, u.cvakneAt) })}
+                  </span>
+                )}
               </span>
             )}
           </span>

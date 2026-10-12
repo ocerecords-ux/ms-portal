@@ -38,6 +38,8 @@ const schema = z.object({
   zvukarName: z.string().trim().max(200).optional(),
   /** Režie online (23. 9. 2026) - ruční výjimka proti automatu. */
   rezieOnline: z.boolean().optional(),
+  /** Přijde režírovat klient (12. 10. 2026) - ruční výjimka proti automatu. */
+  rezieKlienta: z.boolean().optional(),
   /**
    * ULOŽIT I TAK (zadání 23. 9. 2026: „Helča nemůže přidávat castingy, měla
    * by mít práva měnit cokoli v kalendáři"). Kdo do kalendáře studia smí
@@ -88,6 +90,16 @@ function poliUdalosti(kind: string, d: Vstup) {
     // Režie na dálku (23. 9. 2026) - u natáčení a castingu, jinde nedává
     // smysl. Casting ji má sám od sebe, tady se drží jen ruční výjimka.
     rezieOnline: kind === 'NATACENI' || kind === 'CASTING' ? (d.rezieOnline ?? null) : null,
+    /**
+     * Režie klienta (12. 10. 2026) - jen u natáčení. `undefined` znamená, že
+     * o ní formulář vůbec nebyl (firma ji nemá nastavenou), a uložená výjimka
+     * se nemá přepsat; proto se pole v takovém případě ani neposílá.
+     */
+    ...(kind === 'NATACENI' && d.rezieKlienta !== undefined
+      ? { rezieKlienta: d.rezieKlienta }
+      : kind === 'NATACENI'
+        ? {}
+        : { rezieKlienta: null }),
   };
 }
 
@@ -334,6 +346,7 @@ export async function PATCH(req: NextRequest) {
               zvukarUserId: null,
               zvukarName: null,
               rezieOnline: null,
+              rezieKlienta: null,
             }),
       },
     });

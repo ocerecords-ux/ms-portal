@@ -157,6 +157,21 @@ model Company {
   /// Prazdne = vychozi dvojice z lib/notifikaceFirmy.ts.
   interniPrijemci String[] @default([])
 
+  /// REŽII SI CHODÍ DĚLAT KLIENT SÁM (zadání 12. 10. 2026: „u klienta Jan
+  /// Melvil si chodí režírovat Veronika González první frekvence vždy sama.
+  /// Takže já u režie na dálku nejsem").
+  ///
+  /// Normálně se na PRVNÍ frekvenci každého herce připojuje jako režie
+  /// produkce - viz lib/rezieOnline.ts. U firmy, která má tohle vyplněné, na
+  /// ni místo nás chodí člověk od klienta: první frekvenci dostane
+  /// automaticky a další si zaškrtne sám v natáčecím plánu.
+  ///
+  /// Ukládá se ÚČET, ne jméno: ten člověk se v portálu přihlašuje a termíny
+  /// si odškrtává, takže ho portál musí poznat. Jméno do kalendáře se bere
+  /// z účtu.
+  rezieKlientaUserId String?
+  rezieKlienta       User?   @relation("RezieKlientaFirmy", fields: [rezieKlientaUserId], references: [id], onDelete: SetNull)
+
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -596,6 +611,9 @@ model User {
   studioBlocks       StudioBlock[]      @relation("StudioBlockCreatedBy")
   notifications      Notification[]
   calendarFeeds      CalendarFeed[]
+  /// Firmy, u kterych tenhle clovek chodi rezirovat misto nas (12. 10. 2026) -
+  /// viz Company.rezieKlientaUserId.
+  rezieUFirem        Company[]          @relation("RezieKlientaFirmy")
 
   /// Zadosti o udaje, ktere se tykaji tohohle cloveka (doplneni jeho karty).
   pozvankyUdaju        PozvankaUdaju[] @relation("PozvankaUdajuKomu")
@@ -1512,6 +1530,11 @@ model KalendarUkol {
   /// Komu je ukol prave prirazeny (podle nej se pozna vymena zvukare).
   userId String?
 
+  /// Kdy uz ukol prijemci „cvakl" (12. 10. 2026) - podle toho se pozna, ze
+  /// zvonek uz zazvonil a nema zvonit podruhe. Prazdne = jeste ceka na svuj
+  /// cas, patnact minut pred zacatkem udalosti.
+  odemknutoAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -1544,6 +1567,15 @@ model Task {
   zadalId   String?
   /// Kdy prijemce ukol odskrtl. Vraceni mezi otevrene ho zase smaze.
   splnenoAt DateTime?
+
+  /// ÚKOL Z KALENDÁŘE SE UKÁŽE AŽ PŘED UDÁLOSTÍ (zadani 12. 10. 2026: „Peter
+  /// zada pres kalendar zvukari ukol na zitra: podepis s hercem smlouvu nebo
+  /// vytvor si cut, ale cvakne mu to az v ten den 15 min. pred tim casem").
+  ///
+  /// Do te doby ukol v seznamu prijemce NENI a zvonek necinka - jen v nem
+  /// lezi. Prazdne = ukaze se hned, jak tomu bylo vzdycky; vsechny stavajici
+  /// ukoly a ukoly z chatu ho maji prazdne.
+  viditelnyOd DateTime?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -2516,6 +2548,8 @@ model StudioBlock {
   actorName       String?
   /// REŽIE ONLINE (zadani 23. 9. 2026) - stejne jako u RecordingSlot.
   rezieOnline     Boolean?
+  /// PŘIJDE REŽÍROVAT KLIENT (12. 10. 2026) - stejne jako u RecordingSlot.
+  rezieKlienta    Boolean?
   zvukarUserId    String?
   zvukarName      String?
 
@@ -2810,6 +2844,12 @@ model RecordingSlot {
   /// frekvence daneho herce na danem projektu ji ma), true / false = rucni
   /// vyjimka zaskrtnuta v kalendari. Viz lib/rezieOnline.ts.
   rezieOnline Boolean?
+
+  /// PŘIJDE REŽÍROVAT KLIENT (12. 10. 2026) - jen u firmy, ktera ma
+  /// vyplnene Company.rezieKlientaUserId. Stejne pravidlo jako u rezieOnline:
+  /// null = pocita se samo (prvni frekvence herce ji ma), true / false =
+  /// co si clovek od klienta zaskrtl v natacecim planu.
+  rezieKlienta Boolean?
 
   /// Zvukar potvrzene frekvence - doplnuje se v kalendari dvojklikem
   /// (zadani 19. 9. 2026: „aby pak šly dvojklikem editovat a šlo by přidat

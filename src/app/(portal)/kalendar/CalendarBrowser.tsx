@@ -219,6 +219,19 @@ export type CalendarEvent = {
   externi?: boolean;
   /** Ruční výjimka uložená u události: null = počítá se samo. */
   rezieRucne?: boolean | null;
+  /**
+   * REŽII SI DĚLÁ KLIENT (zadání 12. 10. 2026: „my bychom měli vidět
+   * v kalendáři jako Režie: Veronika González"). Jméno toho, kdo na tuhle
+   * frekvenci přijde režírovat od klienta; prázdné u všech ostatních.
+   * U takové události nesvítí náš telefon na dálku - nejedeme tam.
+   */
+  rezieKlient?: string | null;
+  /**
+   * Firma projektu má režii klienta nastavenou na kartě - jméno toho člověka.
+   * Podle tohohle se v úpravě události nabízí zaškrtávátko „Přijde režírovat";
+   * `rezieKlient` výš říká, jestli na TUHLE frekvenci opravdu přijde.
+   */
+  rezieKlientFirmy?: string | null;
   /** Odkaz na videohovor studia (23. 9. 2026) - ikona režie je proklik. */
   hovorOdkaz?: string | null;
   /**
@@ -1999,6 +2012,7 @@ function MrizkaPohled({
                             >
                               <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                               {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
+                              {e.rezieKlient && <IkonaRezieKlienta velikost={14} jmeno={e.rezieKlient} />}
                               {/* Videohovor porady rovnou z události (28. 9. 2026). */}
                               {odkazHovoruPorady(e) && (
                                 <IkonaHovoru velikost={14} odkaz={odkazHovoruPorady(e) as string} />
@@ -2142,6 +2156,7 @@ function MesicniPohled({
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
                     <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                     {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
+                    {e.rezieKlient && <IkonaRezieKlienta velikost={14} jmeno={e.rezieKlient} />}
                     {/* Videohovor porady rovnou z události (28. 9. 2026). */}
                     {odkazHovoruPorady(e) && (
                       <IkonaHovoru velikost={14} odkaz={odkazHovoruPorady(e) as string} />
@@ -2270,6 +2285,13 @@ function UdalostForm({
    * zaškrtnutím se u téhle jedné události uloží výjimka.
    */
   const [rezie, setRezie] = useState(upravovana?.rezie ?? false);
+  /**
+   * REŽII SI DĚLÁ KLIENT (12. 10. 2026). Předvyplní se tím, co kalendář
+   * spočítal (první frekvence herce), odškrtnutím nebo zaškrtnutím se u téhle
+   * jedné události uloží výjimka - stejně jako u naší režie na dálku. Totéž
+   * si zaškrtává i klient sám v natáčecím plánu.
+   */
+  const [rezieKlienta, setRezieKlienta] = useState(Boolean(upravovana?.rezieKlient));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /**
@@ -2685,6 +2707,8 @@ function UdalostForm({
             zvukarName: zvukar?.label ?? '',
             // Režie online (23. 9. 2026) - ukládá se jen u natáčení.
             ...(jeNataceni || druh === 'CASTING' ? { rezieOnline: rezie } : {}),
+            // Režie klienta (12. 10. 2026) - jen u firmy, která ji má nastavenou.
+            ...(jeNataceni && upravovana?.rezieKlientFirmy ? { rezieKlienta } : {}),
           }
         : // U úklidu se název nepíše, doplní se z popisku druhu -
           // v kalendáři pak stojí „Úklid studia“, ne prázdno.
@@ -3138,6 +3162,25 @@ function UdalostForm({
         </label>
       )}
 
+      {/* REŽII SI DĚLÁ KLIENT (12. 10. 2026) - nabízí se jen u projektu firmy,
+          která to má na kartě nastavenou. První frekvenci má zaškrtnutou sama,
+          další si zaškrtává člověk od klienta v natáčecím plánu; tady se to dá
+          udělat i za něj, když to domluví telefonem. */}
+      {jeNataceni && upravovana?.rezieKlientFirmy && (
+        <label className="flex items-start gap-2.5 rounded-lg border border-line bg-field px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={rezieKlienta}
+            onChange={(e) => setRezieKlienta(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="text-sm font-body text-ink">
+            {t('kalendar.rezieKlientaPrijde', { jmeno: upravovana.rezieKlientFirmy })}
+            <span className="block text-xs text-muted">{t('kalendar.rezieKlientaPopis')}</span>
+          </span>
+        </label>
+      )}
+
       {/* ČAS KLIENTA A CESTA K HOSTŮM (zadání 11. 10. 2026: „tady by mělo být
           taky nějak vidět, že se připojuje klient a v kolik. a taky by tam
           mohl být u toho proklik na natáčecí plán, kde se dají udělat
@@ -3148,8 +3191,15 @@ function UdalostForm({
           odejde v pozvánce; kdo událost posouvá, musí ho vidět tady, ne si ho
           dopočítávat. Hosty samotné (kdo přijde, v jakém jazyce mu psát,
           odeslané pozvánky) spravuje natáčecí plán projektu - odtud tam vede
-          odkaz, ať se kvůli jednomu mailu nehledá projekt ručně. */}
-      {jeNataceni && casKlientaZPole(od) && (
+          odkaz, ať se kvůli jednomu mailu nehledá projekt ručně.
+
+          JEN KDYŽ JE KOHO POZVAT (12. 10. 2026: „tohle bych zobrazil jen ve
+          chvíli, kdy tam budou pozvánky. Jinak tam klient není"). Většina
+          natáčení je bez klienta a čtvrthodinová rezerva u nich nic neřeší -
+          byl to řádek, který se musel u každé události přečíst a odmyslet.
+          Hosty má na starosti natáčecí plán projektu; jakmile je tam první,
+          rámeček se v kalendáři objeví sám. */}
+      {jeNataceni && (upravovana?.hoste?.length ?? 0) > 0 && casKlientaZPole(od) && (
         <div className="flex flex-col gap-1 rounded-lg border border-line bg-field px-3 py-2.5">
           <span className="text-sm font-body text-ink">
             {t('kalendar.klientSePripoji', { cas: casKlientaZPole(od) as string })}
@@ -3358,6 +3408,31 @@ function IkonaExterni({ velikost = 13 }: { velikost?: number }) {
       style={{ width: velikost, height: velikost }}
     >
       <KresbaIkony klic="letadlo" velikost={Math.round(velikost * 0.62)} />
+    </span>
+  );
+}
+
+/**
+ * IKONA „REŽII SI DĚLÁ KLIENT" (zadání 12. 10. 2026: „my bychom měli vidět
+ * v kalendáři jako Režie: Veronika González").
+ *
+ * Klapka, ne telefon: telefon v kalendáři znamená NÁS na dálku a tohle je
+ * pravý opak - na téhle frekvenci režíruje někdo od klienta a my u toho
+ * nejsme. Jméno je v bublinkové nápovědě i v detailu události.
+ */
+function IkonaRezieKlienta({ velikost = 14, jmeno }: { velikost?: number; jmeno: string }) {
+  const t = usePreklad();
+  const popis = t('kalendar.rezieKlientaJmeno', { jmeno });
+  return (
+    <span
+      title={popis}
+      aria-label={popis}
+      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony(
+        'klapka',
+      )}`}
+      style={{ width: velikost, height: velikost }}
+    >
+      <KresbaIkony klic="klapka" velikost={Math.round(velikost * 0.62)} />
     </span>
   );
 }
@@ -3824,6 +3899,7 @@ function DetailUdalosti({
             <span className="inline-flex items-center gap-1.5 text-[11px] font-heading font-semibold uppercase tracking-wide opacity-80">
               <IkonaDruhu druh={druhPrace(event)} velikost={22} />
               {event.rezie && <IkonaRezie velikost={22} odkaz={event.hovorOdkaz ?? null} />}
+              {event.rezieKlient && <IkonaRezieKlienta velikost={22} jmeno={event.rezieKlient} />}
               {stav}
             </span>
           </div>
@@ -3858,6 +3934,13 @@ function DetailUdalosti({
           </p>
           {u?.actorName && !event.title.includes(u.actorName) && (
             <p className="m-0 text-sm font-heading">{t('kalendar.herecJmeno', { jmeno: u.actorName })}</p>
+          )}
+          {/* REŽII SI DĚLÁ KLIENT (12. 10. 2026) - jmenovitě, ať je z detailu
+              jasné, kdo na tu frekvenci od klienta přijde. */}
+          {event.rezieKlient && (
+            <p className="m-0 text-sm font-heading">
+              {t('kalendar.rezieKlientaJmeno', { jmeno: event.rezieKlient })}
+            </p>
           )}
           {/* HOSTÉ NA NATÁČENÍ (9. 10. 2026). Čas klienta je o rezervu později
               než začátek dohodnutý s hercem - totéž číslo, které odejde v pozvánce. */}

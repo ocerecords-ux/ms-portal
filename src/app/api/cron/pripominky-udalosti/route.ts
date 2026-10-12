@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { smiSpustitUlohu } from '@/lib/cronGuard';
 import { posliPripominkyUdalosti } from '@/lib/pripominkyUdalostiServer';
+import { odemkniUkolyZKalendare } from '@/lib/kalendarUkolyServer';
 
 /**
  * PŘIPOMÍNKA 15 MINUT PŘED UDÁLOSTÍ (zadání 23. 9. 2026). Úloha běží každých
@@ -33,7 +34,14 @@ async function spust(req: NextRequest) {
       ...(Number.isFinite(odMinut) && url.searchParams.has('od') ? { odMinut } : {}),
       ...(Number.isFinite(doMinut) && url.searchParams.has('do') ? { doMinut } : {}),
     });
-    return NextResponse.json({ ok: true, ...vysledek });
+    /**
+     * ÚKOLY Z KALENDÁŘE, KTERÝM NASTAL ČAS (12. 10. 2026). Jede to tady
+     * schválně: je to stejných patnáct minut před událostí a stejná pětiminutová
+     * kadence, takže by druhá úloha jen zdvojovala totéž. Nanečisto se
+     * nespouští - to je na připomínky.
+     */
+    const ukoly = nanecisto ? { odemceno: 0 } : await odemkniUkolyZKalendare();
+    return NextResponse.json({ ok: true, ...vysledek, ukoly });
   } catch (err) {
     console.error('Pripominky udalosti selhaly:', err);
     return NextResponse.json({ error: 'Připomínky se nepodařilo poslat.' }, { status: 500 });

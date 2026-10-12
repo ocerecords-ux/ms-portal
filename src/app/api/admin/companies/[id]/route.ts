@@ -39,6 +39,8 @@ const schema = z.object({
   audioknihyNaKlic: z.boolean().optional(),
   cenuUrcujeKlient: z.boolean().optional(),
   fakturujeNaCasti: z.boolean().optional(),
+  /** Kdo si u téhle firmy chodí režírovat (12. 10. 2026) - účet, nebo nic. */
+  rezieKlientaUserId: z.string().trim().max(100).nullable().optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -90,6 +92,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               // nepocita ze sazby, klient ji vyplni sam.
               ...(data.cenuUrcujeKlient !== undefined ? { cenuUrcujeKlient: data.cenuUrcujeKlient } : {}),
               ...(data.fakturujeNaCasti !== undefined ? { fakturujeNaCasti: data.fakturujeNaCasti } : {}),
+              ...(data.rezieKlientaUserId !== undefined
+                ? { rezieKlientaUserId: data.rezieKlientaUserId || null }
+                : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }
           : {}),

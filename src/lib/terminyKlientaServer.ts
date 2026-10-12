@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/db';
+import { najdiPrvniFrekvence } from '@/lib/rezieOnlineServer';
+import { nactiReziseryKlientu, prijdeRezieKlienta } from '@/lib/rezieKlientaServer';
 
 /**
  * NATÁČECÍ TERMÍNY PRO KLIENTA (zadání 30. 9. 2026: „potřebuji udělat, aby
@@ -40,10 +42,30 @@ export type TerminKlienta = {
    * s víc herci to není první strana.
    */
   stranaOd: number | null;
+  /**
+   * REŽII SI DĚLÁ KLIENT (zadání 12. 10. 2026: „tu první frekvenci bych ji
+   * tam dal vždy automaticky a pak aby si mohla v natáčecím plánu v portálu
+   * zaškrtnout, na které chce ještě přijít").
+   *
+   * Přijde na tuhle frekvenci režírovat? U firmy bez tohohle nastavení je
+   * vždycky false a v natáčecím plánu se o režii nic nevypisuje.
+   */
+  rezieKlienta: boolean;
+  /** Kdo od klienta na projekt chodí režírovat; prázdné = firma to nemá nastavené. */
+  rezieKlientaJmeno: string | null;
+  /** Smí se to tenhle člověk u tohohle termínu zaškrtnout a odškrtnout? */
+  muzuOznacit: boolean;
 };
 
 /** Termín s hercem, než se z něj udělá to, co vidí klient. */
-type TerminVnitrne = TerminKlienta & { actorUserId: string | null };
+type TerminVnitrne = TerminKlienta & {
+  actorUserId: string | null;
+  /** Id bez předpony „slot-" / „blok-" - podle něj se počítá první frekvence. */
+  rawId: string;
+  /** Uložená výjimka u události: null = počítá se z pořadí frekvence. */
+  rezieUlozena: boolean | null;
+  caflouProjectId: string;
+};
 
 /**
  * PŘIŘAZENÍ ZÁPISŮ K TERMÍNŮM. Zvukař píše do chatu „skončili jsme na straně
@@ -88,6 +110,13 @@ function priradStrany(
  */
 export async function nactiTerminyProjektu(
   caflouProjectIds: string[],
+  /**
+   * Kdo se na plán dívá (12. 10. 2026). Podle toho se u termínů povolí
+   * zaškrtávání režie: smí ji měnit ten, koho má firma na kartě vedeného jako
+   * svého režiséra, a kdokoliv z nás. Bez tohohle propu se plán vykreslí
+   * jen ke čtení - tak ho vidí ostatní lidé z klientovy firmy.
+   */
+  kdoSeDiva?: { userId: string; interni: boolean },
 ): Promise<Record<string, TerminKlienta[]>> {
   if (caflouProjectIds.length === 0) return {};
 
@@ -103,6 +132,7 @@ export async function nactiTerminyProjektu(
           id: true,
           start: true,
           end: true,
+          rezieKlienta: true,
           studio: { select: { name: true } },
           request: { select: { caflouProjectId: true, actorName: true, actorUserId: true } },
         },
@@ -117,6 +147,7 @@ export async function nactiTerminyProjektu(
           actorName: true,
           actorUserId: true,
           caflouProjectId: true,
+          rezieKlienta: true,
           studio: { select: { name: true } },
         },
       }),
@@ -146,11 +177,14 @@ export async function nactiTerminyProjektu(
       id: string;
       start: Date;
       end: Date;
+      rezieKlienta: boolean | null;
       studio: { name: string };
       request: { caflouProjectId: string; actorName: string; actorUserId: string | null };
     }[]) {
       pridej(s.request.caflouProjectId, {
         id: `slot-${s.id}`,
+        rawId: s.id,
+        caflouProjectId: s.request.caflouProjectId,
         start: s.start.toISOString(),
         end: s.end.toISOString(),
         herec: s.request.actorName || null,
@@ -159,6 +193,10 @@ export async function nactiTerminyProjektu(
         stranaDo: null,
         stranaOd: null,
         actorUserId: s.request.actorUserId ?? null,
+        rezieUlozena: s.rezieKlienta ?? null,
+        rezieKlienta: false,
+        rezieKlientaJmeno: null,
+        muzuOznacit: false,
       });
     }
 
@@ -169,10 +207,13 @@ export async function nactiTerminyProjektu(
       actorName: string | null;
       actorUserId: string | null;
       caflouProjectId: string | null;
+      rezieKlienta: boolean | null;
       studio: { name: string };
     }[]) {
       pridej(b.caflouProjectId, {
         id: `blok-${b.id}`,
+        rawId: b.id,
+        caflouProjectId: b.caflouProjectId ?? '',
         start: b.start.toISOString(),
         end: b.end.toISOString(),
         herec: b.actorName || null,
@@ -181,6 +222,10 @@ export async function nactiTerminyProjektu(
         stranaDo: null,
         stranaOd: null,
         actorUserId: b.actorUserId ?? null,
+        rezieUlozena: b.rezieKlienta ?? null,
+        rezieKlienta: false,
+        rezieKlientaJmeno: null,
+        muzuOznacit: false,
       });
     }
 
@@ -200,6 +245,42 @@ export async function nactiTerminyProjektu(
       zapisyProjektu.set(z.caflouProjectId, seznam);
     }
 
+    /**
+     * REŽII SI DĚLÁ KLIENT (12. 10. 2026). Dohledá se jen tehdy, když některá
+     * z firem tohle nastavení má - běžný přehled tak dostane jeden levný
+     * dotaz navíc a nic víc. První frekvence se počítá přes celou historii
+     * kalendáře stejně jako u naší režie na dálku (lib/rezieOnline.ts).
+     */
+    const vsechny = Object.values(podleProjektu).flat();
+    const reziseri = await nactiReziseryKlientu(Object.keys(podleProjektu));
+    const prvni =
+      reziseri.size > 0
+        ? await najdiPrvniFrekvence(
+            vsechny
+              .filter((t) => reziseri.has(t.caflouProjectId))
+              .map((t) => ({
+                id: t.rawId,
+                caflouProjectId: t.caflouProjectId,
+                actorUserId: t.actorUserId,
+                actorName: t.herec,
+              })),
+          )
+        : new Set<string>();
+    for (const t of vsechny) {
+      const kdo = reziseri.get(t.caflouProjectId);
+      if (!kdo) continue;
+      t.rezieKlientaJmeno = kdo.jmeno;
+      t.rezieKlienta = prijdeRezieKlienta(t.rezieUlozena, prvni.has(t.rawId));
+      /**
+       * ZAŠKRTÁVAT SMÍ TEN, KDO TAM JEZDÍ - a my. Ostatním z klientovy firmy
+       * se plán ukáže ke čtení; jinak by si termíny přehazovali navzájem.
+       * Odtočené frekvence se už nemění, to by byla oprava minulosti.
+       */
+      t.muzuOznacit =
+        !t.odtoceno &&
+        Boolean(kdoSeDiva && (kdoSeDiva.interni || kdoSeDiva.userId === kdo.userId));
+    }
+
     const vysledek: Record<string, TerminKlienta[]> = {};
     for (const [projekt, seznam] of Object.entries(podleProjektu)) {
       seznam.sort((a, b) => a.start.localeCompare(b.start));
@@ -214,6 +295,9 @@ export async function nactiTerminyProjektu(
         odtoceno: t.odtoceno,
         stranaDo: t.stranaDo,
         stranaOd: t.stranaOd,
+        rezieKlienta: t.rezieKlienta,
+        rezieKlientaJmeno: t.rezieKlientaJmeno,
+        muzuOznacit: t.muzuOznacit,
       }));
     }
     return vysledek;

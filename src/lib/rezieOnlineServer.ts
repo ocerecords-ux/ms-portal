@@ -29,7 +29,15 @@ export type UdalostProRezii = {
  * uložené výjimky: `rezieOnline === false` značku sundá, i když je frekvence
  * první; `true` ji přidá, i když první není.
  */
-export async function oznacRezii(udalosti: UdalostProRezii[]): Promise<Set<string>> {
+export async function oznacRezii(
+  udalosti: UdalostProRezii[],
+  /**
+   * Už spočítané první frekvence. Kdo je potřebuje i jinde (kalendář je od
+   * 12. 10. 2026 dává i režii klienta), předá je sem a ušetří druhý dotaz
+   * přes celou historii.
+   */
+  prvni?: Set<string>,
+): Promise<Set<string>> {
   const vysledek = new Set<string>();
 
   for (const u of udalosti) {
@@ -37,7 +45,7 @@ export async function oznacRezii(udalosti: UdalostProRezii[]): Promise<Set<strin
     if (u.rezieOnline === null && u.vzdy) vysledek.add(u.id);
   }
 
-  const prvniIds = await najdiPrvniFrekvence(udalosti);
+  const prvniIds = prvni ?? (await najdiPrvniFrekvence(udalosti));
   for (const u of udalosti) {
     if (u.rezieOnline !== null) continue; // ruční výjimka rozhodla výš
     if (prvniIds.has(u.id)) vysledek.add(u.id);

@@ -106,7 +106,7 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 1. **Druh práce s ikonou** nahoře v barevném kolečku jako u typů projektů (modrý mikrofon = natáčení, zelená rozstřižená zvuková vlna = střih, růžový herec s hvězdičkou = casting, šedý klíč = údržba, oranžové slunce = svátek/dovolená) a pod ním celý text — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
 2. **Odkazy** dole — **Projekt** a u frekvence **Nabídka termínů**.
 
-**Úkol z poznámky.** Do poznámky u události se dá napsat **@úkol** a za to, co je potřeba udělat — stejně jako v chatu. Úkol se propíše do to-do listu **zvukaři, který je u té události**. Když u ní zvukař zatím není, kalendář počká, až ho někdo přiřadí; když se zvukař vymění, úkol se přestěhuje na toho, kdo tam je teď. Smazáním značky @úkol z poznámky (nebo smazáním události) nesplněný úkol zmizí; **splněný zůstává**.
+**Úkol z poznámky.** Do poznámky u události se dá napsat **@úkol** a za to, co je potřeba udělat — stejně jako v chatu. Úkol se propíše do to-do listu **zvukaři, který je u té události**. Když u ní zvukař zatím není, kalendář počká, až ho někdo přiřadí; když se zvukař vymění, úkol se přestěhuje na toho, kdo tam je teď. Smazáním značky @úkol z poznámky (nebo smazáním události) nesplněný úkol zmizí; **splněný zůstává**. **Zvukaři se úkol ukáže až patnáct minut před začátkem té události** (12. 10. 2026) — ne ve chvíli, kdy ho zadáte: úkol na zítřejší natáčení mu „cvakne“ zítra, čtvrt hodiny předem, a tehdy mu taky zazvoní zvoneček. Vy ho v panelu **Úkoly → Zadal jsem** vidíte celou dobu a je u něj napsáno, kdy se mu ukáže.
 
 **Když se událost s něčím kryje**, portál to řekne („V tomhle čase už ve studiu je…") a hned pod hláškou nabídne **Uložit i tak** — castingy a domluvy vedle natáčení jsou běžné, takže kdo do kalendáře studia píše, zapíše i to, co se překrývá.
 
@@ -115,6 +115,8 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na druhém řádku, v měsíci za tečkou.
 
 **Režie na dálku (telefon, červený rámeček).** U **první frekvence každého herce na projektu** a **u každého castingu** je událost v **červeném rámečku** a vedle druhu práce svítí modrá ikonka telefonu s vlnami — tam se režie připojuje na online hovor. Kalendář si to spočítá sám z toho, co v něm je (termín z nabídky i ručně zapsané natáčení). Když to tentokrát neplatí, v úpravě události (dvojklik) se zaškrtávátko **Režie na dálku** odškrtne — a naopak se dá zaškrtnout i u jiné frekvence. Když má studio v Administraci → Studia vyplněný **odkaz na videohovor**, je ta ikonka rovnou **proklik do hovoru** (celý odkaz nikde nesvítí).
+
+**Režii si dělá klient (klapka).** U některých firem si chodí režírovat někdo od klienta a my u toho nejsme — nastavuje se to na **kartě firmy** v poli *Režii si dělá klient* (vybere se jeho účet v portálu). U takové zakázky pak **první frekvenci s každým hercem** dostane automaticky on, u události svítí **klapka** a v detailu stojí *Režie: jméno*; naše červená režie na dálku se u ní neukáže. Další termíny si ten člověk zaškrtává sám v **natáčecím plánu** v přehledu zakázek (*Přijdu režírovat*) — a zaškrtnout nebo odškrtnout se to dá i v kalendáři v úpravě události.
 
 **Porady (žlutý kalendář).** Porady, schůzky a hovory týmu. **Každý vidí jen porady, na které je pozvaný** — když založíte poradu jen pro sebe a Karolínu, nikdo jiný ji v kalendáři neuvidí (ani ten, kdo kalendář spravuje).
 

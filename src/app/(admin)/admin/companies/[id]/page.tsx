@@ -158,7 +158,12 @@ export default async function CompanyDetailPage({
             klientsky formular mohl zustat s puvodnimi hodnotami. */}
         {/* Test napojeni na Caflou je od 6. 9. 2026 vypnuty (zadani) -
             komponenta CaflouTestPanel v repu zustava, jen se nezobrazuje. */}
-        <CompanyForm key={company.id} company={company} />
+        <CompanyForm
+          key={company.id}
+          company={company}
+          // Z koho se vybírá režisér klienta (12. 10. 2026) - účty téhle firmy.
+          ucty={company.users.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
+        />
       </div>
       )}
 

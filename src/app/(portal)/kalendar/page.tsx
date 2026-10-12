@@ -26,7 +26,8 @@ import { SOLO_PORADY } from '@/lib/porady';
 import { SOLO_MOJE } from '@/lib/calendar';
 import { nactiPorady } from '@/lib/poradyServer';
 import { SOLO_SCHUZKY } from '@/lib/porady';
-import { oznacRezii } from '@/lib/rezieOnlineServer';
+import { najdiPrvniFrekvence, oznacRezii } from '@/lib/rezieOnlineServer';
+import { nactiReziseryKlientu, prijdeRezieKlienta } from '@/lib/rezieKlientaServer';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 
@@ -369,7 +370,7 @@ export default async function KalendarPage({
    * „první frekvence" se pozná jen vůči ostatním událostem, a v sólo režimu
    * se podle ní teprve rozhoduje, co se má ukázat.
    */
-  const sRezii = await oznacRezii([
+  const proRezii = [
     ...occupancy.slots.map((s) => ({
       id: s.id,
       caflouProjectId: s.caflouProjectId,
@@ -388,7 +389,42 @@ export default async function KalendarPage({
         // Casting má režii pokaždé (23. 9. 2026), natáčení jen to první.
         vzdy: b.kind === 'CASTING',
       })),
-  ]);
+  ];
+  /**
+   * První frekvence se počítají JEDNOU a dělí se o ně naše režie na dálku
+   * a režie klienta (12. 10. 2026) - je to dotaz přes celou historii
+   * kalendáře, nemá smysl ho dělat dvakrát.
+   */
+  const prvniFrekvence = await najdiPrvniFrekvence(proRezii);
+  const sRezii = await oznacRezii(proRezii, prvniFrekvence);
+
+  /**
+   * REŽII SI CHODÍ DĚLAT KLIENT (zadání 12. 10. 2026: „u klienta Jan Melvil
+   * si chodí režírovat Veronika González první frekvence vždy sama. Takže já
+   * u režie na dálku nejsem… My bychom měli vidět v kalendáři jako
+   * Režie: Veronika González").
+   *
+   * U firmy, která to má na kartě nastavené, NEPATŘÍ první frekvence nám:
+   * místo našeho telefonu na dálku se u události ukáže jméno toho, kdo
+   * přijde od klienta. Ručně zaškrtnutá naše režie (`rezieOnline === true`)
+   * zůstává - to je výslovné „jedeme tam taky".
+   */
+  const reziseriKlientu = await nactiReziseryKlientu(
+    [...occupancy.slots, ...occupancy.blocks].map((u) => u.caflouProjectId),
+  );
+  /** Jméno režiséra od klienta u jednotlivých událostí. */
+  const rezieKlientu = new Map<string, string>();
+  if (reziseriKlientu.size > 0) {
+    for (const u of [...occupancy.slots, ...occupancy.blocks]) {
+      const kdo = u.caflouProjectId ? reziseriKlientu.get(u.caflouProjectId) : undefined;
+      if (!kdo) continue;
+      if (!prijdeRezieKlienta(u.rezieKlienta, prvniFrekvence.has(u.id))) continue;
+      rezieKlientu.set(u.id, kdo.jmeno);
+      // Naše režie na dálku na takovou frekvenci nechodí, pokud si ji tam
+      // někdo výslovně nezaškrtl.
+      if (u.rezieOnline !== true) sRezii.delete(u.id);
+    }
+  }
 
   /**
    * SÓLO: I REŽIE NA DÁLKU (zadání 12. 10. 2026: „tady bych měl vidět všechny
@@ -472,6 +508,8 @@ export default async function KalendarPage({
       poznamka: s.note,
       rezie: sRezii.has(s.id),
       rezieRucne: s.rezieOnline,
+      rezieKlient: rezieKlientu.get(s.id) ?? null,
+      rezieKlientFirmy: reziseriKlientu.get(s.caflouProjectId)?.jmeno ?? null,
       externi: jeExterni(s.zvukarUserId),
       hovorOdkaz: odkazHovoru.get(s.studioId) ?? null,
       udalost: {
@@ -506,6 +544,10 @@ export default async function KalendarPage({
       poznamka: b.note,
       rezie: sRezii.has(b.id),
       rezieRucne: b.rezieOnline,
+      rezieKlient: rezieKlientu.get(b.id) ?? null,
+      rezieKlientFirmy: b.caflouProjectId
+        ? (reziseriKlientu.get(b.caflouProjectId)?.jmeno ?? null)
+        : null,
       externi: jeExterni(b.zvukarUserId),
       hovorOdkaz: odkazHovoru.get(b.studioId) ?? null,
       // Hosté na natáčení (9. 10. 2026) - v detailu události se ukáže, v kolik
