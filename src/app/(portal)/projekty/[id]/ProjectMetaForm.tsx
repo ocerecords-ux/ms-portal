@@ -1134,7 +1134,7 @@ export function ProjectMetaForm({
                   onChange={(e) => set('uvodKnihy', e.target.value, true)}
                   onBlur={ulozHned}
                   rows={2}
-                  placeholder="Audiotéka uvádí audioknihu …"
+                  placeholder={t('projektMeta.uvodPlaceholder')}
                   className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
                 />
               </label>
@@ -1145,7 +1145,7 @@ export function ProjectMetaForm({
                   onChange={(e) => set('zaverKnihy', e.target.value, true)}
                   onBlur={ulozHned}
                   rows={3}
-                  placeholder="Autor: Název. Připravila Audiotéka … Režie Ondřej Černý. …"
+                  placeholder={t('projektMeta.zaverPlaceholder')}
                   className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
                 />
                 <span className="text-xs text-muted font-body">

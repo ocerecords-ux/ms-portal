@@ -8,6 +8,8 @@ import { projektProDoklad } from '@/lib/projektProDoklad';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { dostupneFirmy, firmaProNovyDoklad, vybranaFirma } from '@/lib/naseFirmyServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * Faktura z nabídky PŘED uložením (zadani 8. 9. 2026: "chci se dostat ještě
@@ -106,7 +108,7 @@ export default async function NewInvoiceFromOfferPage({
       }}
       invoice={{
         id: 'nova',
-        number: 'Nová faktura',
+        number: prelozit(nactiJazyk(), 'faktura.novaCislo'),
         variableSymbol: '',
         status: 'DRAFT',
         // Značku části zakázky dostane faktura až při uložení (viz
@@ -224,7 +226,7 @@ async function PrazdnaFaktura({
       issuerCompanyId={vydavatel.id}
       invoice={{
         id: 'nova',
-        number: 'Nová faktura',
+        number: prelozit(nactiJazyk(), 'faktura.novaCislo'),
         variableSymbol: '',
         status: 'DRAFT',
         // Značku části zakázky dostane faktura až při uložení (viz

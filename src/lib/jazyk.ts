@@ -72,6 +72,31 @@ export function nazevOdkazu(jazyk: Jazyk, href: string, zaloha: string): string 
 }
 
 /**
+ * Názvy rychlých voleb v levém panelu (dávka 7j). Klíčem je KLÍČ VOLBY, ne
+ * text - panel si uživatel skládá sám a uložený je v databázi česky, takže
+ * překládat se musí podle toho, CO volba zakládá. Stejný vzor jako
+ * `nazevOdkazu` výš.
+ */
+const AKCE_EN: Record<string, string> = {
+  objednavka: 'New order',
+  projekt: 'New project',
+  nabidka: 'New quote',
+  faktura: 'New invoice',
+  smlouva: 'New contract',
+  vydaj: 'New expense',
+  termin: 'New session',
+  vykaz: 'New timesheet',
+  uzivatel: 'New user',
+  firma: 'New company',
+  'prehled-dne': 'What is on today',
+};
+
+export function nazevAkce(jazyk: Jazyk, klic: string, zaloha: string): string {
+  if (jazyk === 'cs') return zaloha;
+  return AKCE_EN[klic] ?? zaloha;
+}
+
+/**
  * Slovník. Klíč je krátký a mluvící, česká věta je zdroj pravdy - kdyby
  * anglická chyběla, ukáže se česká a nikde nezůstane prázdné místo.
  */
@@ -4039,6 +4064,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.pravoSmlouvyPodepisujePopis': {
     cs: 'odeslaná smlouva je od nás rovnou podepsaná jeho jménem',
     en: 'a contract we send out already carries their signature',
+  },
+  /* Kopie nabídek termínů hercům (12. 10. 2026). */
+  'uzivatel.kopieNabidekTerminu': { cs: 'Kopie nabídek termínů', en: 'Copy of session offers' },
+  'uzivatel.kopieNabidekTerminuPopis': {
+    cs: 'každá nabídka termínů odeslaná herci mu přijde v kopii — herec vidí, s kým termín řešit, a jeho odpověď dorazí i sem',
+    en: 'every session offer sent to a narrator also goes to them in copy — the narrator sees who to talk to and their reply arrives here too',
   },
   'uzivatel.pravoDotazyKlientu': { cs: 'Dostává dotazy klientů', en: 'Receives customer questions' },
   'uzivatel.pravoDotazyKlientuPopis': {
@@ -10626,6 +10657,92 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'pult.chybaKamera': {
     cs: 'Nepodařilo se zapnout kameru nebo mikrofon. Zkontrolujte povolení v prohlížeči.',
     en: 'The camera or microphone could not be turned on. Check the permissions in your browser.',
+  },
+
+  // --- dávka 7j: překážky mazání (lib/mazani.ts chodí do SmazatSPrekazkami) ---
+  // Jednotné číslo s počtem před ním („3× faktura") - tak to vypisuje
+  // popisPrekazek a tak to zůstává i v angličtině.
+  'prekazky.uzivatelFirmy': { cs: 'uživatel firmy', en: 'company user' },
+  'prekazky.projekt': { cs: 'projekt', en: 'project' },
+  'prekazky.objednavka': { cs: 'objednávka', en: 'order' },
+  'prekazky.faktura': { cs: 'faktura', en: 'invoice' },
+  'prekazky.nabidka': { cs: 'nabídka', en: 'quote' },
+  'prekazky.vydaj': { cs: 'výdaj', en: 'expense' },
+  'prekazky.smlouva': { cs: 'smlouva', en: 'contract' },
+  'prekazky.frekvence': { cs: 'natáčecí frekvence', en: 'recording session' },
+  'prekazky.rodnyList': { cs: 'rodný list', en: 'advert record' },
+  'prekazky.zpravaVChatu': { cs: 'zpráva v chatu', en: 'chat message' },
+  'prekazky.vykaz': { cs: 'výkaz', en: 'timesheet' },
+  'prekazky.projektManazer': { cs: 'projekt (jako manažer)', en: 'project (as manager)' },
+  'prekazky.projektHerec': { cs: 'projekt (jako herec)', en: 'project (as narrator)' },
+  'prekazky.projektKlient': { cs: 'projekt (jako klient)', en: 'project (as customer)' },
+  'prekazky.frekvenceHerec': {
+    cs: 'natáčecí frekvence (jako herec)',
+    en: 'recording session (as narrator)',
+  },
+  'prekazky.frekvenceZalozil': {
+    cs: 'natáčecí frekvence (založil)',
+    en: 'recording session (created it)',
+  },
+  'prekazky.kanalVChatu': { cs: 'kanál v chatu', en: 'chat channel' },
+  'prekazky.kanalZalozil': { cs: 'kanál v chatu (založil)', en: 'chat channel (created it)' },
+
+  // --- dávka 7j: počítání normostran z rukopisu (lib/normostrany.ts) ---
+  // Hlášky vidí KLIENT v objednávce, ne my v konzoli - proto do slovníku.
+  'normostrany.neplatnyArchiv': {
+    cs: 'Soubor nevypadá jako platný archiv.',
+    en: 'The file does not look like a valid archive.',
+  },
+  'normostrany.bezRozbaleni': {
+    cs: 'Tenhle prohlížeč neumí rozbalit archiv. Zkuste soubor uložit jako PDF nebo TXT.',
+    en: 'This browser cannot unpack the archive. Try saving the file as a PDF or TXT.',
+  },
+  'normostrany.bezTextuDokument': {
+    cs: 'V dokumentu se nenašel text (není to náhodou starý .doc?).',
+    en: 'No text was found in the document — is it an old .doc by any chance?',
+  },
+  'normostrany.bezTextuOdt': {
+    cs: 'V dokumentu se nenašel text.',
+    en: 'No text was found in the document.',
+  },
+  'normostrany.bezTextuEknihy': {
+    cs: 'V e-knize se nenašel text.',
+    en: 'No text was found in the e-book.',
+  },
+  'normostrany.pdfJeSken': {
+    cs: 'PDF neobsahuje text, nejspíš je to sken. Pošlete prosím Word nebo TXT.',
+    en: 'The PDF contains no text — it is most likely a scan. Please send a Word file or TXT.',
+  },
+  'normostrany.staryDoc': {
+    cs: 'Starý formát .doc přečíst neumím. Uložte prosím jako .docx nebo PDF.',
+    en: 'The old .doc format cannot be read. Please save the file as .docx or PDF.',
+  },
+  'normostrany.nelzePrecist': {
+    cs: 'Z tohohle souboru text vyčíst neumím. Pošlete Word, PDF nebo TXT.',
+    en: 'The text cannot be read from this file. Please send a Word file, PDF or TXT.',
+  },
+  // Čím se soubor přečetl. Word, PDF, RTF, HTML ani Final Draft se
+  // nepřekládají - v angličtině se jmenují stejně.
+  'normostrany.zdrojEkniha': { cs: 'E-kniha (.epub)', en: 'E-book (.epub)' },
+  'normostrany.zdrojTextovySoubor': { cs: 'Textový soubor', en: 'Text file' },
+
+  // --- dávka 7j: poslední české texty na obrazovkách ---
+  'faktura.novaCislo': { cs: 'Nová faktura', en: 'New invoice' },
+  'projektMeta.uvodPlaceholder': {
+    cs: 'Audiotéka uvádí audioknihu …',
+    en: 'Audiotéka presents the audiobook …',
+  },
+  'projektMeta.zaverPlaceholder': {
+    cs: 'Autor: Název. Připravila Audiotéka … Režie Ondřej Černý. …',
+    en: 'Author: Title. Produced by Audiotéka … Directed by Ondřej Černý. …',
+  },
+  'uzivatel.zadnaSlozkaDisku': {
+    cs: 'Zatím není založená žádná složka - zakládají se {odkaz}.',
+    en: 'No folder has been created yet — they are created under {odkaz}.',
+  },
+  'uzivatel.zadnaSlozkaDiskuOdkaz': {
+    cs: 've Složkách na Disku',
+    en: 'Folders on the Drive',
   },
 };
 

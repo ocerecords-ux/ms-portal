@@ -2206,6 +2206,12 @@ export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
 
 type RecordingOfferEmailInput = {
   to: string;
+  /**
+   * KDO Z NÁS JDE V KOPII (zadání 12. 10. 2026). Schválně viditelná kopie,
+   * ne skrytá: herec má vidět, s kým termín řešit, a když odpoví „žádný z nich
+   * mi nesedí", odpověď dorazí i produkci.
+   */
+  kopie?: string[];
   /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
   jazyk?: Jazyk;
   actorName: string;
@@ -2266,9 +2272,11 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
   }
 
   const jazyk = input.jazyk ?? 'cs';
+  const kopie = (input.kopie ?? []).map((e) => e.trim()).filter((e) => e && e !== input.to);
   const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
+    cc: kopie.length > 0 ? kopie.join(', ') : undefined,
     subject: prelozitEmailS(jazyk, 'mail.terminy.predmet', { projekt: input.projectName }),
     text: [
       pozdravPosty(jazyk, input.actorName),

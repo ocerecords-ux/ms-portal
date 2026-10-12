@@ -43,6 +43,8 @@ const schema = z.object({
   manazerProjektu: z.string().trim().optional(),
   smlouvyPodepisuje: z.string().trim().optional(),
   prijimaDotazyKlientu: z.string().trim().optional(),
+  /** Kopie nabídek termínů hercům (12. 10. 2026). */
+  kopieNabidekTerminu: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
   spravujeTechParametry: z.string().trim().optional(),
   /** Sekce, do kterých člověk smí (28. 9. 2026). Mění je jen superadmin. */
@@ -103,6 +105,7 @@ function readFormData(formData: FormData) {
     manazerProjektu: has('manazerProjektu') ? formData.get('manazerProjektu') : undefined,
     smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
+    kopieNabidekTerminu: has('kopieNabidekTerminu') ? formData.get('kopieNabidekTerminu') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
     spravujeTechParametry: has('spravujeTechParametry') ? formData.get('spravujeTechParametry') : undefined,
     sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
@@ -296,6 +299,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // tady se jen prepina priznak. Projevi se do peti minut i clovekovi, ktery
       // je zrovna prihlaseny (viz jwt callback v lib/auth.ts).
       ...(data.jenNahled !== undefined ? { jenNahled: data.jenNahled === '1' } : {}),
+      ...(data.kopieNabidekTerminu !== undefined
+        ? { kopieNabidekTerminu: data.kopieNabidekTerminu === '1' }
+        : {}),
       ...(data.prijimaDotazyKlientu !== undefined
         ? { prijimaDotazyKlientu: data.prijimaDotazyKlientu === '1' }
         : {}),

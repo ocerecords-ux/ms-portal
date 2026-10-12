@@ -15,11 +15,24 @@
  * zalomený na šířku stránky.
  */
 
-import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 
 export const ZNAKU_NA_NORMOSTRANU = 1800;
+
+/**
+ * Naše srozumitelná hláška pro klienta (dávka 7j). Technické chyby
+ * z prohlížeče chodí jako obyčejná `Error` a do okna objednávky se
+ * nedostanou - dřív se to poznávalo podle diakritiky, což u anglického
+ * rozhraní přestalo platit.
+ */
+export class ChybaRozboru extends Error {
+  constructor(zprava: string) {
+    super(zprava);
+    this.name = 'ChybaRozboru';
+  }
+}
 
 export type RozborTextu = {
   /** Znaky včetně mezer - to, z čeho se normostrany počítají. */
@@ -92,7 +105,7 @@ export function rozeberText(text: string, zdroj: string, stran?: number): Rozbor
  * rozbalit je umí sám prohlížeč (`DecompressionStream`), takže kvůli tomu
  * netahám do portálu žádnou knihovnu.
  */
-async function zipSoubory(data: ArrayBuffer): Promise<Map<string, Uint8Array>> {
+async function zipSoubory(data: ArrayBuffer, jazyk: Jazyk): Promise<Map<string, Uint8Array>> {
   const bytes = new Uint8Array(data);
   const view = new DataView(data);
   const soubory = new Map<string, Uint8Array>();
@@ -105,7 +118,7 @@ async function zipSoubory(data: ArrayBuffer): Promise<Map<string, Uint8Array>> {
       break;
     }
   }
-  if (konec < 0) throw new Error('Soubor nevypadá jako platný archiv.');
+  if (konec < 0) throw new ChybaRozboru(prelozit(jazyk, 'normostrany.neplatnyArchiv'));
 
   const pocet = view.getUint16(konec + 10, true);
   let at = view.getUint32(konec + 16, true);
@@ -132,7 +145,7 @@ async function zipSoubory(data: ArrayBuffer): Promise<Map<string, Uint8Array>> {
       soubory.set(nazev, syrova);
     } else if (metoda === 8) {
       if (typeof DecompressionStream === 'undefined') {
-        throw new Error('Tenhle prohlížeč neumí rozbalit archiv. Zkuste soubor uložit jako PDF nebo TXT.');
+        throw new ChybaRozboru(prelozit(jazyk, 'normostrany.bezRozbaleni'));
       }
       const proud = new Blob([syrova]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
       soubory.set(nazev, new Uint8Array(await new Response(proud).arrayBuffer()));
@@ -149,37 +162,37 @@ function jakoText(data: Uint8Array | undefined): string {
 
 // --- Jednotlivé formáty -----------------------------------------------------
 
-async function zDocx(file: File): Promise<RozborTextu> {
-  const soubory = await zipSoubory(await file.arrayBuffer());
+async function zDocx(file: File, jazyk: Jazyk): Promise<RozborTextu> {
+  const soubory = await zipSoubory(await file.arrayBuffer(), jazyk);
   const hlavni = soubory.get('word/document.xml');
-  if (!hlavni) throw new Error('V dokumentu se nenašel text (není to náhodou starý .doc?).');
+  if (!hlavni) throw new ChybaRozboru(prelozit(jazyk, 'normostrany.bezTextuDokument'));
   // Konec odstavce a zalomení řádku musí zůstat oddělovačem, jinak by se
   // slova na jejich hranici slepila do jednoho.
   const text = textZeZnacek(jakoText(hlavni), /<\/w:p>|<w:br\b[^>]*\/?>|<w:tab\b[^>]*\/?>/g);
   return rozeberText(text, 'Word (.docx)');
 }
 
-async function zOdt(file: File): Promise<RozborTextu> {
-  const soubory = await zipSoubory(await file.arrayBuffer());
+async function zOdt(file: File, jazyk: Jazyk): Promise<RozborTextu> {
+  const soubory = await zipSoubory(await file.arrayBuffer(), jazyk);
   const hlavni = soubory.get('content.xml');
-  if (!hlavni) throw new Error('V dokumentu se nenašel text.');
+  if (!hlavni) throw new ChybaRozboru(prelozit(jazyk, 'normostrany.bezTextuOdt'));
   const text = textZeZnacek(jakoText(hlavni), /<\/text:p>|<\/text:h>|<text:line-break\b[^>]*\/?>/g);
   return rozeberText(text, 'OpenDocument (.odt)');
 }
 
-async function zEpub(file: File): Promise<RozborTextu> {
-  const soubory = await zipSoubory(await file.arrayBuffer());
+async function zEpub(file: File, jazyk: Jazyk): Promise<RozborTextu> {
+  const soubory = await zipSoubory(await file.arrayBuffer(), jazyk);
   const kapitoly = [...soubory.keys()]
     .filter((n) => /\.(x?html?)$/i.test(n))
     .sort((a, b) => a.localeCompare(b, 'cs'));
-  if (kapitoly.length === 0) throw new Error('V e-knize se nenašel text.');
+  if (kapitoly.length === 0) throw new ChybaRozboru(prelozit(jazyk, 'normostrany.bezTextuEknihy'));
   const text = kapitoly
     .map((n) => textZeZnacek(jakoText(soubory.get(n)), /<\/(p|div|h[1-6]|li|tr)>|<br\b[^>]*\/?>/gi))
     .join('\n');
-  return rozeberText(text, 'E-kniha (.epub)');
+  return rozeberText(text, prelozit(jazyk, 'normostrany.zdrojEkniha'));
 }
 
-async function zPdf(file: File): Promise<RozborTextu> {
+async function zPdf(file: File, jazyk: Jazyk): Promise<RozborTextu> {
   // Soubor se predava JAKO ADRESA (blob:), ne jako pole bajtu - presne tak,
   // jak to dela prehravac v AudioTaggeru, ktery uz je dlouho v provozu.
   // Varianta s `data` se v nekterych prohlizecich chovala jinak.
@@ -201,7 +214,7 @@ async function zPdf(file: File): Promise<RozborTextu> {
     }
     const text = casti.join('\n');
     if (!text.replace(/\s/g, '')) {
-      throw new Error('PDF neobsahuje text, nejspíš je to sken. Pošlete prosím Word nebo TXT.');
+      throw new ChybaRozboru(prelozit(jazyk, 'normostrany.pdfJeSken'));
     }
     return rozeberText(text, 'PDF', doc.numPages);
   } finally {
@@ -224,9 +237,11 @@ async function zRtf(file: File): Promise<RozborTextu> {
 
 /**
  * Spočítá normostrany z vybraného souboru. Vyhazuje srozumitelnou hlášku —
- * v objednávce se ukáže rovnou klientovi.
+ * v objednávce se ukáže rovnou klientovi, a proto chodí jazyk až sem
+ * (dávka 7j): anglický klient nemá dostat českou větu. Výchozí je čeština,
+ * aby se starší volání nerozbila.
  */
-export async function spoctiNormostrany(file: File): Promise<RozborTextu> {
+export async function spoctiNormostrany(file: File, jazyk: Jazyk = 'cs'): Promise<RozborTextu> {
   const pripona = priponaSouboru(file.name);
 
   // Skutecnou chybu chceme videt v konzoli - v okne objednavky se ukazuje
@@ -236,21 +251,21 @@ export async function spoctiNormostrany(file: File): Promise<RozborTextu> {
   }
 
   if (pripona === 'doc') {
-    throw new Error('Starý formát .doc přečíst neumím. Uložte prosím jako .docx nebo PDF.');
+    throw new ChybaRozboru(prelozit(jazyk, 'normostrany.staryDoc'));
   }
   if (!PODPOROVANE.includes(pripona)) {
-    throw new Error('Z tohohle souboru text vyčíst neumím. Pošlete Word, PDF nebo TXT.');
+    throw new ChybaRozboru(prelozit(jazyk, 'normostrany.nelzePrecist'));
   }
 
   switch (pripona) {
     case 'docx':
-      return zDocx(file);
+      return zDocx(file, jazyk);
     case 'odt':
-      return zOdt(file);
+      return zOdt(file, jazyk);
     case 'epub':
-      return zEpub(file);
+      return zEpub(file, jazyk);
     case 'pdf':
-      return zPdf(file);
+      return zPdf(file, jazyk);
     case 'rtf':
       return zRtf(file);
     case 'htm':
@@ -263,7 +278,7 @@ export async function spoctiNormostrany(file: File): Promise<RozborTextu> {
       // Final Draft - scénář v XML; text je v <Text>…</Text>.
       return rozeberText(textZeZnacek(await file.text(), /<\/Paragraph>/g), 'Final Draft (.fdx)');
     default:
-      return rozeberText(await file.text(), 'Textový soubor');
+      return rozeberText(await file.text(), prelozit(jazyk, 'normostrany.zdrojTextovySoubor'));
   }
 }
 

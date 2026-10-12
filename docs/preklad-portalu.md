@@ -84,6 +84,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7g | 9. 10. | Komponenty v `src/lib`, kam skript nikdy nemířil — popisky ikon typů projektu, značky nabídky a faktury u názvu projektu, doklady klienta, ruční značka nabídky u reklam, detail procesu | [x] |
 | 7h | 10. 10. | Řetězce, na které se kontrolní skript nikdy nezeptal — hlavičky tabulek, `title`, `aria-label` a placeholdery: přehled reklam u klienta, přehled projektů (jazyk do buněk), lišta, tabule, část zakázky u faktur, upomínky, banka, složky na Disku u uživatele | [x] |
 | 7i | 11. 10. | Obrazovky z téhož dne, které s překladem nepočítaly — nabídková prezentace pro klienta (veřejná stránka i sestavování u projektu), knihovna ukázek, vzor prezentace a natáčecí pult | [x] |
+| 7j | 12. 10. | Číselníky a hlášky z `src/lib/*.ts`, které chodí na obrazovku natvrdo česky — názvy rychlých voleb, překážky mazání, hlášky počítání normostran z rukopisu, placeholdery úvodu a závěru knihy, číslo nové faktury, prázdné složky na Disku u uživatele | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1104,6 +1105,89 @@ Dnešní nález nebyl zapomenutý kout, byla to práce z téhož dne. Dokud jsou
 nové obrazovky psané natvrdo česky, bude mít večerní úloha každý den co dělat —
 levnější je psát `t('…')` rovnou při psaní obrazovky než ji překládat večer
 ve druhém průchodu.
+
+### Dávka 7j je HOTOVÁ (12. 10. 2026)
+
+**Dnešní práce přišla přeložená** — a to je novinka proti 7i. Za den vznikly
+dvě naše firmy v dokladech, notifikace firmy, režie klienta u termínů
+a měsíční přehled, a všechno to rovnou mluví oba jazyky (slovník +108 řádků
+od Ondřeje). Kontrola přidaných řádků v `src/app` nenašla jediný nový český
+text mimo komentáře. Večer tedy nedojížděl dnešní den, ale **číselníky
+v `src/lib/*.ts`, které si text nesou v sobě a vykreslují se natvrdo.**
+Dávky 7g a 7h mířily na `src/lib/*.tsx` a na řetězce bez diakritiky; tyhle
+jsou v obyčejných `.ts` a chodí na obrazovku skrz propy.
+**Šest obrazovek, devět souborů, slovník +33 klíčů (5 449 → 5 482) a +11
+názvů voleb.**
+
+**Co se přeložilo:**
+
+- `lib/quickActions.ts` → `components/QuickDock.tsx` — **názvy rychlých voleb
+  v levém panelu.** „Nová objednávka", „Nový termín", „Co mě dnes čeká" svítily
+  česky i klientovi s EN rozhraním, a to na každé obrazovce portálu
+  i administrace. Panel si každý skládá sám a je uložený v databázi česky,
+  takže se překládá PODLE KLÍČE VOLBY, ne podle textu — nový `nazevAkce()`
+  v `lib/jazyk.ts` je dvojče `nazevOdkazu()` z dávky 0. Český číselník
+  zůstává zdrojem pravdy.
+- `lib/mazani.ts` → `components/SmazatSPrekazkami.tsx` — **co visí na firmě,
+  uživateli a projektu** („3× objednávka, 1× rodný list"). Server jazyk
+  příjemce nezná, a tak ho nehádá: `Prekazka` nese kromě českého `co` i `klic`
+  do slovníku a přeloží to obrazovka. Česká věta v `error` od API zůstává —
+  jde do logu a do hlášky, kterou si čte administrace.
+- `lib/normostrany.ts` → `objednavka/OrderForm.tsx` — **hlášky počítání
+  normostran z rukopisu.** Tyhle vidí KLIENT: „PDF neobsahuje text, nejspíš
+  je to sken", „Starý formát .doc přečíst neumím". Jazyk teď chodí do
+  `spoctiNormostrany(file, jazyk)` a dál všemi čtecími funkcemi, protože
+  počítání běží celé v prohlížeči. Zdroj textu („E-kniha (.epub)", „Textový
+  soubor") je taky klíč; Word, PDF, RTF, HTML ani Final Draft se nepřekládají,
+  v angličtině se jmenují stejně.
+- **Nová `ChybaRozboru`** místo obyčejné `Error`. Objednávka do té doby
+  poznávala naši srozumitelnou větu od technické chyby prohlížeče **podle
+  diakritiky** — což přesně ve chvíli, kdy naše věta začne být anglicky,
+  přestane platit a klient by místo rady dostal obecné „soubor nejde přečíst".
+  Teď se to pozná podle typu chyby.
+- `projekty/[id]/ProjectMetaForm.tsx` — placeholdery úvodu a závěru audioknihy
+  („Audiotéka uvádí audioknihu …"). Název klienta a jméno režiséra v příkladu
+  zůstávají, jen věta kolem nich je anglicky.
+- `doklady/faktury/nova/page.tsx` — „Nová faktura" v hlavičce dokladu, který
+  se ještě nezaložil (serverová stránka, `nactiJazyk()`).
+- `users/[id]/UserEditForm.tsx` — věta „Zatím není založená žádná složka —
+  zakládají se ve Složkách na Disku". Odkaz je uprostřed věty, takže je to
+  jeden klíč se značkou `{odkaz}` a `prelozitKolem` (pravidlo 7).
+
+**Co zůstává české schválně, i když to kontrola našla:**
+
+- `lib/svatky.ts` a `lib/countries.ts` — **už přeložené jsou**, jen si texty
+  nesou samy (`{ cs, en }`, resp. `Intl.DisplayNames`). Kontrola „soubor bez
+  volání překladu" je kvůli tomu hlásí falešně; hledat se musí i na `en:`.
+- `lib/menu.ts`, `lib/stavyProjektu.ts`, `lib/projectTypes.ts` — české
+  číselníky, které se překládají až u vykreslení (`nazevOdkazu`, `nazevStavu`,
+  klíče v `IkonaPriority`). Stavy projektů se navíc ukládají do databáze
+  česky (dávka 5).
+- `lib/contracts.ts`, `lib/vzoryZprav.ts`, `lib/osloveni.ts`,
+  `lib/uvodZaver.ts` — texty dokladů a vzorů se řídí jazykem DOKUMENTU, ne
+  přepínačem (pravidlo 5), a skloňování jmen je věc češtiny.
+- `lib/bruno*.ts` — příručka a nástroje asistenta. Čte je model, ne klient.
+- `lib/socialni.ts` — modul sítí vidí zatím jen Ondřej (zadání 27. 9. 2026).
+
+**Co se našlo a NEDĚLALO se to (pořád vlastní úkol, ne večerní dávka):**
+
+1. Routy náhledů v `api/**`, které vracejí text na obrazovku — viz dávka 7h.
+   Dnešní průchod jich napočítal přes třicet (`api/nahled/doklad`,
+   `api/kalendar/*`, `api/klient/doklady/nahled`); jsou to serverové hlášky,
+   u kterých se musí nejdřív rozhodnout, jestli jazyk brát z cookie, nebo
+   z uživatele v databázi.
+2. `HostNataceni.chybaOdeslani` se ukládá do databáze česky — viz dávka 7h.
+3. `src/lib/pristupy.ts` — **názvy sekcí a jednotlivých práv na kartě
+   uživatele** (95 řádků). Je to největší zbývající český kus v `lib` a sahá
+   do něj i middleware; na jeden večer spolu s ostatním se to nevešlo, je to
+   dávka sama pro sebe.
+4. Zámky v `.git` byly uklizené, nic se nepřepisovalo. Platí dál
+   `git rm --cached stubs/prisma-client.d.ts` (viz dávka 7a).
+
+**Poučení: kontrolní skript ještě pořád lže v obou směrech.** Hlásí soubory,
+které si překlad nesou samy (`svatky.ts`), a mlčí o těch, co posílají český
+text propem jinam (`quickActions.ts`, `mazani.ts`). Spolehlivější je jít po
+tom, KAM text teče, ne po tom, jestli v souboru stojí `usePreklad`.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

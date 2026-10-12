@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UDALOST_PREHLED_DNE, jeOtevriVPortalu } from '@/lib/quickActions';
 import type { QuickAction, QuickActionKey } from '@/lib/quickActions';
-import { usePreklad } from './JazykProvider';
+import { useJazyk, usePreklad } from './JazykProvider';
+import { nazevAkce } from '@/lib/jazyk';
 
 /**
  * Levý panel rychlých voleb (zadání 9. 9. 2026: „vlevo bych chtěl skrývací
@@ -154,6 +155,13 @@ export function QuickDock({
   available: QuickAction[];
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
+  /**
+   * Název volby podle KLÍČE, ne podle textu (dávka 7j). Panel má každý
+   * uživatel vlastní a uložený je v databázi česky, takže se překládá podle
+   * toho, co volba zakládá - stejně jako názvy odkazů v liště.
+   */
+  const nazev = (a: { key: string; label: string }) => nazevAkce(jazyk, a.key, a.label);
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -267,8 +275,8 @@ export function QuickDock({
               key={akce.key}
               type="button"
               onClick={() => otevriVPortalu(akce.key)}
-              title={akce.label}
-              aria-label={akce.label}
+              title={nazev(akce)}
+              aria-label={nazev(akce)}
               className="px-2.5 py-2.5 text-brand-green hover:bg-brand-purpleDeep transition-colors flex items-center justify-center"
             >
               <Ikona akce={akce.key} />
@@ -277,8 +285,8 @@ export function QuickDock({
             <Link
               key={akce.key}
               href={akce.href}
-              title={akce.label}
-              aria-label={akce.label}
+              title={nazev(akce)}
+              aria-label={nazev(akce)}
               className="px-2.5 py-2.5 text-brand-green hover:bg-brand-purpleDeep transition-colors flex items-center justify-center no-underline"
             >
               <Ikona akce={akce.key} />
@@ -381,12 +389,12 @@ export function QuickDock({
                 <span className="text-brand-purple">
                   <Ikona akce={akce.key} />
                 </span>
-                <span className="truncate flex-1">{akce.label}</span>
+                <span className="truncate flex-1">{nazev(akce)}</span>
                 <button
                   type="button"
                   onClick={() => odeber(akce.key)}
-                  title={t('rychleVolby.odebrat', { nazev: akce.label })}
-                  aria-label={t('rychleVolby.odebrat', { nazev: akce.label })}
+                  title={t('rychleVolby.odebrat', { nazev: nazev(akce) })}
+                  aria-label={t('rychleVolby.odebrat', { nazev: nazev(akce) })}
                   className="w-5 h-5 rounded-full bg-field text-muted hover:bg-dangerTint hover:text-danger text-xs font-bold leading-none flex items-center justify-center"
                 >
                   ×
@@ -402,7 +410,7 @@ export function QuickDock({
                 <span className="text-brand-purple">
                   <Ikona akce={akce.key} />
                 </span>
-                <span className="truncate">{akce.label}</span>
+                <span className="truncate">{nazev(akce)}</span>
               </button>
             ) : (
               <Link
@@ -413,7 +421,7 @@ export function QuickDock({
                 <span className="text-brand-purple">
                   <Ikona akce={akce.key} />
                 </span>
-                <span className="truncate">{akce.label}</span>
+                <span className="truncate">{nazev(akce)}</span>
               </Link>
             ),
           )}
@@ -432,7 +440,7 @@ export function QuickDock({
                       onClick={() => pridej(akce)}
                       className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-heading text-brand-purple hover:bg-tint transition-colors text-left"
                     >
-                      + {akce.label}
+                      + {nazev(akce)}
                     </button>
                   ))}
                 </>

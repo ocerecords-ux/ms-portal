@@ -47,8 +47,29 @@ export async function odesliNabidkuHerci(
   }
 
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+
+  /**
+   * KDO Z NÁS JDE V KOPII (zadání 12. 10. 2026: „potřebuji, aby chodily Helči
+   * v kopii emaily s nabídkou termínů, které chodí na herce").
+   *
+   * Zaškrtává se u účtu, ne natvrdo v kódu - lidi se mění a časem to může
+   * chtít i někdo další. Viditelná kopie, ne skrytá: herec má vidět, s kým
+   * termín řešit, a odpověď „žádný mi nesedí" má dorazit produkci.
+   */
+  const vKopii = (
+    await prisma.user
+      .findMany({
+        where: { kopieNabidekTerminu: true, active: true },
+        select: { email: true },
+      })
+      .catch(() => [] as { email: string }[])
+  )
+    .map((u) => u.email.trim())
+    .filter(Boolean);
+
   const result = await sendRecordingOfferEmail({
     to: request.actorEmail,
+    kopie: vKopii,
     actorName: request.actorName,
     projectName: request.projectName,
     // Hercovi se pobocka oznacuje ulici, ne jako „Brno I" (pripominka Heleny

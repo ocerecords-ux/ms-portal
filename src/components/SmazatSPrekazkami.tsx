@@ -95,8 +95,10 @@ export function SmazatSPrekazkami({
         <p className="text-sm font-body text-muted m-0 mt-1">{t('mazani.visiNaNem')}</p>
         <ul className="text-sm font-body text-ink mt-1 mb-0 pl-5">
           {prekazky?.map((p) => (
-            <li key={p.co}>
-              {p.pocet}× {p.co}
+            <li key={p.klic ?? p.co}>
+              {/* Název přichází ze serveru česky a klíč k němu - přeloží se
+                  tady, kde je jazyk rozhraní (dávka 7j). */}
+              {p.pocet}× {p.klic ? t(p.klic) : p.co}
             </li>
           ))}
         </ul>

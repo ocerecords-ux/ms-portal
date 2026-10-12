@@ -307,6 +307,14 @@ model User {
   /// v kazdem kanalu, ktery klient otevre tlacitkem "Zeptat se" u projektu.
   prijimaDotazyKlientu Boolean @default(false)
 
+  /// KOPIE NABIDEK TERMINU HERCUM (zadani 12. 10. 2026: „potrebuji, aby
+  /// chodily Helci v kopii emaily s nabidkou terminu, ktere chodi na herce").
+  ///
+  /// Kdo to ma zaskrtnute, chodi mu kazda odeslana nabidka terminu v KOPII -
+  /// ne ve skryte. Herec tak vidi, s kym termin resit, a kdyz odpovi „zadny
+  /// z nich mi nesedi", odpoved dorazi i produkci.
+  kopieNabidekTerminu Boolean @default(false)
+
   /// Vidi sekci Banka - napojeni uctu a parovani plateb (zadani 17. 9. 2026:
   /// „nastaveni a parovani banky bych mel videt jen ja a Bara Siblova").
   /// Priznak u uctu, ne seznam jmen v kodu: lidi se meni, kod by o tom nevedel.

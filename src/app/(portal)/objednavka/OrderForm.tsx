@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { NarratorMultiSelect, type NarratorOption } from './NarratorMultiSelect';
 import {
+  ChybaRozboru,
   formatujCislo,
   formatujNormostrany,
   spoctiNormostrany,
@@ -207,7 +208,7 @@ export function OrderForm({
     setChybaRozboru(null);
     setDetailChyby(null);
     try {
-      const vysledek = await spoctiNormostrany(soubor);
+      const vysledek = await spoctiNormostrany(soubor, jazyk);
       setRozbor(vysledek);
       if (doplnitVzdy || !pocetRef.current.trim()) {
         setPageCount(String(zaokrouhliNormostrany(vysledek.normostran)));
@@ -224,15 +225,15 @@ export function OrderForm({
           typeof navigator !== 'undefined' ? ` · ${navigator.userAgent}` : ''
         }`,
       );
-      setChybaRozboru(
-        hlaska && hlaska.length < 120 && /[ěščřžýáíéúůťďň ]/i.test(hlaska)
-          ? hlaska
-          : t('objednavka.chybaCteni'),
-      );
+      // Naše hláška už přichází ze slovníku v jazyce rozhraní (dávka 7j),
+      // a pozná se podle typu - do té doby se rozlišovala podle diakritiky,
+      // což by anglické větě ze slovníku nesedlo. Technická chyba
+      // z prohlížeče jde jen do konzole.
+      setChybaRozboru(err instanceof ChybaRozboru ? err.message : t('objednavka.chybaCteni'));
     } finally {
       setPocitam(false);
     }
-  }, [t]);
+  }, [t, jazyk]);
 
   useEffect(() => {
     setRozbor(null);

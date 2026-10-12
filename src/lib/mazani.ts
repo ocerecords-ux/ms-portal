@@ -19,7 +19,12 @@ import { prisma } from '@/lib/db';
  * stát.
  */
 
-export type Prekazka = { co: string; pocet: number };
+/**
+ * Co na záznamu visí. `co` je ČESKÝ název (zdroj pravdy - jde i do hlášky
+ * serveru a do logu), `klic` je klíč do slovníku, podle kterého to přeloží
+ * obrazovka (dávka 7j). Server jazyk příjemce nezná, a tak ho ani nehádá.
+ */
+export type Prekazka = { co: string; pocet: number; klic: string };
 
 /** Věty typu "3 faktury, 1 projekt" - ať to jde přečíst, ne luštit. */
 export function popisPrekazek(prekazky: Prekazka[]): string {
@@ -42,15 +47,15 @@ export async function prekazkyFirmy(companyId: string): Promise<Prekazka[]> {
     ]);
 
   return [
-    { co: 'uživatel firmy', pocet: uzivatele },
-    { co: 'projekt', pocet: projekty },
-    { co: 'objednávka', pocet: objednavky },
-    { co: 'faktura', pocet: faktury },
-    { co: 'nabídka', pocet: nabidky },
-    { co: 'výdaj', pocet: vydaje },
-    { co: 'smlouva', pocet: smlouvy },
-    { co: 'natáčecí frekvence', pocet: frekvence },
-    { co: 'rodný list', pocet: rodneListy },
+    { co: 'uživatel firmy', klic: 'prekazky.uzivatelFirmy', pocet: uzivatele },
+    { co: 'projekt', klic: 'prekazky.projekt', pocet: projekty },
+    { co: 'objednávka', klic: 'prekazky.objednavka', pocet: objednavky },
+    { co: 'faktura', klic: 'prekazky.faktura', pocet: faktury },
+    { co: 'nabídka', klic: 'prekazky.nabidka', pocet: nabidky },
+    { co: 'výdaj', klic: 'prekazky.vydaj', pocet: vydaje },
+    { co: 'smlouva', klic: 'prekazky.smlouva', pocet: smlouvy },
+    { co: 'natáčecí frekvence', klic: 'prekazky.frekvence', pocet: frekvence },
+    { co: 'rodný list', klic: 'prekazky.rodnyList', pocet: rodneListy },
   ].filter((p) => p.pocet > 0);
 }
 
@@ -89,15 +94,15 @@ export async function prekazkyUzivatele(userId: string): Promise<Prekazka[]> {
   ]);
 
   return [
-    { co: 'zpráva v chatu', pocet: zpravy },
-    { co: 'výkaz', pocet: vykazy },
-    { co: 'objednávka', pocet: objednavky },
-    { co: 'projekt (jako manažer)', pocet: projektyManazer },
-    { co: 'projekt (jako herec)', pocet: projektyHerec },
-    { co: 'projekt (jako klient)', pocet: projektyKlient },
-    { co: 'natáčecí frekvence (jako herec)', pocet: frekvence },
-    { co: 'natáčecí frekvence (založil)', pocet: frekvenceZalozil },
-    { co: 'kanál v chatu (založil)', pocet: kanaly },
+    { co: 'zpráva v chatu', klic: 'prekazky.zpravaVChatu', pocet: zpravy },
+    { co: 'výkaz', klic: 'prekazky.vykaz', pocet: vykazy },
+    { co: 'objednávka', klic: 'prekazky.objednavka', pocet: objednavky },
+    { co: 'projekt (jako manažer)', klic: 'prekazky.projektManazer', pocet: projektyManazer },
+    { co: 'projekt (jako herec)', klic: 'prekazky.projektHerec', pocet: projektyHerec },
+    { co: 'projekt (jako klient)', klic: 'prekazky.projektKlient', pocet: projektyKlient },
+    { co: 'natáčecí frekvence (jako herec)', klic: 'prekazky.frekvenceHerec', pocet: frekvence },
+    { co: 'natáčecí frekvence (založil)', klic: 'prekazky.frekvenceZalozil', pocet: frekvenceZalozil },
+    { co: 'kanál v chatu (založil)', klic: 'prekazky.kanalZalozil', pocet: kanaly },
   ].filter((p) => p.pocet > 0);
 }
 
@@ -122,13 +127,13 @@ export async function prekazkyProjektu(caflouProjectId: string): Promise<Prekazk
   ]);
 
   return [
-    { co: 'faktura', pocet: faktury },
-    { co: 'nabídka', pocet: nabidky },
-    { co: 'výdaj', pocet: vydaje },
-    { co: 'smlouva', pocet: smlouvy },
-    { co: 'výkaz', pocet: vykazy },
-    { co: 'natáčecí frekvence', pocet: frekvence },
-    { co: 'rodný list', pocet: rodneListy },
-    { co: 'kanál v chatu', pocet: konverzace },
+    { co: 'faktura', klic: 'prekazky.faktura', pocet: faktury },
+    { co: 'nabídka', klic: 'prekazky.nabidka', pocet: nabidky },
+    { co: 'výdaj', klic: 'prekazky.vydaj', pocet: vydaje },
+    { co: 'smlouva', klic: 'prekazky.smlouva', pocet: smlouvy },
+    { co: 'výkaz', klic: 'prekazky.vykaz', pocet: vykazy },
+    { co: 'natáčecí frekvence', klic: 'prekazky.frekvence', pocet: frekvence },
+    { co: 'rodný list', klic: 'prekazky.rodnyList', pocet: rodneListy },
+    { co: 'kanál v chatu', klic: 'prekazky.kanalVChatu', pocet: konverzace },
   ].filter((p) => p.pocet > 0);
 }

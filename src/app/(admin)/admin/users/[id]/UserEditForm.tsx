@@ -18,6 +18,7 @@ import { LOKACE_S_BARVOU, nazevMesta } from '@/lib/lokaceHercu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { prelozitKolem } from '@/lib/jazyk';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -55,6 +56,8 @@ type EditableUser = {
   /** Podepisuje za Mediaspace smlouvy (zadání 15. 9. 2026). */
   smlouvyPodepisuje: boolean;
   prijimaDotazyKlientu: boolean;
+  /** Chodí mu v kopii nabídky termínů hercům (12. 10. 2026). */
+  kopieNabidekTerminu: boolean;
   /** Vidí sekci Banka (zadání 17. 9. 2026). */
   vidiBanku: boolean;
   /** Spravuje technické parametry výroby (zadání 27. 9. 2026). */
@@ -135,6 +138,8 @@ export function UserEditForm({
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
+  // Věta „zakládají se ve Složkách na Disku" s odkazem uprostřed (dávka 7j).
+  const [prazdnoPred, prazdnoPo] = prelozitKolem(jazyk, 'uzivatel.zadnaSlozkaDisku', 'odkaz');
   const router = useRouter();
   const [email, setEmail] = useState(user.email);
   const [name, setName] = useState(user.name ?? '');
@@ -148,6 +153,11 @@ export function UserEditForm({
   const [pristupy, setPristupy] = useState<string[]>(user.pristupy);
   const [smlouvyPodepisuje, setSmlouvyPodepisuje] = useState(user.smlouvyPodepisuje);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
+  /**
+   * KOPIE NABÍDEK TERMÍNŮ HERCŮM (zadání 12. 10. 2026: „potřebuji, aby chodily
+   * Helči v kopii emaily s nabídkou termínů, které chodí na herce").
+   */
+  const [kopieNabidek, setKopieNabidek] = useState(user.kopieNabidekTerminu);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
   const [spravujeTechParametry, setSpravujeTechParametry] = useState(user.spravujeTechParametry);
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
@@ -276,6 +286,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
+        if (isMediaspace) fd.set('kopieNabidekTerminu', kopieNabidek ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
         if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
         /**
@@ -612,11 +623,13 @@ export function UserEditForm({
               ))}
               {slozkyDisku.length === 0 && (
                 <span className="text-sm font-body text-muted">
-                  Zatím není založená žádná složka - zakládají se{' '}
+                  {/* Celá věta je jeden klíč se značkou {odkaz} - v angličtině
+                      stojí odkaz jinde (pravidlo 7, dávka 7j). */}
+                  {prazdnoPred}
                   <Link href="/admin/slozky" className="text-brand-purple underline">
-                    ve Složkách na Disku
+                    {t('uzivatel.zadnaSlozkaDiskuOdkaz')}
                   </Link>
-                  .
+                  {prazdnoPo}
                 </span>
               )}
             </div>
@@ -777,6 +790,28 @@ export function UserEditForm({
                 {t('uzivatel.pravoDotazyKlientu')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.pravoDotazyKlientuPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* KOPIE NABÍDEK TERMÍNŮ HERCŮM (12. 10. 2026). Viditelná kopie,
+            ne skrytá - herec má vidět, s kým termín řešit, a odpověď
+            „žádný mi nesedí" má dorazit produkci. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={kopieNabidek}
+                onChange={(e) => setKopieNabidek(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.kopieNabidekTerminu')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.kopieNabidekTerminuPopis')}
                 </span>
               </span>
             </label>
