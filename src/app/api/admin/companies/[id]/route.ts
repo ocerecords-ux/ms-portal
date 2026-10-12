@@ -43,6 +43,8 @@ const schema = z.object({
   rezieKlientaUserId: z.string().trim().max(100).nullable().optional(),
   /** Pod kterou naši firmu klient patří (12. 10. 2026) - viz lib/naseFirmy.ts. */
   vydavatelId: z.string().trim().max(100).nullable().optional(),
+  /** Měna klienta (12. 10. 2026) - sazba za normostranu a předběžná cena. */
+  mena: z.enum(['CZK', 'EUR', 'USD', 'GBP']).optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -98,6 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                 ? { rezieKlientaUserId: data.rezieKlientaUserId || null }
                 : {}),
               ...(data.vydavatelId !== undefined ? { vydavatelId: data.vydavatelId || null } : {}),
+              ...(data.mena !== undefined ? { mena: data.mena } : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }
           : {}),

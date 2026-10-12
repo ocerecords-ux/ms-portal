@@ -9,7 +9,9 @@ import { CountrySelect } from './CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { CURRENCIES, CURRENCY_LABELS, nazevMeny } from '@/lib/doklady';
+import type { Currency } from '@prisma/client';
 
 // Firmy se od 5. 9. 2026 deli na Klienty a Dodavatele (CompanyType) - typ se
 // prednastavi podle zalozky, na ktere admin prave je (viz page.tsx), pole
@@ -20,6 +22,7 @@ import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 // jde tedy zalozit rovnou s fakturacnimi udaji, bez otevirani detailu.
 export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -42,6 +45,8 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
 
   // Klient
   const [rate, setRate] = useState('');
+  /** Měna klienta (12. 10. 2026) - sazba za normostranu je v ní. */
+  const [mena, setMena] = useState<Currency>('CZK');
   const [caflouCompanyId, setCaflouCompanyId] = useState('');
   const [driveUrl, setDriveUrl] = useState('');
   // Druh zakazek (zadani 12. 9. 2026) - podle tohoto se klientovi na
@@ -132,6 +137,7 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
           ? {
               ...common,
               ratePerPage: dealsAudiobooks ? rate : '',
+              mena,
               caflouCompanyId,
               driveFolderUrl: driveUrl,
               dealsAudiobooks,
@@ -283,10 +289,21 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
           {/* Sazba za normostranu dava smysl jen u audioknih - u reklamnich
               klientu se cena pocita z Ceniku. */}
           {dealsAudiobooks && (
-            <AdminField label={t('firmy.sazbaZaNs')} required>
+            <AdminField label={t('firmy.sazbaZaNs', { mena: CURRENCY_LABELS[mena] })} required>
               <input required type="number" min={0} value={rate} onChange={(e) => setRate(e.target.value)} className="admin-input" />
             </AdminField>
           )}
+
+          {/* Měna klienta (12. 10. 2026) - u britské firmy libry. */}
+          <AdminField label={t('firma.mena')} hint={t('firma.menaHint')}>
+            <select value={mena} onChange={(e) => setMena(e.target.value as Currency)} className="admin-input">
+              {CURRENCIES.map((m) => (
+                <option key={m} value={m}>
+                  {nazevMeny(m, jazyk)}
+                </option>
+              ))}
+            </select>
+          </AdminField>
 
           <AdminField label={t('firmy.caflouId')} hint={t('firmy.caflouIdNapoveda')}>
             <input

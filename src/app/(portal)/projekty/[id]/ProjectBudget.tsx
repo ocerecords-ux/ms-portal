@@ -5,10 +5,21 @@ import { budgetUsedPercent, type Budget } from '@/lib/budget';
 import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '../../components/JazykProvider';
 import { NakladyProjektu, type NakladovaPolozka } from './NakladyProjektu';
+import { CURRENCY_LABELS } from '@/lib/doklady';
+import type { Currency } from '@prisma/client';
 
 // Částky podle jazyka (dávka 7b) - britsky „1,234 Kč", česky „1 234 Kč".
 const czk = (v: number, jazyk: Jazyk) =>
   `${Math.round(v).toLocaleString(kodJazyka(jazyk))} Kč`;
+
+/**
+ * Částka v MĚNĚ KLIENTA (12. 10. 2026: „u té britské firmy potřebuju nějak
+ * nastavit sazbu za NS v librách"). Náklady výroby zůstávají v korunách -
+ * to jsou naše peníze; v měně klienta je jen to, co se počítá z jeho sazby
+ * za normostranu.
+ */
+const uKlienta = (v: number, mena: Currency, jazyk: Jazyk) =>
+  `${Math.round(v).toLocaleString(kodJazyka(jazyk))} ${CURRENCY_LABELS[mena]}`;
 
 /**
  * Rozpocet audioknihy (zadani 6. 9. 2026) - vidi ho jen Zuzo-labuzo.
@@ -48,6 +59,7 @@ export function ProjectBudget({
   spent,
   revenue,
   ratePerPage,
+  mena = 'CZK',
   hoursLogged,
   caflouProjectId,
   pocatecniPolozky,
@@ -63,6 +75,8 @@ export function ProjectBudget({
   /** Cena zakazky z normostran x sazba firmy, null kdyz sazba chybi. */
   revenue: number | null;
   ratePerPage: number | null;
+  /** Měna klienta (12. 10. 2026) - sazba za normostranu a cena zakázky. */
+  mena?: Currency;
   hoursLogged: number;
   caflouProjectId: string;
   pocatecniPolozky: NakladovaPolozka[];
@@ -209,7 +223,7 @@ export function ProjectBudget({
             <p className="text-xs font-body text-muted mt-1 m-0">
               {t('rozpocet.cenaZakazkyVzorec', {
                 pocet: budget.pageCount,
-                sazba: czk(ratePerPage, jazyk),
+                sazba: uKlienta(ratePerPage, mena, jazyk),
               })}
             </p>
           )}
@@ -300,7 +314,7 @@ export function ProjectBudget({
               <p className="text-xs font-body text-muted mt-1.5 m-0">
                 {t('rozpocet.zatimOdhad', {
                   pocet: budget.pageCount,
-                  sazba: czk(ratePerPage ?? 0, jazyk),
+                  sazba: uKlienta(ratePerPage ?? 0, mena, jazyk),
                 })}
               </p>
             )}

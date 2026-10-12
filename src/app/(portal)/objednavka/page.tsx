@@ -60,6 +60,8 @@ export default async function ObjednavkaPage() {
       {company.dealsAudiobooks && company.dealsAds ? (
         <OrderTypeSwitcher
           ratePerPage={company.ratePerPage ?? 0}
+          // Měna klienta (12. 10. 2026) - u britské firmy libry.
+          mena={company.mena ?? 'CZK'}
           cenuUrcujeKlient={company.cenuUrcujeKlient}
           herci={herci}
           uvodZaver={uvodZaver}
@@ -67,6 +69,8 @@ export default async function ObjednavkaPage() {
       ) : company.dealsAudiobooks ? (
         <OrderForm
           ratePerPage={company.ratePerPage ?? 0}
+          // Měna klienta (12. 10. 2026) - u britské firmy libry.
+          mena={company.mena ?? 'CZK'}
           cenuUrcujeKlient={company.cenuUrcujeKlient}
           herci={herci}
           uvodZaver={uvodZaver}

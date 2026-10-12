@@ -5,6 +5,7 @@ import { OrderForm } from './OrderForm';
 import { AdOrderForm } from './AdOrderForm';
 import type { NarratorOption } from './NarratorMultiSelect';
 import { usePreklad } from '../components/JazykProvider';
+import type { Currency } from '@prisma/client';
 
 /**
  * Klient, ktery poptava OBOJI (audioknihy i reklamy - zadani 12. 9. 2026),
@@ -13,11 +14,14 @@ import { usePreklad } from '../components/JazykProvider';
  */
 export function OrderTypeSwitcher({
   ratePerPage,
+  mena,
   cenuUrcujeKlient = false,
   herci,
   uvodZaver = false,
 }: {
   ratePerPage: number;
+  /** Měna klienta (12. 10. 2026) - viz OrderForm. */
+  mena: Currency;
   /** Cenu navrhuje klient (23. 9. 2026) - viz OrderForm. */
   cenuUrcujeKlient?: boolean;
   herci: NarratorOption[];
@@ -49,7 +53,7 @@ export function OrderTypeSwitcher({
         </button>
       </div>
 
-      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} cenuUrcujeKlient={cenuUrcujeKlient} herci={herci} uvodZaver={uvodZaver} /> : <AdOrderForm />}</div>
+      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} mena={mena} cenuUrcujeKlient={cenuUrcujeKlient} herci={herci} uvodZaver={uvodZaver} /> : <AdOrderForm />}</div>
     </div>
   );
 }

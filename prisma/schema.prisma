@@ -82,7 +82,16 @@ model Company {
   name            String
 
   // --- Klient (type = KLIENT) ---
-  ratePerPage    Int?      // predbezna sazba za 1 normostranu, v Kc - jen u klientu
+  ratePerPage    Int?      // predbezna sazba za 1 normostranu - jen u klientu, v mene nize
+
+  /// MĚNA KLIENTA (zadani 12. 10. 2026: „u te britske firmy potrebuju nejak
+  /// nastavit sazbu za NS v librach").
+  ///
+  /// V cem se tomuhle klientovi pocita a fakturuje. Plati pro SAZBU ZA
+  /// NORMOSTRANU a predbeznou cenu v objednavce; doklady si menu nesou
+  /// vlastni, jen se jim tahle predvyplni. Vychozi koruna, aby se
+  /// u stavajicich klientu nic nezmenilo.
+  mena           Currency  @default(CZK)
   caflouCompanyId String?   // ID firmy/kontaktu v Caflou - podle nej se z Caflou API tahaji projekty teto firmy
   driveFolderUrl String?   // odkaz na slozku klienta na Google Disku (prirazuje admin rucne)
 

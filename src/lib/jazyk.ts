@@ -4460,8 +4460,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'firmy.audioknihy': { cs: 'Audioknihy', en: 'Audiobooks' },
   'firmy.reklamy': { cs: 'Reklamy', en: 'Adverts' },
   'firmy.sazbaZaNs': {
-    cs: 'Sazba za normostranu (Kč bez DPH)',
-    en: 'Rate per standard page (CZK excl. VAT)',
+    cs: 'Sazba za normostranu ({mena} bez DPH)',
+    en: 'Rate per standard page ({mena} excl. VAT)',
   },
   'firmy.caflouId': { cs: 'ID firmy v Caflou', en: 'Company ID in Caflou' },
   'firmy.caflouIdNapoveda': {
@@ -6652,7 +6652,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'half once the contract is signed, the rest afterwards — an invoice raised from a quote is then pre-filled with our internal 1st / 2nd part marker; it is not printed on the document',
   },
   'firma.naCastiVolba': { cs: 'Zakázka se fakturuje nadvakrát', en: 'The order is invoiced in two goes' },
-  'firma.sazba': { cs: 'Sazba za normostranu (Kč bez DPH)', en: 'Rate per standard page (CZK excl. VAT)' },
+  'firma.sazba': {
+    cs: 'Sazba za normostranu ({mena} bez DPH)',
+    en: 'Rate per standard page ({mena} excl. VAT)',
+  },
+  /* Měna klienta (12. 10. 2026) - sazba za NS a předběžná cena v objednávce. */
+  'firma.mena': { cs: 'Měna klienta', en: 'Client currency' },
+  'firma.menaHint': {
+    cs: 'V téhle měně se klientovi počítá sazba za normostranu i předběžná cena v objednávce. Na dokladu se předvyplní, ale dá se tam přepsat.',
+    en: 'The rate per standard page and the estimated order price are calculated in this currency. Documents pre-fill it and can still override it.',
+  },
   'firma.caflouId': { cs: 'ID firmy v Caflou', en: 'Company ID in Caflou' },
   'firma.caflouIdHint': {
     cs: 'podle tohoto ID se z Caflou tahají projekty této firmy do sekce Projekty',

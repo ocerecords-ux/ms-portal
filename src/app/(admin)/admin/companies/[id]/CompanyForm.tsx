@@ -10,6 +10,8 @@ import type { Company } from '@prisma/client';
 import { nazevTypuFirmy } from '@/lib/roles';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
+import { CURRENCIES, CURRENCY_LABELS, nazevMeny } from '@/lib/doklady';
+import type { Currency } from '@prisma/client';
 
 /**
  * Karta firmy (zadani 6. 9. 2026). Fakturacni udaje - IC, DIC, platce DPH,
@@ -65,6 +67,14 @@ export function CompanyForm({
   const [fakturyKlientovi, setFakturyKlientovi] = useState(company.fakturyKlientovi ?? false);
 
   const [rate, setRate] = useState(String(company.ratePerPage ?? ''));
+  /**
+   * MĚNA KLIENTA (zadání 12. 10. 2026: „u té britské firmy potřebuju nějak
+   * nastavit sazbu za NS v librách"). Platí pro sazbu za normostranu
+   * a předběžnou cenu v objednávce; dokladu se jen předvyplní.
+   */
+  const [mena, setMena] = useState<Currency>(
+    ((company as { mena?: Currency }).mena ?? 'CZK') as Currency,
+  );
   const [caflouCompanyId, setCaflouCompanyId] = useState(company.caflouCompanyId ?? '');
   const [driveUrl, setDriveUrl] = useState(company.driveFolderUrl ?? '');
   const [dealsAudiobooks, setDealsAudiobooks] = useState(company.dealsAudiobooks);
@@ -188,6 +198,7 @@ export function CompanyForm({
                 fakturujeNaCasti: naCasti,
                 rezieKlientaUserId: rezieKlientaUserId || null,
                 vydavatelId: vydavatelId || null,
+                mena,
               }
             : {}),
         }),
@@ -455,10 +466,27 @@ export function CompanyForm({
               klientu se cena bude pocitat kalkulackou nad Cenikem. A u firmy,
               ktera si cenu navrhuje sama, se nepouzije vubec. */}
           {dealsAudiobooks && !cenuUrcujeKlient && (
-            <AdminField label={t('firma.sazba')} required>
+            <AdminField label={t('firma.sazba', { mena: CURRENCY_LABELS[mena] })} required>
               <input required type="number" min={0} value={rate} onChange={(e) => setRate(e.target.value)} className="admin-input" />
             </AdminField>
           )}
+
+          {/* MĚNA KLIENTA (12. 10. 2026). Nabízí se u každého klienta, ne jen
+              u audioknih: v téhle měně se mu počítá sazba za normostranu
+              i předběžná cena v objednávce a předvyplní se na dokladu. */}
+          <AdminField label={t('firma.mena')} hint={t('firma.menaHint')}>
+            <select
+              value={mena}
+              onChange={(e) => setMena(e.target.value as Currency)}
+              className="admin-input"
+            >
+              {CURRENCIES.map((m) => (
+                <option key={m} value={m}>
+                  {nazevMeny(m, jazyk)}
+                </option>
+              ))}
+            </select>
+          </AdminField>
 
           <AdminField label={t('firma.caflouId')} hint={t('firma.caflouIdHint')}>
             <input value={caflouCompanyId} onChange={(e) => setCaflouCompanyId(e.target.value)} placeholder={t('firma.caflouIdPlaceholder')} className="admin-input" />

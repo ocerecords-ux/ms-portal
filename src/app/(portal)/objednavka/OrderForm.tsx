@@ -18,14 +18,22 @@ import { UpravaPdf } from './UpravaPdf';
 import { vygenerujUvod, vygenerujZaver, REZISER_UVODU } from '@/lib/uvodZaver';
 import { usePreklad, useJazyk } from '../components/JazykProvider';
 import { kodJazyka, prelozit, prelozitKolem, type Jazyk } from '@/lib/jazyk';
+import { CURRENCY_LABELS } from '@/lib/doklady';
+import type { Currency } from '@prisma/client';
 
 export function OrderForm({
   ratePerPage,
+  mena,
   cenuUrcujeKlient = false,
   herci,
   uvodZaver = false,
 }: {
   ratePerPage: number;
+  /**
+   * MĚNA KLIENTA (12. 10. 2026) - sazba za normostranu i předběžná cena jsou
+   * v ní. U českých klientů koruna jako dřív, u britské firmy libra.
+   */
+  mena: Currency;
   /**
    * CENU NAVRHUJE KLIENT (zadání 23. 9. 2026: „u Albatrosu bych dal pryč
    * výpočet ceny z normostran. Jen tam nechal pole NS a cenu, ale nic
@@ -255,7 +263,7 @@ export function OrderForm({
           <p className="text-white/85 text-sm font-body mt-2">
             {t('objednavka.odeslanaText', {
               nazev: lastOrder.title,
-              cena: `${new Intl.NumberFormat(kodJazyka(jazyk)).format(lastOrder.price)} Kč`,
+              cena: `${new Intl.NumberFormat(kodJazyka(jazyk)).format(lastOrder.price)} ${CURRENCY_LABELS[mena]}`,
             })}
           </p>
           {lastOrder.varovani && (
@@ -308,7 +316,9 @@ export function OrderForm({
         ) : (
           <p className="text-white/75 text-xs font-heading mt-1.5">
             {sazbaPred}
-            <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong>
+            <strong className="text-brand-green font-semibold">
+              {ratePerPage} {CURRENCY_LABELS[mena]}
+            </strong>
             {sazbaPo}
           </p>
         )}
@@ -354,7 +364,7 @@ export function OrderForm({
           ) : (
             <input
               readOnly
-              value={`${new Intl.NumberFormat(kodJazyka(jazyk)).format(price)} Kč`}
+              value={`${new Intl.NumberFormat(kodJazyka(jazyk)).format(price)} ${CURRENCY_LABELS[mena]}`}
               title={t('objednavka.cenaZeSazby')}
               className="input input-readonly"
             />

@@ -62,7 +62,7 @@ export async function objednavkaProjektu(caflouProjectId: string) {
         pageCount: true,
         priceEstimate: true,
         companyId: true,
-        company: { select: { name: true } },
+        company: { select: { name: true, mena: true } },
         attachmentName: true,
         attachmentUrl: true,
         diskPrilohaId: true,
@@ -124,7 +124,13 @@ export async function navrhNabidkyZObjednavky(
       issuerName: vydavatel.name,
       companyId: objednavka.companyId,
       companyName: objednavka.company?.name ?? '',
-      currency: vydavatel.defaultCurrency,
+      /**
+       * MĚNA KLIENTA MÁ PŘEDNOST (12. 10. 2026). Sazba za normostranu
+       * a předběžná cena jsou v ní, takže v ní musí být i nabídka - jinak by
+       * z liber byly koruny. Když klient měnu nastavenou nemá, platí výchozí
+       * měna naší firmy jako dřív.
+       */
+      currency: objednavka.company?.mena ?? vydavatel.defaultCurrency,
       // Predbezna cena je v celych korunach, doklady pocitaji v halerich.
       castkaMinor: Math.round(objednavka.priceEstimate * 100),
       pageCount: objednavka.pageCount,

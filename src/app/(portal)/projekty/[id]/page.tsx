@@ -254,6 +254,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           name: true,
           driveFolderUrl: true,
           ratePerPage: true,
+          mena: true,
           dealsAudiobooks: true,
           dealsAds: true,
           audioknihyNaKlic: true,
@@ -267,6 +268,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           name: true,
           driveFolderUrl: true,
           ratePerPage: true,
+          mena: true,
           dealsAudiobooks: true,
           dealsAds: true,
           audioknihyNaKlic: true,
@@ -629,6 +631,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       spent={spent}
       revenue={revenue}
       ratePerPage={company?.ratePerPage ?? null}
+      // Měna klienta (12. 10. 2026) - sazba za normostranu je v ní.
+      mena={company?.mena ?? 'CZK'}
       hoursLogged={hoursLogged}
       caflouProjectId={caflouProjectId}
       pocatecniPolozky={nakladovePolozky}
