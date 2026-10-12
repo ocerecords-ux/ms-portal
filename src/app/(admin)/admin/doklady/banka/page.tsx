@@ -14,6 +14,9 @@ import {
 } from './BankaKlient';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, formatDatumCas } from '@/lib/jazyk';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { dostupneFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
 
 /**
  * BANKA (zadání 17. 9. 2026: „potřebuju, ať se ta banka páruje sama").
@@ -32,8 +35,21 @@ export default async function BankaPage() {
   const pristup = await pristupKBance();
   if (!pristup.smi) notFound();
 
+  /**
+   * JEN ÚČTY VYBRANÉ NAŠÍ FIRMY (12. 10. 2026) - přepínač v liště Dokladů,
+   * viz lib/naseFirmy.ts. Napojení bez vyplněné firmy (starší záznamy) se
+   * ukazují vždycky, jinak by zmizela i s pohyby.
+   */
+  const session = await getServerSession(authOptions);
+  const naseFirmy = await dostupneFirmy(session?.user?.id);
+  const firma = vybranaFirma(naseFirmy);
+  const jenFirma: { OR?: { issuerCompanyId: string | null }[] } = firma
+    ? { OR: [{ issuerCompanyId: firma }, { issuerCompanyId: null }] }
+    : {};
+
   const [napojeni, pohyby, faktury, stavPosty] = await Promise.all([
     prisma.bankConnection.findMany({
+      where: jenFirma,
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -48,6 +64,7 @@ export default async function BankaPage() {
       },
     }),
     prisma.bankTransaction.findMany({
+      where: firma ? { connection: jenFirma } : {},
       orderBy: { bookedAt: 'desc' },
       take: 150,
       select: {
