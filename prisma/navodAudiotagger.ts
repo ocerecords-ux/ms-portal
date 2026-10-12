@@ -123,7 +123,7 @@ Seznam se dá kdykoli upravit tlačítkem **👤 Posluchači** v hlavičce Audio
 - **Odebrat** — na druhé klepnutí,
 - **To jsem já** (jen u klienta) — prohlížeč si zapamatuje, kdo u něj sedí, a tím jménem se pak podepisují poznámky.
 
-**Zprávy o nových stopách:** jakmile ve složce na Disku přibudou stopy, odejde všem posluchačům se zapnutým 🔔 e-mail „Nové stopy k přeposlechu" s odkazem. Portál to zjistí při otevření AudioTaggeru a navíc to kontroluje každou hodinu. Posílá se jen o tom, co přibylo od chvíle, kdy byl posluchač zapsaný; po PŘEPOSLECHNUTO nebo se zavřeným odkazem se už nic neposílá.
+**Zprávy o nových stopách:** jakmile ve složce na Disku přibudou stopy, odejde všem posluchačům se zapnutým 🔔 e-mail „Nové stopy k přeposlechu" s odkazem. Portál to zjistí při otevření AudioTaggeru a navíc to kontroluje každou hodinu. Posílá se jen o tom, co přibylo od chvíle, kdy byl posluchač zapsaný; po PŘEPOSLECHNUTO nebo se zavřeným odkazem se už nic neposílá. **A taky se přestane posílat, jakmile projekt přejde do stavu „Dokončeno - ke schválení"** (12. 10. 2026): tím okamžikem jsou na disku všechny nahrávky k přeposlechu a co přibude potom, bývají ukázky, které s přeposlechem nemají co dělat.
 
 **Kdo co udělal** je vidět v záložce **Historie**: kdo odkaz otevřel, kdo se představil, komu byl přeposlech předán, komu odešla zpráva o nových stopách — a u poznámek jméno toho, kdo je napsal.
 

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { sendNoveStopyEmail } from '@/lib/email';
 import { nactiZDisku } from '@/lib/preposlechDriveServer';
 import { urlPreposlechu } from '@/lib/preposlechOdkaz';
+import { stavJeOdevzdany } from '@/lib/stavyProjektu';
 
 /**
  * POSLUCHAČI ODKAZU DO AUDIOTAGGERU (zadání 21. 9. 2026: „aby vyskočilo po
@@ -66,9 +67,32 @@ export async function oznamNoveStopy(caflouProjectId: string, celkem: number): P
       }),
       prisma.preposlechOdkaz.findUnique({ where: { caflouProjectId }, select: { token: true, zneplatnenoAt: true } }),
       prisma.preposlechPosluchac.findMany({ where: { caflouProjectId, notifikace: true } }),
-      prisma.projectMeta.findUnique({ where: { caflouProjectId }, select: { name: true } }),
+      prisma.projectMeta.findUnique({
+        where: { caflouProjectId },
+        select: { name: true, statusName: true },
+      }),
     ]);
     if (!stav || posluchaci.length === 0) return 0;
+
+    /**
+     * PO ODEVZDÁNÍ UŽ SE NEOZNAMUJE (zadání 12. 10. 2026: „notifikace o tom,
+     * že jsme přidali novou nahrávku do AudioTaggeru, by měla chodit jen do
+     * doby, kdy se překlopil projekt na Dokončeno - ke schválení. Protože to
+     * je moment, kdy tam jsou už všechny nahrávky na disku a potom už se
+     * přidávají už třeba ukázky a ty už se netýkají přeposlechu").
+     *
+     * Počítadlo se přitom POSUNE: co na disk přibylo po odevzdání, se nemá
+     * ohlásit ani později, kdyby se stav na chvíli vrátil zpátky. Jsou to
+     * ukázky, ne stopy k přeposlechu.
+     */
+    if (stavJeOdevzdany(projekt?.statusName)) {
+      if (stav.oznamenoStop !== celkem) {
+        await prisma.preposlechStav
+          .update({ where: { caflouProjectId }, data: { oznamenoStop: celkem } })
+          .catch(() => undefined);
+      }
+      return 0;
+    }
 
     const dosud = stav.oznamenoStop;
     if (dosud === null || dosud === undefined || celkem < dosud) {
@@ -130,16 +154,32 @@ export async function zkontrolujNoveStopy(strop = 60): Promise<{ projektu: numbe
   const ids: string[] = skupiny.map((s: { caflouProjectId: string }) => s.caflouProjectId);
   if (ids.length === 0) return { projektu: 0, zprav: 0 };
 
-  const [hotove, odkazy] = await Promise.all([
+  const [hotove, odkazy, projekty] = await Promise.all([
     prisma.preposlechStav.findMany({ where: { caflouProjectId: { in: ids }, reviewed: true }, select: { caflouProjectId: true } }),
     prisma.preposlechOdkaz.findMany({
       where: { caflouProjectId: { in: ids }, zneplatnenoAt: null },
       select: { caflouProjectId: true },
     }),
+    /**
+     * Stav projektu (12. 10. 2026) - od „Dokončeno - ke schválení" dál se na disk
+     * přidávají ukázky, ne stopy k přeposlechu, takže se takový projekt
+     * nekontroluje vůbec. Ušetří to i dotazy na Disk.
+     */
+    prisma.projectMeta
+      .findMany({
+        where: { caflouProjectId: { in: ids } },
+        select: { caflouProjectId: true, statusName: true },
+      })
+      .catch(() => [] as { caflouProjectId: string; statusName: string | null }[]),
   ]);
   const hotovo = new Set(hotove.map((h) => h.caflouProjectId));
   const sOdkazem = new Set(odkazy.map((o) => o.caflouProjectId));
-  const kontrolovat = ids.filter((id) => !hotovo.has(id) && sOdkazem.has(id)).slice(0, strop);
+  const odevzdane = new Set(
+    projekty.filter((p) => stavJeOdevzdany(p.statusName)).map((p) => p.caflouProjectId),
+  );
+  const kontrolovat = ids
+    .filter((id) => !hotovo.has(id) && !odevzdane.has(id) && sOdkazem.has(id))
+    .slice(0, strop);
 
   let zprav = 0;
   for (const id of kontrolovat) {
