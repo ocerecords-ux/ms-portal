@@ -2542,6 +2542,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Nabídku pošleme {prijemce}',
     en: 'We will send the quote to {prijemce}',
   },
+  /* Adresy, které má firma vyplněné zvlášť na nabídky (12. 10. 2026). */
+  'nabidka.prijemceZNabidek': {
+    cs: 'adresy nastavené u firmy pro cenové nabídky',
+    en: 'addresses set on the company for quotes',
+  },
   'nabidka.prijemceZKlienta': {
     cs: 'klient vyplněný u projektu',
     en: 'the customer listed on the project',
@@ -6343,6 +6348,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projektMeta.klient': { cs: 'Klient', en: 'Customer' },
   'projektMeta.klientZFirmy': { cs: 'Z vybrané firmy', en: 'From the selected company' },
   'projektMeta.klientOstatni': { cs: 'Ostatní', en: 'Others' },
+  /* Projekt má firmu, ale nemá klienta (12. 10. 2026). */
+  'projektMeta.klientChybi': {
+    cs: 'Bez vyplněného klienta zakázku nikdo z firmy neuvidí ve „svých projektech" a nechodí o ní žádné zprávy o stavu.',
+    en: 'Without a client filled in, nobody at the company sees this job under “my projects” and no status messages go out.',
+  },
   'projektMeta.klientNapoveda': {
     cs: 'Na tuhle osobu chodí zprávy o projektu.',
     en: 'Messages about the project go to this person.',
@@ -6656,6 +6666,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Sazba za normostranu ({mena} bez DPH)',
     en: 'Rate per standard page ({mena} excl. VAT)',
   },
+  /* Kam posílat cenové nabídky (12. 10. 2026). */
+  'firma.nabidkyEmaily': { cs: 'Cenové nabídky posílat na', en: 'Send quotes to' },
+  'firma.nabidkyEmailyHint': {
+    cs: 'Adresy, na které u téhle firmy chodí cenové nabídky — hodí se, když je řeší někdo jiný než běžný provoz zakázky. Když je necháte prázdné, nabídka jde klientovi vedenému u projektu, a teprve když ho projekt nemá, na kontaktní e-mail firmy.',
+    en: 'Addresses that receive this company\u2019s quotes — useful when someone other than the day-to-day contact handles pricing. Left empty, a quote goes to the client assigned to the project, and only if there is none, to the company contact e-mail.',
+  },
+  'firma.nabidkyPridatMail': { cs: 'Přidat adresu', en: 'Add an address' },
+  'obecne.odebrat': { cs: 'Odebrat', en: 'Remove' },
+
   /* Měna klienta (12. 10. 2026) - sazba za NS a předběžná cena v objednávce. */
   'firma.mena': { cs: 'Měna klienta', en: 'Client currency' },
   'firma.menaHint': {

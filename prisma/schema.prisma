@@ -92,6 +92,18 @@ model Company {
   /// vlastni, jen se jim tahle predvyplni. Vychozi koruna, aby se
   /// u stavajicich klientu nic nezmenilo.
   mena           Currency  @default(CZK)
+
+  /// KAM POSILAT CENOVE NABIDKY (zadani 12. 10. 2026: „potrebuju jeste
+  /// u firem nastavit zvlast maily na zasilani cenovych nabidek").
+  ///
+  /// U vetsich klientu resi nabidky nekdo jiny nez bezny provoz zakazky -
+  /// nakup, produkce, vedeni. Kdyz je tenhle seznam vyplneny, nabidka jde JEN
+  /// na nej a klient u projektu se neresi.
+  ///
+  /// PRAZDNE = chova se to jako dosud: nabidka jde klientovi vedenemu
+  /// u projektu, a kdyz ho projekt nema, na kontaktni e-mail firmy.
+  /// Viz lib/prijemceNabidky.ts.
+  nabidkyEmaily  String[]  @default([])
   caflouCompanyId String?   // ID firmy/kontaktu v Caflou - podle nej se z Caflou API tahaji projekty teto firmy
   driveFolderUrl String?   // odkaz na slozku klienta na Google Disku (prirazuje admin rucne)
 

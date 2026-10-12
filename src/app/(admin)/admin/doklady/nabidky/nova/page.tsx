@@ -119,6 +119,8 @@ export default async function NovaNabidkaPage({
         dic: odberatel?.dic ?? null,
         vatPayer: odberatel?.vatPayer ?? false,
         contactEmail: odberatel?.contactEmail ?? null,
+        // Adresy zvlášť na nabídky (12. 10. 2026) - ať je v editoru vidět, komu to půjde.
+        nabidkyEmaily: odberatel?.nabidkyEmaily ?? [],
         addressStreet: odberatel?.addressStreet ?? null,
         addressCity: odberatel?.addressCity ?? null,
         addressZip: odberatel?.addressZip ?? null,

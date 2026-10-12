@@ -45,6 +45,8 @@ const schema = z.object({
   vydavatelId: z.string().trim().max(100).nullable().optional(),
   /** Měna klienta (12. 10. 2026) - sazba za normostranu a předběžná cena. */
   mena: z.enum(['CZK', 'EUR', 'USD', 'GBP']).optional(),
+  /** Kam posílat cenové nabídky (12. 10. 2026) - prázdné pole = jako dosud. */
+  nabidkyEmaily: z.array(z.string().trim().max(200)).max(20).optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -101,6 +103,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                 : {}),
               ...(data.vydavatelId !== undefined ? { vydavatelId: data.vydavatelId || null } : {}),
               ...(data.mena !== undefined ? { mena: data.mena } : {}),
+              ...(data.nabidkyEmaily !== undefined
+                ? { nabidkyEmaily: data.nabidkyEmaily.map((e) => e.trim()).filter(Boolean) }
+                : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }
           : {}),

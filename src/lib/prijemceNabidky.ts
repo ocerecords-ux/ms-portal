@@ -19,10 +19,11 @@ import { bezTitulu as bezTituluJmena } from '@/lib/jmena';
  */
 
 export type PrijemceNabidky = {
-  email: string;
-  /** Jméno pro oslovení v mailu. */
+  /** Adresy, na které nabídka půjde. Nejčastěji jedna. */
+  emaily: string[];
+  /** Jméno pro oslovení v mailu; prázdné = obecné „Dobrý den,". */
   jmeno: string | null;
-  zdroj: 'klient' | 'firma';
+  zdroj: 'nabidky' | 'klient' | 'firma';
 };
 
 /** Klient projektu s e-mailem, nebo `null`. */
@@ -46,17 +47,40 @@ export async function klientProjektu(
   }
 }
 
-/** Komu nabídku poslat. `null` = není komu. */
+/**
+ * Komu nabídku poslat. `null` = není komu.
+ *
+ * VLASTNÍ ADRESY NA NABÍDKY MAJÍ PŘEDNOST (zadání 12. 10. 2026: „potřebuju
+ * ještě u firem nastavit zvlášť maily na zasílání cenových nabídek").
+ *
+ * U větších klientů řeší cenu někdo jiný než běžný provoz zakázky. Když firma
+ * tenhle seznam vyplněný má, nabídka jde JEN na něj - sečítat ho s klientem
+ * projektu by znamenalo posílat cenu i tomu, kdo ji vidět nemá. Firma bez
+ * seznamu se chová jako dosud.
+ *
+ * Oslovení se u téhle cesty nechává obecné: za adresou jako „nakup@firma.cz"
+ * nikdo konkrétní stát nemusí a „Dobrý den, Jano," by bylo trapné.
+ */
 export async function najdiPrijemceNabidky(vstup: {
   caflouProjectId: string | null | undefined;
-  company: { name: string; contactEmail: string | null; contactName: string | null };
+  company: {
+    name: string;
+    contactEmail: string | null;
+    contactName: string | null;
+    nabidkyEmaily?: string[] | null;
+  };
 }): Promise<PrijemceNabidky | null> {
+  const naNabidky = (vstup.company.nabidkyEmaily ?? []).map((e) => e.trim()).filter(Boolean);
+  if (naNabidky.length > 0) {
+    return { emaily: naNabidky, jmeno: null, zdroj: 'nabidky' };
+  }
+
   const klient = await klientProjektu(vstup.caflouProjectId);
-  if (klient) return { email: klient.email, jmeno: klient.jmeno, zdroj: 'klient' };
+  if (klient) return { emaily: [klient.email], jmeno: klient.jmeno, zdroj: 'klient' };
 
   const mailFirmy = vstup.company.contactEmail?.trim();
   if (mailFirmy) {
-    return { email: mailFirmy, jmeno: vstup.company.contactName?.trim() || null, zdroj: 'firma' };
+    return { emaily: [mailFirmy], jmeno: vstup.company.contactName?.trim() || null, zdroj: 'firma' };
   }
   return null;
 }

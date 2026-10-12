@@ -135,6 +135,8 @@ export default async function OfferDetailPage({
           ic: offer.company.ic,
           dic: offer.company.dic,
           contactEmail: offer.company.contactEmail,
+          // Adresy zvlášť na nabídky (12. 10. 2026) - ať je v editoru vidět, komu to půjde.
+          nabidkyEmaily: offer.company.nabidkyEmaily,
           addressStreet: offer.company.addressStreet,
           addressCity: offer.company.addressCity,
           addressZip: offer.company.addressZip,

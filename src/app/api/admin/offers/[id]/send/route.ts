@@ -8,8 +8,9 @@ import { najdiPrijemceNabidky } from '@/lib/prijemceNabidky';
 // Odeslani nabidky klientovi (zadani 6. 9. 2026). Mail nese odkaz se
 // schvalovacim tokenem, aby klient nemusel byt prihlaseny.
 //
-// KOMU: klientovi vedenemu u projektu, a teprve kdyz projekt klienta nema,
-// na kontakt firmy (zadani 17. 9. 2026) - viz lib/prijemceNabidky.ts.
+// KOMU: na adresy, ktere ma firma vyplnene zvlast na nabidky (12. 10. 2026);
+// kdyz zadne nema, klientovi vedenemu u projektu, a teprve pak na kontakt
+// firmy (zadani 17. 9. 2026) - viz lib/prijemceNabidky.ts.
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
@@ -33,13 +34,14 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       return NextResponse.json(
         {
           error: offer.caflouProjectId
-            ? `Nabídku není komu poslat — projekt nemá vyplněného klienta s e-mailem a firma „${offer.company.name}" nemá kontaktní e-mail.`
-            : `Nabídku není komu poslat — není navázaná na projekt a firma „${offer.company.name}" nemá kontaktní e-mail.`,
+            ? `Nabídku není komu poslat — projekt nemá vyplněného klienta s e-mailem a firma „${offer.company.name}" nemá ani adresy na nabídky, ani kontaktní e-mail.`
+            : `Nabídku není komu poslat — není navázaná na projekt a firma „${offer.company.name}" nemá ani adresy na nabídky, ani kontaktní e-mail.`,
         },
         { status: 400 },
       );
     }
-    const to = prijemce.email;
+    // Adres může být víc, když je firma má vyplněné zvlášť na nabídky (12. 10. 2026).
+    const to = prijemce.emaily.join(', ');
 
     const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
     const totals = computeTotals(offer.items, offer);

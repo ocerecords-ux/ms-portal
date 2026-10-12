@@ -1064,6 +1064,17 @@ export function ProjectMetaForm({
                   ? t('projektMeta.klientNapovedaCaflou', { stitek: klientNameZCaflou })
                   : t('projektMeta.klientNapoveda')}
               </span>
+              {/* PROJEKT S FIRMOU, ALE BEZ KLIENTA (zadání 12. 10. 2026:
+                  „klient Radka Kopecká ho teď nevidí ve svých projektech").
+                  Ručně zadaný projekt tohle pole běžně prázdné má a nikde to
+                  nebylo vidět: klient zakázku ve „svých projektech" nemá
+                  a nechodí mu ani jedna zpráva o stavu. Teď to tu stojí
+                  černé na bílém, dokud se to nevyplní. */}
+              {values.companyId && !values.klientUserId && (
+                <span className="text-xs font-body text-status-progress bg-warnTint border border-line rounded-lg px-2.5 py-2">
+                  {t('projektMeta.klientChybi')}
+                </span>
+              )}
             </label>
           )}
 

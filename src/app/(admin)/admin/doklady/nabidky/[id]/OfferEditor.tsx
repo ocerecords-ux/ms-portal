@@ -40,6 +40,8 @@ type Party = {
   dic?: string | null;
   vatPayer?: boolean;
   contactEmail?: string | null;
+  /** Adresy, které má firma vyplněné zvlášť na nabídky (12. 10. 2026). */
+  nabidkyEmaily?: string[] | null;
   addressStreet: string | null;
   addressCity: string | null;
   addressZip: string | null;
@@ -166,16 +168,20 @@ export function OfferEditor({
 
   /**
    * Komu nabídka poletí. Stejné pořadí jako na serveru (lib/prijemceNabidky.ts):
+   * adresy, které má firma vyplněné zvlášť na nabídky (12. 10. 2026), pak
    * klient vyplněný u projektu, a teprve když ho projekt nemá, kontakt firmy.
    * Počítá se ze současného výběru, ať je to vidět hned po přehození projektu.
    */
+  const naNabidky = (company.nabidkyEmaily ?? []).map((e) => e.trim()).filter(Boolean);
   const klientProjektu = form.caflouProjectId ? klientiProjektu[form.caflouProjectId] : undefined;
-  const prijemce: { jmeno: string | null; email: string; zdroj: 'klient' | 'firma' } | null =
-    klientProjektu
-      ? { ...klientProjektu, zdroj: 'klient' }
-      : company.contactEmail
-        ? { jmeno: null, email: company.contactEmail, zdroj: 'firma' }
-        : null;
+  const prijemce: { jmeno: string | null; email: string; zdroj: 'nabidky' | 'klient' | 'firma' } | null =
+    naNabidky.length > 0
+      ? { jmeno: null, email: naNabidky.join(', '), zdroj: 'nabidky' }
+      : klientProjektu
+        ? { ...klientProjektu, zdroj: 'klient' }
+        : company.contactEmail
+          ? { jmeno: null, email: company.contactEmail, zdroj: 'firma' }
+          : null;
   /**
    * Jméno příjemce je uprostřed věty tučně, takže se věta dělí přes
    * prelozitKolem - viz pravidlo 7 v docs/preklad-portalu.md.
@@ -728,9 +734,11 @@ export function OfferEditor({
                     {posleme[1]}
                     {prijemce.jmeno ? ` · ${prijemce.email}` : ''}
                     <span className="block">
-                      {prijemce.zdroj === 'klient'
-                        ? t('nabidka.prijemceZKlienta')
-                        : t('nabidka.prijemceZFirmy')}
+                      {prijemce.zdroj === 'nabidky'
+                        ? t('nabidka.prijemceZNabidek')
+                        : prijemce.zdroj === 'klient'
+                          ? t('nabidka.prijemceZKlienta')
+                          : t('nabidka.prijemceZFirmy')}
                     </span>
                   </>
                 ) : form.caflouProjectId ? (

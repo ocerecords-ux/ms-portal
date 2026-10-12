@@ -54,6 +54,17 @@ export function CompanyForm({
 
   const [contactName, setContactName] = useState(company.contactName ?? '');
   const [contactEmail, setContactEmail] = useState(company.contactEmail ?? '');
+  /**
+   * KAM POSÍLAT CENOVÉ NABÍDKY (zadání 12. 10. 2026: „potřebuju ještě u firem
+   * nastavit zvlášť maily na zasílání cenových nabídek").
+   *
+   * Řádek na každou adresu, ne jeden text oddělený čárkami - u hostů natáčení
+   * se ukázalo (9. 10. 2026), že z rozdělování podle čárek vznikají chyby,
+   * které jsou vidět až v odeslaném mailu.
+   */
+  const [nabidkyEmaily, setNabidkyEmaily] = useState<string[]>(
+    ((company as { nabidkyEmaily?: string[] }).nabidkyEmaily ?? []).filter(Boolean),
+  );
   const [contactPhone, setContactPhone] = useState(company.contactPhone ?? '');
   /**
    * Komu chodí faktury (zadání 13. 9. 2026: „nastavoval bych to u firem
@@ -199,6 +210,7 @@ export function CompanyForm({
                 rezieKlientaUserId: rezieKlientaUserId || null,
                 vydavatelId: vydavatelId || null,
                 mena,
+                nabidkyEmaily: nabidkyEmaily.map((e) => e.trim()).filter(Boolean),
               }
             : {}),
         }),
@@ -354,6 +366,42 @@ export function CompanyForm({
           </AdminField>
         </div>
       </div>
+
+      {/* KAM POSÍLAT CENOVÉ NABÍDKY (12. 10. 2026). Prázdné = jako dosud,
+          tedy klientovi vedenému u projektu a teprve pak na kontakt firmy. */}
+      <AdminField label={t('firma.nabidkyEmaily')} hint={t('firma.nabidkyEmailyHint')}>
+        <div className="flex flex-col gap-2">
+          {nabidkyEmaily.map((mail, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="email"
+                value={mail}
+                placeholder="nakup@firma.cz"
+                onChange={(e) =>
+                  setNabidkyEmaily((p) => p.map((x, j) => (j === i ? e.target.value : x)))
+                }
+                className="admin-input flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setNabidkyEmaily((p) => p.filter((_, j) => j !== i))}
+                title={t('obecne.odebrat')}
+                aria-label={t('obecne.odebrat')}
+                className="shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-danger hover:border-danger transition-colors cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setNabidkyEmaily((p) => [...p, ''])}
+            className="self-start inline-flex items-center gap-1.5 font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer"
+          >
+            + {t('firma.nabidkyPridatMail')}
+          </button>
+        </div>
+      </AdminField>
 
       <label className="flex items-start gap-2 text-sm font-heading text-ink">
         <input
