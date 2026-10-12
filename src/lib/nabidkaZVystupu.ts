@@ -119,17 +119,12 @@ export async function zalozNabidkuZVystupu(
     // Pod kterou naši firmu nabídka patří - podle klienta (12. 10. 2026).
     const issuerId = await firmaKlienta(meta.companyId);
     const issuer = issuerId
-      ? ((await prisma.issuerCompany
+      ? await prisma.issuerCompany
           .findUnique({
             where: { id: issuerId },
             select: { id: true, offerNextNumber: true, offerNumberFormat: true, defaultCurrency: true },
           })
-          .catch(() => null)) as unknown as {
-          id: string;
-          offerNextNumber: number;
-          offerNumberFormat: string;
-          defaultCurrency: string;
-        } | null)
+          .catch(() => null)
       : null;
     if (!issuer) return { ok: false, duvod: 'Není nastavená žádná vlastní firma.' };
 

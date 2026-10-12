@@ -108,12 +108,12 @@ export async function navrhNabidkyZObjednavky(
       firmaKlienta(objednavka.companyId),
     ]);
     const vydavatel = vydavatelId
-      ? ((await prisma.issuerCompany
+      ? await prisma.issuerCompany
           .findUnique({
             where: { id: vydavatelId },
             select: { id: true, name: true, defaultCurrency: true },
           })
-          .catch(() => null)) as unknown as { id: string; name: string; defaultCurrency: string } | null)
+          .catch(() => null)
       : null;
     if (nabidek > 0 || !vydavatel) return null;
 
