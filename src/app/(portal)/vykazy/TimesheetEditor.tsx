@@ -461,9 +461,26 @@ export function TimesheetEditor({
                 : month === 'all'
                   ? t('vykaz.vse')
                   : monthLabel(jazyk, month);
-              return druhPrace !== 'all'
-                ? t('vykaz.celkemZaDruh', { obdobi, druh: druhPracePopisek(jazyk, druhPrace) })
-                : t('vykaz.celkemZa', { obdobi });
+              const casti = [obdobi];
+              if (druhPrace !== 'all') casti.push(druhPracePopisek(jazyk, druhPrace));
+              /**
+               * POPISEK MUSÍ ŘÍCT, ČÍ TO JE (oprava 12. 10. 2026: „má tam 27 750 ve
+               * výkazech za minulý měsíc a přišel mu výpis na 12 125").
+               *
+               * Žůžo-labůžo vidí výkazy celého týmu a výběr „čí" začíná na
+               * VŠICHNI. „Celkem · Září" pak vypadalo jako součet jednoho
+               * člověka, ačkoliv to byl součet celého týmu - a neseděl s měsíčním
+               * přehledem, který chodí každému jen za něj. Zvukař vidí jen svoje,
+               * tomu se jméno nepřidává - měl by ho u každého čísla na stránce.
+               */
+              if (isAdmin && people.length > 1) {
+                casti.push(
+                  userFilter === 'all'
+                    ? t('vykaz.vsichniZvukari')
+                    : people.find((p) => p.id === userFilter)?.label ?? '',
+                );
+              }
+              return t('vykaz.celkemCasti', { casti: casti.filter(Boolean).join(' · ') });
             })()}
           </p>
           <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.celkem, jazyk)}</p>

@@ -4,10 +4,15 @@ import {
   entryAmount,
   formatCzk,
   formatDuration,
+  formatTime,
   nazevDruhuPrace,
 } from '@/lib/timesheets';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
-import { sendMesicniPrehledEmail, type MesicniPrehledInput } from '@/lib/email';
+import {
+  sendMesicniPrehledEmail,
+  sendMzdovyPodkladEmail,
+  type MesicniPrehledInput,
+} from '@/lib/email';
 import { notify } from '@/lib/notifications';
 import { jeZapnuto } from '@/lib/oznameniServer';
 
@@ -95,6 +100,9 @@ export function vstupMailu(p: PrehledZvukare, mesic: string, n: NastaveniPrehled
       ? p.druhy.map((d) => ({ nazev: d.nazev, hodiny: formatDuration(d.minut), castka: formatCzk(d.castka) }))
       : [],
     projekty: n.projekty ? p.projekty.map((pr) => ({ nazev: pr.nazev, hodiny: formatDuration(pr.minut) })) : [],
+    // Soupis všech výkazů chodí vždycky - je to jádro výpisu, ne doplněk,
+    // který by se dal v nastavení vypnout (12. 10. 2026).
+    vykazy: p.polozky,
     bonusy: bonusy ? p.bonusy.map((b) => ({ nazev: b.nazev, castka: formatCzk(b.castka) })) : [],
     bonusCelkem: bonusy && p.bonusCelkem > 0 ? formatCzk(p.bonusCelkem) : null,
     odkaz,
@@ -128,6 +136,8 @@ export type PrehledZvukare = {
   userId: string;
   jmeno: string;
   email: string | null;
+  /** Adresa mzdové účetní z karty uživatele (12. 10. 2026). Null = neposílá se. */
+  mzdyEmail: string | null;
   minut: number;
   castka: number;
   /** Rozpad podle druhu práce - kolik minut a kolik korun. */
@@ -136,6 +146,15 @@ export type PrehledZvukare = {
   projekty: { nazev: string; minut: number }[];
   bonusy: { nazev: string; castka: number }[];
   bonusCelkem: number;
+  /**
+   * VŠECHNY VÝKAZY ZA MĚSÍC, den po dni (zadání 12. 10. 2026: „zvukařům
+   * musí přijít výpis každého 6. den v měsíci se soupisem částek za minulý
+   * měsíc. Všech výkazů, které tam za ten daný měsíc mají").
+   *
+   * Souhrn podle druhu práce a podle projektů na to nestačí - z něj si nikdo
+   * nezkontroluje konkrétní den.
+   */
+  polozky: { datum: string; odDo: string; hodiny: string; druh: string; projekt: string; castka: string }[];
 };
 
 
@@ -147,7 +166,9 @@ export async function spoctiPrehledy(mesic: string, jazyk?: Jazyk): Promise<Preh
 
   const vykazy = await prisma.timesheetEntry.findMany({
     where: { date: { gte: od, lt: do_ } },
-    include: { user: { select: { id: true, name: true, email: true, role: true } } },
+    include: {
+      user: { select: { id: true, name: true, email: true, role: true, mzdyEmail: true } },
+    },
   });
 
   // Bonusy se poctou k mesici, ve kterem se SCHVALILY - tehdy se o nich
@@ -160,19 +181,26 @@ export async function spoctiPrehledy(mesic: string, jazyk?: Jazyk): Promise<Preh
     .catch(() => []);
 
   const mapa = new Map<string, PrehledZvukare>();
-  const zalozPolozku = (u: { id: string; name: string | null; email: string }): PrehledZvukare => {
+  const zalozPolozku = (u: {
+    id: string;
+    name: string | null;
+    email: string;
+    mzdyEmail?: string | null;
+  }): PrehledZvukare => {
     const stav = mapa.get(u.id);
     if (stav) return stav;
     const novy: PrehledZvukare = {
       userId: u.id,
       jmeno: u.name || u.email,
       email: u.email,
+      mzdyEmail: u.mzdyEmail?.trim() || null,
       minut: 0,
       castka: 0,
       druhy: [],
       projekty: [],
       bonusy: [],
       bonusCelkem: 0,
+      polozky: [],
     };
     mapa.set(u.id, novy);
     return novy;
@@ -181,7 +209,13 @@ export async function spoctiPrehledy(mesic: string, jazyk?: Jazyk): Promise<Preh
   const podleDruhu = new Map<string, Map<string, { minut: number; castka: number }>>();
   const podleProjektu = new Map<string, Map<string, number>>();
 
-  for (const v of vykazy) {
+  // Po dnech od začátku měsíce - výpis se má dát projít shora dolů jako
+  // kalendář, ne v pořadí, v jakém to zrovna vrátí databáze.
+  const poDnech = [...vykazy].sort(
+    (x, y) => x.date.getTime() - y.date.getTime() || x.startMinutes - y.startMinutes,
+  );
+
+  for (const v of poDnech) {
     if (v.user.role !== 'ZVUKAR') continue;
     const p = zalozPolozku(v.user);
     const minut = durationMinutes(v.startMinutes, v.endMinutes);
@@ -195,6 +229,17 @@ export async function spoctiPrehledy(mesic: string, jazyk?: Jazyk): Promise<Preh
     podleDruhu.set(v.userId, druhy);
 
     const nazevProjektu = v.projectName || (v.caflouProjectId ? `Projekt ${v.caflouProjectId}` : 'Bez projektu');
+
+    p.polozky.push({
+      // Datum se skládá ručně z UTC složek: `date` je den bez času a
+      // `toLocaleDateString` by ho podle pásma serveru uměl posunout o den.
+      datum: `${v.date.getUTCDate()}. ${v.date.getUTCMonth() + 1}. ${v.date.getUTCFullYear()}`,
+      odDo: `${formatTime(v.startMinutes)}–${formatTime(v.endMinutes)}`,
+      hodiny: formatDuration(minut),
+      druh: nazevDruhuPrace(v.workType, jazyk),
+      projekt: nazevProjektu,
+      castka: formatCzk(castka),
+    });
     const projekty = podleProjektu.get(v.userId) ?? new Map();
     projekty.set(nazevProjektu, (projekty.get(nazevProjektu) ?? 0) + minut);
     podleProjektu.set(v.userId, projekty);
@@ -222,8 +267,19 @@ export async function spoctiPrehledy(mesic: string, jazyk?: Jazyk): Promise<Preh
   return Array.from(mapa.values()).sort((a, b) => a.jmeno.localeCompare(b.jmeno, 'cs'));
 }
 
-/** Rozešle přehledy za daný měsíc. Co už odešlo, se přeskočí. */
-export async function rozesliMesicniPrehledy(mesic: string): Promise<VysledekRozeslani> {
+/**
+ * Rozešle přehledy za daný měsíc. Co už odešlo, se přeskočí.
+ *
+ * `znovu` tu přeskočení vypne (zadání 12. 10. 2026: „ty maily s výpisem
+ * nedošly"). Když pošta mail spolkne, záznam „odesláno" zůstane a další
+ * pokus už by se bez toho nekonal. Pouští to VÝHRADNĚ člověk z administrace -
+ * úloha z Vercelu musí zůstat idempotentní, jinak by při každém dením běhu
+ * poslala týž přehled znovu.
+ */
+export async function rozesliMesicniPrehledy(
+  mesic: string,
+  znovu = false,
+): Promise<VysledekRozeslani> {
   // Vypinac v Administraci → Zpravy portalu (zadani 15. 9. 2026).
   if (!(await jeZapnuto('MESICNI_PREHLED'))) {
     return { mesic, odeslano: 0, preskoceno: 0, chyby: 0, vypnuto: true };
@@ -241,12 +297,14 @@ export async function rozesliMesicniPrehledy(mesic: string): Promise<VysledekRoz
       preskoceno += 1;
       continue;
     }
-    const uz = await prisma.mesicniPrehledOdeslan
-      .findUnique({ where: { userId_mesic: { userId: p.userId, mesic } }, select: { id: true } })
-      .catch(() => null);
-    if (uz) {
-      preskoceno += 1;
-      continue;
+    if (!znovu) {
+      const uz = await prisma.mesicniPrehledOdeslan
+        .findUnique({ where: { userId_mesic: { userId: p.userId, mesic } }, select: { id: true } })
+        .catch(() => null);
+      if (uz) {
+        preskoceno += 1;
+        continue;
+      }
     }
 
     try {
@@ -257,8 +315,35 @@ export async function rozesliMesicniPrehledy(mesic: string): Promise<VysledekRoz
         continue;
       }
 
-      await prisma.mesicniPrehledOdeslan.create({
-        data: { userId: p.userId, mesic, prijemce: p.email },
+      /**
+       * PODKLAD MZDOVÉ ÚČETNÍ (12. 10. 2026). Jde až po zvukařově mailu
+       * a VLASTNÍM zápisem - kdyby se nepovedl, nesmí to shodit přehled,
+       * který už člověku odešel. Jen jméno, období, hodiny a částka.
+       */
+      if (p.mzdyEmail) {
+        try {
+          const mzdy = await sendMzdovyPodkladEmail({
+            to: p.mzdyEmail,
+            jmeno: p.jmeno,
+            mesic: nazevMesice(mesic),
+            hodiny: formatDuration(p.minut),
+            castka: formatCzk(p.castka + p.bonusCelkem),
+            den: nastaveni.den,
+          });
+          if (!mzdy.sent) {
+            console.error(`Podklad pro mzdy (${p.jmeno}) na ${p.mzdyEmail} neodešel: ${mzdy.reason}`);
+          }
+        } catch (err) {
+          console.error(`Podklad pro mzdy (${p.jmeno}) na ${p.mzdyEmail} selhal:`, err);
+        }
+      }
+
+      // Upsert, ne create: při opakovaném odeslání už záznam existuje a
+      // posune se mu jen datum.
+      await prisma.mesicniPrehledOdeslan.upsert({
+        where: { userId_mesic: { userId: p.userId, mesic } },
+        create: { userId: p.userId, mesic, prijemce: p.email },
+        update: { prijemce: p.email, odeslanoAt: new Date() },
       });
       await notify({
         userId: p.userId,

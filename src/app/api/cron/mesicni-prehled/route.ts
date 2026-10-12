@@ -52,8 +52,15 @@ async function spust(req: NextRequest) {
     if (dnesniDenPraha() < den) return NextResponse.json({ ok: true, ceka: true, den });
   }
 
+  /**
+   * `?znovu=1` pošle přehled i tomu, komu už jednou „odešel" (12. 10. 2026:
+   * mail pošta spolkla, záznam zůstal a další pokus se nekonal). Jen pro
+   * ruční spuštění z administrace - úloha z Vercelu musí zůstat idempotentní.
+   */
+  const znovu = kdo === 'admin' && req.nextUrl.searchParams.get('znovu') === '1';
+
   try {
-    const vysledek = await rozesliMesicniPrehledy(mesic);
+    const vysledek = await rozesliMesicniPrehledy(mesic, znovu);
     return NextResponse.json({ ok: true, ...vysledek });
   } catch (err) {
     console.error('Rozeslání měsíčních přehledů selhalo:', err);

@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { SEKCE, type Sekce, type UkazkaData } from '@/lib/prezentaceNabidky';
 import { naData } from '@/lib/ukazkyServer';
+import { notify } from '@/lib/notifications';
 
 /**
  * NABÍDKOVÁ PREZENTACE - SERVEROVÁ ČÁST (zadání 11. 10. 2026).
@@ -380,12 +381,45 @@ export async function nactiProKlienta(token: string): Promise<PrezentaceProKlien
 }
 
 /**
+ * ZA JAK DLOUHO SE OZVEME ZNOVU. Klient si stranku běžně načte dvakrát za
+ * sebou - pošle odkaz kolegovi, vrátí se k ceniku, obnoví záložku. Kdyby
+ * každé načtení zvonilo, zvoneček by se zahltil a přestal se číst. Dvanáct
+ * hodin od posledního otevření je už nová návštěva, ne obnovení stránky.
+ */
+const ZNOVU_PO_MS = 12 * 60 * 60 * 1000;
+
+/**
  * ŽE SE NA TO KLIENT PODÍVAL. Bez toho se produkce musí ptát mailem „došlo
  * to?"; takhle je v portálu vidět, kdy a kolikrát se prezentace otevřela.
  * Běží mimochodem při vykreslení a nesmí stránku zdržet ani shodit.
+ *
+ * ZVONEČEK, KDYŽ KLIENT NABÍDKU OTEVŘE (zadání 11. 10. 2026: „chtěl bych mít
+ * možnost, aby mi přišla notifikace do portálu, když tu nabídku pak klient
+ * otevře"). Je to prodejní informace, ne úkol: ozve se při PRVNÍM otevření
+ * („dorazilo to") a pak už jen tehdy, když se klient vrátí po delší pauze
+ * („ještě se v tom hrabe"). Obnovení stránky nezvoní.
  */
 export async function zapisOtevreni(id: string): Promise<void> {
   const ted = new Date();
+
+  // Stav PŘED zápisem - podle něj se pozná, jestli je tohle první otevření
+  // nebo návrat. Po updatu už by to nikdo nerozlišil.
+  const pred = await prisma.prezentaceNabidky
+    .findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nadpis: true,
+        projectName: true,
+        klientNazev: true,
+        caflouProjectId: true,
+        vytvorilId: true,
+        prvniOtevreni: true,
+        posledniOtevreni: true,
+      },
+    })
+    .catch(() => null);
+
   await prisma.prezentaceNabidky
     .update({
       where: { id },
@@ -398,4 +432,54 @@ export async function zapisOtevreni(id: string): Promise<void> {
   await prisma.prezentaceNabidky
     .updateMany({ where: { id, prvniOtevreni: null }, data: { prvniOtevreni: ted } })
     .catch(() => null);
+
+  if (!pred) return;
+  const poprve = !pred.prvniOtevreni;
+  const navrat =
+    !poprve &&
+    (!pred.posledniOtevreni || ted.getTime() - pred.posledniOtevreni.getTime() > ZNOVU_PO_MS);
+  if (!poprve && !navrat) return;
+
+  await zvonekOOtevreni(pred, poprve);
+}
+
+/**
+ * ZVONEČEK MANAŽEROVI PROJEKTU. Stejný adresát jako u odpovědi na prezentaci
+ * (api/prezentace/[token]/odpoved) - manažer projektu, a když žádný není, ten,
+ * kdo prezentaci založil. Nikdy nevyhazuje: statistika otevření se nesmí
+ * rozbít kvůli zvonečku.
+ */
+async function zvonekOOtevreni(
+  prez: {
+    nadpis: string | null;
+    projectName: string;
+    klientNazev: string;
+    caflouProjectId: string;
+    vytvorilId: string | null;
+  },
+  poprve: boolean,
+): Promise<void> {
+  try {
+    const meta = await prisma.projectMeta
+      .findUnique({
+        where: { caflouProjectId: prez.caflouProjectId },
+        select: { managerUserId: true },
+      })
+      .catch(() => null);
+    const prijemce = meta?.managerUserId || prez.vytvorilId;
+    if (!prijemce) return;
+
+    const nazev = prez.nadpis?.trim() || prez.projectName;
+    await notify({
+      userId: prijemce,
+      kind: 'prezentace-otevreno',
+      title: poprve
+        ? `Klient otevřel nabídku: ${nazev}`
+        : `Klient se k nabídce vrátil: ${nazev}`,
+      body: prez.klientNazev?.trim() || null,
+      url: `/projekty/${prez.caflouProjectId}?zalozka=prezentace`,
+    });
+  } catch (err) {
+    console.error('Zvoneček o otevření prezentace selhal:', err);
+  }
 }

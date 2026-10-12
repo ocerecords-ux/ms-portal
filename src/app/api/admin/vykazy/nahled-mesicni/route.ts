@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
             userId: '',
             jmeno: 'Ukázka',
             email: null,
+            mzdyEmail: null,
             minut: 5550,
             castka: 23125,
             druhy: [
@@ -69,6 +70,13 @@ export async function GET(req: NextRequest) {
             ],
             bonusy: [{ nazev: 'ANNA, CESTA ZE SUDET', castka: 1072 }],
             bonusCelkem: 1072,
+            // Soupis všech výkazů (12. 10. 2026). V ukázce stačí pár dnů -
+            // jde o to, aby bylo vidět, jak tabulka vypadá.
+            polozky: [
+              { datum: '3. 9. 2026', odDo: '09:00–15:00', hodiny: '6 h', druh: 'Střih', projekt: 'ANNA, CESTA ZE SUDET', castka: '1 500 Kč' },
+              { datum: '4. 9. 2026', odDo: '10:00–14:00', hodiny: '4 h', druh: 'Natáčení', projekt: 'POSLEDNÍ DOPIS', castka: '1 000 Kč' },
+              { datum: '7. 9. 2026', odDo: '09:30–13:00', hodiny: '3,5 h', druh: 'Střih', projekt: 'ROK PRASETE', castka: '875 Kč' },
+            ],
           },
           mesic,
           nastaveni,

@@ -218,6 +218,15 @@ model User {
   // prace. Vychozi 250 Kc; u ostatnich roli se nepouziva.
   hourlyRate   Int?      @default(250)
 
+  /// KOMU POSLAT PODKLAD PRO MZDY (zadani 12. 10. 2026: „Daniel Vlcek je na
+  /// dohodu, takze bych potreboval, aby to slo rovnou na mzdovou ucetni").
+  ///
+  /// Adresa mzdove ucetni. Kdyz je vyplnena, odejde ji spolu s mesicnim
+  /// prehledem HOLY podklad - jmeno, obdobi, hodiny, castka, nic jineho.
+  /// Prazdno = neposila se nikam. Drzi se u cloveka, ne natvrdo v kodu:
+  /// lidi na dohodu pribyvaji a ucetni se meni.
+  mzdyEmail    String?
+
   /// PODIL NA OBRATU V PROCENTECH (zadani 6. 10. 2026: „potrebuju dat Peterovi
   /// a Karoline do Prehledu zalozku Moje bonusy, kde uvidi aktualne castku bez
   /// dph. Kazdy z nich ma jiny podil na obratu").

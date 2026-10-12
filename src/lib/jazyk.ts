@@ -3962,6 +3962,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'uzivatel.poleHodinovaSazba': { cs: 'Hodinová sazba (Kč)', en: 'Hourly rate (CZK)' },
   'uzivatel.hodinovaSazbaHint': {
+  'uzivatel.poleMzdyEmail': { cs: 'Podklad pro mzdy posílat na', en: 'Send payroll figures to' },
+  'uzivatel.mzdyEmailHint': {
+    cs: 'Adresa mzdové účetní u lidí na dohodu. Spolu s měsíčním přehledem jí odejde holý podklad — jméno, období, hodiny a částka, nic jiného. Prázdné = neposílá se.',
+    en: 'Payroll accountant\u2019s address for people on a work agreement. A bare summary — name, period, hours and amount — goes to them with the monthly report. Empty = nothing is sent.',
+  },
     cs: 'z ní se počítají výkazy práce',
     en: 'timesheets are calculated from it',
   },
@@ -5389,6 +5394,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'vykaz.vaseSazba': { cs: 'Vaše hodinová sazba: {sazba}', en: 'Your hourly rate: {sazba}' },
   'vykaz.celkemZa': { cs: 'Celkem · {obdobi}', en: 'Total · {obdobi}' },
   'vykaz.celkemZaDruh': { cs: 'Celkem · {obdobi} · {druh}', en: 'Total · {obdobi} · {druh}' },
+  'vykaz.celkemCasti': { cs: 'Celkem · {casti}', en: 'Total · {casti}' },
   'vykaz.hodinyABonusy': {
     cs: '{hodiny} · z toho bonusy {castka}',
     en: '{hodiny} · of which bonuses {castka}',
@@ -7971,6 +7977,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Send now for {mesic} ({pocet})',
   },
   'zvukari.nejdrivUlozte': { cs: 'Nejdřív uložte nastavení', en: 'Save the settings first' },
+  'zvukari.poslatZnovu': { cs: 'Poslat znovu všem ({pocet})', en: 'Send again to everyone ({pocet})' },
+  'zvukari.potvrzeniZnovu': {
+    cs: 'Poslat přehled za {mesic} ZNOVU všem {pocet} zvukařům? Dostanou ho i ti, komu už jednou odešel.',
+    en: 'Send the report for {mesic} AGAIN to all {pocet} sound engineers? Those who already had it will get it too.',
+  },
 
   /* Palubovka - budíky, fakturace po měsících, palivo. */
   'palubovka.stav.DOBRE': { cs: 'Šlape to', en: 'Running well' },

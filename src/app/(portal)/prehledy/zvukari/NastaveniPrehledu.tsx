@@ -27,12 +27,15 @@ export function NastaveniPrehledu({
   mesic,
   nazevMesice,
   cekaNaOdeslani,
+  pocetVsech,
 }: {
   nastaveni: Nastaveni;
   zmena: string | null;
   mesic: string;
   nazevMesice: string;
   cekaNaOdeslani: number;
+  /** Kolik zvukařů má za měsíc co poslat - včetně těch, komu už odešlo. */
+  pocetVsech: number;
 }) {
   const t = usePreklad();
   const router = useRouter();
@@ -87,17 +90,28 @@ export function NastaveniPrehledu({
     }
   }
 
-  async function rozesli() {
+  /**
+   * `znovu` pošle přehled i tomu, komu už jednou „odešel" (12. 10. 2026:
+   * pošta maily spolkla, záznam zůstal a další pokus by se bez toho nekonal).
+   */
+  async function rozesli(znovu = false) {
+    const pocet = znovu ? pocetVsech : cekaNaOdeslani;
     if (
       !window.confirm(
-        t('zvukari.potvrzeniRozeslani', { mesic: nazevMesice.toLowerCase(), pocet: cekaNaOdeslani }),
+        t(znovu ? 'zvukari.potvrzeniZnovu' : 'zvukari.potvrzeniRozeslani', {
+          mesic: nazevMesice.toLowerCase(),
+          pocet,
+        }),
       )
     )
       return;
     setRozesila(true);
     setZprava(null);
     try {
-      const res = await fetch(`/api/cron/mesicni-prehled?mesic=${mesic}`, { method: 'POST' });
+      const res = await fetch(
+        `/api/cron/mesicni-prehled?mesic=${mesic}${znovu ? '&znovu=1' : ''}`,
+        { method: 'POST' },
+      );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || t('zvukari.rozeslaniNepodarilo'));
       setZprava({
@@ -188,7 +202,7 @@ export function NastaveniPrehledu({
         {cekaNaOdeslani > 0 && (
           <button
             type="button"
-            onClick={rozesli}
+            onClick={() => rozesli(false)}
             disabled={rozesila || zmeneno}
             title={zmeneno ? t('zvukari.nejdrivUlozte') : undefined}
             className="ml-auto text-sm font-heading font-semibold rounded-lg px-4 py-2 border border-line text-ink hover:border-brand-purple disabled:opacity-50"
@@ -199,6 +213,18 @@ export function NastaveniPrehledu({
                   mesic: nazevMesice.toLowerCase(),
                   pocet: cekaNaOdeslani,
                 })}
+          </button>
+        )}
+        {/* Poslat znovu - i tomu, komu už přehled jednou „odešel". */}
+        {pocetVsech > 0 && (
+          <button
+            type="button"
+            onClick={() => rozesli(true)}
+            disabled={rozesila || zmeneno}
+            title={zmeneno ? t('zvukari.nejdrivUlozte') : undefined}
+            className={`${cekaNaOdeslani > 0 ? '' : 'ml-auto '}text-sm font-heading rounded-lg px-4 py-2 border border-line text-muted hover:border-brand-purple hover:text-ink disabled:opacity-50`}
+          >
+            {t('zvukari.poslatZnovu', { pocet: pocetVsech })}
           </button>
         )}
         {zprava && <span className={`text-sm font-heading ${zprava.ok ? 'text-status-done' : 'text-danger'}`}>{zprava.text}</span>}

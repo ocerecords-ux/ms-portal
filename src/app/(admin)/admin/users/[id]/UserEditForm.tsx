@@ -46,6 +46,7 @@ type EditableUser = {
   birthDate: string | null;
   photoUrl: string | null;
   hourlyRate: number | null;
+  mzdyEmail: string | null;
   podilNaObratu: number | null;
   /** Smí být manažerem projektu (zadání 10. 9. 2026). */
   manazerProjektu: boolean;
@@ -135,6 +136,7 @@ export function UserEditForm({
   const [phone, setPhone] = useState(user.phone ?? '');
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
+  const [mzdyEmail, setMzdyEmail] = useState(user.mzdyEmail ?? '');
   const [podilNaObratu, setPodilNaObratu] = useState(String(user.podilNaObratu ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
   /** Do kterých sekcí ten člověk smí (28. 9. 2026). */
@@ -258,6 +260,7 @@ export function UserEditForm({
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
         if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
+        if (role === 'ZVUKAR') fd.set('mzdyEmail', mzdyEmail);
         if (isMediaspace) fd.set('podilNaObratu', podilNaObratu);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
@@ -405,6 +408,23 @@ export function UserEditForm({
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(e.target.value)}
                 placeholder="250"
+                className="admin-input"
+              />
+            </AdminField>
+          </div>
+        )}
+        {/* PODKLAD PRO MZDOVOU ÚČETNÍ (zadání 12. 10. 2026: „Daniel Vlček je
+            na dohodu, takže bych potřeboval, aby to šlo rovnou na mzdovou
+            účetní"). Drží se u člověka, ne natvrdo v kódu - lidí na dohodu
+            přibývá a účetní se mění. */}
+        {role === 'ZVUKAR' && (
+          <div className="flex-1 min-w-[260px]">
+            <AdminField label={t('uzivatel.poleMzdyEmail')} hint={t('uzivatel.mzdyEmailHint')}>
+              <input
+                type="email"
+                value={mzdyEmail}
+                onChange={(e) => setMzdyEmail(e.target.value)}
+                placeholder="ucetni@firma.cz"
                 className="admin-input"
               />
             </AdminField>

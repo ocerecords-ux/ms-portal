@@ -1868,6 +1868,12 @@ export type MesicniPrehledInput = {
   celkem: string;
   druhy: { nazev: string; hodiny: string; castka: string }[];
   projekty: { nazev: string; hodiny: string }[];
+  /**
+   * Soupis VŠECH výkazů za měsíc, den po dni (12. 10. 2026). Souhrny výš
+   * říkají, kolik toho bylo; tenhle seznam říká, za co přesně - a dá se podle
+   * něj zkontrolovat konkrétní den.
+   */
+  vykazy?: { datum: string; odDo: string; hodiny: string; druh: string; projekt: string; castka: string }[];
   bonusy: { nazev: string; castka: string }[];
   /** Null, kdyz v mesici zadny bonus nebyl. */
   bonusCelkem: string | null;
@@ -1891,6 +1897,49 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
         .map(
           (p) =>
             `<tr><td class="label">${escapeHtml(p.nazev)}</td><td class="value regular">${escapeHtml(p.hodiny)}</td></tr>`,
+        )
+        .join('\n      ')}
+    </table>`
+    : '';
+
+  /**
+   * SOUPIS VŠECH VÝKAZŮ (12. 10. 2026: „zvukařům musí přijít výpis každého
+   * 6. den v měsíci se soupisem částek za minulý měsíc. Všech výkazů, které
+   * tam za ten daný měsíc mají").
+   *
+   * Vlastní tabulka, ne `field-table`: ta má dva sloupce, tady jich je šest.
+   * Styly jsou v atributech - poštovní klienti třídy ze `<style>` často
+   * zahodí a z tabulky by zbyla hromádka textu.
+   */
+  const vykazy = input.vykazy?.length
+    ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">${prelozitEmail(jazyk, 'mail.prehled.vykazy')}</h3>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr>
+        ${[
+          prelozitEmail(jazyk, 'mail.prehled.slDatum'),
+          prelozitEmail(jazyk, 'mail.prehled.slOdDo'),
+          prelozitEmail(jazyk, 'mail.prehled.slHodiny'),
+          prelozitEmail(jazyk, 'mail.prehled.slDruh'),
+          prelozitEmail(jazyk, 'mail.prehled.slProjekt'),
+        ]
+          .map(
+            (h) =>
+              `<td style="padding:6px 8px 6px 0;border-bottom:1px solid #E6E1F5;color:#6B6480;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;">${escapeHtml(h)}</td>`,
+          )
+          .join('')}
+        ${sCastkou ? `<td style="padding:6px 0;border-bottom:1px solid #E6E1F5;color:#6B6480;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;text-align:right;white-space:nowrap;">${escapeHtml(prelozitEmail(jazyk, 'mail.prehled.slCastka'))}</td>` : ''}
+      </tr>
+      ${input.vykazy
+        .map(
+          (v) =>
+            `<tr>
+        <td style="padding:7px 8px 7px 0;border-bottom:1px solid #F0EDF9;white-space:nowrap;">${escapeHtml(v.datum)}</td>
+        <td style="padding:7px 8px 7px 0;border-bottom:1px solid #F0EDF9;white-space:nowrap;color:#6B6480;">${escapeHtml(v.odDo)}</td>
+        <td style="padding:7px 8px 7px 0;border-bottom:1px solid #F0EDF9;white-space:nowrap;">${escapeHtml(v.hodiny)}</td>
+        <td style="padding:7px 8px 7px 0;border-bottom:1px solid #F0EDF9;white-space:nowrap;color:#6B6480;">${escapeHtml(v.druh)}</td>
+        <td style="padding:7px 8px 7px 0;border-bottom:1px solid #F0EDF9;">${escapeHtml(v.projekt)}</td>
+        ${sCastkou ? `<td style="padding:7px 0;border-bottom:1px solid #F0EDF9;text-align:right;white-space:nowrap;font-weight:600;">${escapeHtml(v.castka)}</td>` : ''}
+      </tr>`,
         )
         .join('\n      ')}
     </table>`
@@ -1942,6 +1991,8 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
 
     ${bonusy}
 
+    ${vykazy}
+
     ${input.poznamka ? `<p>${escapeHtml(input.poznamka).replace(/\n/g, '<br>')}</p>` : ''}
 
     <div class="cta-row">
@@ -1953,12 +2004,121 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
   });
 }
 
+// ===========================================================================
+// PODKLAD PRO MZDOVOU ÚČETNÍ (zadání 12. 10. 2026: „Daniel Vlček je na
+// dohodu, takže bych potřeboval, aby to šlo rovnou na mzdovou účetní.
+// Stačí tam částka a hodiny").
+//
+// ZÁMĚRNĚ HOLÝ MAIL. Účetní k výplatě nepotřebuje vědět, na čem se dělalo -
+// rozpis projektů by byl údaj o zakázkách navíc u někoho, kdo ho k práci
+// nepotřebuje. Jméno, období, hodiny, částka - a nic víc.
+// ===========================================================================
+
+export type MzdovyPodkladInput = {
+  to: string;
+  jazyk?: Jazyk;
+  /** Koho se podklad týká. */
+  jmeno: string;
+  /** „Září 2026". */
+  mesic: string;
+  hodiny: string;
+  castka: string;
+  /** Den v měsíci, kdy podklad chodí - do patičky. */
+  den?: number;
+};
+
+export function buildMzdovyPodkladHtml(input: MzdovyPodkladInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  const den = input.den ?? 6;
+
+  return emailShell({
+    jazyk,
+    tag: prelozitEmailS(jazyk, 'mail.mzdy.stitek', { mesic: input.mesic }),
+    preheader: prelozitEmailS(jazyk, 'mail.mzdy.preheader', {
+      jmeno: input.jmeno,
+      mesic: input.mesic,
+      hodiny: input.hodiny,
+      castka: input.castka,
+    }),
+    body: `
+    <span class="badge">${escapeHtml(input.mesic)}</span>
+    <h2>${escapeHtml(input.jmeno)}</h2>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.mzdy.obdobi')}</td><td class="value">${escapeHtml(input.mesic)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.mzdy.odpracovano')}</td><td class="value">${escapeHtml(input.hodiny)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.mzdy.castka')}</td><td class="value">${escapeHtml(input.castka)}</td></tr>
+    </table>
+
+    <p class="small">${prelozitEmailS(jazyk, 'mail.mzdy.patka', { den })}</p>
+  `,
+  });
+}
+
+export async function sendMzdovyPodkladEmail(input: MzdovyPodkladInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+
+  const jazyk = input.jazyk ?? 'cs';
+  return odesliAOver(
+    transport,
+    {
+      ...odesilatelMediaspace(),
+      to: input.to,
+      subject: prelozitEmailS(jazyk, 'mail.mzdy.predmet', { jmeno: input.jmeno, mesic: input.mesic }),
+      text: [
+        prelozitEmailS(jazyk, 'mail.mzdy.textNadpis', { jmeno: input.jmeno, mesic: input.mesic }),
+        '',
+        `${prelozitEmail(jazyk, 'mail.mzdy.odpracovano')}: ${input.hodiny}`,
+        `${prelozitEmail(jazyk, 'mail.mzdy.castka')}: ${input.castka}`,
+      ].join('\n'),
+      html: buildMzdovyPodkladHtml(input),
+    },
+    input.to,
+    'Podklad pro mzdy',
+  );
+}
+
+/**
+ * ODESLÁNÍ, KTERÉ SE PTÁ, JESTLI TO POŠTA VZALA (12. 10. 2026: „ty maily
+ * s výpisem nedošly", a přitom u každého zvukaře svítilo „Odesláno").
+ *
+ * `transport.sendMail` DOBĚHNE V POŘÁDKU i tehdy, když server spojení přijal,
+ * ale adresáta odmítl - výsledek pak nese prázdné `accepted` a adresu
+ * v `rejected`. Dokud se na to nikdo neptal, portál si zapsal „odesláno"
+ * a mail nikam nedorazil.
+ *
+ * SMTP odpověď se loguje: v záznamech Vercelu je pak černé na bílém, co
+ * server řekl, a nemusí se hádat, jestli mail odešel.
+ */
+async function odesliAOver(
+  transport: NonNullable<ReturnType<typeof getTransport>>,
+  zprava: Parameters<NonNullable<ReturnType<typeof getTransport>>['sendMail']>[0],
+  komu: string,
+  co: string,
+): Promise<{ sent: true } | { sent: false; reason: string }> {
+  const vysledek = await transport.sendMail(zprava);
+  const prijato = vysledek?.accepted ?? [];
+  const odmitnuto = vysledek?.rejected ?? [];
+
+  if (odmitnuto.length > 0 || prijato.length === 0) {
+    const duvod = `SMTP_REJECTED: ${vysledek?.response ?? 'bez odpovědi'}`;
+    console.error(`${co} pro ${komu} pošta nepřijala: ${duvod}`);
+    return { sent: false as const, reason: duvod };
+  }
+
+  console.log(`${co} pro ${komu} předáno poště: ${vysledek?.messageId ?? '?'} · ${vysledek?.response ?? ''}`);
+  return { sent: true as const };
+}
+
 export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
 
   const jazyk = input.jazyk ?? 'cs';
-  await transport.sendMail({
+  return odesliAOver(
+    transport,
+    {
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.prehled.predmet', { mesic: input.mesic }),
@@ -1984,6 +2144,13 @@ export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
       input.bonusy.length ? '' : '',
       input.bonusy.length ? prelozitEmail(jazyk, 'mail.prehled.textBonusySeznam') : '',
       ...input.bonusy.map((b) => `  ${b.nazev}: ${b.castka}`),
+      input.vykazy?.length ? '' : '',
+      input.vykazy?.length ? prelozitEmail(jazyk, 'mail.prehled.textVykazy') : '',
+      ...(input.vykazy ?? []).map(
+        (v) =>
+          `  ${v.datum}  ${v.odDo}  ${v.hodiny}  ${v.druh}  ${v.projekt}` +
+          (input.castkyViditelne !== false ? `  ${v.castka}` : ''),
+      ),
       input.poznamka ? '' : '',
       input.poznamka || '',
       '',
@@ -1993,9 +2160,10 @@ export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
       .filter((r) => r !== '')
       .join('\n'),
     html: buildMesicniPrehledHtml(input),
-  });
-
-  return { sent: true as const };
+    },
+    input.to,
+    'Měsíční přehled',
+  );
 }
 
 

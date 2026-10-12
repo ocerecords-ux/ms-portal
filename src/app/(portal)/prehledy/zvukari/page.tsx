@@ -190,6 +190,10 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
             ? prehledy.filter((p) => p.email && !odeslanoKomu.has(p.userId)).length
             : 0
         }
+        // Pro „Poslat znovu" - i ti, komu už přehled jednou odešel (12. 10. 2026).
+        pocetVsech={
+          Date.UTC(rok, cislo, 1) <= Date.now() ? prehledy.filter((p) => p.email).length : 0
+        }
       />
       </div>
 

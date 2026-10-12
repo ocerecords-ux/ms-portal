@@ -1,4 +1,7 @@
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { isInternalRole } from '@/lib/roles';
 import { computeTotals, formatMoney } from '@/lib/doklady';
 import { nactiProKlienta, zapisOtevreni } from '@/lib/prezentaceServer';
 import { nactiJazyk } from '@/lib/jazykServer';
@@ -24,8 +27,16 @@ export default async function PrezentacePage({ params }: { params: { token: stri
   const data = await nactiProKlienta(params.token);
   if (!data) notFound();
 
-  // Že se na to klient podíval. Nesmí stránku zdržet ani shodit.
-  void zapisOtevreni(data.id).catch(() => undefined);
+  /**
+   * ŽE SE NA TO KLIENT PODÍVAL. Nesmí stránku zdržet ani shodit.
+   *
+   * Náš člověk na klientově odkazu se nepočítá - stejně jako u přeposlechu
+   * (21. 9. 2026). Jinak by „klient otevřel nabídku" zazvonilo pokaždé, když
+   * si prezentaci zkontrolujeme sami.
+   */
+  const session = await getServerSession(authOptions).catch(() => null);
+  const interni = Boolean(session?.user?.id && isInternalRole(session.user.role));
+  if (!interni) void zapisOtevreni(data.id).catch(() => undefined);
 
   const mena = (data.nabidka?.mena ?? 'CZK') as Parameters<typeof formatMoney>[1];
   const soucty = data.nabidka
