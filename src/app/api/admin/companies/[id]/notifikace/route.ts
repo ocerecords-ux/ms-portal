@@ -3,7 +3,12 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { INTERNAL_ROLES } from '@/lib/roles';
-import { STAVY_S_NOTIFIKACI, jeToEmail, prazdneNastaveni } from '@/lib/notifikaceFirmy';
+import {
+  STAVY_S_NOTIFIKACI,
+  jeToEmail,
+  prazdneNastaveni,
+  prazdniPrijemciStavu,
+} from '@/lib/notifikaceFirmy';
 
 /**
  * Nastavení zpráv klientovi podle stavu projektu (zadání 10. 9. 2026).
@@ -22,6 +27,8 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({
   nastaveni: z.record(z.enum(['NIKAM', 'KLIENT', 'INTERNE'])),
   interniPrijemci: z.array(z.string()).max(20).optional(),
+  /** Komu z nás u jednotlivých stavů (12. 10. 2026). Prázdné = jako u firmy. */
+  prijemciStavu: z.record(z.array(z.string()).max(20)).optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -31,7 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const [radky, firma, ucty] = await Promise.all([
     prisma.notifikaceFirmy.findMany({
       where: { companyId: params.id },
-      select: { stav: true, komu: true },
+      select: { stav: true, komu: true, interniPrijemci: true },
     }),
     prisma.company.findUnique({ where: { id: params.id }, select: { interniPrijemci: true } }),
     // Nabidka k zaskrtnuti - jen aktivni interni ucty Mediaspace. Adresu mimo
@@ -44,11 +51,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   ]);
 
   const nastaveni = prazdneNastaveni();
+  const prijemciStavu = prazdniPrijemciStavu();
   for (const r of radky) {
     if (r.stav in nastaveni) nastaveni[r.stav] = r.komu;
+    if (r.stav in prijemciStavu) prijemciStavu[r.stav] = r.interniPrijemci ?? [];
   }
   return NextResponse.json({
     nastaveni,
+    prijemciStavu,
     interniPrijemci: firma?.interniPrijemci ?? [],
     nabidkaUctu: ucty.map((u) => ({ email: u.email, jmeno: u.name ?? u.email })),
   });
@@ -86,14 +96,34 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     prijemci = ocistene;
   }
 
+  /**
+   * Adresy u jednotlivých stavů (12. 10. 2026). Stejná kontrola jako u
+   * firemního seznamu - překlep by se jinak projevil tím, že zpráva tiše
+   * nikam nedojde.
+   */
+  const poStavech = new Map<string, string[]>();
+  const zadaneStavy: [string, string[]][] = Object.entries(parsed.data.prijemciStavu ?? {});
+  for (const [stav, adresy] of zadaneStavy) {
+    if (!STAVY_S_NOTIFIKACI.includes(stav)) continue;
+    const ocistene: string[] = Array.from(
+      new Set<string>(adresy.map((e) => e.trim().toLowerCase()).filter(Boolean)),
+    );
+    const spatny = ocistene.find((e) => !jeToEmail(e));
+    if (spatny) {
+      return NextResponse.json({ error: `"${spatny}" nevypadá jako e-mail.` }, { status: 400 });
+    }
+    poStavech.set(stav, ocistene);
+  }
+
   await prisma.$transaction([
-    ...zapisy.map(([stav, komu]) =>
-      prisma.notifikaceFirmy.upsert({
+    ...zapisy.map(([stav, komu]) => {
+      const adresy = poStavech.get(stav);
+      return prisma.notifikaceFirmy.upsert({
         where: { companyId_stav: { companyId: params.id, stav } },
-        create: { companyId: params.id, stav, komu },
-        update: { komu },
-      }),
-    ),
+        create: { companyId: params.id, stav, komu, interniPrijemci: adresy ?? [] },
+        update: adresy ? { komu, interniPrijemci: adresy } : { komu },
+      });
+    }),
     ...(prijemci
       ? [prisma.company.update({ where: { id: params.id }, data: { interniPrijemci: prijemci } })]
       : []),

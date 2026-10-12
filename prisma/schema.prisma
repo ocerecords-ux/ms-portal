@@ -1009,6 +1009,17 @@ model NotifikaceFirmy {
   stav      String
   komu      KomuNotifikace @default(NIKAM)
 
+  /// KOMU Z NAS U TOHOHLE STAVU (zadani 12. 10. 2026: „potrebuji jeste
+  /// nastavit nase interni maily, aby sly nastavit ke kazdemu stavu zvlast.
+  /// Protoze kdyz dam na klienta, tak abych to treba uz neslo u nekterych
+  /// stavu na vsechny maily").
+  ///
+  /// Prazdne pole znamena „jako u cele firmy" - plati Company.interniPrijemci
+  /// a kdyz ani ten neni vyplneny, vychozi dvojice z lib/notifikaceFirmy.ts.
+  /// Vyplneny seznam firemni NAHRAZUJE, nescita se s nim: smysl tehle volby
+  /// je u nekterych stavu okruh ZUZIT.
+  interniPrijemci String[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -12,7 +12,9 @@ import {
   predvolbaJakoAudioteka,
   predvolbaJakoJota,
   prazdneNastaveni,
+  prazdniPrijemciStavu,
   type NastaveniNotifikaci,
+  type PrijemciStavu,
 } from '@/lib/notifikaceFirmy';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { prelozitKolem } from '@/lib/jazyk';
@@ -43,6 +45,10 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
   const [pred, za] = prelozitKolem(jazyk, 'firma.notifikaceUvod', 'komu');
   const [nastaveni, setNastaveni] = useState<NastaveniNotifikaci>(prazdneNastaveni());
   const [prijemci, setPrijemci] = useState<string[]>([]);
+  // Komu z nás u jednotlivých stavů (12. 10. 2026). Prázdné = jako u firmy.
+  const [prijemciStavu, setPrijemciStavu] = useState<PrijemciStavu>(prazdniPrijemciStavu());
+  // Který řádek má rozbalený výběr lidí - rozbalené všechny naráz by byla zeď.
+  const [otevreny, setOtevreny] = useState<string | null>(null);
   const [nabidka, setNabidka] = useState<Ucet[]>([]);
   const [novaAdresa, setNovaAdresa] = useState('');
   const [nacita, setNacita] = useState(true);
@@ -56,6 +62,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
       .then((d) => {
         if (d?.nastaveni) setNastaveni(d.nastaveni);
         if (Array.isArray(d?.interniPrijemci)) setPrijemci(d.interniPrijemci);
+        if (d?.prijemciStavu) setPrijemciStavu({ ...prazdniPrijemciStavu(), ...d.prijemciStavu });
         if (Array.isArray(d?.nabidkaUctu)) setNabidka(d.nabidkaUctu);
       })
       .catch(() => undefined)
@@ -64,6 +71,26 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
 
   function nastav(stav: string, komu: KomuNotifikace) {
     setNastaveni((n) => ({ ...n, [stav]: komu }));
+    setUlozeno(false);
+  }
+
+  /** Přehodí člověka u JEDNOHO stavu. Prázdný seznam = jako u celé firmy. */
+  function prepniPrijemceStavu(stav: string, email: string) {
+    const adresa = email.trim().toLowerCase();
+    setPrijemciStavu((p) => {
+      const ted = p[stav] ?? [];
+      return {
+        ...p,
+        [stav]: ted.includes(adresa) ? ted.filter((e) => e !== adresa) : [...ted, adresa],
+      };
+    });
+    setUlozeno(false);
+    setChyba(null);
+  }
+
+  /** Zpět na „jako u celé firmy" - stačí seznam vyprázdnit. */
+  function vratNaFiremni(stav: string) {
+    setPrijemciStavu((p) => ({ ...p, [stav]: [] }));
     setUlozeno(false);
   }
 
@@ -95,7 +122,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
       const res = await fetch(`/api/admin/companies/${companyId}/notifikace`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nastaveni, interniPrijemci: prijemci }),
+        body: JSON.stringify({ nastaveni, interniPrijemci: prijemci, prijemciStavu }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -126,8 +153,9 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
         {STAVY_S_NOTIFIKACI.map((stav) => (
           <div
             key={stav}
-            className="flex items-start justify-between gap-4 flex-wrap border-b border-line pb-3 last:border-0 last:pb-0"
+            className="border-b border-line pb-3 last:border-0 last:pb-0"
           >
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex-1 min-w-[240px]">
               <p className="font-heading font-semibold text-sm text-ink m-0">{stav}</p>
               <p className="text-xs font-body text-muted m-0 mt-0.5">{CO_SE_POSILA[stav]}</p>
@@ -153,6 +181,70 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
                 </button>
               ))}
             </span>
+          </div>
+
+          {/* KOMU Z NÁS U TOHOHLE STAVU (zadání 12. 10. 2026). Skládá se jen
+              tam, kde se vůbec něco posílá - u „Neposílat" by to byl řádek
+              o ničem. Zavřený řádek rovnou říká, komu to teď chodí. */}
+          {nastaveni[stav] !== 'NIKAM' && (() => {
+            const vlastni = prijemciStavu[stav] ?? [];
+            const platne = vlastni.length > 0 ? vlastni : prijemci;
+            const jmenem = (adresa: string) =>
+              nabidka.find((u) => u.email.toLowerCase() === adresa)?.jmeno ?? adresa;
+            return (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setOtevreny((o) => (o === stav ? null : stav))}
+                  className="text-xs font-body text-muted hover:text-ink text-left"
+                >
+                  {otevreny === stav ? '▾ ' : '▸ '}
+                  {t('firma.komuZNasStav')}:{' '}
+                  <span className="text-ink">
+                    {platne.length > 0 ? vyjmenuj(platne.map(jmenem)) : t('firma.komuZNasNikdo')}
+                  </span>
+                  {vlastni.length === 0 && ` · ${t('firma.komuZNasJakoFirma')}`}
+                </button>
+
+                {otevreny === stav && (
+                  <div className="mt-2 flex flex-col gap-2 bg-field rounded-lg p-3">
+                    <p className="text-xs font-body text-muted m-0">{t('firma.komuZNasStavPopis')}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {nabidka.map((u) => {
+                        const zvoleny = vlastni.includes(u.email.toLowerCase());
+                        return (
+                          <button
+                            key={u.email}
+                            type="button"
+                            onClick={() => prepniPrijemceStavu(stav, u.email)}
+                            aria-pressed={zvoleny}
+                            title={u.email}
+                            className={`font-heading font-semibold text-xs rounded-pill px-3 py-1.5 border transition-colors ${
+                              zvoleny
+                                ? 'bg-brand-purple text-white border-brand-purple'
+                                : 'bg-surface text-muted border-line hover:text-ink'
+                            }`}
+                          >
+                            {zvoleny ? '✓ ' : '+ '}
+                            {u.jmeno}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {vlastni.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => vratNaFiremni(stav)}
+                        className="self-start text-xs font-heading text-brand-purple hover:underline"
+                      >
+                        {t('firma.komuZNasZpetNaFiremni')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           </div>
         ))}
       </div>

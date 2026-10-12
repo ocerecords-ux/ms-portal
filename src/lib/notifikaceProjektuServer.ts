@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import {
   druhNotifikaceFirmy,
   stavySNotifikaci,
-  interniPrijemciFirmy,
+  interniPrijemciStavu,
   STAV_PREPOSLECH_HOTOVO,
 } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
@@ -111,7 +111,7 @@ export async function posliNotifikaciKeStavu(
 
     const ulozene = await prisma.notifikaceFirmy.findUnique({
       where: { companyId_stav: { companyId: projekt.companyId, stav } },
-      select: { komu: true },
+      select: { komu: true, interniPrijemci: true },
     });
     /**
      * „Přeposlech dokončen" chodí klientovi i bez nastavení (25. 9. 2026) -
@@ -133,7 +133,12 @@ export async function posliNotifikaciKeStavu(
 
     // Komu z nas to jde - nastavuje se na karte firmy (zadani 10. 9. 2026).
     // U zpravy klientovi jdeme v kopii i my, at je videt, co odeslo.
-    const nasi = interniPrijemciFirmy(projekt.company?.interniPrijemci);
+    // Od 12. 10. 2026 nejdřív seznam u STAVU, teprve když je prázdný, ten
+    // firemní - u některých stavů má být okruh užší než u zbytku.
+    const nasi = interniPrijemciStavu(
+      ulozene?.interniPrijemci,
+      projekt.company?.interniPrijemci,
+    );
     /**
      * Klient je v „Komu", MY VE SKRYTÉ KOPII (zadání 11. 9. 2026: „nemůžeme
      * tam být vidět, kdyžtak to musí být ve skryté kopii").

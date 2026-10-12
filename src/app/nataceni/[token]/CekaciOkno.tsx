@@ -118,6 +118,11 @@ export function CekaciOkno({
         )}
       </div>
 
+      {/* TLAČÍTKO SE PROBARVÍ AŽ ČASEM (zadání 12. 10. 2026: „tady by se mělo to
+          tlačítko probarvit až ve chvíli, kdy uběhne čas").
+          Do té doby svítilo značkovou fialovou už dvanáct dní předem a zvalo
+          k připojení do prázdné místnosti. Teď je do začátku (a po konci) tlumené;
+          odkaz zůstává funkční, kdyby si ho někdo chtěl vyzkoušet dopředu. */}
       {hovorOdkaz && (
         <a
           href={hovorOdkaz}
@@ -126,7 +131,7 @@ export function CekaciOkno({
           className={`block text-center rounded-pill px-6 py-4 font-heading font-semibold text-base no-underline transition-colors ${
             bezi
               ? 'bg-brand-green text-brand-purpleDark hover:bg-brand-greenDeep'
-              : 'bg-brand-purple text-white hover:bg-brand-purpleDeep'
+              : 'bg-surface text-muted border border-line hover:text-ink hover:border-brand-purple'
           }`}
         >
           {t('cekarna.pripojit')}

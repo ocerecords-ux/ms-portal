@@ -2604,6 +2604,23 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    */
   const dotazy = conversations.filter((c) => c.kind === 'DOTAZ');
   const otevrena = conversations.find((c) => c.id === openId) ?? null;
+
+  /**
+   * DOTAZY KLIENTŮ JSOU BEZ VLÁKEN (zadání 12. 10. 2026: „u dotazu klientu
+   * zrusme vlakna. klient je nevidi a je to zbytecne").
+   *
+   * Dotaz je rozhovor s člověkem zvenku - ten vidí jen hlavní linku, vlákno
+   * mu portál nikam nedoručí. Odpovědi v něm proto četl jen ten, kdo je napsal,
+   * a klient čekal na něco, co už dávno padá do prázdna.
+   */
+  const bezVlaken = otevrena?.kind === 'DOTAZ';
+
+  // Přepnutí do dotazu zavře otevřené vlákno - jinak by panel zůstal viset
+  // u rozhovoru, který vlákna nemá (12. 10. 2026).
+  useEffect(() => {
+    if (bezVlaken) setVlaknoId(null);
+  }, [bezVlaken]);
+
   /**
    * Výčet ostatních lidí ve skupině pro věty o tom, kdo do ní vidí. Jména
    * jsou data, takže se do věty jen dosadí - celá věta je jeden klíč.
@@ -3408,7 +3425,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
           naStrance
             ? 'w-full h-full border-0'
             : `max-w-[96vw] h-full border-r-0 shadow-xl transition-[width] ${
-                vlaknoId ? 'w-[1180px]' : 'w-[760px]'
+                vlaknoId && !bezVlaken ? 'w-[1180px]' : 'w-[760px]'
               }`
         } ${tahnouSoubory > 0 ? 'border-brand-purple' : 'border-line'}`}
       >
@@ -4048,7 +4065,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               (zprava uzivatele 8. 9. 2026). */}
                           <span className="mt-0.5 flex items-center gap-2 flex-wrap">
                             {m.mine && <Zobrazeno seenBy={m.seenBy} stav={m.stav} />}
-                            {m.mine && <span className={`text-[11px] text-muted/40 ${odpovedetSkryta}`}>·</span>}
+                            {m.mine && !bezVlaken && (
+                              <span className={`text-[11px] text-muted/40 ${odpovedetSkryta}`}>·</span>
+                            )}
+                            {!bezVlaken && (
                             <button
                               type="button"
                               onClick={() => setVlaknoId(m.id)}
@@ -4064,6 +4084,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                     ? t('chat.odpovediMalo', { pocet: m.replyCount })
                                     : t('chat.odpovediMnoho', { pocet: m.replyCount })}
                             </button>
+                            )}
                             {/* Upravit smi jen autor - i na serveru (zadani
                                 9. 9. 2026: "bylo by super upravovat me
                                 odeslane zpravy, kdyz se treba spletu"). */}
@@ -4137,8 +4158,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   />
                 </div>
 
-                {/* Treti sloupec: vlakno vedle zpravy, jako u Slacku. */}
-                {vlaknoId && (
+                {/* Treti sloupec: vlakno vedle zpravy, jako u Slacku.
+                    U dotazů klientů se nevykresluje vůbec (12. 10. 2026). */}
+                {vlaknoId && !bezVlaken && (
                   <div className="w-full md:w-[340px] shrink-0 border-l border-line flex flex-col min-h-0">
                     <div className="px-3 py-2.5 border-b border-line flex items-center justify-between gap-2 bg-field">
                       <span className="font-heading font-semibold text-sm text-ink">{t('chat.vlakno')}</span>

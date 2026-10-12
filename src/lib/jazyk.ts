@@ -6648,6 +6648,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'U volby „Jen nám interně" jsou to jediní příjemci. U volby „Klientovi" jim zpráva chodí v kopii, ať je vidět, co klientovi odešlo.',
     en: 'With “Internally only” these are the only recipients. With “To the customer” they get a copy, so it is clear what went to the customer.',
   },
+  'firma.komuZNasStav': { cs: 'Komu z nás u tohohle stavu', en: 'Who on our side for this status' },
+  'firma.komuZNasNikdo': { cs: 'nikdo', en: 'nobody' },
+  'firma.komuZNasJakoFirma': { cs: 'jako u celé firmy', en: 'same as the whole company' },
+  'firma.komuZNasStavPopis': {
+    cs: 'Vybraní lidé platí jen pro tenhle stav a nahrazují seznam u celé firmy. Nic nevybraného = platí firemní seznam.',
+    en: 'The people selected here apply to this status only and replace the company-wide list. Nothing selected = the company list applies.',
+  },
+  'firma.komuZNasZpetNaFiremni': { cs: 'Zpět na seznam celé firmy', en: 'Back to the company list' },
   'firma.odebratAdresu': { cs: 'Odebrat {email}', en: 'Remove {email}' },
   'firma.dalsiAdresa': {
     cs: 'Další adresa, třeba fakturace@mediaspace.cz',

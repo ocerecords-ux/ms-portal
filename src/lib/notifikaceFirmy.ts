@@ -198,6 +198,36 @@ export function interniPrijemciFirmy(ulozene: string[] | null | undefined): stri
   return ocistene.length > 0 ? ocistene : [...INTERNI_PRIJEMCI];
 }
 
+/**
+ * KOMU Z NÁS U KONKRÉTNÍHO STAVU (zadání 12. 10. 2026: „potřebuji ještě
+ * nastavit naše interní maily, aby šly nastavit ke každému stavu zvlášť.
+ * Protože když dám na klienta, tak abych to třeba už nešlo u některých stavů
+ * na všechny maily").
+ *
+ * TŘI PATRA, každé překrývá to pod sebou:
+ *   1. seznam u STAVU   — když je vyplněný, platí jen on,
+ *   2. seznam u FIRMY   — když stav nic svého nemá,
+ *   3. výchozí dvojice — když nemá nic ani firma.
+ *
+ * Seznam u stavu firemní NAHRAZUJE, nesčítá se s ním. Smysl téhle volby je
+ * okruh ZUŽIT - sčítáním by se to nedalo.
+ */
+export function interniPrijemciStavu(
+  uStavu: string[] | null | undefined,
+  uFirmy: string[] | null | undefined,
+): string[] {
+  const vlastni = (uStavu ?? []).map((e) => e.trim()).filter(Boolean);
+  if (vlastni.length > 0) return vlastni;
+  return interniPrijemciFirmy(uFirmy);
+}
+
+/** Co u kterého stavu vybráno je - prázdné pole = „jako u celé firmy". */
+export type PrijemciStavu = Record<string, string[]>;
+
+export function prazdniPrijemciStavu(): PrijemciStavu {
+  return Object.fromEntries(STAVY_S_NOTIFIKACI.map((s) => [s, [] as string[]]));
+}
+
 /** Hrubá kontrola e-mailu - jen aby se do seznamu nedostal překlep typu "helena@". */
 export function jeToEmail(text: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(text.trim());

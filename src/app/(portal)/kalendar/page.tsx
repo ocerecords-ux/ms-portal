@@ -361,24 +361,23 @@ export default async function KalendarPage({
   const odkazHovoru = new Map(studios.map((s) => [s.id, s.hovorOdkaz ?? null]));
   const nazevStudia = new Map(studios.map((s) => [s.id, s.shortName]));
 
-  const jeMoje = (u: { zvukarUserId: string | null; actorUserId: string | null }) =>
-    u.zvukarUserId === session.user.id || u.actorUserId === session.user.id;
-  const sloty = soloMoje ? occupancy.slots.filter(jeMoje) : occupancy.slots;
-  const bloky = soloMoje ? occupancy.blocks.filter(jeMoje) : occupancy.blocks;
-
   /**
    * REŽIE ONLINE (zadání 23. 9. 2026) - ikona u první frekvence každého herce
    * na projektu. Počítá se z kalendáře, ruční výjimka u události má přednost.
+   *
+   * Počítá se z CELÉHO kalendáře, ne až z vyfiltrovaného (12. 10. 2026):
+   * „první frekvence" se pozná jen vůči ostatním událostem, a v sólo režimu
+   * se podle ní teprve rozhoduje, co se má ukázat.
    */
   const sRezii = await oznacRezii([
-    ...sloty.map((s) => ({
+    ...occupancy.slots.map((s) => ({
       id: s.id,
       caflouProjectId: s.caflouProjectId,
       actorUserId: s.actorUserId,
       actorName: s.actorName,
       rezieOnline: s.rezieOnline,
     })),
-    ...bloky
+    ...occupancy.blocks
       .filter((b) => b.kind === 'NATACENI' || b.kind === 'CASTING')
       .map((b) => ({
         id: b.id,
@@ -390,6 +389,53 @@ export default async function KalendarPage({
         vzdy: b.kind === 'CASTING',
       })),
   ]);
+
+  /**
+   * SÓLO: I REŽIE NA DÁLKU (zadání 12. 10. 2026: „tady bych měl vidět všechny
+   * své události i režie, u kterých jsem na dálku").
+   *
+   * Do teď „moje" znamenalo jen to, kde člověk sedí jako zvukař nebo stí
+   * před mikrofonem jako herec. Jenže na první frekvenci se produkce připojuje
+   * jako režie - a ta událost ze sóla vypadla, přestože na ní člověk má být.
+   *
+   * ČÍ REŽIE TO JE, se pozná podle MANAŽERA PROJEKTU - u události samotné se
+   * režisér neukládá (je to značka, ne osoba). Projekt bez manažera nikomu
+   * do sóla nepřibude.
+   */
+  const projektySRezii = new Set<string>();
+  if (soloMoje) {
+    for (const u of [...occupancy.slots, ...occupancy.blocks]) {
+      if (sRezii.has(u.id) && u.caflouProjectId) projektySRezii.add(u.caflouProjectId);
+    }
+  }
+  const mojeProjektyRezie = new Set<string>(
+    projektySRezii.size > 0
+      ? (
+          await prisma.projectMeta
+            .findMany({
+              where: {
+                caflouProjectId: { in: Array.from(projektySRezii) },
+                managerUserId: session.user.id,
+              },
+              select: { caflouProjectId: true },
+            })
+            .catch(() => [] as { caflouProjectId: string }[])
+        ).map((p) => p.caflouProjectId)
+      : [],
+  );
+
+  const jeMoje = (u: {
+    id: string;
+    zvukarUserId: string | null;
+    actorUserId: string | null;
+    caflouProjectId: string | null;
+  }) =>
+    u.zvukarUserId === session.user.id ||
+    u.actorUserId === session.user.id ||
+    (sRezii.has(u.id) && !!u.caflouProjectId && mojeProjektyRezie.has(u.caflouProjectId));
+
+  const sloty = soloMoje ? occupancy.slots.filter(jeMoje) : occupancy.slots;
+  const bloky = soloMoje ? occupancy.blocks.filter(jeMoje) : occupancy.blocks;
 
   /**
    * KDO STŘÍHÁ EXTERNĚ (zadání 23. 9. 2026: „u Matěje by defaultně mohla
