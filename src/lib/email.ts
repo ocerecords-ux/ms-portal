@@ -446,7 +446,7 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to,
     subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.objednavkaInterni.predmet', {
@@ -456,7 +456,7 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
     html: buildInternalNotificationHtml(input),
   });
 
-  return { sent: true as const, komu: to };
+  return overOdeslani(vysledekPosty, 'sendOrderNotificationEmail');
 }
 
 // ---------------------------------------------------------------------------
@@ -712,7 +712,7 @@ export async function sendInviteEmail(input: InviteEmailInput) {
 
   const jazyk = jazykPozvanky(input);
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmail(
@@ -743,7 +743,7 @@ export async function sendInviteEmail(input: InviteEmailInput) {
     html: buildInviteHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendInviteEmail');
 }
 
 // ---------------------------------------------------------------------------
@@ -853,7 +853,7 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
 
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     // ADRESY TYMU SEM NESMI (zadani 14. 9. 2026: „klient nevidi adresy tymu").
     // Do 14. 9. 2026 tu v Reply-To svitila interni schranka na objednavky;
     // ted odpoved jde zpatky na mediaspace@msportal.cz, tedy tam, odkud
@@ -890,7 +890,7 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
     html: buildOrderConfirmationHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendOrderConfirmationEmail');
 }
 
 // ---------------------------------------------------------------------------
@@ -981,7 +981,7 @@ export async function sendHerecDotocenEmail(input: HerecDotocenInput) {
 
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     subject: prelozitEmailS(jazyk, 'mail.dotoceno.predmet', {
@@ -1006,7 +1006,7 @@ export async function sendHerecDotocenEmail(input: HerecDotocenInput) {
     html: buildHerecDotocenHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendHerecDotocenEmail');
 }
 
 // ---------------------------------------------------------------------------
@@ -1077,7 +1077,7 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
 
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.dotocenoKlient.predmet', {
@@ -1094,7 +1094,7 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
     html: buildHerecDotocenKlientoviHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendHerecDotocenKlientoviEmail');
 }
 
 /**
@@ -1162,7 +1162,7 @@ export async function sendZmenaTerminuKlientoviEmail(input: ZmenaTerminuKlientov
   const jazyk = input.jazyk ?? 'cs';
   const zruseno = input.nove === null;
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(
@@ -1189,7 +1189,7 @@ export async function sendZmenaTerminuKlientoviEmail(input: ZmenaTerminuKlientov
     html: buildZmenaTerminuKlientoviHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendZmenaTerminuKlientoviEmail');
 }
 
 export async function sendPasswordResetEmail(input: PasswordResetInput) {
@@ -1200,7 +1200,7 @@ export async function sendPasswordResetEmail(input: PasswordResetInput) {
 
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmail(jazyk, 'mail.heslo.predmet'),
@@ -1221,7 +1221,7 @@ export async function sendPasswordResetEmail(input: PasswordResetInput) {
     html: buildPasswordResetHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendPasswordResetEmail');
 }
 
 
@@ -1377,9 +1377,9 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     html: buildOfferHtml(input),
   };
 
-  await transport.sendMail(zprava);
+  const vysledekPosty = await transport.sendMail(zprava);
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendOfferEmail');
 }
 
 
@@ -1533,9 +1533,9 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
     })(),
   };
 
-  await transport.sendMail(zprava);
+  const vysledekPosty = await transport.sendMail(zprava);
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendInvoiceEmail');
 }
 
 
@@ -1600,7 +1600,7 @@ export async function sendContractEmail(input: ContractEmailInput) {
 
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.smlouva.predmet', {
@@ -1630,7 +1630,7 @@ export async function sendContractEmail(input: ContractEmailInput) {
     html: buildContractHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendContractEmail');
 }
 
 
@@ -1704,7 +1704,7 @@ export async function sendPodepsanaSmlouvaEmail(input: PodepsanaSmlouvaInput) {
   const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
@@ -1736,7 +1736,7 @@ export async function sendPodepsanaSmlouvaEmail(input: PodepsanaSmlouvaInput) {
     ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendPodepsanaSmlouvaEmail');
 }
 
 
@@ -1818,7 +1818,7 @@ export async function sendBonusEmail(input: BonusEmailInput) {
 
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.bonus.predmet', { projekt: input.projekt }),
@@ -1840,7 +1840,7 @@ export async function sendBonusEmail(input: BonusEmailInput) {
     html: buildBonusHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendBonusEmail');
 }
 
 
@@ -2091,6 +2091,35 @@ export async function sendMzdovyPodkladEmail(input: MzdovyPodkladInput) {
  * SMTP odpověď se loguje: v záznamech Vercelu je pak černé na bílém, co
  * server řekl, a nemusí se hádat, jestli mail odešel.
  */
+/**
+ * OVĚŘENÍ UŽ ODESLANÉ ZPRÁVY (12. 10. 2026: „Vlakař ve stavu Dokončeno -
+ * ke schválení na nikoho nešel", a přitom v historii projektu svítilo
+ * „odešla klientovi").
+ *
+ * Totéž co `odesliAOver` níž, jen pro místa, která si `sendMail` volají sama:
+ * výsledek se nesmí zahodit. `transport.sendMail` DOBĚHNE V POŘÁDKU i tehdy,
+ * když server spojení přijal, ale adresáta odmítl - výsledek pak nese prázdné
+ * `accepted` a adresu v `rejected`. Dokud se na to nikdo neptal, portál si
+ * zapsal „odesláno" a mail nikam nedorazil.
+ */
+function overOdeslani(
+  vysledek: { accepted?: unknown[]; rejected?: unknown[]; response?: string; messageId?: string } | null | undefined,
+  co: string,
+): { sent: true; reason: undefined } | { sent: false; reason: string } {
+  const prijato = vysledek?.accepted ?? [];
+  const odmitnuto = vysledek?.rejected ?? [];
+
+  if (odmitnuto.length > 0 || prijato.length === 0) {
+    const kdo = odmitnuto.length > 0 ? ` (${odmitnuto.map(String).join(', ')})` : '';
+    const duvod = `SMTP_REJECTED${kdo}: ${vysledek?.response ?? 'bez odpovědi'}`;
+    console.error(`${co}: pošta zprávu nevzala - ${duvod}`);
+    return { sent: false as const, reason: duvod };
+  }
+
+  console.log(`${co}: předáno poště ${vysledek?.messageId ?? '?'} · ${vysledek?.response ?? ''}`);
+  return { sent: true as const, reason: undefined };
+}
+
 async function odesliAOver(
   transport: NonNullable<ReturnType<typeof getTransport>>,
   zprava: Parameters<NonNullable<ReturnType<typeof getTransport>>['sendMail']>[0],
@@ -2237,7 +2266,7 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
   }
 
   const jazyk = input.jazyk ?? 'cs';
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.terminy.predmet', { projekt: input.projectName }),
@@ -2262,7 +2291,7 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
     html: buildRecordingOfferHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendRecordingOfferEmail');
 }
 
 
@@ -2359,7 +2388,7 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
 
   const jazyk = input.jazyk ?? 'cs';
   const t = DECISION_TEXTS[input.decision];
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.rozhodnuti.predmet', {
@@ -2384,7 +2413,7 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
     html: buildRecordingDecisionHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendRecordingDecisionEmail');
 }
 
 
@@ -2452,7 +2481,7 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
   }
 
   const jazyk = input.jazyk ?? 'cs';
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.rodnyList.predmet', { projekt: input.projectName }),
@@ -2475,7 +2504,7 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
     html: buildRodnyListHtml(input),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendRodnyListEmail');
 }
 // ===========================================================================
 // ZPRÁVA O ZMĚNĚ STAVU PROJEKTU (zadání 10. 9. 2026)
@@ -2699,7 +2728,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
   const jazyk = input.jazyk ?? 'cs';
   const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     // Nase adresy jen ve skryte kopii - viz skrytaKopie v typu vys.
@@ -2730,7 +2759,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
     html: buildStavProjektuHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendStavProjektuEmail');
 }
 
 /* ==========================================================================
@@ -2780,7 +2809,7 @@ export async function sendPozvankaUdajuEmail(input: PozvankaUdajuInput) {
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
   const jazyk = input.jazyk ?? 'cs';
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmail(jazyk, 'mail.udaje.predmet'),
@@ -2797,7 +2826,7 @@ export async function sendPozvankaUdajuEmail(input: PozvankaUdajuInput) {
     html: buildPozvankaUdajuHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendPozvankaUdajuEmail');
 }
 
 export type VyplneneUdajeInput = {
@@ -2842,7 +2871,7 @@ export async function sendVyplneneUdajeEmail(input: VyplneneUdajeInput) {
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(
@@ -2860,7 +2889,7 @@ export async function sendVyplneneUdajeEmail(input: VyplneneUdajeInput) {
     html: buildVyplneneUdajeHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendVyplneneUdajeEmail');
 }
 
 /* ==========================================================================
@@ -2913,14 +2942,14 @@ export async function sendPreposlechPredanEmail(input: PreposlechPredanInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.preposlech.predmet', { projekt: input.nazevProjektu }),
     text: [pozdravPosty(input.jazyk ?? 'cs', input.jmeno), '', vetaPredani(input), '', input.odkaz].join('\n'),
     html: buildPreposlechPredanHtml(input),
   });
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendPreposlechPredanEmail');
 }
 
 export type NoveStopyInput = PreposlechPosluchaciInput & {
@@ -2965,14 +2994,14 @@ export async function sendNoveStopyEmail(input: NoveStopyInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.stopy.predmet', { projekt: input.nazevProjektu }),
     text: [pozdravPosty(input.jazyk ?? 'cs', input.jmeno), '', vetaNoveStopy(input), '', input.odkaz].join('\n'),
     html: buildNoveStopyHtml(input),
   });
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendNoveStopyEmail');
 }
 
 /**
@@ -3026,7 +3055,7 @@ export async function sendNovaOdpovedKlientoviEmail(input: NovaOdpovedKlientoviI
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.odpoved.predmet', { projekt: input.nazevProjektu }),
@@ -3042,7 +3071,7 @@ export async function sendNovaOdpovedKlientoviEmail(input: NovaOdpovedKlientoviI
       .join('\n'),
     html: buildNovaOdpovedKlientoviHtml(input),
   });
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendNovaOdpovedKlientoviEmail');
 }
 
 /* ==========================================================================
@@ -3104,7 +3133,7 @@ export async function sendUpominkaEmail(input: UpominkaInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     // Kopie chodí skrytě - klient nemá vidět, kdo u nás na platbu čeká.
@@ -3115,7 +3144,7 @@ export async function sendUpominkaEmail(input: UpominkaInput) {
     text: `${bezZnacek(input.text)}\n\n${input.odkaz ?? ''}`.trim(),
     html: buildUpominkaHtml(input),
   });
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendUpominkaEmail');
 }
 
 // ---------------------------------------------------------------------------
@@ -3232,7 +3261,7 @@ export async function sendStudioBookingEmail(input: StudioBookingEmailInput) {
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
   const copy = ZPRAVY_STUDIA[input.druh];
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: `${copy.subject} - ${input.kdy}`,
@@ -3252,7 +3281,7 @@ export async function sendStudioBookingEmail(input: StudioBookingEmailInput) {
     ].join('\n'),
     html: buildStudioBookingHtml(input),
   });
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendStudioBookingEmail');
 }
 
 
@@ -3302,7 +3331,7 @@ export async function sendCenikEmail(input: CenikEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(input.odpovedNa ?? null),
     to: input.to,
     subject: input.predmet,
@@ -3311,7 +3340,7 @@ export async function sendCenikEmail(input: CenikEmailInput) {
     ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendCenikEmail');
 }
 
 
@@ -3512,7 +3541,7 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
   }
   radkyTextu.push('', prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco'));
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(input.odpovedNa ?? null),
     to: input.to,
     subject: prelozitEmailS(jazyk, input.zmena ? 'mail.pozvankaNataceni.predmetZmena' : 'mail.pozvankaNataceni.predmet', {
@@ -3543,7 +3572,7 @@ export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
       : {}),
   });
 
-  return { sent: true as const };
+  return overOdeslani(vysledekPosty, 'sendPozvankaNataceniEmail');
 }
 
 
@@ -3622,7 +3651,7 @@ export async function sendVyberTerminuProdukciEmail(input: VyberTerminuProdukciI
 
   const jazyk = input.jazyk ?? 'cs';
 
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     subject: prelozitEmailS(jazyk, 'mail.vyberTerminu.predmet', {
@@ -3651,7 +3680,7 @@ export async function sendVyberTerminuProdukciEmail(input: VyberTerminuProdukciI
     html: buildVyberTerminuProdukciHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendVyberTerminuProdukciEmail');
 }
 
 
@@ -3718,7 +3747,7 @@ export async function sendUpominkaTerminuEmail(input: UpominkaTerminuInput) {
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
 
   const jazyk = input.jazyk ?? 'cs';
-  await transport.sendMail({
+  const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
     subject: prelozitEmailS(jazyk, 'mail.upominkaTerminu.predmet', { projekt: input.projectName }),
@@ -3745,5 +3774,5 @@ export async function sendUpominkaTerminuEmail(input: UpominkaTerminuInput) {
     html: buildUpominkaTerminuHtml(input),
   });
 
-  return { sent: true as const, reason: undefined };
+  return overOdeslani(vysledekPosty, 'sendUpominkaTerminuEmail');
 }

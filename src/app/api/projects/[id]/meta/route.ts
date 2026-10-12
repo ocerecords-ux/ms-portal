@@ -21,7 +21,7 @@ const STAV_PRO_BONUS = 'Dokončeno - ke schválení';
 import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
 import { otevriKanalProjektu, uzavriKanalProjektu } from '@/lib/chatServer';
 import { isActiveProjectStatus } from '@/lib/projectTypes';
-import { zapisZmenyProjektu, type CitelnaJmena } from '@/lib/projektLogServer';
+import { zapisNotifikaci, zapisZmenyProjektu, type CitelnaJmena } from '@/lib/projektLogServer';
 
 
 // Ulozeni internich atributu projektu (model ProjectMeta) - zadani
@@ -424,6 +424,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (stavSeZmenil && !pred?.finished) {
         // Po prodlevě a jen když stav vydrží (zadání 22. 9. 2026).
         posliNotifikaciPoProdleve(params.id, data.statusName);
+      } else if (stavSeZmenil && pred?.finished) {
+        /**
+         * PROČ ZPRÁVA NEODEŠLA, MUSÍ BÝT VIDĚT (12. 10. 2026). Do teď se
+         * u dokončeného projektu prostě nestalo nic - v historii po tom
+         * nezbyla ani stopa a hledat se to dalo jen v kódu.
+         */
+        await zapisNotifikaci({
+          caflouProjectId: params.id,
+          stav: data.statusName,
+          popis: `Zpráva ke stavu „${data.statusName}" neodešla — projekt je mezi dokončenými.`,
+        }).catch(() => undefined);
       }
 
       /**

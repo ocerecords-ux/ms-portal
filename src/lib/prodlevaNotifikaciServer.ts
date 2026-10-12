@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
+import { zapisNotifikaci } from '@/lib/projektLogServer';
 
 /**
  * PRODLEVA NOTIFIKACÍ PŘI ZMĚNĚ STAVU (zadání 22. 9. 2026: „nastav ještě
@@ -66,6 +67,16 @@ export function posliNotifikaciPoProdleve(caflouProjectId: string, stav: string)
       .catch(() => null);
     if (ted && (ted.statusName ?? '') !== stav) {
       console.log(`[notifikace] ${caflouProjectId}: stav se během ${sekund} s změnil na „${ted.statusName ?? ''}" - zpráva ke „${stav}" neodešla`);
+      /**
+       * Taky do historie projektu (12. 10. 2026) - kdo přeskočí dva stavy
+       * rychle za sebou, přijde o tu první zprávu a nemá se to dozvídat
+       * z logů Vercelu.
+       */
+      await zapisNotifikaci({
+        caflouProjectId,
+        stav,
+        popis: `Zpráva ke stavu „${stav}" neodešla — během ${sekund} s se stav změnil na „${ted.statusName ?? ''}".`,
+      }).catch(() => undefined);
       return;
     }
     await posliNotifikaciKeStavu(caflouProjectId, stav);
