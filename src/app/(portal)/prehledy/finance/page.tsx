@@ -10,6 +10,7 @@ import { Pruhy } from './Pruhy';
 import { kc } from './format';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+import { dostupneFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
 
 /**
  * OBRAT A ZISK (zadání 21. 9. 2026: „chci do přehledu novou záložku, kde
@@ -36,7 +37,16 @@ export default async function FinancePage({
   const obdobi = searchParams?.obdobi === '12m' ? '12m' : String(Number(searchParams?.obdobi) || letos);
   const zaklad: Zaklad = searchParams?.zaklad === 'uhrazeno' ? 'uhrazeno' : 'vystaveno';
   const krok: Krok = searchParams?.krok === 'ctvrtleti' ? 'ctvrtleti' : 'mesic';
-  const firma = searchParams?.firma || null;
+  /**
+   * PŘEDVYBRANÁ NAŠE FIRMA (12. 10. 2026) - když si člověk v Dokladech
+   * přepnul firmu, Finance ukážou rovnou ji. Vlastní výběr v adrese má
+   * přednost; „Vše" se pozná podle `?firma=` bez hodnoty.
+   */
+  const naseFirmy = await dostupneFirmy(session.user.id);
+  const firma =
+    searchParams?.firma !== undefined
+      ? searchParams.firma || null
+      : vybranaFirma(naseFirmy);
 
   const od =
     obdobi === '12m'

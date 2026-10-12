@@ -41,6 +41,8 @@ const schema = z.object({
   fakturujeNaCasti: z.boolean().optional(),
   /** Kdo si u téhle firmy chodí režírovat (12. 10. 2026) - účet, nebo nic. */
   rezieKlientaUserId: z.string().trim().max(100).nullable().optional(),
+  /** Pod kterou naši firmu klient patří (12. 10. 2026) - viz lib/naseFirmy.ts. */
+  vydavatelId: z.string().trim().max(100).nullable().optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -95,6 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               ...(data.rezieKlientaUserId !== undefined
                 ? { rezieKlientaUserId: data.rezieKlientaUserId || null }
                 : {}),
+              ...(data.vydavatelId !== undefined ? { vydavatelId: data.vydavatelId || null } : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }
           : {}),

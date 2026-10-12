@@ -7,6 +7,9 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit } from '@/lib/jazyk';
 import { NewContractForm } from './NewContractForm';
 import { SmlouvyTabulka, type SmlouvaRadek } from './SmlouvyTabulka';
+import { dostupneFirmy, filtrFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Smlouvy s elektronickym podpisem (zadani 8. 9. 2026: "chtel bych udelat
 // vlastni podepisovani smluv, jak to ma treba Signi. Ale bez kodu
@@ -42,9 +45,17 @@ export default async function ContractsPage({
   const jazyk = nactiJazyk();
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
 
+  /**
+   * JEN DOKLADY VYBRANÉ NAŠÍ FIRMY (12. 10. 2026) - přepínač v liště Dokladů,
+   * viz lib/naseFirmy.ts. Bez vybrané firmy se ukážou všechny.
+   */
+  const session = await getServerSession(authOptions);
+  const naseFirmy = await dostupneFirmy(session?.user?.id);
+  const jenFirma = filtrFirmy(vybranaFirma(naseFirmy));
+
   const [contracts, issuers, companies, templates, counts] = await Promise.all([
     prisma.contract.findMany({
-      where: { status: { in: activeTab.statuses as never } },
+      where: { ...jenFirma, status: { in: activeTab.statuses as never } },
       orderBy: [{ createdAt: 'desc' }],
       take: 300,
       include: { signatures: { select: { role: true } }, company: { select: { name: true } } },
@@ -68,7 +79,7 @@ export default async function ContractsPage({
       // rucni pole (odmena, termin, ...) v te konkretni smlouve vubec jsou.
       select: { id: true, name: true, body: true },
     }),
-    prisma.contract.groupBy({ by: ['status'], _count: true }),
+    prisma.contract.groupBy({ by: ['status'], where: jenFirma, _count: true }),
   ]);
 
   const projects = await listProjectOptions();

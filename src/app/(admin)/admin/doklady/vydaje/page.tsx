@@ -12,6 +12,9 @@ import { nactiStavPosty } from '@/lib/postaServer';
 import { PostaTlacitko } from './PostaTlacitko';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { dostupneFirmy, filtrFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
 
 // Prijate doklady (zadani 6. 9. 2026). Zalozky Uhrazeno / Neuhrazeno stejne
 // jako Aktivni / Dokoncene u projektu, nahore soucty.
@@ -41,9 +44,23 @@ export default async function ExpensesPage({
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[1];
   const categoryFilter = searchParams?.kategorie || '';
 
+  /**
+   * JEN VÝDAJE VYBRANÉ NAŠÍ FIRMY (12. 10. 2026) - přepínač v liště Dokladů.
+   * NEZAŘAZENÉ (čerstvě došlá pošta, u které firma ještě není vyplněná) se
+   * ukazují vždycky: ty teprve čekají, až se u nich doplní, čí jsou.
+   */
+  const session = await getServerSession(authOptions);
+  const naseFirmy = await dostupneFirmy(session?.user?.id);
+  const firma = vybranaFirma(naseFirmy);
+  const jenFirma: { OR?: { issuerCompanyId: string | null }[] } = firma
+    ? { OR: [{ issuerCompanyId: firma }, { issuerCompanyId: null }] }
+    : {};
+  const jenFirmaPocet = filtrFirmy(firma);
+
   const [expenses, categories, issuers, pocty, posta] = await Promise.all([
     prisma.expense.findMany({
       where: {
+        ...jenFirma,
         ...activeTab.where,
         ...(categoryFilter ? { categoryId: categoryFilter } : {}),
       },
@@ -67,8 +84,8 @@ export default async function ExpensesPage({
     }),
     Promise.all([
       prisma.expense.count({ where: { stav: 'NEZARAZENY' } }),
-      prisma.expense.count({ where: { stav: 'ZARAZENY', paid: false } }),
-      prisma.expense.count({ where: { stav: 'ZARAZENY', paid: true } }),
+      prisma.expense.count({ where: { ...jenFirmaPocet, stav: 'ZARAZENY', paid: false } }),
+      prisma.expense.count({ where: { ...jenFirmaPocet, stav: 'ZARAZENY', paid: true } }),
     ]),
     nactiStavPosty(),
   ]);

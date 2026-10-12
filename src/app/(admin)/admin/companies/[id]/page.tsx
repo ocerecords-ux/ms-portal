@@ -36,6 +36,15 @@ export default async function CompanyDetailPage({
   });
   if (!company) notFound();
 
+  /** Naše firmy - z nich se vybírá, pod kterou klient patří (12. 10. 2026). */
+  const naseFirmy = (await prisma.issuerCompany
+    .findMany({
+      where: { active: true },
+      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+      select: { id: true, name: true },
+    })
+    .catch(() => [])) as unknown as { id: string; name: string }[];
+
   // Dodavatel nema projekty ani prihlasovaci ucty - zbyde mu jen jedna
   // zalozka a lista se u nej vubec neukazuje.
   const jeKlient = company.type === 'KLIENT';
@@ -163,6 +172,8 @@ export default async function CompanyDetailPage({
           company={company}
           // Z koho se vybírá režisér klienta (12. 10. 2026) - účty téhle firmy.
           ucty={company.users.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
+          // Pod kterou naši firmu klient patří (12. 10. 2026).
+          naseFirmy={naseFirmy}
         />
       </div>
       )}

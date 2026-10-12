@@ -5,6 +5,9 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit } from '@/lib/jazyk';
 import { NewOfferForm } from './NewOfferForm';
 import { NabidkyTabulka, type NabidkaRadek } from './NabidkyTabulka';
+import { dostupneFirmy, filtrFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Prehled nabidek (zadani 6. 9. 2026). Zalozky podle stavu, at je hned videt,
 // co ceka na klienta a co uz je odsouhlasene.
@@ -33,15 +36,23 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
   const jazyk = nactiJazyk();
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
 
+  /**
+   * JEN DOKLADY VYBRANÉ NAŠÍ FIRMY (12. 10. 2026) - přepínač v liště Dokladů,
+   * viz lib/naseFirmy.ts. Bez vybrané firmy se ukážou všechny.
+   */
+  const session = await getServerSession(authOptions);
+  const naseFirmy = await dostupneFirmy(session?.user?.id);
+  const jenFirma = filtrFirmy(vybranaFirma(naseFirmy));
+
   const [offers, issuers, counts] = await Promise.all([
     prisma.offer.findMany({
-      where: activeTab.statuses ? { status: { in: activeTab.statuses as never } } : {},
+      where: { ...jenFirma, ...(activeTab.statuses ? { status: { in: activeTab.statuses as never } } : {}) },
       orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
       take: 300,
       include: { company: { select: { name: true } }, items: true },
     }),
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] }),
-    prisma.offer.groupBy({ by: ['status'], _count: true }),
+    prisma.offer.groupBy({ by: ['status'], where: jenFirma, _count: true }),
   ]);
 
   const countFor = (statuses: readonly string[] | null) =>

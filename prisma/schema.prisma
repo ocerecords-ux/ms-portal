@@ -172,6 +172,21 @@ model Company {
   rezieKlientaUserId String?
   rezieKlienta       User?   @relation("RezieKlientaFirmy", fields: [rezieKlientaUserId], references: [id], onDelete: SetNull)
 
+  /// POD KTEROU NASI FIRMU TENHLE KLIENT PATRI (zadani 12. 10. 2026: „pridal
+  /// jsem ted jeste jednu nasi firmu do portalu... urcite potrebuji oddelit
+  /// ucetnictvi, ale zaroven chci ponechat rizeni projektu a kalendare
+  /// v jednom portalu").
+  ///
+  /// UCETNICTVI SE DELI PODLE KLIENTA: co se tomuhle klientovi vystavi
+  /// (nabidka, faktura, smlouva) a co se u jeho zakazek utrati, jde pod tuhle
+  /// nasi firmu. Rizeni projektu, kalendare a chat zustavaji spolecne - tohle
+  /// je jen o dokladech.
+  ///
+  /// Prazdne = firma oznacena jako vychozi (IssuerCompany.isDefault), aby se
+  /// u stavajicich klientu nic nezmenilo.
+  vydavatelId String?
+  vydavatel   IssuerCompany? @relation("KlientVydavatel", fields: [vydavatelId], references: [id], onDelete: SetNull)
+
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -614,6 +629,11 @@ model User {
   /// Firmy, u kterych tenhle clovek chodi rezirovat misto nas (12. 10. 2026) -
   /// viz Company.rezieKlientaUserId.
   rezieUFirem        Company[]          @relation("RezieKlientaFirmy")
+
+  /// KTERE NASE FIRMY VIDI V DOKLADECH (zadani 12. 10. 2026). Ulozena id
+  /// IssuerCompany. PRAZDNE ZNAMENA VSECHNY - at se stavajicim uctum nic
+  /// neuzavre; omezeni se zaskrtava jen tam, kde ma byt.
+  viditelneFirmy     String[]           @default([])
 
   /// Zadosti o udaje, ktere se tykaji tohohle cloveka (doplneni jeho karty).
   pozvankyUdaju        PozvankaUdaju[] @relation("PozvankaUdajuKomu")
@@ -1638,6 +1658,8 @@ model IssuerCompany {
   active          Boolean  @default(true)
 
   bankAccounts BankAccount[]
+  /// Klienti, kteri jedou pod touhle nasi firmou (12. 10. 2026).
+  klienti      Company[] @relation("KlientVydavatel")
   offers       Offer[]
   invoices     Invoice[]
   expenses     Expense[]

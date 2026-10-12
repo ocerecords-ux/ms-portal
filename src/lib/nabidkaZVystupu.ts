@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { nazevSpotuZVystupu, sDedenim, type VystupData } from '@/lib/vystupy';
 import { nactiVystupy } from '@/lib/vystupyServer';
+import { firmaKlienta } from '@/lib/naseFirmyServer';
 
 /**
  * NABÍDKA Z VÝSTUPŮ (zadání 26. 9. 2026, etapa 5) - klient na dokladu vidí
@@ -115,11 +116,21 @@ export async function zalozNabidkuZVystupu(
       return { ok: false, duvod: 'Projekt nemá napojenou firmu — nabídka by neměla odběratele.' };
     }
 
-    const issuer = await prisma.issuerCompany.findFirst({
-      where: { active: true },
-      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
-      select: { id: true, offerNextNumber: true, offerNumberFormat: true, defaultCurrency: true },
-    });
+    // Pod kterou naši firmu nabídka patří - podle klienta (12. 10. 2026).
+    const issuerId = await firmaKlienta(meta.companyId);
+    const issuer = issuerId
+      ? ((await prisma.issuerCompany
+          .findUnique({
+            where: { id: issuerId },
+            select: { id: true, offerNextNumber: true, offerNumberFormat: true, defaultCurrency: true },
+          })
+          .catch(() => null)) as unknown as {
+          id: string;
+          offerNextNumber: number;
+          offerNumberFormat: string;
+          defaultCurrency: string;
+        } | null)
+      : null;
     if (!issuer) return { ok: false, duvod: 'Není nastavená žádná vlastní firma.' };
 
     const { randomBytes } = await import('crypto');

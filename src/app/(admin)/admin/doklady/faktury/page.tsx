@@ -9,6 +9,9 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit } from '@/lib/jazyk';
 import { stavyUpominek } from '@/lib/upominkyServer';
 import { PRAZDNY_STAV_UPOMINKY } from '@/lib/upominkaStav';
+import { dostupneFirmy, filtrFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Prehled vydanych faktur (zadani 6. 9. 2026). Zalozky podle stavu - nejdulezitejsi
 // je videt, co je jeste neuhrazene a co je uz po splatnosti.
@@ -53,15 +56,23 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
   const vychoziTab = TABS.find((t) => t.key === 'neuhrazene') ?? TABS[0];
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? vychoziTab;
 
+  /**
+   * JEN DOKLADY VYBRANÉ NAŠÍ FIRMY (12. 10. 2026) - přepínač v liště Dokladů,
+   * viz lib/naseFirmy.ts. Bez vybrané firmy se ukážou všechny.
+   */
+  const session = await getServerSession(authOptions);
+  const naseFirmy = await dostupneFirmy(session?.user?.id);
+  const jenFirma = filtrFirmy(vybranaFirma(naseFirmy));
+
   const [invoices, issuers, counts] = await Promise.all([
     prisma.invoice.findMany({
-      where: activeTab.statuses ? { status: { in: activeTab.statuses as never } } : {},
+      where: { ...jenFirma, ...(activeTab.statuses ? { status: { in: activeTab.statuses as never } } : {}) },
       orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
       take: 300,
       include: { company: { select: { name: true } }, items: true },
     }),
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] }),
-    prisma.invoice.groupBy({ by: ['status'], _count: true }),
+    prisma.invoice.groupBy({ by: ['status'], where: jenFirma, _count: true }),
   ]);
 
   const countFor = (statuses: readonly string[] | null) =>

@@ -3441,6 +3441,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'smlouva.opravduSmazatSablonu': { cs: 'Opravdu smazat šablonu?', en: 'Delete this template?' },
 
   // --- doklady (sekce, záložky, sdílené komponenty) ---
+  /* Přepínač naší firmy v liště Dokladů (12. 10. 2026). */
+  'naseFirmy.vsechny': { cs: 'Vše', en: 'All' },
+  'naseFirmy.prepinac': { cs: 'Naše firma', en: 'Our company' },
+  'naseFirmy.prepinacPopis': {
+    cs: 'Které naší firmy doklady se ukazují. Řízení projektů a kalendáře jsou pro obě firmy společné.',
+    en: 'Whose documents are shown. Project management and calendars are shared across both companies.',
+  },
   'doklady.nadpis': { cs: 'Doklady', en: 'Documents' },
   'doklady.zalozkaNabidky': { cs: 'Nabídky', en: 'Quotes' },
   'doklady.zalozkaFaktury': { cs: 'Faktury', en: 'Invoices' },
@@ -3977,6 +3984,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.hodinovaSazbaHint': {
     cs: 'z ní se počítají výkazy práce',
     en: 'timesheets are calculated from it',
+  },
+  /* Které naše firmy účet vidí v Dokladech (12. 10. 2026). */
+  'uzivatel.poleViditelneFirmy': { cs: 'Vidí doklady firem', en: 'Sees documents of' },
+  'uzivatel.viditelneFirmyNapoveda': {
+    cs: 'nic zaškrtnutého = vidí doklady všech našich firem',
+    en: 'nothing ticked = sees the documents of all our companies',
   },
   'uzivatel.poleMzdyEmail': { cs: 'Podklad pro mzdy posílat na', en: 'Send payroll figures to' },
   'uzivatel.mzdyEmailHint': {
@@ -6618,6 +6631,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'the order does not work the price out from standard pages — the customer fills it in themselves (both the Standard pages and Price fields stay)',
   },
   'firma.cenuSiNavrhuje': { cs: 'Cenu si navrhuje sám', en: 'They propose the price themselves' },
+  /* Naše firmy - oddělené účetnictví (12. 10. 2026). */
+  'firma.naseFirma': { cs: 'Naše firma', en: 'Our company' },
+  'firma.naseFirmaHint': {
+    cs: 'Pod kterou naši firmu tenhle klient patří. Nabídky, faktury, smlouvy i výdaje u jeho zakázek jdou pod ni. Řízení projektů a kalendáře zůstávají společné.',
+    en: 'Which of our companies this client belongs to. Their quotes, invoices, contracts and costs all go under it. Project management and calendars stay shared.',
+  },
+  'firma.naseFirmaVychozi': { cs: 'Výchozí firma', en: 'The default company' },
+
   /* Režii si dělá klient (12. 10. 2026) - karta firmy. */
   'firma.rezieKlienta': { cs: 'Režii si dělá klient', en: 'Client directs the sessions' },
   'firma.rezieKlientaHint': {

@@ -5,6 +5,9 @@ import { InvoiceEditor } from '../[id]/InvoiceEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { computeTotals } from '@/lib/doklady';
 import { projektProDoklad } from '@/lib/projektProDoklad';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { dostupneFirmy, firmaProNovyDoklad, vybranaFirma } from '@/lib/naseFirmyServer';
 
 /**
  * Faktura z nabídky PŘED uložením (zadani 8. 9. 2026: "chci se dostat ještě
@@ -180,12 +183,22 @@ async function PrazdnaFaktura({
 }) {
   // Faktura založená z detailu projektu (zadání 18. 9. 2026).
   const projekt = await projektProDoklad(searchParams?.projekt);
-  const vydavatel = searchParams?.vydavatel
-    ? await prisma.issuerCompany.findUnique({ where: { id: searchParams.vydavatel } })
-    : await prisma.issuerCompany.findFirst({
-        where: { active: true },
-        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
-      });
+  /**
+   * POD KTEROU NAŠI FIRMU SE VYSTAVUJE (12. 10. 2026). Rozhoduje KLIENT -
+   * účetnictví se dělí podle něj, viz lib/naseFirmy.ts. Když klient ještě
+   * vybraný není, vezme se firma z přepínače v liště Dokladů a pak výchozí.
+   */
+  const session = await getServerSession(authOptions);
+  const naseFirmy = await dostupneFirmy(session?.user?.id);
+  const vydavatelId = await firmaProNovyDoklad({
+    vydavatel: searchParams?.vydavatel,
+    companyId: searchParams?.firma || projekt?.companyId || null,
+    caflouProjectId: searchParams?.projekt || null,
+    zPrepinace: vybranaFirma(naseFirmy),
+  });
+  const vydavatel = vydavatelId
+    ? await prisma.issuerCompany.findUnique({ where: { id: vydavatelId } })
+    : null;
   if (!vydavatel) redirect('/admin/doklady/moje-firmy');
 
   const [companies, bankAccounts, projects] = await Promise.all([

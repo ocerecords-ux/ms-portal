@@ -6,6 +6,9 @@ import { projektProDoklad } from '@/lib/projektProDoklad';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 import { OfferEditor } from '../[id]/OfferEditor';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { dostupneFirmy, firmaProNovyDoklad, vybranaFirma } from '@/lib/naseFirmyServer';
 
 /**
  * Nová nabídka BEZ mezikroku (zadání 10. 9. 2026: „dej pryč ten mezikrok při
@@ -31,12 +34,22 @@ export default async function NovaNabidkaPage({
   // Nabídka založená z detailu projektu (zadání 18. 9. 2026) - projekt,
   // klient i předmět se předvyplní, ať se nevybírá to, co portál ví.
   const projekt = await projektProDoklad(searchParams?.projekt);
-  const vydavatel = searchParams?.vydavatel
-    ? await prisma.issuerCompany.findUnique({ where: { id: searchParams.vydavatel } })
-    : await prisma.issuerCompany.findFirst({
-        where: { active: true },
-        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
-      });
+  /**
+   * POD KTEROU NAŠI FIRMU SE VYSTAVUJE (12. 10. 2026). Rozhoduje KLIENT -
+   * účetnictví se dělí podle něj, viz lib/naseFirmy.ts. Když klient ještě
+   * vybraný není, vezme se firma z přepínače v liště Dokladů a pak výchozí.
+   */
+  const session = await getServerSession(authOptions);
+  const naseFirmy = await dostupneFirmy(session?.user?.id);
+  const vydavatelId = await firmaProNovyDoklad({
+    vydavatel: searchParams?.vydavatel,
+    companyId: searchParams?.firma || projekt?.companyId || null,
+    caflouProjectId: searchParams?.projekt || null,
+    zPrepinace: vybranaFirma(naseFirmy),
+  });
+  const vydavatel = vydavatelId
+    ? await prisma.issuerCompany.findUnique({ where: { id: vydavatelId } })
+    : null;
   if (!vydavatel) redirect('/admin/doklady/moje-firmy');
 
   const [issuers, companies, bankAccounts, projects, klientiProjektu, herciProjektu] = await Promise.all([

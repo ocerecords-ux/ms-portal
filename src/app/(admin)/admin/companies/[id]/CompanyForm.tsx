@@ -20,6 +20,7 @@ import { DEFAULT_COUNTRY } from '@/lib/countries';
 export function CompanyForm({
   company,
   ucty = [],
+  naseFirmy = [],
 }: {
   company: Company;
   /**
@@ -27,6 +28,11 @@ export function CompanyForm({
    * režírovat. Prázdné u dodavatele, který přihlašovací účty nemá.
    */
   ucty?: { id: string; name: string | null; email: string }[];
+  /**
+   * Naše firmy (12. 10. 2026) - pod kterou z nich tenhle klient jede. Viz
+   * lib/naseFirmy.ts. S jedinou naší firmou se pole nenabízí.
+   */
+  naseFirmy?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const t = usePreklad();
@@ -93,6 +99,17 @@ export function CompanyForm({
    * na které další frekvence přijde, takže ho portál musí poznat podle
    * přihlášení. První frekvenci každého herce dostane automaticky.
    */
+  /**
+   * POD KTEROU NAŠI FIRMU TENHLE KLIENT PATŘÍ (zadání 12. 10. 2026: „určitě
+   * potřebuji oddělit účetnictví, ale zároveň chci ponechat řízení projektů
+   * a kalendáře v jednom portálu").
+   *
+   * Účetnictví se dělí podle klienta: nabídky, faktury, smlouvy i výdaje
+   * u jeho zakázek jdou pod tuhle naši firmu. Prázdné = výchozí firma.
+   */
+  const [vydavatelId, setVydavatelId] = useState(
+    (company as { vydavatelId?: string | null }).vydavatelId ?? '',
+  );
   const [rezieKlientaUserId, setRezieKlientaUserId] = useState(
     (company as { rezieKlientaUserId?: string | null }).rezieKlientaUserId ?? '',
   );
@@ -170,6 +187,7 @@ export function CompanyForm({
                 cenuUrcujeKlient: dealsAudiobooks ? cenuUrcujeKlient : false,
                 fakturujeNaCasti: naCasti,
                 rezieKlientaUserId: rezieKlientaUserId || null,
+                vydavatelId: vydavatelId || null,
               }
             : {}),
         }),
@@ -393,6 +411,25 @@ export function CompanyForm({
               {t('firma.naCastiVolba')}
             </label>
           </AdminField>
+
+          {/* POD KTEROU NAŠI FIRMU KLIENT PATŘÍ (12. 10. 2026). Nabízí se jen
+              tehdy, když máme firem víc - jinak není z čeho vybírat. */}
+          {naseFirmy.length > 1 && (
+            <AdminField label={t('firma.naseFirma')} hint={t('firma.naseFirmaHint')}>
+              <select
+                value={vydavatelId}
+                onChange={(e) => setVydavatelId(e.target.value)}
+                className="admin-input"
+              >
+                <option value="">{t('firma.naseFirmaVychozi')}</option>
+                {naseFirmy.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </AdminField>
+          )}
 
           {/* REŽII SI DĚLÁ KLIENT (12. 10. 2026). Pole se nabízí jen tehdy,
               když firma vůbec nějaké přihlašovací účty má - jinak není

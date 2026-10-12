@@ -72,6 +72,8 @@ const schema = z.object({
   tabulePristup: z.array(z.string()).optional(),
   /** Složky na Disku, které tenhle člověk vidí (zadání 30. 9. 2026). */
   slozkyDisku: z.array(z.string()).optional(),
+  /** Které naše firmy účet vidí v Dokladech (12. 10. 2026); prázdné = všechny. */
+  viditelneFirmy: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
   dic: z.string().trim().optional(),
@@ -133,6 +135,9 @@ function readFormData(formData: FormData) {
     // Složky na Disku (30. 9. 2026) - u všech rolí, klienty nevyjímaje:
     // do Klientské zóny chodí i oni.
     slozkyDisku: has('slozkyDiskuPrazdne') ? formData.getAll('slozkyDisku').map(String) : undefined,
+    viditelneFirmy: has('viditelneFirmyPrazdne')
+      ? formData.getAll('viditelneFirmy').map(String)
+      : undefined,
     // Stejný trik jako u studií: prázdné pole se pozná podle průvodce, ne
     // podle chybějícího klíče - jinak by odškrtnutí všeho nic neuložilo.
     pristupy: has('pristupyPrazdne') ? formData.getAll('pristupy').map(String) : undefined,
@@ -324,6 +329,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Složky na Disku (30. 9. 2026). `set` přepíše celý seznam, takže
       // odškrtnutá složka zmizí. Bez ohledu na roli - složka se přiděluje
       // člověku, ne roli.
+      ...(data.viditelneFirmy !== undefined ? { viditelneFirmy: data.viditelneFirmy } : {}),
       ...(data.slozkyDisku !== undefined
         ? { slozkyDisku: { set: data.slozkyDisku.map((id) => ({ id })) } }
         : {}),

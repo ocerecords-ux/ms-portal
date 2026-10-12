@@ -1,4 +1,8 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { DokladyTabs } from './DokladyTabs';
+import { PrepinacFirmy } from './PrepinacFirmy';
+import { dostupneFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
 import { OzubeneKolo } from '@/components/OzubeneKolo';
 import { nastaveniSekce } from '@/lib/nastaveniSekci';
 import { smiDoBanky } from '@/lib/bankaPristup';
@@ -12,6 +16,14 @@ export default async function DokladyLayout({ children }: { children: React.Reac
   const jazyk = nactiJazyk();
   // Zalozka Banka se ukazuje jen tomu, kdo na ni ma pravo (17. 9. 2026).
   const banka = await smiDoBanky();
+  /**
+   * PŘEPÍNAČ NAŠÍ FIRMY (12. 10. 2026) - účetnictví obou našich firem je
+   * oddělené, řízení projektů a kalendáře zůstávají společné. Viz
+   * lib/naseFirmy.ts. S jedinou firmou se přepínač nekreslí.
+   */
+  const session = await getServerSession(authOptions);
+  const firmy = await dostupneFirmy(session?.user?.id);
+  const firma = vybranaFirma(firmy);
   return (
     <section className="flex flex-col gap-3 sm:gap-6">
       {/* `data-doklady-hlavicka`: kdyz se doklad otevre Z PROJEKTU, schova se
@@ -27,6 +39,9 @@ export default async function DokladyLayout({ children }: { children: React.Reac
           cesta={nastaveniSekce('DOKLADY')?.cesta ?? '/admin/nastaveni/doklady'}
           popis={prelozit(jazyk, 'doklady.nastaveniSekce')}
         />
+        <div className="ml-auto">
+          <PrepinacFirmy firmy={firmy.map((f) => ({ id: f.id, name: f.name }))} vybrana={firma ?? ''} />
+        </div>
       </div>
 
       <div data-doklady-hlavicka>

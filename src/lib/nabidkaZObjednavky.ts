@@ -1,5 +1,6 @@
 import type { Currency } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { firmaKlienta } from '@/lib/naseFirmyServer';
 
 /**
  * NABÍDKA Z OBJEDNÁVKY NA WEBU (zadání 18. 9. 2026: „potřebuju, aby se
@@ -98,14 +99,22 @@ export async function navrhNabidkyZObjednavky(
   if (!objednavka.priceEstimate || objednavka.priceEstimate <= 0) return null;
 
   try {
-    const [nabidek, vydavatel] = await Promise.all([
+    /**
+     * POD KTEROU NAŠI FIRMU (12. 10. 2026) - podle KLIENTA objednávky,
+     * ne natvrdo pod výchozí firmou. Viz lib/naseFirmy.ts.
+     */
+    const [nabidek, vydavatelId] = await Promise.all([
       prisma.offer.count({ where: { caflouProjectId } }),
-      prisma.issuerCompany.findFirst({
-        where: { active: true },
-        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
-        select: { id: true, name: true, defaultCurrency: true },
-      }),
+      firmaKlienta(objednavka.companyId),
     ]);
+    const vydavatel = vydavatelId
+      ? ((await prisma.issuerCompany
+          .findUnique({
+            where: { id: vydavatelId },
+            select: { id: true, name: true, defaultCurrency: true },
+          })
+          .catch(() => null)) as unknown as { id: string; name: string; defaultCurrency: string } | null)
+      : null;
     if (nabidek > 0 || !vydavatel) return null;
 
     return {

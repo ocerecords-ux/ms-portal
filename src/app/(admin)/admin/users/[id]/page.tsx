@@ -12,7 +12,7 @@ import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
-  const [user, companies, studia, ja, slozkyDisku] = await Promise.all([
+  const [user, companies, studia, ja, slozkyDisku, naseFirmy] = await Promise.all([
     prisma.user.findUnique({
       where: { id: params.id },
       // Firma-dodavatel zalozena z herce (zadani 16. 9. 2026) - podle ni se
@@ -54,6 +54,12 @@ export default async function UserEditPage({ params }: { params: { id: string } 
       select: { id: true, nazev: true, popis: true },
       orderBy: [{ poradi: 'asc' }, { nazev: 'asc' }],
     }),
+    /** Naše firmy (12. 10. 2026) - z nich se zaškrtává, které účet vidí. */
+    prisma.issuerCompany.findMany({
+      where: { active: true },
+      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+      select: { id: true, name: true },
+    }) as Promise<{ id: string; name: string }[]>,
   ]);
   if (!user) notFound();
 
@@ -132,6 +138,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           photoUrl: user.photoUrl ? `/api/uzivatele/${user.id}/fotka` : null,
           hourlyRate: user.hourlyRate,
           mzdyEmail: user.mzdyEmail,
+          viditelneFirmy: user.viditelneFirmy ?? [],
           podilNaObratu: user.podilNaObratu,
           manazerProjektu: user.manazerProjektu,
           smlouvyPodepisuje: user.smlouvyPodepisuje,
@@ -185,6 +192,8 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         studia={studia}
         slozkyDisku={slozkyDisku as { id: string; nazev: string; popis: string | null }[]}
+        // Které naše firmy účet vidí v Dokladech (12. 10. 2026).
+        naseFirmy={naseFirmy}
         jsemSuperadmin={Boolean(ja?.superadmin)}
       />
     </section>

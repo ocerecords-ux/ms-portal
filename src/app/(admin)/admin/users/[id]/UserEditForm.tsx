@@ -47,6 +47,8 @@ type EditableUser = {
   photoUrl: string | null;
   hourlyRate: number | null;
   mzdyEmail: string | null;
+  /** Které naše firmy vidí v Dokladech (12. 10. 2026); prázdné = všechny. */
+  viditelneFirmy: string[];
   podilNaObratu: number | null;
   /** Smí být manažerem projektu (zadání 10. 9. 2026). */
   manazerProjektu: boolean;
@@ -114,6 +116,7 @@ export function UserEditForm({
   companies,
   studia,
   slozkyDisku,
+  naseFirmy,
   jsemSuperadmin,
 }: {
   user: EditableUser;
@@ -125,6 +128,8 @@ export function UserEditForm({
    * v Administraci ▸ Složky na Disku; tady se jen rozdávají.
    */
   slozkyDisku: { id: string; nazev: string; popis: string | null }[];
+  /** Naše firmy (12. 10. 2026) - z nich se zaškrtává, které tenhle účet vidí. */
+  naseFirmy: { id: string; name: string }[];
   /** Přístupy do sekcí rozdává jen superadmin (28. 9. 2026). */
   jsemSuperadmin: boolean;
 }) {
@@ -178,6 +183,12 @@ export function UserEditForm({
   const [tabulePristup, setTabulePristup] = useState<string[]>(user.tabulePristup);
   /** Složky na Disku - u každé role, klienty nevyjímaje (30. 9. 2026). */
   const [slozky, setSlozky] = useState<string[]>(user.slozkyDisku);
+  /**
+   * KTERÉ NAŠE FIRMY TENHLE ÚČET VIDÍ V DOKLADECH (zadání 12. 10. 2026).
+   * PRÁZDNÉ ZNAMENÁ VŠECHNY - omezení se zaškrtává jen tam, kde má být,
+   * a účty založené dřív o nic nepřijdou. Viz lib/naseFirmy.ts.
+   */
+  const [viditelneFirmy, setViditelneFirmy] = useState<string[]>(user.viditelneFirmy ?? []);
 
   // Herec
   const [studioLocations, setStudioLocations] = useState<string[]>(user.studioLocations);
@@ -308,6 +319,10 @@ export function UserEditForm({
        */
       fd.set('slozkyDiskuPrazdne', '1');
       slozky.forEach((id) => fd.append('slozkyDisku', id));
+      // Naše firmy v Dokladech (12. 10. 2026) - průvodce ze stejného důvodu
+      // jako u složek: bez něj by odškrtnutí poslední firmy server nepoznal.
+      fd.set('viditelneFirmyPrazdne', '1');
+      viditelneFirmy.forEach((id) => fd.append('viditelneFirmy', id));
       if (isZvukar) {
         fd.set('vedeStudiaPrazdne', '1');
         vedeStudia.forEach((id) => fd.append('vedeStudia', id));
@@ -535,6 +550,34 @@ export function UserEditForm({
                 {studia.length === 0 && (
                   <span className="text-sm font-body text-muted">{t('uzivatel.zadneStudio')}</span>
                 )}
+              </div>
+            </AdminField>
+          </div>
+        )}
+
+        {/* KTERÉ NAŠE FIRMY VIDÍ V DOKLADECH (zadání 12. 10. 2026: „určitě
+            potřebuji oddělit účetnictví"). Nabízí se jen našim lidem a jen
+            tehdy, když máme firem víc; nikdo jiný do Dokladů stejně nechodí.
+
+            NIC ZAŠKRTNUTÉHO ZNAMENÁ VŠECHNY - ať se stávajícím účtům nic
+            neuzavře. Viz lib/naseFirmy.ts. */}
+        {isMediaspace && naseFirmy.length > 1 && (
+          <div className="w-full">
+            <AdminField label={t('uzivatel.poleViditelneFirmy')} hint={t('uzivatel.viditelneFirmyNapoveda')}>
+              <div className="flex flex-wrap gap-2">
+                {naseFirmy.map((f) => (
+                  <Volba
+                    key={f.id}
+                    vybrano={viditelneFirmy.includes(f.id)}
+                    onZmena={() =>
+                      setViditelneFirmy((p) =>
+                        p.includes(f.id) ? p.filter((x) => x !== f.id) : [...p, f.id],
+                      )
+                    }
+                  >
+                    <span className="text-sm font-body text-ink">{f.name}</span>
+                  </Volba>
+                ))}
               </div>
             </AdminField>
           </div>
