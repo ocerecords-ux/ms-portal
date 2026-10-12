@@ -86,7 +86,9 @@ Když někdo napíše do kanálu projektu **„dotočeno"**, Bruno udělá přes
 
 # Zprávy o změně stavu
 
-Jestli se klientovi o stavu píše, **rozhoduje nastavení u firmy** — karta firmy, záložka Notifikace. Co tam není zapnuté, se neposílá, takže zpráva nemůže odejít klientovi, se kterým to není domluvené. **Nová firma má všechno vypnuté.**
+Jestli se klientovi o stavu píše, **rozhoduje nastavení u firmy** — karta firmy, záložka Notifikace.
+
+**Komu z nás cinkne „Schváleno - k fakturaci" (12. 10. 2026).** Na kartě uživatele je zaškrtávátko **Schváleno k fakturaci**. Komu je zaškrtnuté, přijde ve chvíli, kdy projekt do toho stavu přejde, **mail s tlačítkem rovnou na projekt** a zároveň **zvoneček** v portálu — ať se nemusí chodit do pošty pro odkaz. Není to svázané s jedním člověkem: zaškrtnout to jde komukoliv z týmu, a když to nemá nikdo, neodejde nic. Klientovi odsud nic nechodí, ten má vlastní zprávu podle nastavení u firmy. Co tam není zapnuté, se neposílá, takže zpráva nemůže odejít klientovi, se kterým to není domluvené. **Nová firma má všechno vypnuté.**
 
 Nastavit jde: Natáčíme/stříháme, Dotočeno, Dotočeno/stříháme, Dokončeno - ke schválení, Čekáme na opravy, Schváleno - k fakturaci. U „V přípravě", „Plánujeme" a „Natáčíme" se ještě nic nestalo a zpráva o tom by byla jen šum.
 

@@ -58,6 +58,8 @@ type EditableUser = {
   prijimaDotazyKlientu: boolean;
   /** Chodí mu v kopii nabídky termínů hercům (12. 10. 2026). */
   kopieNabidekTerminu: boolean;
+  /** Dostává zprávu, když je projekt schválený k fakturaci (12. 10. 2026). */
+  fakturaceProjektu: boolean;
   /** Vidí sekci Banka (zadání 17. 9. 2026). */
   vidiBanku: boolean;
   /** Spravuje technické parametry výroby (zadání 27. 9. 2026). */
@@ -158,6 +160,11 @@ export function UserEditForm({
    * Helči v kopii emaily s nabídkou termínů, které chodí na herce").
    */
   const [kopieNabidek, setKopieNabidek] = useState(user.kopieNabidekTerminu);
+  /**
+   * SCHVÁLENO K FAKTURACI (zadání Barbory Šíblové 12. 10. 2026) - mail
+   * s proklikem na projekt a zvonek. Viz lib/fakturaceZpravaServer.ts.
+   */
+  const [fakturaceProjektu, setFakturaceProjektu] = useState(user.fakturaceProjektu);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
   const [spravujeTechParametry, setSpravujeTechParametry] = useState(user.spravujeTechParametry);
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
@@ -287,6 +294,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('kopieNabidekTerminu', kopieNabidek ? '1' : '0');
+        if (isMediaspace) fd.set('fakturaceProjektu', fakturaceProjektu ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
         if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
         /**
@@ -812,6 +820,29 @@ export function UserEditForm({
                 {t('uzivatel.kopieNabidekTerminu')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.kopieNabidekTerminuPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* SCHVÁLENO K FAKTURACI (zadání Barbory Šíblové 12. 10. 2026:
+            „nastavit notifikaci při stavu projektu Schváleno - k fakturaci
+            na mě. Nejlépe email… a proklik na projekt"). Mail i zvonek,
+            obojí s odkazem rovnou na projekt. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={fakturaceProjektu}
+                onChange={(e) => setFakturaceProjektu(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.fakturaceProjektu')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.fakturaceProjektuPopis')}
                 </span>
               </span>
             </label>

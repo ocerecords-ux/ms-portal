@@ -45,6 +45,8 @@ const schema = z.object({
   prijimaDotazyKlientu: z.string().trim().optional(),
   /** Kopie nabídek termínů hercům (12. 10. 2026). */
   kopieNabidekTerminu: z.string().trim().optional(),
+  /** Zpráva o schválení k fakturaci (12. 10. 2026). */
+  fakturaceProjektu: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
   spravujeTechParametry: z.string().trim().optional(),
   /** Sekce, do kterých člověk smí (28. 9. 2026). Mění je jen superadmin. */
@@ -106,6 +108,7 @@ function readFormData(formData: FormData) {
     smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     kopieNabidekTerminu: has('kopieNabidekTerminu') ? formData.get('kopieNabidekTerminu') : undefined,
+    fakturaceProjektu: has('fakturaceProjektu') ? formData.get('fakturaceProjektu') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
     spravujeTechParametry: has('spravujeTechParametry') ? formData.get('spravujeTechParametry') : undefined,
     sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
@@ -301,6 +304,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.jenNahled !== undefined ? { jenNahled: data.jenNahled === '1' } : {}),
       ...(data.kopieNabidekTerminu !== undefined
         ? { kopieNabidekTerminu: data.kopieNabidekTerminu === '1' }
+        : {}),
+      ...(data.fakturaceProjektu !== undefined
+        ? { fakturaceProjektu: data.fakturaceProjektu === '1' }
         : {}),
       ...(data.prijimaDotazyKlientu !== undefined
         ? { prijimaDotazyKlientu: data.prijimaDotazyKlientu === '1' }

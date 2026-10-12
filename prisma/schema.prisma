@@ -315,6 +315,16 @@ model User {
   /// z nich mi nesedi", odpoved dorazi i produkci.
   kopieNabidekTerminu Boolean @default(false)
 
+  /// ZPRAVA, KDYZ JE PROJEKT SCHVALENY K FAKTURACI (zadani Barbory Siblove
+  /// 12. 10. 2026: „nastavit notifikaci pri stavu projektu Schvaleno - k
+  /// fakturaci na me. Nejlepe email... a pokud by mohl do zpravy o projektu
+  /// dat i proklik na projekt, tak by to bylo perfektni").
+  ///
+  /// Kdo to ma zaskrtnute, dostane v tom okamziku MAIL s odkazem na projekt
+  /// a zaroven zvonek v portalu. Stejne pravidlo jako u planovaniTerminu:
+  /// zaskrtava se u uctu, ne podle jmena v kodu.
+  fakturaceProjektu Boolean @default(false)
+
   /// Vidi sekci Banka - napojeni uctu a parovani plateb (zadani 17. 9. 2026:
   /// „nastaveni a parovani banky bych mel videt jen ja a Bara Siblova").
   /// Priznak u uctu, ne seznam jmen v kodu: lidi se meni, kod by o tom nevedel.

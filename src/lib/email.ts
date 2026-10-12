@@ -1812,6 +1812,74 @@ export function buildBonusHtml(input: BonusEmailInput): string {
   });
 }
 
+/**
+ * PROJEKT SCHVÁLENÝ K FAKTURACI (zadání Barbory Šíblové 12. 10. 2026:
+ * „nastavit notifikaci při stavu projektu Schváleno - k fakturaci na mě.
+ * Nejlépe email… a pokud by mohl do zprávy o projektu dát i proklik na
+ * projekt, tak by to bylo perfektní").
+ *
+ * Zpráva NÁM, ne klientovi - klientské zprávy ke stavům mají vlastní vzory
+ * a nastavují se u každé firmy. Tahle chodí tomu, kdo fakturuje, a nese
+ * tlačítko rovnou na projekt.
+ */
+type FakturaceEmailInput = {
+  to: string;
+  jazyk?: Jazyk;
+  projekt: string;
+  firma: string | null;
+  odkaz: string;
+};
+
+function buildFakturaceHtml(input: FakturaceEmailInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.fakturace.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.fakturace.preheader', { projekt: input.projekt }),
+    body: `
+    <span class="badge">${prelozitEmail(jazyk, 'mail.fakturace.odznak')}</span>
+    <h2>${escapeHtml(input.projekt)}</h2>
+    <p>${prelozitEmail(jazyk, 'mail.fakturace.uvod')}</p>
+
+    ${
+      input.firma
+        ? `<table role="presentation" class="field-table">
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.fakturace.firma')}</td><td class="value regular">${escapeHtml(input.firma)}</td></tr>
+    </table>`
+        : ''
+    }
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.fakturace.tlacitko')}</a>
+    </div>
+  `,
+  });
+}
+
+export async function sendSchvalenoKFakturaciEmail(input: FakturaceEmailInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: prelozitEmailS(jazyk, 'mail.fakturace.predmet', { projekt: input.projekt }),
+    text: [
+      prelozitEmailS(jazyk, 'mail.fakturace.textUvod', { projekt: input.projekt }),
+      input.firma ? prelozitEmailS(jazyk, 'mail.fakturace.textFirma', { firma: input.firma }) : '',
+      '',
+      prelozitEmail(jazyk, 'mail.fakturace.textOdkaz'),
+      input.odkaz,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildFakturaceHtml(input),
+  });
+
+  return overOdeslani(vysledekPosty, 'sendSchvalenoKFakturaciEmail');
+}
+
 export async function sendBonusEmail(input: BonusEmailInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };

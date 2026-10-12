@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
 import { STAV_PLANUJEME, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { zvonekOPlanovani } from '@/lib/planovaniServer';
+import { zpravaOSchvaleniKFakturaci } from '@/lib/fakturaceZpravaServer';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { nazevProjektuVelky } from '@/lib/nazevProjektu';
@@ -18,6 +19,11 @@ import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
  * stavu na Dokonceno - ke schvaleni").
  */
 const STAV_PRO_BONUS = 'Dokončeno - ke schválení';
+/**
+ * Stav, po kterém se fakturuje (zadání Barbory Šíblové 12. 10. 2026) - viz
+ * lib/fakturaceZpravaServer.ts.
+ */
+const STAV_K_FAKTURACI = 'Schváleno - k fakturaci';
 import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
 import { otevriKanalProjektu, uzavriKanalProjektu } from '@/lib/chatServer';
 import { isActiveProjectStatus } from '@/lib/projectTypes';
@@ -454,6 +460,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           meta.name ?? null,
           pred?.company?.name ?? meta.companyName ?? null,
         ).catch(() => undefined);
+      }
+
+      /**
+       * ZPRÁVA O SCHVÁLENÍ K FAKTURACI (zadání Barbory Šíblové 12. 10. 2026).
+       * Mail s proklikem na projekt a zvonek tomu, kdo to má na kartě účtu
+       * zaškrtnuté. Bez čekání - fakturace nesmí zdržet uložení stavu.
+       */
+      if (stavSeZmenil && !pred?.finished && data.statusName === STAV_K_FAKTURACI) {
+        void zpravaOSchvaleniKFakturaci(
+          params.id,
+          meta.name ?? pred?.name ?? null,
+          pred?.company?.name ?? meta.companyName ?? null,
+        );
       }
 
       /**

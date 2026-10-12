@@ -917,6 +917,29 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     cs: 'Bonus je jednorázová odměna nad rámec výkazu — do odpracovaných hodin se nezapočítává a proti rozpočtu projektu nestojí.',
     en: 'A bonus is a one-off reward on top of the timesheet — it does not count towards the hours worked and does not go against the project budget.',
   },
+  /* --- Projekt schválený k fakturaci (12. 10. 2026) - zpráva nám, ne klientovi. --- */
+  'mail.fakturace.stitek': { cs: 'K FAKTURACI', en: 'READY TO INVOICE' },
+  'mail.fakturace.odznak': { cs: 'Schváleno — k fakturaci', en: 'Approved — ready to invoice' },
+  'mail.fakturace.predmet': {
+    cs: 'K fakturaci — {projekt}',
+    en: 'Ready to invoice — {projekt}',
+  },
+  'mail.fakturace.preheader': {
+    cs: '{projekt} je schválený, můžete fakturovat.',
+    en: '{projekt} has been approved, you can invoice it.',
+  },
+  'mail.fakturace.firma': { cs: 'Firma', en: 'Company' },
+  'mail.fakturace.uvod': {
+    cs: 'Projekt přešel do stavu „Schváleno - k fakturaci". Klient má hotovou zakázku odsouhlasenou.',
+    en: 'The project moved to “Approved — ready to invoice”. The client has signed the finished job off.',
+  },
+  'mail.fakturace.tlacitko': { cs: 'Otevřít projekt', en: 'Open the project' },
+  'mail.fakturace.textUvod': {
+    cs: '{projekt} přešel do stavu „Schváleno - k fakturaci".',
+    en: '{projekt} moved to “Approved — ready to invoice”.',
+  },
+  'mail.fakturace.textFirma': { cs: 'Firma: {firma}', en: 'Company: {firma}' },
+  'mail.fakturace.textOdkaz': { cs: 'Projekt v portálu:', en: 'The project in the portal:' },
   'mail.bonus.predmet': { cs: 'Schválený bonus — {projekt}', en: 'Approved bonus — {projekt}' },
   'mail.bonus.textBonus': { cs: 'Bonus: {castka}', en: 'Bonus: {castka}' },
   'mail.bonus.textKniha': { cs: 'Kniha: {projekt}', en: 'Book: {projekt}' },

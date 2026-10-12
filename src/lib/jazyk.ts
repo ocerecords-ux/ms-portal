@@ -4065,6 +4065,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'odeslaná smlouva je od nás rovnou podepsaná jeho jménem',
     en: 'a contract we send out already carries their signature',
   },
+  /* Zpráva o schválení k fakturaci (12. 10. 2026). */
+  'uzivatel.fakturaceProjektu': { cs: 'Schváleno k fakturaci', en: 'Approved to invoice' },
+  'uzivatel.fakturaceProjektuPopis': {
+    cs: 'jakmile projekt přejde na „Schváleno - k fakturaci", přijde mu mail s proklikem na projekt a zvoneček v portálu',
+    en: 'the moment a project moves to “Approved — ready to invoice”, they get an e-mail linking straight to the project and a bell in the portal',
+  },
   /* Kopie nabídek termínů hercům (12. 10. 2026). */
   'uzivatel.kopieNabidekTerminu': { cs: 'Kopie nabídek termínů', en: 'Copy of session offers' },
   'uzivatel.kopieNabidekTerminuPopis': {
