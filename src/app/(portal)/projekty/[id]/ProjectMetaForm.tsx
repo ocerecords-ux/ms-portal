@@ -1298,11 +1298,30 @@ export function ProjectMetaForm({
                   varianta="radek"
                 />
               )}
+              {/* POŘÁDNÉ TLAČÍTKO, NE DROBNÝ TEXT (zadání 12. 10. 2026: „já chci
+                  jen mít možnost vyměnit odkaz na složku").
+                  Přepsat odkaz šlo i předtím, jenže ovládání vypadalo jako
+                  popisek - drobné fialové písmo pod dvěma plnohodnotnými
+                  tlačítky. Teď je to tlačítko stejné velikosti jako ta nad ním,
+                  takže je vidět, že se na něj dá kliknout. */}
               <button
                 type="button"
                 onClick={() => setUpravitOdkaz((v) => !v)}
-                className="text-xs font-heading font-semibold text-brand-purple hover:underline mt-0.5"
+                className="inline-flex items-center gap-1.5 font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer"
               >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-3.5 h-3.5 shrink-0"
+                  aria-hidden
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                </svg>
                 {upravitOdkaz
                   ? t('obecne.skryt')
                   : values.driveUrl
