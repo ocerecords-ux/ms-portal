@@ -20,6 +20,7 @@ import { vygenerujUvod, vygenerujZaver, REZISER_UVODU } from '@/lib/uvodZaver';
 import { usePreklad, useJazyk } from '../components/JazykProvider';
 import { kodJazyka, prelozit, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 import { CURRENCY_LABELS } from '@/lib/doklady';
+import { minimalniCena, uplatniSpodniHranici } from '@/lib/price';
 import type { Currency } from '@prisma/client';
 
 export function OrderForm({
@@ -119,15 +120,55 @@ export function OrderForm({
   /** Cena, kterou klient navrhuje sám (jen když cenuUrcujeKlient). */
   const [cenaVlastni, setCenaVlastni] = useState('');
 
-  const price = useMemo(() => {
-    if (cenuUrcujeKlient) return Math.round(parseFloat(cenaVlastni.replace(/\s/g, '').replace(',', '.')) || 0);
-    const n = parseFloat(pageCount) || 0;
-    return Math.round(n * ratePerPage);
-  }, [cenaVlastni, cenuUrcujeKlient, pageCount, ratePerPage]);
+  /**
+   * SPODNÍ HRANICE CENY (zadání 13. 10. 2026). Číslo je v lib/price.ts —
+   * tady se jen použije, ať formulář ukazuje totéž, co pak uloží server.
+   * U firmy se sazbou v jiné měně žádná hranice neplatí a je to `null`.
+   */
+  const hraniceCeny = minimalniCena(mena);
+
+  /** Co vychází z normostran a sazby, ještě bez hranice. */
+  const cenaZeSazby = useMemo(
+    () => Math.round((parseFloat(pageCount) || 0) * ratePerPage),
+    [pageCount, ratePerPage],
+  );
+
+  /** Cena, kterou klient sám napsal (jen u firem, co si cenu navrhují). */
+  const cenaKlienta = useMemo(
+    () => Math.round(parseFloat(cenaVlastni.replace(/\s/g, '').replace(',', '.')) || 0),
+    [cenaVlastni],
+  );
+
+  const { cena: price, zvednuto: cenaZvednutaNaHranici } = useMemo(
+    () =>
+      cenuUrcujeKlient
+        ? { cena: cenaKlienta, zvednuto: false }
+        : uplatniSpodniHranici(cenaZeSazby, mena),
+    [cenaKlienta, cenaZeSazby, cenuUrcujeKlient, mena],
+  );
+
+  /**
+   * Klient si cenu navrhuje sám a napsal mín, než je spodní hranice. Jeho
+   * číslo se mu NEPŘEPISUJE — objednávka se jen neodešle a řekne se proč,
+   * stejně jako to hlásí server.
+   */
+  const cenaPodHranici =
+    cenuUrcujeKlient && hraniceCeny != null && cenaKlienta > 0 && cenaKlienta < hraniceCeny;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    // Cena pod spodní hranicí — objednávka se neodešle a klient dostane
+    // vysvětlení. Server to hlásí také, tohle je jen aby se na to nejezdilo
+    // zbytečně (zadání 13. 10. 2026).
+    if (cenaPodHranici && hraniceCeny != null) {
+      setError(
+        t('objednavka.cenaPodHranici', {
+          hranice: `${formatujCislo(hraniceCeny, jazyk)} ${CURRENCY_LABELS[mena]}`,
+        }),
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -372,6 +413,29 @@ export function OrderForm({
           )}
         </Field>
       </div>
+
+      {/* SPODNÍ HRANICE CENY (zadání 13. 10. 2026). Pod cenou, ne v políčku —
+          věta se do širokého řádku vejde celá a nerozhodí rozložení. */}
+      {hraniceCeny != null && (
+        <p
+          className={`m-0 -mt-2 text-[11px] font-heading ${
+            cenaPodHranici ? 'text-red-300' : cenaZvednutaNaHranici ? 'text-brand-green' : 'text-white/60'
+          }`}
+        >
+          {cenaPodHranici
+            ? t('objednavka.cenaPodHranici', {
+                hranice: `${formatujCislo(hraniceCeny, jazyk)} ${CURRENCY_LABELS[mena]}`,
+              })
+            : cenaZvednutaNaHranici
+              ? t('objednavka.cenaZvednutaNaHranici', {
+                  ze: `${formatujCislo(cenaZeSazby, jazyk)} ${CURRENCY_LABELS[mena]}`,
+                  hranice: `${formatujCislo(hraniceCeny, jazyk)} ${CURRENCY_LABELS[mena]}`,
+                })
+              : t('objednavka.cenaHranice', {
+                  hranice: `${formatujCislo(hraniceCeny, jazyk)} ${CURRENCY_LABELS[mena]}`,
+                })}
+        </p>
+      )}
 
       <Field label={t('objednavka.datumOdevzdani')}>
         <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />

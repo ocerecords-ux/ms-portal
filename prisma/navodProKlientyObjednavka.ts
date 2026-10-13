@@ -24,6 +24,7 @@ Když u vás děláme obojí, jsou nahoře dvě tlačítka — **Audiokniha** a 
 - **Název** — povinný. Pod tímhle názvem zakázku uvidíte v Projektech.
 - **Počet normostran** — nemusíte počítat ručně, viz příloha níž.
 - **Cena bez DPH** — spočítá se sama z normostran a vaší sazby. Pokud si cenu navrhujete sami, je políčko k vyplnění a částka je vždycky bez DPH.
+- **Minimální cena** — audiokniha má spodní hranici **12 000 Kč bez DPH**. Pod ní se projekt nerozjede: režisér, studio, postprodukce a korektura se zaplatí i u tenké knížky. U krátkého textu proto v objednávce uvidíte těch 12 000 Kč místo částky z normostran — pod cenou je napísané, proč. Jestli si cenu navrhujete sami, formulář návrh pod hranicí nepustí dál; ozvěte se nám a domluvíme se.
 - **Datum odevzdání** — dokdy nahrávku potřebujete.
 - **Preferovaný herec** — vyberte jednoho nebo víc z databáze, nebo napište vlastní jméno. Bereme to jako přání, potvrdíme ho podle toho, kdo bude volný.
 - **Poznámka** — cokoliv, co bychom měli vědět.

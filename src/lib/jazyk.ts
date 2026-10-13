@@ -908,6 +908,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH.',
     en: 'The price is worked out from the agreed rate per standard page. The amount shown excludes VAT.',
   },
+  // SPODNÍ HRANICE CENY (zadání 13. 10. 2026) - pod cenou v objednávce.
+  'objednavka.cenaHranice': {
+    cs: 'Minimální cena audioknihy je {hranice} bez DPH.',
+    en: 'The minimum price for an audiobook is {hranice} excluding VAT.',
+  },
+  'objednavka.cenaZvednutaNaHranici': {
+    cs: 'Z normostran vychází {ze}, účtuje se minimální cena audioknihy {hranice} bez DPH.',
+    en: 'The standard pages work out to {ze}; the minimum audiobook price of {hranice} excluding VAT applies.',
+  },
+  'objednavka.cenaPodHranici': {
+    cs: 'Minimální cena audioknihy je {hranice} bez DPH — pod tím projekt nerozjedeme. Prosím navrhněte cenu alespoň v této výši, nebo se nám ozvěte a domluvíme se.',
+    en: 'The minimum price for an audiobook is {hranice} excluding VAT — below that we cannot get the project off the ground. Please propose at least this amount, or get in touch and we will work something out.',
+  },
   'objednavka.datumOdevzdani': { cs: 'Datum odevzdání', en: 'Delivery date' },
   'objednavka.preferovanyHerec': { cs: 'Preferovaný herec', en: 'Preferred narrator' },
   'objednavka.preferovanyHerecNapoveda': {

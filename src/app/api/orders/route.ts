@@ -10,7 +10,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { calculatePrice } from '@/lib/price';
+import { calculatePrice, minimalniCena, uplatniSpodniHranici } from '@/lib/price';
 import { adresaVUlozisti, overPrilohu, uploadOrderAttachment } from '@/lib/storage';
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { noveIdProjektu } from '@/lib/projektId';
@@ -24,7 +24,7 @@ import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { bezTitulu } from '@/lib/jmena';
 import { notifyMany } from '@/lib/notifications';
 import { vidiCenuObjednavky } from '@/lib/roles';
-import type { Role } from '@prisma/client';
+import type { Currency, Role } from '@prisma/client';
 
 // Druh objednavky (zadani 12. 9. 2026 - viz OrderKind ve schema.prisma).
 // AUDIOBOOK je vychozi a zachovava puvodni chovani (normostrany, cena,
@@ -163,11 +163,40 @@ export async function POST(req: NextRequest) {
     const n = raw ? Number(raw) : NaN;
     return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
   })();
+  /**
+   * SPODNÍ HRANICE OBJEDNÁVKY (zadání 13. 10. 2026). Pod částkou
+   * z lib/price.ts se audiokniha nerozjede, takže:
+   *
+   * - když cenu počítá portál ze sazby, ZVEDNE SE na hranici (tenká knížka
+   *   stojí minimálně těch 12 000 Kč) — a klient to v objednávce vidí,
+   *   formulář mu pod cenou napsal, proč je tam jiné číslo, než vychází
+   *   z normostran;
+   * - když si cenu navrhuje klient sám (Albatros), NEPŘEPISUJE se mu — jeho
+   *   číslo je návrh a přepsat ho za jeho zády by znamenalo, že odešle jinou
+   *   objednávku, než si myslel. Tahle se odmítne s vysvětlením.
+   */
+  const menaObjednavky: Currency = company.mena ?? 'CZK';
+
+  if (isAudiobook && company.cenuUrcujeKlient && cenaOdKlienta != null && cenaOdKlienta > 0) {
+    const hranice = minimalniCena(menaObjednavky);
+    if (hranice != null && cenaOdKlienta < hranice) {
+      return NextResponse.json(
+        {
+          error:
+            `Minimální cena audioknihy je ${hranice.toLocaleString('cs-CZ')} Kč bez DPH — ` +
+            'pod tím projekt nerozjedeme. Prosím navrhněte cenu alespoň v této výši, ' +
+            'nebo se nám ozvěte a domluvíme se.',
+        },
+        { status: 400 },
+      );
+    }
+  }
+
   const priceEstimate = !isAudiobook
     ? null
     : company.cenuUrcujeKlient
       ? cenaOdKlienta
-      : calculatePrice(pageCount, company.ratePerPage ?? 0);
+      : uplatniSpodniHranici(calculatePrice(pageCount, company.ratePerPage ?? 0), menaObjednavky).cena;
 
   // Priloha objednavky. Kdyz uloziste souboru neni nastavene (coz je k
   // 9. 9. 2026 na produkci porad pripad), uploadOrderAttachment vrati null -

@@ -34,6 +34,7 @@ import { dokladyUProjektu } from '@/lib/dokladyUProjektuServer';
 import { ZnackyDokladu } from '@/lib/dokladyUProjektu';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
+import { uplatniSpodniHranici } from '@/lib/price';
 import { expenseTotalMinor } from '@/lib/expenses';
 import { sessionsForPages } from '@/lib/calendar';
 import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
@@ -362,8 +363,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     0,
   );
   const hoursLogged = timesheets.reduce((sum, e) => sum + toHours(durationMinutes(e.startMinutes, e.endMinutes)), 0);
+  // Výnos od klienta - a NIKDY než niž, než je spodní hranice ceny audioknihy
+  // (13. 10. 2026, lib/price.ts). Objednávka už tu hranici drží, takže
+  // rozpočet musí počítat s týmž číslem, jinak u tenké knížky ukazuje
+  // menší výnos, než klient zaplatí.
   const revenue =
-    budget && company?.ratePerPage != null ? budget.pageCount * company.ratePerPage : null;
+    budget && company?.ratePerPage != null
+      ? uplatniSpodniHranici(budget.pageCount * company.ratePerPage, company.mena ?? 'CZK').cena
+      : null;
 
   // Datum dokladu britsky 13/09/2026, česky 13. 9. 2026 (dávka 7b).
   const dokladDatum = (date: Date | null) => formatDatum(jazyk, date, '');
