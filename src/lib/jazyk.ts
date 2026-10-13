@@ -2977,8 +2977,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Any further files are just attached.',
   },
   'vydaj.vyberSouboruNapoveda': {
-    cs: 'Vyberte PDF, sken nebo fotku dokladu (klidně víc souborů) - částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.',
-    en: 'Choose a PDF, a scan or a photo of the document (several files are fine) — the amount, the date and the VAT will be filled in for you. Please check them before saving.',
+    cs: 'Vyberte PDF, sken nebo fotku dokladu (klidně víc souborů), nebo je sem rovnou přetáhněte - částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.',
+    en: 'Choose a PDF, a scan or a photo of the document (several files are fine), or just drag them in here — the amount, the date and the VAT will be filled in for you. Please check them before saving.',
+  },
+  // Přetažení souboru do plochy (zadání 13. 10. 2026, Karolína Zbořilová).
+  'vydaj.pustteSoubory': { cs: 'Pusťte soubory sem…', en: 'Drop the files here…' },
+  'vydaj.neboPretazenim': {
+    cs: 'Nebo sem soubor rovnou přetáhněte.',
+    en: 'Or simply drag a file in here.',
   },
   'vydaj.souborDoklad': { cs: 'Doklad', en: 'Document' },
   'vydaj.souborPriloha': { cs: 'Příloha', en: 'Attachment' },
@@ -10763,6 +10769,320 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 've Složkách na Disku',
     en: 'Folders on the Drive',
   },
+
+  // --- přístupy do sekcí a jednotlivá práva na kartě uživatele (lib/pristupy.ts, dávka 7k) ---
+  'pristup.PROJEKTY.nazev': { cs: 'Projekty', en: 'Projects' },
+  'pristup.PROJEKTY.popis': {
+    cs: 'Seznam projektů a jejich detail - stav, herci, termíny, výstupy.',
+    en: 'The project list and project detail — status, narrators, sessions and deliverables.',
+  },
+  'pristup.PROJEKTY.CTENI.nazev': {
+    cs: 'Vidí projekty (jen ke čtení)',
+    en: 'Can see projects (read-only)',
+  },
+  'pristup.PROJEKTY.CTENI.popis': {
+    cs: 'Seznam a detail projektu. Bez dalších zaškrtávátek nic víc - žádný rozpočet, doklady ani klient.',
+    en: 'The project list and project detail. Nothing more without the other tick boxes — no budget, documents or client.',
+  },
+  'pristup.PROJEKTY.UPRAVY.nazev': { cs: 'Upravuje údaje projektu', en: 'Edits project details' },
+  'pristup.PROJEKTY.UPRAVY.popis': {
+    cs: 'Mění stav, typ, manažera, termíny a odkazy. Bez toho je detail jen ke čtení.',
+    en: 'Changes the status, type, manager, sessions and links. Without it the detail is read-only.',
+  },
+  'pristup.PROJEKTY.ROZPOCET.nazev': {
+    cs: 'Vidí rozpočet a výkazy',
+    en: 'Can see the budget and timesheets',
+  },
+  'pristup.PROJEKTY.ROZPOCET.popis': {
+    cs: 'Záložka Rozpočet u projektu - kolik je naplánováno a kolik se protočilo.',
+    en: 'The Budget tab on a project — how much is planned and how much has been spent.',
+  },
+  'pristup.PROJEKTY.DOKLADY.nazev': {
+    cs: 'Vidí doklady u projektu',
+    en: 'Can see documents on a project',
+  },
+  'pristup.PROJEKTY.DOKLADY.popis': {
+    cs: 'Nabídky, faktury a výdaje navázané na zakázku přímo v detailu projektu.',
+    en: 'Quotes, invoices and expenses linked to the job, right in the project detail.',
+  },
+  'pristup.PROJEKTY.KLIENT.nazev': {
+    cs: 'Vidí klienta a datum vydání',
+    en: 'Can see the client and the release date',
+  },
+  'pristup.PROJEKTY.KLIENT.popis': {
+    cs: 'Obchodní část karty. Zvukař ji dosud neměl.',
+    en: 'The commercial part of the record. Sound engineers have not had it until now.',
+  },
+  'pristup.PROJEKTY.VPRIPRAVE.nazev': {
+    cs: 'Vidí projekty V přípravě',
+    en: 'Can see projects In preparation',
+  },
+  'pristup.PROJEKTY.VPRIPRAVE.popis': {
+    cs: 'Zakázky, které ještě nemají termín ani herce - jinak se objeví až v Natáčíme.',
+    en: 'Jobs that have no session or narrator yet — otherwise they turn up only once they are Recording.',
+  },
+  'pristup.PROJEKTY.TECHNICKE_PARAMETRY.nazev': {
+    cs: 'Upravuje technické parametry',
+    en: 'Edits technical parameters',
+  },
+  'pristup.PROJEKTY.TECHNICKE_PARAMETRY.popis': {
+    cs: 'Sady formátů u firem. Číst je smí celý tým, měnit jen tenhle člověk.',
+    en: 'Format sets for companies. The whole team may read them, only this person may change them.',
+  },
+  'pristup.DOKLADY.nazev': { cs: 'Doklady', en: 'Documents' },
+  'pristup.DOKLADY.popis': {
+    cs: 'Nabídky, faktury, výdaje, smlouvy a moje firmy. Jsou tam peníze celé firmy.',
+    en: 'Quotes, invoices, expenses, contracts and our own companies. The money of the whole company is in there.',
+  },
+  'pristup.DOKLADY.NABIDKY_CIST.nazev': { cs: 'Vidí nabídky', en: 'Can see quotes' },
+  'pristup.DOKLADY.NABIDKY_CIST.popis': {
+    cs: 'Seznam a detail cenových nabídek.',
+    en: 'The list and detail of price quotes.',
+  },
+  'pristup.DOKLADY.NABIDKY_VYSTAVIT.nazev': { cs: 'Vystavuje nabídky', en: 'Issues quotes' },
+  'pristup.DOKLADY.NABIDKY_VYSTAVIT.popis': {
+    cs: 'Zakládá, mění a posílá nabídky klientovi.',
+    en: 'Creates, changes and sends quotes to the client.',
+  },
+  'pristup.DOKLADY.FAKTURY_CIST.nazev': { cs: 'Vidí faktury', en: 'Can see invoices' },
+  'pristup.DOKLADY.FAKTURY_CIST.popis': {
+    cs: 'Seznam a detail vydaných faktur.',
+    en: 'The list and detail of issued invoices.',
+  },
+  'pristup.DOKLADY.FAKTURY_VYSTAVIT.nazev': { cs: 'Vystavuje faktury', en: 'Issues invoices' },
+  'pristup.DOKLADY.FAKTURY_VYSTAVIT.popis': {
+    cs: 'Zakládá a posílá faktury. Číslo faktury se nikdy nemění.',
+    en: 'Creates and sends invoices. An invoice number never changes.',
+  },
+  'pristup.DOKLADY.UPOMINKY.nazev': { cs: 'Řeší upomínky', en: 'Handles reminders' },
+  'pristup.DOKLADY.UPOMINKY.popis': {
+    cs: 'Nezaplacené faktury a upomínání klientů.',
+    en: 'Unpaid invoices and chasing clients.',
+  },
+  'pristup.DOKLADY.VYDAJE_CIST.nazev': { cs: 'Vidí výdaje', en: 'Can see expenses' },
+  'pristup.DOKLADY.VYDAJE_CIST.popis': {
+    cs: 'Náklady zakázek a režie.',
+    en: 'Job costs and overheads.',
+  },
+  'pristup.DOKLADY.VYDAJE_ZAPIS.nazev': { cs: 'Zapisuje výdaje', en: 'Records expenses' },
+  'pristup.DOKLADY.VYDAJE_ZAPIS.popis': {
+    cs: 'Přidává a mění výdaje včetně příloh.',
+    en: 'Adds and changes expenses, including attachments.',
+  },
+  'pristup.DOKLADY.SMLOUVY_CIST.nazev': { cs: 'Vidí smlouvy', en: 'Can see contracts' },
+  'pristup.DOKLADY.SMLOUVY_CIST.popis': {
+    cs: 'Smlouvy s herci a jejich vzory.',
+    en: 'Contracts with narrators and their templates.',
+  },
+  'pristup.DOKLADY.SMLOUVY_ODESLAT.nazev': {
+    cs: 'Posílá smlouvy k podpisu',
+    en: 'Sends contracts for signature',
+  },
+  'pristup.DOKLADY.SMLOUVY_ODESLAT.popis': {
+    cs: 'Vytvoří smlouvu ze vzoru a pošle ji druhé straně.',
+    en: 'Creates a contract from a template and sends it to the other party.',
+  },
+  'pristup.DOKLADY.MOJE_FIRMY.nazev': { cs: 'Spravuje naše firmy', en: 'Manages our companies' },
+  'pristup.DOKLADY.MOJE_FIRMY.popis': {
+    cs: 'Fakturační údaje firem, ze kterých vystavujeme.',
+    en: 'The billing details of the companies we invoice from.',
+  },
+  'pristup.DOKLADY.BANKA.nazev': { cs: 'Vidí Banku', en: 'Can see the Bank' },
+  'pristup.DOKLADY.BANKA.popis': {
+    cs: 'Bankovní výpisy a párování plateb k fakturám.',
+    en: 'Bank statements and matching payments to invoices.',
+  },
+  'pristup.PREHLEDY.nazev': { cs: 'Přehledy', en: 'Reports' },
+  'pristup.PREHLEDY.popis': {
+    cs: 'Kapacita studií, backlog, obrat a zisk, knihy a rozpočty.',
+    en: 'Studio capacity, the backlog, turnover and profit, books and budgets.',
+  },
+  'pristup.PREHLEDY.PALUBOVKA.nazev': { cs: 'Palubovka', en: 'Dashboard' },
+  'pristup.PREHLEDY.PALUBOVKA.popis': {
+    cs: 'Ukazatele celé firmy na jedné obrazovce.',
+    en: 'The whole company in figures on one screen.',
+  },
+  'pristup.PREHLEDY.KAPACITA.nazev': { cs: 'Kapacita studií', en: 'Studio capacity' },
+  'pristup.PREHLEDY.KAPACITA.popis': {
+    cs: 'Kolik je ve studiích volno a kde se tlačíme.',
+    en: 'How much room there is in the studios and where it is tight.',
+  },
+  'pristup.PREHLEDY.BACKLOG.nazev': { cs: 'Backlog', en: 'Backlog' },
+  'pristup.PREHLEDY.BACKLOG.popis': {
+    cs: 'Co je objednané a čeká na zařazení.',
+    en: 'What has been ordered and is waiting to be scheduled.',
+  },
+  'pristup.PREHLEDY.KNIHY.nazev': { cs: 'Knihy a rozpočty', en: 'Books and budgets' },
+  'pristup.PREHLEDY.KNIHY.popis': {
+    cs: 'Čerpání rozpočtů audioknih, zisk a porada nad nimi.',
+    en: 'Audiobook budgets and spend, profit, and the meeting that goes over them.',
+  },
+  'pristup.PREHLEDY.FINANCE.nazev': { cs: 'Obrat a zisk', en: 'Turnover and profit' },
+  'pristup.PREHLEDY.FINANCE.popis': {
+    cs: 'Finanční přehled firmy po měsících.',
+    en: 'The financial overview of the company, month by month.',
+  },
+  'pristup.PREHLEDY.ZVUKARI.nazev': { cs: 'Výkony zvukařů', en: 'Sound engineer output' },
+  'pristup.PREHLEDY.ZVUKARI.popis': {
+    cs: 'Kdo kolik natočil a sestříhal.',
+    en: 'Who has recorded and edited how much.',
+  },
+  'pristup.KALENDARE.nazev': { cs: 'Kalendáře', en: 'Calendars' },
+  'pristup.KALENDARE.popis': {
+    cs: 'Kalendáře studií - natáčení, střihy, blokace a nepřítomnosti.',
+    en: 'Studio calendars — recording, editing, blocks and absences.',
+  },
+  'pristup.KALENDARE.ZAPIS.nazev': { cs: 'Zakládá a mění bloky', en: 'Creates and changes blocks' },
+  'pristup.KALENDARE.ZAPIS.popis': {
+    cs: 'Natáčení, střihy a externí pronájmy. Bez toho je kalendář jen ke čtení.',
+    en: 'Recording, editing and external hire. Without it the calendar is read-only.',
+  },
+  'pristup.KALENDARE.NABIDKY_TERMINU.nazev': {
+    cs: 'Nabízí termíny hercům',
+    en: 'Offers sessions to narrators',
+  },
+  'pristup.KALENDARE.NABIDKY_TERMINU.popis': {
+    cs: 'Sestavuje nabídku termínů, potvrzuje a ruší rezervace herců.',
+    en: 'Puts the session offer together, confirms and cancels narrator bookings.',
+  },
+  'pristup.KALENDARE.NEPRITOMNOSTI.nazev': { cs: 'Zapisuje nepřítomnosti', en: 'Records absences' },
+  'pristup.KALENDARE.NEPRITOMNOSTI.popis': {
+    cs: 'Dovolené, blokace studia a údržbu.',
+    en: 'Holidays, studio blocks and maintenance.',
+  },
+  'pristup.KALENDARE.VSICHNI_LIDE.nazev': {
+    cs: 'Vidí kalendář všech',
+    en: "Can see everyone's calendar",
+  },
+  'pristup.KALENDARE.VSICHNI_LIDE.popis': {
+    cs: 'Bez toho člověk vidí jen svoje bloky a bloky svých studií.',
+    en: 'Without it a person sees only their own blocks and those of their studios.',
+  },
+  'pristup.STUDIA.nazev': { cs: 'Studia', en: 'Studios' },
+  'pristup.STUDIA.popis': {
+    cs: 'Nastavení studií, rezervační kalendář a ceník studia.',
+    en: 'Studio settings, the booking calendar and the studio price list.',
+  },
+  'pristup.STUDIA.REZERVACE.nazev': { cs: 'Rezervační kalendář', en: 'Booking calendar' },
+  'pristup.STUDIA.REZERVACE.popis': {
+    cs: 'Bookování studia pro klienty zvenčí.',
+    en: 'Booking the studio for clients from outside.',
+  },
+  'pristup.STUDIA.NASTAVENI.nazev': { cs: 'Nastavení studií', en: 'Studio settings' },
+  'pristup.STUDIA.NASTAVENI.popis': {
+    cs: 'Pobočky, místnosti, otevírací doba, vedoucí.',
+    en: 'Branches, rooms, opening hours, managers.',
+  },
+  'pristup.STUDIA.CENIK.nazev': { cs: 'Ceník studia', en: 'Studio price list' },
+  'pristup.STUDIA.CENIK.popis': {
+    cs: 'Ceny za hodinu a den, PDF a odeslání klientovi.',
+    en: 'Hourly and daily rates, the PDF and sending it to the client.',
+  },
+  'pristup.PROCESY.nazev': { cs: 'Procesy', en: 'Procedures' },
+  'pristup.PROCESY.popis': {
+    cs: 'Pracovní postupy, technické specifikace a návody k programům.',
+    en: 'Working procedures, technical specifications and software guides.',
+  },
+  'pristup.PROCESY.PSANI.nazev': {
+    cs: 'Píše a upravuje postupy',
+    en: 'Writes and edits procedures',
+  },
+  'pristup.PROCESY.PSANI.popis': {
+    cs: 'Zakládá články, vkládá obrázky a určuje, kdo je uvidí.',
+    en: 'Creates articles, inserts images and decides who gets to see them.',
+  },
+  'pristup.FIRMY.nazev': { cs: 'Firmy', en: 'Companies' },
+  'pristup.FIRMY.popis': {
+    cs: 'Klienti a dodavatelé - karty firem, sazby a kontakty.',
+    en: 'Clients and suppliers — company records, rates and contacts.',
+  },
+  'pristup.FIRMY.UPRAVY.nazev': { cs: 'Upravuje karty firem', en: 'Edits company records' },
+  'pristup.FIRMY.UPRAVY.popis': {
+    cs: 'Zakládá firmy a mění jejich údaje. Bez toho je seznam jen ke čtení.',
+    en: 'Creates companies and changes their details. Without it the list is read-only.',
+  },
+  'pristup.FIRMY.SAZBY.nazev': { cs: 'Ceníky a sazby', en: 'Price lists and rates' },
+  'pristup.FIRMY.SAZBY.popis': {
+    cs: 'Sazby za normostranu a ceníky prací.',
+    en: 'Standard-page rates and work price lists.',
+  },
+  'pristup.ZPRAVY_PORTALU.nazev': { cs: 'Zprávy z portálu', en: 'Messages from the portal' },
+  'pristup.ZPRAVY_PORTALU.popis': {
+    cs: 'Vzory zpráv, které portál posílá ven, a hlášky v rozhraní.',
+    en: 'Templates for the messages the portal sends out, and the wording inside the interface.',
+  },
+  'pristup.ZPRAVY_PORTALU.VZORY.nazev': { cs: 'Vzory e-mailů', en: 'Email templates' },
+  'pristup.ZPRAVY_PORTALU.VZORY.popis': {
+    cs: 'Texty, které portál posílá klientům a hercům.',
+    en: 'The texts the portal sends to clients and narrators.',
+  },
+  'pristup.ZPRAVY_PORTALU.HLASKY.nazev': { cs: 'Hlášky v portálu', en: 'Wording in the portal' },
+  'pristup.ZPRAVY_PORTALU.HLASKY.popis': {
+    cs: 'Texty uvnitř rozhraní a jejich překlady.',
+    en: 'The texts inside the interface and their translations.',
+  },
+  'pristup.HERCI.nazev': { cs: 'Herci', en: 'Narrators' },
+  'pristup.HERCI.popis': {
+    cs: 'Karty herců, pozvánky a jejich údaje.',
+    en: 'Narrator records, invitations and their details.',
+  },
+  'pristup.HERCI.UPRAVY.nazev': { cs: 'Upravuje karty herců', en: 'Edits narrator records' },
+  'pristup.HERCI.UPRAVY.popis': {
+    cs: 'Mění údaje na kartě herce. Bez toho je seznam jen ke čtení.',
+    en: 'Changes the details on a narrator record. Without it the list is read-only.',
+  },
+  'pristup.HERCI.POZVANKY.nazev': {
+    cs: 'Posílá pozvánky a žádosti o údaje',
+    en: 'Sends invitations and requests for details',
+  },
+  'pristup.HERCI.POZVANKY.popis': {
+    cs: 'Zve herce do portálu a posílá odkaz na doplnění údajů.',
+    en: 'Invites narrators into the portal and sends them the link for filling in their details.',
+  },
+  'pristup.HERCI.HONORARE.nazev': { cs: 'Vidí honoráře herců', en: 'Can see narrator fees' },
+  'pristup.HERCI.HONORARE.popis': {
+    cs: 'Kolik komu za natáčení náleží.',
+    en: 'How much each person is due for recording.',
+  },
+  'pristup.SITE.nazev': { cs: 'Sítě', en: 'Social' },
+  'pristup.SITE.popis': {
+    cs: 'Příspěvky na Instagram a LinkedIn a fronta příběhů ke schválení.',
+    en: 'Posts on Instagram and LinkedIn and the queue of stories awaiting approval.',
+  },
+  'pristup.SITE.PRIBEHY_POSLAT.nazev': {
+    cs: 'Posílá příběhy ke schválení',
+    en: 'Sends stories for approval',
+  },
+  'pristup.SITE.PRIBEHY_POSLAT.popis': {
+    cs: 'Nahraje fotku nebo video a text. K instagramovému účtu se nedostane.',
+    en: 'Uploads a photo or a video and the text. Has no access to the Instagram account.',
+  },
+  'pristup.SITE.PRIBEHY_SCHVALIT.nazev': {
+    cs: 'Schvaluje a vyvěšuje příběhy',
+    en: 'Approves and posts stories',
+  },
+  'pristup.SITE.PRIBEHY_SCHVALIT.popis': {
+    cs: 'Vidí celou frontu, příběh vyvěsí nebo zamítne se vzkazem zpátky.',
+    en: 'Sees the whole queue and either posts a story or rejects it with a note back.',
+  },
+  'pristup.SITE.PRISPEVKY.nazev': {
+    cs: 'Tvoří příspěvky na sítě',
+    en: 'Creates posts for social media',
+  },
+  'pristup.SITE.PRISPEVKY.popis': {
+    cs: 'Modul Sítě - plátno, šablony a export. Zatím se dodělává, takže ho má jen Ondřej (6. 10. 2026).',
+    en: 'The Social module — canvas, templates and export. Still being finished, so only Ondřej has it (06/10/2026).',
+  },
+  'pristup.KLIENTI.nazev': { cs: 'Klienti', en: 'Clients' },
+  'pristup.KLIENTI.popis': {
+    cs: 'Karty klientských účtů a jejich nastavení.',
+    en: 'Client account records and their settings.',
+  },
+  'pristup.KLIENTI.UPRAVY.nazev': { cs: 'Upravuje klientské účty', en: 'Edits client accounts' },
+  'pristup.KLIENTI.UPRAVY.popis': {
+    cs: 'Zakládá přístupy klientům a mění je. Bez toho je seznam jen ke čtení.',
+    en: 'Creates and changes client access. Without it the list is read-only.',
+  },
 };
 
 /**
@@ -10905,4 +11225,29 @@ export function prelozit(jazyk: Jazyk, klic: string): string {
     return klic;
   }
   return jazyk === 'en' ? zaznam.en || zaznam.cs : zaznam.cs;
+}
+
+/**
+ * Názvy a popisy sekcí a jednotlivých práv ze `lib/pristupy.ts` (dávka 7k).
+ *
+ * Číselník přístupů zůstává česky a je zdrojem pravdy — klíče práv se ukládají
+ * do databáze (`User.pristupy`) a text se překládá až při vykreslení karty
+ * uživatele, podle KLÍČE PRÁVA. Stejný vzor jako `textSekce`
+ * v `lib/nastaveniSekci.ts` z dávky 4.
+ *
+ * Helper schválně stojí tady, ne v `lib/pristupy.ts`: ten si bere middleware,
+ * a slovník by se s ním táhl do edge runtime.
+ *
+ * Co ve slovníku není, projde česky (pravidlo 1) — ne klíčem.
+ */
+export function textPristupu(
+  jazyk: Jazyk,
+  klicPrava: string,
+  cast: 'nazev' | 'popis',
+  zaloha: string,
+): string {
+  if (jazyk === 'cs') return zaloha;
+  const klic = `pristup.${klicPrava}.${cast}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? zaloha : text;
 }

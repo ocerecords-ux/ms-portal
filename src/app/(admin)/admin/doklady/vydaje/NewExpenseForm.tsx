@@ -12,6 +12,7 @@ import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * Zadání přijatého dokladu. Schválně jedna obrazovka bez překlikávání —
@@ -313,6 +314,11 @@ export function NewExpenseForm({
           být jen možnost vybrat přílohu, ne vyfotit. Ale mělo by to mít
           stejnou funkci"). Čtení je v obou případech totéž - liší se jen to,
           odkud se obrázek vezme, a proto i popisek. */}
+      <PlochaProPretazeni
+        onSoubory={pridejSoubory}
+        vypnuto={cteni}
+        popisek={t('vydaj.pustteSoubory')}
+      >
       <div className="flex flex-col gap-3 bg-tint border border-line rounded-lg px-4 py-3">
         <input
           ref={fotoRef}
@@ -389,6 +395,7 @@ export function NewExpenseForm({
           </ul>
         )}
       </div>
+      </PlochaProPretazeni>
 
       {/* Nazev je prvni - zadava se jako prvni (zadani 8. 9. 2026). Dodavatel
           se u vydaje uz nevyplnuje vubec, je to zbytecny udaj. */}
