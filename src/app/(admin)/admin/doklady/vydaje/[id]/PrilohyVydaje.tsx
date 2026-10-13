@@ -89,7 +89,7 @@ export function PrilohyVydaje({
     <PlochaProPretazeni
       onSoubory={(soubory) => void nahraj(soubory)}
       vypnuto={pracuji}
-      popisek={t('vydaj.pustteSoubory')}
+      popisek={t('obecne.pustteSoubory')}
     >
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
       <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('vydaj.prilohyNadpis')}</span>
@@ -152,7 +152,7 @@ export function PrilohyVydaje({
             : t('vydaj.pridatPrilohu')}
       </button>
       {/* Ať se o přetažení ví - jinak by ho nikdo nehledal (13. 10. 2026). */}
-      <span className="text-xs font-body text-muted">{t('vydaj.neboPretazenim')}</span>
+      <span className="text-xs font-body text-muted">{t('obecne.neboPretazenim')}</span>
       {chyba && <p className="text-danger text-sm m-0">{chyba}</p>}
     </div>
     </PlochaProPretazeni>

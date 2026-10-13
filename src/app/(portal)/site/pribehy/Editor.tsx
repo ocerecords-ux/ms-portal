@@ -31,6 +31,7 @@ import {
 } from '@/lib/hudba';
 import { nactiSkladbuDoPameti, slozVideoSHudbou, umiSlozitVideo } from '@/lib/pribehVideo';
 import { KROUZEK, KROUZEK_KLID, Znacka, nahrajDoUloziste, typSouboru } from './spolecne';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * EDITOR PŘÍBĚHU (zadání 6. 10. 2026: „pojďme to udělat tak, že pole textu
@@ -263,7 +264,11 @@ export function Editor({
   const sirkaRamu = vyskaMrizky > 0 ? Math.min(340, Math.max(200, Math.round(((vyskaMrizky - 26) * 9) / 16))) : 230;
 
   function vyber(e: React.ChangeEvent<HTMLInputElement>) {
-    const vybrany = e.target.files?.[0] ?? null;
+    prijmiSoubor(e.target.files?.[0] ?? null);
+  }
+
+  /** Vybraný NEBO přetažený soubor - stejné kontroly (13. 10. 2026). */
+  function prijmiSoubor(vybrany: File | null) {
     setChyba(null);
     if (!vybrany) return;
     const typ = typSouboru(vybrany);
@@ -923,9 +928,14 @@ export function Editor({
          * na výšku toho rastru, co je vlevo, a tím i zvětšil náhled").
          * Šířku si dopočítá poměr 9:16 sám, takže se rám nikdy nerozjede.
          */}
+      <PlochaProPretazeni
+        onSoubory={(soubory) => prijmiSoubor(soubory[0] ?? null)}
+        bezBoxu
+        popisek={t('obecne.pustteSoubor')}
+      >
       <div
         ref={sloupecRef}
-        className="order-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden md:order-last md:block md:flex-none md:overflow-visible"
+        className="relative order-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden md:order-last md:block md:flex-none md:overflow-visible"
       >
         <label
           htmlFor="pribeh-soubor"
@@ -1081,6 +1091,7 @@ export function Editor({
           </span>
         )}
       </div>
+      </PlochaProPretazeni>
     </div>
   );
 }

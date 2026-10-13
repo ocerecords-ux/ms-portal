@@ -12,6 +12,7 @@ import {
   smiKlientPriloha,
   type ChatPriloha,
 } from '@/lib/chatPrilohy';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * DOK DOTAZŮ PRO KLIENTA (zadání 12. 9. 2026: „dal bych pryč celé ty rychlé
@@ -471,7 +472,12 @@ export function DotazyDock() {
                     {t('dotazy.projektUzavren')}
                   </p>
                 ) : (
-                  <form onSubmit={odesli} className="border-t border-line p-3 flex flex-col gap-2 shrink-0">
+                  <PlochaProPretazeni
+                    onSoubory={pridejPrilohy}
+                    bezBoxu
+                    popisek={t('obecne.pustteSoubory')}
+                  >
+                  <form onSubmit={odesli} className="relative border-t border-line p-3 flex flex-col gap-2 shrink-0">
                     {prilohy.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {prilohy.map((p, i) => (
@@ -546,6 +552,7 @@ export function DotazyDock() {
                     </button>
                     </div>
                   </form>
+                  </PlochaProPretazeni>
                 )}
               </>
             )}

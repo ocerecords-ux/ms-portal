@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * Obrazovka Banka (zadání 17. 9. 2026: „potřebuju, ať se ta banka páruje
@@ -294,6 +295,11 @@ export function BankaKlient({
         </p>
       )}
 
+      <PlochaProPretazeni
+        onSoubory={(soubory) => void nahrajVypis(soubory[0])}
+        vypnuto={busy !== null}
+        popisek={t('obecne.pustteSoubor')}
+      >
       <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="font-display text-xl text-ink m-0">{t('banka.napojeneUcty')}</h2>
@@ -371,6 +377,7 @@ export function BankaKlient({
           </div>
         )}
       </section>
+      </PlochaProPretazeni>
 
       <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
         <h2 className="font-display text-xl text-ink m-0">{t('banka.cekaNaTebe')}</h2>

@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/doklady';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { prelozitKolem } from '@/lib/jazyk';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * DODATEČNÁ FAKTURA KE SMLOUVĚ (zadání 25. 9. 2026: „my vytvoříme herci
@@ -212,6 +213,17 @@ export function FakturaKeSmlouve({
             </div>
           )}
 
+          <PlochaProPretazeni
+            onSoubory={(soubory) => {
+              // Pole souboru je neovladane - pustene soubory se do nej vlozi,
+              // at je u nej videt jejich jmeno a odeslou se jako vybrane.
+              const prenos = new DataTransfer();
+              for (const s of soubory) prenos.items.add(s);
+              if (vstup.current) vstup.current.files = prenos.files;
+            }}
+            vypnuto={pracuji}
+            popisek={t('obecne.pustteSoubory')}
+          >
           <div className="border-t border-line pt-4 flex flex-col gap-3">
             <span className="text-sm font-body text-ink">{t('vydaj.neboFakturuNahrajte')}</span>
             <input
@@ -263,6 +275,7 @@ export function FakturaKeSmlouve({
               </button>
             </div>
           </div>
+          </PlochaProPretazeni>
         </>
       )}
     </div>

@@ -15,6 +15,7 @@ import {
   type UkazkaData,
 } from '@/lib/prezentaceNabidky';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * SPRÁVA KNIHOVNY UKÁZEK (11. 10. 2026).
@@ -41,7 +42,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
     [druh, hledani, ukazky],
   );
 
-  async function nahraj(soubory: FileList | null) {
+  async function nahraj(soubory: ArrayLike<File> | null) {
     if (!soubory || soubory.length === 0) return;
     setChyba(null);
 
@@ -158,6 +159,11 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
         />
       </div>
 
+      <PlochaProPretazeni
+        onSoubory={(soubory) => void nahraj(soubory)}
+        vypnuto={nahravam !== null}
+        popisek={t('obecne.pustteSoubory')}
+      >
       <label className="rounded-card border border-dashed border-line bg-surface p-4 flex flex-col gap-1 cursor-pointer hover:border-brand-purple">
         <span className="font-heading font-semibold text-sm text-ink">
           {nahravam ? t('ukazky.nahravam', { nazev: nahravam }) : t('ukazky.nahrat')}
@@ -174,6 +180,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
           className="hidden"
         />
       </label>
+      </PlochaProPretazeni>
 
       {chyba && <p className="m-0 font-body text-sm text-danger">{chyba}</p>}
 

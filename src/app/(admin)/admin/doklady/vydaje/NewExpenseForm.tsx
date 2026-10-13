@@ -317,7 +317,7 @@ export function NewExpenseForm({
       <PlochaProPretazeni
         onSoubory={pridejSoubory}
         vypnuto={cteni}
-        popisek={t('vydaj.pustteSoubory')}
+        popisek={t('obecne.pustteSoubory')}
       >
       <div className="flex flex-col gap-3 bg-tint border border-line rounded-lg px-4 py-3">
         <input

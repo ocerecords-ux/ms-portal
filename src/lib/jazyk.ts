@@ -141,6 +141,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'obecne.otevrit': { cs: 'Otevřít', en: 'Open' },
   'obecne.upravit': { cs: 'Upravit', en: 'Edit' },
   'obecne.stahnout': { cs: 'Stáhnout', en: 'Download' },
+  // Přetažení souboru do plochy (zadání 13. 10. 2026, Karolína Zbořilová).
+  // Společné pro celý portál - viz components/PlochaProPretazeni.tsx.
+  'obecne.pustteSoubory': { cs: 'Pusťte soubory sem…', en: 'Drop the files here…' },
+  'obecne.pustteSoubor': { cs: 'Pusťte soubor sem…', en: 'Drop the file here…' },
+  'obecne.neboPretazenim': {
+    cs: 'Nebo sem soubor rovnou přetáhněte.',
+    en: 'Or simply drag a file in here.',
+  },
   'obecne.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
   'obecne.skryt': { cs: 'Skrýt', en: 'Hide' },
 
@@ -2979,12 +2987,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'vydaj.vyberSouboruNapoveda': {
     cs: 'Vyberte PDF, sken nebo fotku dokladu (klidně víc souborů), nebo je sem rovnou přetáhněte - částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.',
     en: 'Choose a PDF, a scan or a photo of the document (several files are fine), or just drag them in here — the amount, the date and the VAT will be filled in for you. Please check them before saving.',
-  },
-  // Přetažení souboru do plochy (zadání 13. 10. 2026, Karolína Zbořilová).
-  'vydaj.pustteSoubory': { cs: 'Pusťte soubory sem…', en: 'Drop the files here…' },
-  'vydaj.neboPretazenim': {
-    cs: 'Nebo sem soubor rovnou přetáhněte.',
-    en: 'Or simply drag a file in here.',
   },
   'vydaj.souborDoklad': { cs: 'Doklad', en: 'Document' },
   'vydaj.souborPriloha': { cs: 'Příloha', en: 'Attachment' },

@@ -11,6 +11,7 @@ import {
   type SkladbaRadek,
 } from '@/lib/hudba';
 import { nahrajDoUloziste } from './spolecne';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * SPRÁVA HUDBY DO PŘÍBĚHŮ (zadání 8. 10. 2026).
@@ -147,6 +148,11 @@ export function Hudba({ onZmena }: { onZmena?: () => void }) {
       </button>
 
       {otevreno && (
+        <PlochaProPretazeni
+          onSoubory={(soubory) => void pridej(soubory[0])}
+          vypnuto={pracuji}
+          popisek={t('obecne.pustteSoubor')}
+        >
         <div className="flex flex-col gap-3 rounded-card border border-line p-3">
           <p className="m-0 font-body text-xs text-muted">{t('pribehy.hudbaProc')}</p>
 
@@ -234,6 +240,7 @@ export function Hudba({ onZmena }: { onZmena?: () => void }) {
             </ul>
           )}
         </div>
+        </PlochaProPretazeni>
       )}
     </div>
   );

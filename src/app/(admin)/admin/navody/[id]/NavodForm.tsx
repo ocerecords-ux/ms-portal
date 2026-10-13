@@ -7,6 +7,7 @@ import { DRUHY_ZAKAZEK, KATEGORIE_NAVODU, navodNaHtml, nazevDruhuZakazky } from 
 import { nazevRole } from '@/lib/roles';
 import { ALL_ROLES } from '@/lib/menu';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * Psaní návodu (zadání 16. 9. 2026).
@@ -162,7 +163,13 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
       </label>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <label className="flex flex-col gap-1">
+        <PlochaProPretazeni
+          onSoubory={(soubory) => void vlozObrazek(soubory[0])}
+          vypnuto={nahravam}
+          bezBoxu
+          popisek={t('obecne.pustteSoubor')}
+        >
+        <label className="relative flex flex-col gap-1">
           <span className="flex items-center justify-between gap-3 flex-wrap">
             <span className="text-sm font-heading font-semibold text-ink">
               {t('navod.text')} <span className="font-normal text-muted">{t('navod.textMarkdown')}</span>
@@ -200,6 +207,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
             placeholder={t('navod.textPlaceholder')}
           />
         </label>
+        </PlochaProPretazeni>
 
         <div className="flex flex-col gap-1 min-w-0">
           <span className="text-sm font-heading font-semibold text-ink">{t('navod.nahled')}</span>

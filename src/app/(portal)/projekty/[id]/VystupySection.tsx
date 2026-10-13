@@ -14,6 +14,7 @@ import {
   zakladNazvu,
   type VystupData,
 } from '@/lib/vystupy';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * ZÁLOŽKA „VÝSTUPY" (zadání 26. 9. 2026: „u jednoho projektu máme více
@@ -668,6 +669,11 @@ function VystupRadek({
       </div>
 
       {otevrenText && (
+        <PlochaProPretazeni
+          onSoubory={(soubory) => nahrajText(soubory[0])}
+          vypnuto={!canEdit || nacitam || pracuje}
+          popisek={t('obecne.pustteSoubor')}
+        >
         <div className="mt-1 ml-3 flex flex-col gap-2 rounded-card border border-line bg-field/40 px-3 py-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
@@ -710,6 +716,7 @@ function VystupRadek({
 
           <p className="text-[11px] font-body text-muted m-0">{t('vystupy.textFormat')}</p>
         </div>
+        </PlochaProPretazeni>
       )}
 
       {delkaSpatne && (

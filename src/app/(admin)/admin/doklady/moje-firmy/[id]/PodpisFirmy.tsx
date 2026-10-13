@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * Podpis, který se tiskne na faktury této firmy (zadání 21. 9. 2026: „na
@@ -54,6 +55,11 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
   }
 
   return (
+    <PlochaProPretazeni
+      onSoubory={(soubory) => vybrano(soubory[0])}
+      vypnuto={pracuji}
+      popisek={t('obecne.pustteSoubor')}
+    >
     <section className="bg-surface border border-line rounded-card p-6 flex flex-col gap-3 shadow-sm">
       <div>
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
@@ -104,6 +110,7 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
       </div>
       {chyba && <p className="text-danger text-sm m-0">{chyba}</p>}
     </section>
+    </PlochaProPretazeni>
   );
 }
 

@@ -22,6 +22,7 @@ import {
   zaregistrujOfflineWorker,
   type ZapisVeFronte,
 } from '@/lib/preposlechOffline';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -1300,8 +1301,23 @@ export function Preposlech({
     pdfObalRef.current?.querySelector(`[data-strana="${cil}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  /**
+   * SOUBORY PUŠTĚNÉ DO PŘEPOSLECHU (13. 10. 2026). PDF je text knihy,
+   * zvuk jsou stopy - podá se to samé, co obě tlačítka nahm, jen se pozná,
+   * co je co. Co není ani jedno (náhodný dokument), se tiše přejde.
+   */
+  function prijmiPustene(soubory: File[]) {
+    const jePdf = (f: File) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+    const jeZvuk = (f: File) =>
+      f.type.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac|ogg|opus|aif|aiff|wma)$/i.test(f.name);
+    const pdf = soubory.find(jePdf);
+    const zvuk = soubory.filter(jeZvuk);
+    if (pdf) void nactiPdfZeSouboru(pdf);
+    if (zvuk.length > 0) pridejStopyZeSouboru(zvuk);
+  }
+
   /** Ruční záloha, když složka projektu není po ruce. */
-  function pridejStopyZeSouboru(seznam: FileList) {
+  function pridejStopyZeSouboru(seznam: ArrayLike<File>) {
     const soubory = Array.from(seznam).sort((a, b) => a.name.localeCompare(b.name, 'cs', { numeric: true }));
     const nove: Stopa[] = soubory.map((file) => {
       const url = URL.createObjectURL(file);
@@ -2320,6 +2336,12 @@ export function Preposlech({
         </p>
       )}
 
+      <PlochaProPretazeni
+        onSoubory={prijmiPustene}
+        vypnuto={jenPoslech}
+        bezBoxu
+        popisek={t('obecne.pustteSoubory')}
+      >
       <div
         ref={mrizkaRef}
         className="relative grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-4 items-stretch"
@@ -2946,6 +2968,7 @@ export function Preposlech({
           </aside>
         )}
       </div>
+      </PlochaProPretazeni>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from '@/lib/socialni';
 import type { ObrazekRadek, PrispevekDetail } from '@/lib/socialniServer';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
  * EDITOR PŘÍSPĚVKU (zadání 27. 9. 2026: „aby tam bylo něco jako Canva",
@@ -456,7 +457,12 @@ export function Editor({
 
       <div className="grid grid-cols-1 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,360px)] gap-5 items-start">
         {/* PLÁTNO */}
-        <div className="flex flex-col gap-3 min-w-0">
+        <PlochaProPretazeni
+          onSoubory={(soubory) => void nahrajObrazek(soubory[0])}
+          bezBoxu
+          popisek={t('obecne.pustteSoubor')}
+        >
+        <div className="relative flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <button type="button" onClick={pridejText} className={`${pole} cursor-pointer hover:border-brand-purple`}>
               {t('siteEditor.pridatText')}
@@ -548,6 +554,7 @@ export function Editor({
             {t('siteEditor.navodKTazeni')}
           </span>
         </div>
+        </PlochaProPretazeni>
 
         {/* PANEL */}
         <div className="flex flex-col gap-3 min-w-0 min-[1100px]:sticky min-[1100px]:top-4">
@@ -1010,6 +1017,10 @@ function Pozadi({
       )}
 
       {p.druh === 'obrazek' && (
+        <PlochaProPretazeni
+          onSoubory={(soubory) => onObrazek(soubory[0])}
+          popisek={t('obecne.pustteSoubor')}
+        >
         <div className="flex flex-col gap-2">
           <label className={`${pole} cursor-pointer text-center hover:border-brand-purple`}>
             {t('siteEditor.nahratFotku')}
@@ -1036,6 +1047,7 @@ function Pozadi({
             />
           </label>
         </div>
+        </PlochaProPretazeni>
       )}
     </div>
   );

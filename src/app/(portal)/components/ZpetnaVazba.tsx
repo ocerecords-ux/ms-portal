@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { MAX_DELKA_TEXTU, MAX_PRILOH, type PodobnaPripominka } from '@/lib/pripominky';
 import { usePreklad } from './JazykProvider';
+import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /** Co z připomínky ukazuje panel v liště. */
 type PripominkaVPanelu = {
@@ -192,6 +193,11 @@ export function ZpetnaVazba({
       </button>
 
       {otevreno && (
+        <PlochaProPretazeni
+          onSoubory={pridejSoubory}
+          bezBoxu
+          popisek={t('obecne.pustteSoubory')}
+        >
         <div
           style={{ top: shora }}
           className="fixed right-3 sm:right-6 w-[420px] max-w-[calc(100vw-24px)] bg-surface border border-line rounded-card shadow-lg p-4 z-50 flex flex-col gap-3"
@@ -389,6 +395,7 @@ export function ZpetnaVazba({
             </>
           )}
         </div>
+        </PlochaProPretazeni>
       )}
     </div>
   );

@@ -23,6 +23,7 @@ export function PlochaProPretazeni({
   onSoubory,
   popisek,
   vypnuto = false,
+  bezBoxu = false,
   className = '',
   children,
 }: {
@@ -32,6 +33,14 @@ export function PlochaProPretazeni({
   popisek: string;
   /** Například když se zrovna nahrává - puštěný soubor se zahodí. */
   vypnuto?: boolean;
+  /**
+   * OBAL NEMÁ VLASTNÍ BOX (`display: contents`). Pro místa, kde je obalovaný
+   * prvek položený rozložením rodiče - dlaždice v mřížce, pružný sloupec,
+   * ukotvený panel. Obyčejný `div` by se mezi ně vložil a rozložení
+   * rozházel; takhle se chová, jako by tam nebyl, a zvýraznění si sedne na
+   * obalovaný prvek - ten proto musí mít `relative` (nebo `fixed`).
+   */
+  bezBoxu?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -48,7 +57,7 @@ export function PlochaProPretazeni({
 
   return (
     <div
-      className={`relative ${className}`}
+      className={bezBoxu ? 'contents' : `relative ${className}`}
       onDragEnter={(e) => {
         if (vypnuto || !nesouSoubory(e)) return;
         e.preventDefault();
