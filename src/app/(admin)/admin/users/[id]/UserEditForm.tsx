@@ -18,7 +18,7 @@ import { LOKACE_S_BARVOU, nazevMesta } from '@/lib/lokaceHercu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
-import { prelozitKolem } from '@/lib/jazyk';
+import { prelozitKolem, textPristupu } from '@/lib/jazyk';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -693,11 +693,14 @@ export function UserEditForm({
                                 28. 9. 2026: „dejme ty naše jednoduché ikony,
                                 ať je to hezké") - devět zaškrtávátek pod sebou
                                 se jinak čte jako seznam, ne jako sekce. */}
-                            <IkonaTypu klic={sekce.ikona} typProjektu={sekce.nazev} />
+                            <IkonaTypu
+                              klic={sekce.ikona}
+                              typProjektu={textPristupu(jazyk, sekce.klic, 'nazev', sekce.nazev)}
+                            />
                             <span className="text-sm font-body text-ink font-semibold">
-                              {sekce.nazev}
+                              {textPristupu(jazyk, sekce.klic, 'nazev', sekce.nazev)}
                               <span className="block text-xs text-muted font-normal">
-                                {sekce.popis}
+                                {textPristupu(jazyk, sekce.klic, 'popis', sekce.popis)}
                               </span>
                             </span>
                           </label>
@@ -726,8 +729,10 @@ export function UserEditForm({
                                     className="w-4 h-4 accent-brand-purple mt-0.5"
                                   />
                                   <span className="text-sm font-body text-ink">
-                                    {pravo.nazev}
-                                    <span className="block text-xs text-muted">{pravo.popis}</span>
+                                    {textPristupu(jazyk, pravo.klic, 'nazev', pravo.nazev)}
+                                    <span className="block text-xs text-muted">
+                                      {textPristupu(jazyk, pravo.klic, 'popis', pravo.popis)}
+                                    </span>
                                   </span>
                                 </label>
                               ))}
