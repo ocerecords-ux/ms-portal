@@ -8,7 +8,7 @@ import { odkazNaFotku } from '@/lib/fotky';
 import { initials } from '@/lib/chat';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
-import { canManageCalendar } from '@/lib/roles';
+import { canManageCalendar, isInternalRole } from '@/lib/roles';
 import { maStudioSRezervacemi } from '@/lib/bookingServer';
 import { ThemeToggle } from '@/app/(portal)/components/ThemeToggle';
 import { OdhlasitSe } from './studio/OdhlasitSe';
@@ -86,6 +86,23 @@ export default async function StudioLayout({ children }: { children: React.React
   const jmeno = ucet?.name?.trim() || ucet?.email || session.user.email || '';
   const fotka = odkazNaFotku(session.user.id, ucet?.maFotku);
 
+  /**
+   * LOGO JE CESTA VEN (hlášení Matěje Černého 14. 10. 2026: „ze záložky
+   * Studio mi nefunguje logo jako home button" — ze stránky studia se pak
+   * nedostal zpátky do portálu).
+   *
+   * Sekce studia je schválně holá: žádná lišta, žádné menu. Pro klienta
+   * studia zvenku je to v pořádku, ten tu je doma. Ale chodíme sem i my —
+   * vedoucí pobočky si tu spravuje rezervace — a pro nás to byla slepá
+   * ulice: ven vedlo jen tlačítko Odhlásit nebo ruční přepisování adresy.
+   *
+   * Logo proto vede DOMŮ, a domů znamená u každého něco jiného: nás vrátí
+   * do portálu, klienta studia nechá na rezervacích. Tím se klient zvenku
+   * nedozví o ničem, co vidět nemá.
+   */
+  const jsemZTymu = isInternalRole(session.user.role as never);
+  const domu = jsemZTymu ? '/projekty' : '/studio';
+
   return (
     <JazykProvider jazyk={jazyk}>
       <div className="min-h-screen bg-paper flex flex-col">
@@ -93,19 +110,43 @@ export default async function StudioLayout({ children }: { children: React.React
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <span className="flex items-center gap-2.5 min-w-0">
               {/* Pohyblivé logo Mediaspace (25. 9. 2026) - stejné jako na
-                  přihlášení, ne zkratka MS. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/mediaspace-logo.gif"
-                alt="Mediaspace"
-                className="h-9 sm:h-10 w-auto shrink-0"
-              />
+                  přihlášení, ne zkratka MS. Od 14. 10. 2026 je to odkaz domů,
+                  viz `domu` výše. */}
+              <Link
+                href={domu}
+                title={jsemZTymu ? 'Back to MS Portal' : 'Studio booking'}
+                aria-label={jsemZTymu ? 'Back to MS Portal' : 'Studio booking'}
+                className="shrink-0 no-underline"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/mediaspace-logo.gif"
+                  alt="Mediaspace"
+                  className="h-9 sm:h-10 w-auto shrink-0"
+                />
+              </Link>
               <span className="w-px h-6 bg-white/40 shrink-0" aria-hidden="true" />
-              <span className="font-heading font-semibold text-sm sm:text-base truncate">
+              {/* Zároveň i druhá, větší plocha na totéž - kdo míří na nápis,
+                  chce též domů. */}
+              <Link
+                href={domu}
+                className="font-heading font-semibold text-sm sm:text-base truncate text-white no-underline hover:text-brand-green transition-colors"
+              >
                 Studio booking
-              </span>
+              </Link>
             </span>
             <span className="flex items-center gap-2 shrink-0">
+              {/* Cesta ven i NAPSANÁ, ne jen schovaná v logu (14. 10. 2026).
+                  Kdo sem přišel z portálu, má vidět, kudy zpátky; klient studia
+                  zvenku žádný portál nemá a nic takového se mu neukáže. */}
+              {jsemZTymu && (
+                <Link
+                  href="/projekty"
+                  className="rounded-pill border border-white/25 px-3 py-1 text-[11px] font-heading font-semibold text-white/85 hover:text-white hover:border-white/50 transition-colors no-underline whitespace-nowrap"
+                >
+                  ← MS Portal
+                </Link>
+              )}
               <Link
                 href="/studio/napoveda"
                 title="Help"
