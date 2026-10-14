@@ -283,6 +283,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekt.zalozka.licencniList': { cs: 'Licenční list', en: 'Licence sheet' },
   'projekt.zalozka.pripominky': { cs: 'Připomínky', en: 'Comments' },
   'projekt.zalozka.preposlech': { cs: 'Přeposlech', en: 'Proof-listening' },
+  'projekt.zalozka.tagy': { cs: 'Tagy', en: 'Tags' },
   'projekt.zalozka.protokol': { cs: 'Natáčecí protokol', en: 'Recording log' },
   'projekt.zalozka.historie': { cs: 'Historie', en: 'History' },
   'projekt.zalozka.doklady': { cs: 'Doklady', en: 'Documents' },
@@ -6813,6 +6814,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'obecne.odebrat': { cs: 'Odebrat', en: 'Remove' },
 
   /* Měna klienta (12. 10. 2026) - sazba za NS a předběžná cena v objednávce. */
+  'firma.tagyPovoleny': { cs: 'Tagování finálních nahrávek', en: 'Tagging of final recordings' },
+  'firma.tagyPovolenyPopis': {
+    cs: 'U projektů téhle firmy přibude záložka Tagy - vyplní se vlastnosti souboru a portál je zapíše do hotových MP3 ve složce projektu.',
+    en: 'Projects of this company get a Tags tab - you fill in the file properties and the portal writes them into the finished MP3s in the project folder.',
+  },
+  'firma.tagyVydavatel': { cs: 'Vydavatel do tagů', en: 'Publisher for the tags' },
+  'firma.tagyVydavatelHint': {
+    cs: 'Předvyplní se do tagů každého projektu téhle firmy, třeba „Voxi". U projektu jde přepsat.',
+    en: 'Pre-filled into the tags of every project of this company, e.g. „Voxi". It can be overridden per project.',
+  },
   'firma.mena': { cs: 'Měna klienta', en: 'Client currency' },
   'firma.menaHint': {
     cs: 'V téhle měně se klientovi počítá sazba za normostranu i předběžná cena v objednávce. Na dokladu se předvyplní, ale dá se tam přepsat.',
@@ -7795,6 +7806,45 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'obecne.denKratce.4': { cs: 'čt', en: 'Thu' },
   'obecne.denKratce.5': { cs: 'pá', en: 'Fri' },
   'obecne.denKratce.6': { cs: 'so', en: 'Sat' },
+
+  /* Tagy finální nahrávky (14. 10. 2026). */
+  'tagy.uvod': {
+    cs: 'Vlastnosti souboru pro hotové MP3 ve složce projektu. Údaje vlevo platí pro celou knihu a zadávají se jednou; u každé stopy se mění jen její název. Zápis přelepí značku rovnou v souborech na Disku - zvuk zůstane beze změny.',
+    en: 'File properties for the finished MP3s in the project folder. The fields on the left apply to the whole book and are filled in once; only the track name differs per file. Writing replaces the tag directly in the files on the Drive - the audio itself is untouched.',
+  },
+  'tagy.spolecne': { cs: 'Společné pro celou knihu', en: 'Shared by the whole book' },
+  'tagy.autor': { cs: 'Autor knihy (artist)', en: 'Book author (artist)' },
+  'tagy.autorPriklad': { cs: 'např. Astrid Lindgrenová', en: 'e.g. Astrid Lindgren' },
+  'tagy.album': { cs: 'Název audioknihy (album)', en: 'Audiobook title (album)' },
+  'tagy.interpret': { cs: 'Herec (albumartist)', en: 'Narrator (albumartist)' },
+  'tagy.interpretPriklad': { cs: 'např. Tereza Kostková', en: 'e.g. Tereza Kostková' },
+  'tagy.rok': { cs: 'Rok vydání', en: 'Year' },
+  'tagy.zanr': { cs: 'Žánr', en: 'Genre' },
+  'tagy.vydavatel': { cs: 'Vydavatel (label)', en: 'Publisher (label)' },
+  'tagy.slozka': { cs: 'Složka s hotovými MP3', en: 'Folder with the finished MP3s' },
+  'tagy.ulozit': { cs: 'Uložit údaje', en: 'Save the details' },
+  'tagy.zapsat': { cs: 'Zapsat tagy do souborů', en: 'Write the tags into the files' },
+  'tagy.zapisuji': { cs: 'Zapisuji…', en: 'Writing…' },
+  'tagy.ulozeno': { cs: 'Uloženo. Do souborů se ještě nesáhlo.', en: 'Saved. The files have not been touched yet.' },
+  'tagy.ulozeniNeslo': { cs: 'Uložit se to nepodařilo.', en: 'Saving failed.' },
+  'tagy.zapisNeslo': { cs: 'Zápis se nepodařil.', en: 'Writing failed.' },
+  'tagy.zapsanoVse': { cs: 'Hotovo, všechny stopy jsou otagované.', en: 'Done, every track is tagged.' },
+  'tagy.zapsanoSChybou': {
+    cs: 'Část stop se nepodařila - u nich je napsáno proč. Ostatní jsou hotové.',
+    en: 'Some tracks failed - the reason is next to each. The rest are done.',
+  },
+  'tagy.nactenoNeslo': { cs: 'Složku se nepodařilo načíst.', en: 'The folder could not be loaded.' },
+  'tagy.naposledy': { cs: 'Naposledy zapsáno {kdy}', en: 'Last written {kdy}' },
+  'tagy.zadneMp3': {
+    cs: 'V téhle složce žádné MP3 nejsou. Vyber složku, kde leží finální soubory.',
+    en: 'There are no MP3s in this folder. Pick the folder where the final files are.',
+  },
+  'tagy.nazevStopy': { cs: 'Název stopy (title)', en: 'Track name (title)' },
+  'tagy.soubor': { cs: 'Soubor', en: 'File' },
+  'tagy.stavBezi': { cs: 'zapisuji…', en: 'writing…' },
+  'tagy.stavHotovo': { cs: 'otagováno', en: 'tagged' },
+  'tagy.stavChyba': { cs: 'nepovedlo se', en: 'failed' },
+  'tagy.stavDrive': { cs: 'otagováno dřív', en: 'tagged earlier' },
 
   /* Kapacita studií. */
   'kapacita.uvodPredTucnym': {

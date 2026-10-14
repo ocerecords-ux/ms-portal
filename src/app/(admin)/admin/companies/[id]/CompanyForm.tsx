@@ -83,6 +83,13 @@ export function CompanyForm({
    * nastavit sazbu za NS v librách"). Platí pro sazbu za normostranu
    * a předběžnou cenu v objednávce; dokladu se jen předvyplní.
    */
+  // Tagování finálních nahrávek (14. 10. 2026) - zatím jen Albatros.
+  const [tagyPovoleny, setTagyPovoleny] = useState<boolean>(
+    Boolean((company as { tagyPovoleny?: boolean }).tagyPovoleny),
+  );
+  const [tagyVydavatel, setTagyVydavatel] = useState<string>(
+    (company as { tagyVydavatel?: string | null }).tagyVydavatel ?? '',
+  );
   const [mena, setMena] = useState<Currency>(
     ((company as { mena?: Currency }).mena ?? 'CZK') as Currency,
   );
@@ -210,6 +217,8 @@ export function CompanyForm({
                 rezieKlientaUserId: rezieKlientaUserId || null,
                 vydavatelId: vydavatelId || null,
                 mena,
+                tagyPovoleny,
+                tagyVydavatel: tagyPovoleny ? tagyVydavatel : '',
                 nabidkyEmaily: nabidkyEmaily.map((e) => e.trim()).filter(Boolean),
               }
             : {}),
@@ -435,6 +444,29 @@ export function CompanyForm({
               <span className="text-xs font-body text-muted">{t('firma.druhZakazekPopis')}</span>
             </div>
           </AdminField>
+
+          {/* TAGY FINÁLNÍ NAHRÁVKY (zadání 14. 10. 2026: „mělo by to fungovat
+              u Albatrosu jen zatím"). Záložka Tagy u projektu se ukáže jen
+              firmám, které to mají zapnuté tady - ne podle názvu firmy v kódu. */}
+          <AdminField label={t('firma.tagyPovoleny')}>
+            <div className="flex flex-col gap-1.5">
+              <Volba vybrano={tagyPovoleny} onZmena={setTagyPovoleny}>
+                {t('firma.tagyPovoleny')}
+              </Volba>
+              <span className="text-xs font-body text-muted">{t('firma.tagyPovolenyPopis')}</span>
+            </div>
+          </AdminField>
+
+          {tagyPovoleny && (
+            <AdminField label={t('firma.tagyVydavatel')} hint={t('firma.tagyVydavatelHint')}>
+              <input
+                value={tagyVydavatel}
+                onChange={(e) => setTagyVydavatel(e.target.value)}
+                placeholder="Voxi"
+                className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
+              />
+            </AdminField>
+          )}
 
           {/* Na klic = platime i herce a jednorazove veci. Ukazuje se jen
               u audioknih, u reklamy ten pojem nedava smysl. */}

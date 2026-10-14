@@ -43,6 +43,10 @@ const schema = z.object({
   rezieKlientaUserId: z.string().trim().max(100).nullable().optional(),
   /** Pod kterou naši firmu klient patří (12. 10. 2026) - viz lib/naseFirmy.ts. */
   vydavatelId: z.string().trim().max(100).nullable().optional(),
+  /** Tagování finálních nahrávek (14. 10. 2026) - záložka Tagy u projektů. */
+  tagyPovoleny: z.boolean().optional(),
+  /** Výchozí vydavatel do tagů (14. 10. 2026) - u Albatrosu „Voxi". */
+  tagyVydavatel: z.string().trim().max(120).optional(),
   /** Měna klienta (12. 10. 2026) - sazba za normostranu a předběžná cena. */
   mena: z.enum(['CZK', 'EUR', 'USD', 'GBP']).optional(),
   /** Kam posílat cenové nabídky (12. 10. 2026) - prázdné pole = jako dosud. */
@@ -103,6 +107,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                 : {}),
               ...(data.vydavatelId !== undefined ? { vydavatelId: data.vydavatelId || null } : {}),
               ...(data.mena !== undefined ? { mena: data.mena } : {}),
+              ...(data.tagyPovoleny !== undefined ? { tagyPovoleny: data.tagyPovoleny } : {}),
+              ...(data.tagyVydavatel !== undefined ? { tagyVydavatel: data.tagyVydavatel || null } : {}),
               ...(data.nabidkyEmaily !== undefined
                 ? { nabidkyEmaily: data.nabidkyEmaily.map((e) => e.trim()).filter(Boolean) }
                 : {}),

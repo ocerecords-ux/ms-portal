@@ -748,6 +748,70 @@ export async function nahrajSouborDoSlozky(
   }
 }
 
+/**
+ * PŘEPSÁNÍ OBSAHU UŽ EXISTUJÍCÍHO SOUBORU (zadání 14. 10. 2026 - tagy
+ * finálních nahrávek).
+ *
+ * Soubor si nechává SVÉ ID, jméno i odkaz - mění se jen obsah. To je důležité:
+ * na stopy ukazuje AudioTagger, odkazy v mailech i to, co má klient otevřené.
+ * Nahrát vedle a staré smazat by všechny ty odkazy utrhlo.
+ *
+ * Google si předchozí podobu drží ve verzích souboru, takže se dá na Disku
+ * vrátit zpátky.
+ */
+export async function prepisObsahSouboru(
+  fileId: string,
+  bytes: Buffer,
+  mime = 'application/octet-stream',
+): Promise<{ ok: true } | { ok: false; duvod: string }> {
+  const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+  if (!token) return { ok: false, duvod: 'Portál se nepřihlásil ke Google Disku.' };
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media&supportsAllDrives=true&keepRevisionForever=false`,
+      {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': mime },
+        // Uint8Array, ne Buffer - viz nahrajSouborDoSlozky.
+        body: new Uint8Array(bytes),
+        cache: 'no-store',
+      },
+    );
+    if (!res.ok) {
+      const telo = await res.text().catch(() => '');
+      console.error('Google Drive: prepsani obsahu souboru selhalo', res.status, telo);
+      return { ok: false, duvod: popisChybyDisku(res.status, telo) };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('Google Drive: prepsani obsahu souboru spadlo:', err);
+    return { ok: false, duvod: 'Disk neodpověděl.' };
+  }
+}
+
+/** Obsah souboru z Disku do paměti. Velké soubory sem netahat po desítkách. */
+export async function stahniSoubor(
+  fileId: string,
+): Promise<{ ok: true; bytes: Buffer } | { ok: false; duvod: string }> {
+  const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+  if (!token) return { ok: false, duvod: 'Portál se nepřihlásil ke Google Disku.' };
+  try {
+    const res = await fetch(
+      `${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+    );
+    if (!res.ok) {
+      const telo = await res.text().catch(() => '');
+      console.error('Google Drive: stazeni souboru selhalo', res.status, telo);
+      return { ok: false, duvod: popisChybyDisku(res.status, telo) };
+    }
+    return { ok: true, bytes: Buffer.from(await res.arrayBuffer()) };
+  } catch (err) {
+    console.error('Google Drive: stazeni souboru spadlo:', err);
+    return { ok: false, duvod: 'Disk neodpověděl.' };
+  }
+}
+
 /** Soubor na Disku pro zálohu textů (viz lib/zalohaTextuServer.ts). */
 export type SouborNaDisku = {
   id: string;

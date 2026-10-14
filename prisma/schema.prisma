@@ -208,6 +208,18 @@ model Company {
   vydavatelId String?
   vydavatel   IssuerCompany? @relation("KlientVydavatel", fields: [vydavatelId], references: [id], onDelete: SetNull)
 
+  /// TAGOVÁNÍ FINÁLNÍCH NAHRÁVEK (zadání 14. 10. 2026: „potřebuju nějak
+  /// pořešit to, abychom mohli finální nahrávku otagovat. Mělo by to fungovat
+  /// u Albatrosu jen zatím").
+  ///
+  /// Záložka Tagy se u projektu ukáže jen firmám, které to mají zapnuté -
+  /// každý klient chce tagy jinak a u ostatních by to byla jen další záložka
+  /// navíc. Zapíná se v Administraci → Firmy, ne v kódu.
+  tagyPovoleny   Boolean @default(false)
+  /// Výchozí vydavatel (ID3 label) - u Albatrosu „Voxi". Předvyplní se do
+  /// tagů projektu, kde se dá přepsat.
+  tagyVydavatel  String?
+
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -931,6 +943,21 @@ model ProjectMeta {
   /// a řadí se podle něj.
   serie       String?
   serieDil    Int?
+
+  /// TAGY FINÁLNÍ NAHRÁVKY (zadání 14. 10. 2026). Společné pro celou knihu -
+  /// zadá se jednou a zapíše se do všech stop; mění se jen název stopy
+  /// (title), ten je u každé stopy vlastní (viz model TagStopa).
+  ///
+  /// Proč u projektu a ne až v okně tagování: u dalšího dílu série i při
+  /// opravě jedné stopy se to jinak vypisuje znovu a pokaždé trochu jinak.
+  tagAutor      String?   /// ID3 artist - AUTOR KNIHY, ne herec
+  tagAlbum      String?   /// ID3 album - název audioknihy
+  tagInterpret  String?   /// ID3 albumartist - herec
+  tagRok        Int?      /// ID3 year - rok vydání
+  tagZanr       String?   /// ID3 genre - domluveno „Speech"
+  tagVydavatel  String?   /// ID3 publisher - u Albatrosu „Voxi"
+  /// Kdy se tagy naposledy zapsaly do souborů na Disku.
+  tagyZapsanoAt DateTime?
 
   companyId       String?
   company         Company?         @relation("ProjektFirma", fields: [companyId], references: [id])
@@ -5015,4 +5042,31 @@ model PrezentaceUkazka {
 
   @@unique([prezentaceId, ukazkaId, sekce])
   @@index([prezentaceId, sekce, poradi])
+}
+
+/// NÁZEV JEDNÉ STOPY DO TAGU (zadání 14. 10. 2026).
+///
+/// Title se u každé stopy liší a bere se z reálného názvu souboru. Jenže ten
+/// bývá bez diakritiky („03_Jak se kotatko probudilo.mp3"), takže se opravuje
+/// ručně - a ta oprava musí přežít zavření okna i druhý zápis tagů.
+///
+/// Drží se na ID souboru na Disku, ne na pořadí: přibyde-li stopa doprostřed,
+/// nepřelepí se názvy všem ostatním.
+model TagStopa {
+  id              String    @id @default(cuid())
+  caflouProjectId String
+  /// Soubor na Google Disku, kterého se název týká.
+  driveFileId     String
+  /// Název souboru v době, kdy se title zapisoval - ať je poznat přejmenování.
+  nazevSouboru    String
+  /// Číslo stopy (ID3 track). Bere se z pořadí ve složce, dá se přepsat.
+  cislo           Int
+  title           String
+  /// Kdy se tahle stopa naposledy opravdu otagovala.
+  zapsanoAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([caflouProjectId, driveFileId])
+  @@index([caflouProjectId])
 }

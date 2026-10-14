@@ -35,6 +35,8 @@ import { ZnackyDokladu } from '@/lib/dokladyUProjektu';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
 import { nactiSerieFirmy } from '@/lib/serieServer';
+import { TagySekce } from './TagySekce';
+import { nactiTagy, tagovaniPovoleno } from '@/lib/tagyServer';
 import { NazevProjektu } from './NazevProjektu';
 import { expenseTotalMinor } from '@/lib/expenses';
 import { sessionsForPages } from '@/lib/calendar';
@@ -1179,6 +1181,24 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       ),
     });
   }
+  /**
+   * TAGY FINÁLNÍ NAHRÁVKY (zadání 14. 10. 2026: „potřebuju nějak pořešit to,
+   * abychom mohli finální nahrávku otagovat. Mělo by to fungovat u Albatrosu
+   * jen zatím").
+   *
+   * Záložka je JEN NÁŠ TÝM a jen u firem, které to mají zapnuté v Administraci
+   * → Firmy. Je to výrobní krok těsně před předáním - klientovi by k ničemu
+   * nebyla a u ostatních firem by to byla jen záložka navíc.
+   */
+  if (isInternalRole(session.user.role) && (await tagovaniPovoleno(caflouProjectId))) {
+    const tagy = await nactiTagy(caflouProjectId);
+    tabs.push({
+      key: 'tagy',
+      label: prelozit(jazyk, 'projekt.zalozka.tagy'),
+      content: <TagySekce caflouProjectId={caflouProjectId} pocatecni={tagy} />,
+    });
+  }
+
   // NATACECÍ PROTOKOL MA VLASTNI ZALOZKU (zadani 13. 9. 2026: „Natacecí
   // protokol presunme do zvlastni zalozky a nechme i v detailu u toho herce
   // jen odznak"). Drive visel pod hercem v prehledu projektu a u delsiho
