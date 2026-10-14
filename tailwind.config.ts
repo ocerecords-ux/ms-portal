@@ -48,6 +48,11 @@ const config: Config = {
         // Tmavy text na svetlych plochach znacky (zelena tlacitka a odznaky).
         // Pevna barva - "ink" by se v tmavem rezimu prevratil a zelena
         // zustava svetla, takze by na ni bylo svetle pismo.
+        //
+        // NA ZELENE PLOSE VZDYCKY TOHLE (14. 10. 2026: "bile pismo na zelenou
+        // nikdy prosim nedavejme"). Ne text-brand-purpleDark: ten se v tmavem
+        // rezimu rozsvecuje na #B49BFF (viz globals.css) a na zelene z nej
+        // zbyde necitelna kase.
         onAccent: '#201A33',
         // Plne obarvene stavove odznaky. Take pevne: bg-status-* se v tmavem
         // rezimu rozsvecuje kvuli citelnosti TEXTU, coz se pro plochu pod

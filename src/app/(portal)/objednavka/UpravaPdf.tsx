@@ -169,7 +169,7 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
                     : t('upravaPdf.vyraditStranu', { cislo: s.index + 1 })
                 }
                 className={`w-6 h-6 rounded-full text-xs leading-none ${
-                  s.vyrazena ? 'bg-brand-green text-brand-purpleDark' : 'bg-black/60 text-white hover:bg-red-600'
+                  s.vyrazena ? 'bg-brand-green text-onAccent' : 'bg-black/60 text-white hover:bg-red-600'
                 }`}
               >
                 {s.vyrazena ? '↺' : '×'}
@@ -221,7 +221,7 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
                 type="button"
                 onClick={() => prepni(velka)}
                 className={`h-9 px-3 rounded-lg text-sm font-heading font-semibold ${
-                  stranky[velka].vyrazena ? 'bg-brand-green text-brand-purpleDark' : 'bg-red-600 text-white'
+                  stranky[velka].vyrazena ? 'bg-brand-green text-onAccent' : 'bg-red-600 text-white'
                 }`}
               >
                 {stranky[velka].vyrazena ? t('upravaPdf.vratitStranku') : t('upravaPdf.vyraditStranku')}

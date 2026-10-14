@@ -130,7 +130,7 @@ export function CekaciOkno({
           rel="noopener noreferrer"
           className={`block text-center rounded-pill px-6 py-4 font-heading font-semibold text-base no-underline transition-colors ${
             bezi
-              ? 'bg-brand-green text-brand-purpleDark hover:bg-brand-greenDeep'
+              ? 'bg-brand-green text-onAccent hover:bg-brand-greenDeep'
               : 'bg-surface text-muted border border-line hover:text-ink hover:border-brand-purple'
           }`}
         >

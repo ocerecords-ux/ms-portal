@@ -172,7 +172,7 @@ export function AdOrderForm() {
           <button
             type="button"
             onClick={() => setDone(false)}
-            className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors"
+            className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-onAccent transition-colors"
           >
             {t('objednavka.dalsiObjednavka')}
           </button>
@@ -284,7 +284,7 @@ export function AdOrderForm() {
                     >
                       <span
                         className={`grid place-items-center w-9 h-9 rounded-pill ${
-                          vybrano ? 'bg-brand-green text-brand-purpleDark' : 'bg-white/10 text-white'
+                          vybrano ? 'bg-brand-green text-onAccent' : 'bg-white/10 text-white'
                         }`}
                       >
                         <KresbaIkony klic={sl.ikona} velikost={18} />
@@ -316,7 +316,7 @@ export function AdOrderForm() {
                       aria-pressed={vybrano}
                       className={`rounded-pill border px-3 py-1 text-xs font-heading tabular-nums transition-colors ${
                         vybrano
-                          ? 'border-brand-green bg-brand-green text-brand-purpleDark'
+                          ? 'border-brand-green bg-brand-green text-onAccent'
                           : 'border-white/30 text-white/80 hover:border-white/70'
                       }`}
                     >
@@ -489,7 +489,7 @@ export function AdOrderForm() {
         <button
           type="submit"
           disabled={(krok !== 'shrnuti' && !muzeDal) || submitting}
-          className="bg-brand-green text-brand-purpleDark font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {krok === 'shrnuti'
             ? submitting

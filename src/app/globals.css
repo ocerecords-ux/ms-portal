@@ -199,6 +199,11 @@ body {
 .dark .text-brand-purpleDark {
   color: #B49BFF;
 }
+/* POZOR NA ZELENOU PLOCHU (14. 10. 2026: „bílé písmo na zelenou nikdy
+   prosím nedávejme"). Pravidlo nahoře rozsvítí KAŽDÝ fialový text, i ten,
+   který leží na zelené - a ze zeleného tlačítka je pak nečitelná kaše.
+   Text na zelené proto nikdy nepíšeme fialovou, ale tokenem `onAccent`
+   (#201A33): ten je pevný a v tmavém režimu se nepřevrací. */
 .dark .hover\:text-brand-purple:hover {
   color: #B49BFF;
 }

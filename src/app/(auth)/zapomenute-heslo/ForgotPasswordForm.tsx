@@ -74,7 +74,7 @@ export function ForgotPasswordForm({ jazyk = 'cs' }: { jazyk?: Jazyk }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
+                className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-onAccent transition-colors disabled:opacity-60"
               >
                 {t(loading ? 'heslo.odesilam' : 'heslo.poslatOdkaz')}
               </button>

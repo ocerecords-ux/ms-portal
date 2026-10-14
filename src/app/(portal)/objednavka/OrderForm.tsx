@@ -348,7 +348,7 @@ export function OrderForm({
           <button
             type="button"
             onClick={() => setDone(false)}
-            className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors"
+            className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-onAccent transition-colors"
           >
             {t('objednavka.dalsiObjednavka')}
           </button>
@@ -584,7 +584,7 @@ export function OrderForm({
                   pocetChtelKlient.current = true;
                   void prepocitej(file, false);
                 }}
-                className="bg-brand-green text-brand-purpleDark rounded-md px-3.5 py-1.5 text-xs font-heading font-semibold"
+                className="bg-brand-green text-onAccent rounded-md px-3.5 py-1.5 text-xs font-heading font-semibold"
               >
                 {t('objednavka.spocitatNs')}
               </button>
@@ -643,7 +643,7 @@ export function OrderForm({
                   <button
                     type="button"
                     onClick={() => setPageCount(String(zaokrouhliNormostrany(rozbor.normostran)))}
-                    className="mt-2 bg-brand-green text-brand-purpleDark rounded-md px-3 py-1.5 text-xs font-heading font-semibold"
+                    className="mt-2 bg-brand-green text-onAccent rounded-md px-3 py-1.5 text-xs font-heading font-semibold"
                   >
                     {t('objednavka.doplnitDoObjednavky', { pocet: zaokrouhliNormostrany(rozbor.normostran) })}
                   </button>
@@ -697,7 +697,7 @@ export function OrderForm({
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex items-center gap-2.5 border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-brand-green"
+          className="inline-flex items-center gap-2.5 border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-onAccent transition-colors disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-brand-green"
         >
           {/* Za odesilani se rozbehne logo Mediaspace - stejna vlnka jako
               v AudioTaggeru, kdyz hraje nahravka (zadani 12. 9. 2026:

@@ -112,7 +112,7 @@ export default function LoginPage() {
                     title={NAZVY_JAZYKU[j]}
                     aria-pressed={j === jazyk}
                     className={`px-2.5 py-1 text-[11px] font-heading font-bold tracking-wide transition-colors ${
-                      j === jazyk ? 'bg-brand-green text-brand-purpleDark' : 'text-white/75 hover:text-white'
+                      j === jazyk ? 'bg-brand-green text-onAccent' : 'text-white/75 hover:text-white'
                     }`}
                   >
                     {ZKRATKY_JAZYKU[j]}
@@ -158,7 +158,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
+              className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-onAccent transition-colors disabled:opacity-60"
             >
               {phase === 'signing'
                 ? t('prihlaseni.probiha')
