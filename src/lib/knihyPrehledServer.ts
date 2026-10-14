@@ -6,7 +6,6 @@ import { DEFAULT_BUDGET_SETTINGS, computeBudget, type BudgetSettingsValues } fro
 import { durationMinutes, entryAmount } from '@/lib/timesheets';
 import { STAV_ODEVZDANO, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
-import { uplatniSpodniHranici } from '@/lib/price';
 
 /**
  * KNIHY, ROZPOČTY A ZISK (zadání 28. 9. 2026 pro Petera: „přehled celkový, na
@@ -423,13 +422,10 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     const schvalena = trzbySchvalenePrehled.get(p.caflouProjectId) ?? 0;
     const odeslana = trzbyOdeslanePrehled.get(p.caflouProjectId) ?? 0;
     const sazba = p.company?.ratePerPage ?? null;
-    // Spodní hranice ceny audioknihy (13. 10. 2026) - odhad z normostran
-    // nesmí vyjít níž, než za kolik se projekt vůbec rozjíždí, jinak by
-    // marže u tenkých knížek vypadala hůř, než jaká je.
-    const zSazby =
-      sazba != null && sazba > 0
-        ? uplatniSpodniHranici((p.pageCount ?? 0) * sazba, p.company?.mena ?? 'CZK').cena
-        : 0;
+    // Odhad ze sazby a normostran. Spodní hranice ceny se sem NEPROMÍTÁ
+    // (14. 10. 2026) - je to pravidlo pro novou objednávku, ne přepočet
+    // běžících zakázek; viz lib/price.ts.
+    const zSazby = sazba != null && sazba > 0 ? (p.pageCount ?? 0) * sazba : 0;
     const trzba = schvalena > 0 ? schvalena : odeslana > 0 ? odeslana : zSazby;
     const trzbaOdhad = schvalena === 0 && trzba > 0;
     const nakladyKnihy = vycerpano + vydajeKnihy;
@@ -849,13 +845,10 @@ export async function nactiKnihyUkazatele(
     const schvalena = trzbySchvalene.get(p.caflouProjectId) ?? 0;
     const odeslana = trzbyOdeslane.get(p.caflouProjectId) ?? 0;
     const sazba = p.company?.ratePerPage ?? null;
-    // Spodní hranice ceny audioknihy (13. 10. 2026) - odhad z normostran
-    // nesmí vyjít níž, než za kolik se projekt vůbec rozjíždí, jinak by
-    // marže u tenkých knížek vypadala hůř, než jaká je.
-    const zSazby =
-      sazba != null && sazba > 0
-        ? uplatniSpodniHranici((p.pageCount ?? 0) * sazba, p.company?.mena ?? 'CZK').cena
-        : 0;
+    // Odhad ze sazby a normostran. Spodní hranice ceny se sem NEPROMÍTÁ
+    // (14. 10. 2026) - je to pravidlo pro novou objednávku, ne přepočet
+    // běžících zakázek; viz lib/price.ts.
+    const zSazby = sazba != null && sazba > 0 ? (p.pageCount ?? 0) * sazba : 0;
     const trzba = schvalena > 0 ? schvalena : odeslana > 0 ? odeslana : zSazby;
     const trzbaOdhad = schvalena === 0 && trzba > 0;
 

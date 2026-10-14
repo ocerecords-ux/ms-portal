@@ -34,7 +34,6 @@ import { dokladyUProjektu } from '@/lib/dokladyUProjektuServer';
 import { ZnackyDokladu } from '@/lib/dokladyUProjektu';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
-import { uplatniSpodniHranici } from '@/lib/price';
 import { nactiSerieFirmy } from '@/lib/serieServer';
 import { NazevProjektu } from './NazevProjektu';
 import { expenseTotalMinor } from '@/lib/expenses';
@@ -371,14 +370,17 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     0,
   );
   const hoursLogged = timesheets.reduce((sum, e) => sum + toHours(durationMinutes(e.startMinutes, e.endMinutes)), 0);
-  // Výnos od klienta - a NIKDY než niž, než je spodní hranice ceny audioknihy
-  // (13. 10. 2026, lib/price.ts). Objednávka už tu hranici drží, takže
-  // rozpočet musí počítat s týmž číslem, jinak u tenké knížky ukazuje
-  // menší výnos, než klient zaplatí.
+  /**
+   * Výnos od klienta ze sazby a normostran.
+   *
+   * SPODNÍ HRANICE SEM NEPATŘÍ (14. 10. 2026: „žádné nabídky neměň! Ta spodní
+   * hranice se týká objednávek z webu nových až od teď"). Minimální cena je
+   * pravidlo pro NOVOU objednávku, ne pro přepočet už běžících zakázek -
+   * jinak portál u starého projektu ukazuje cenu, na které se nikdo nedomluvil,
+   * a vleze i do návrhu nabídky.
+   */
   const revenue =
-    budget && company?.ratePerPage != null
-      ? uplatniSpodniHranici(budget.pageCount * company.ratePerPage, company.mena ?? 'CZK').cena
-      : null;
+    budget && company?.ratePerPage != null ? budget.pageCount * company.ratePerPage : null;
 
   // Datum dokladu britsky 13/09/2026, česky 13. 9. 2026 (dávka 7b).
   const dokladDatum = (date: Date | null) => formatDatum(jazyk, date, '');

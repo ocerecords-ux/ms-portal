@@ -20,9 +20,18 @@ export function calculatePrice(pageCount: number | null | undefined, ratePerPage
  * (reziser, studio, postprodukce a korektura se zaplati i u sta stran).
  * Castka je VZDY BEZ DPH, stejne jako cokoli jineho v objednavce.
  *
+ * PLATI JEN NA NOVOU OBJEDNAVKU Z WEBU (upresneni 14. 10. 2026: „žadne
+ * nabidky nemen! Ta spodni hranice se tyka objednavek z webu novych az od
+ * ted. Kdyz nekdo zalozi, aby tam byla spodni hranice.")
+ *
+ * UZ BEZICIM ZAKAZKAM SE NEPREPOCITAVA NIC - ani rozpocet projektu, ani
+ * prehled Knihy, ani palubovka, a uz vubec ne cenova nabidka. Jednou
+ * dohodnuta cena je dohodnuta cena a portal do ni nesaha. 13. 10. 2026 jsem
+ * tu hranici nasadil i na tyhle prepocty a objevila se u zakazek, kterych se
+ * netykala; proto to tady stoji takhle natvrdo.
+ *
  * ZMENA CENY SE DELA TADY, na jednom miste. Prepise se tim predbezna cena
- * v objednavce, a tim i potvrzovaci mail klientovi, nase notifikace
- * i cenova nabidka, ktera se z objednavky sklada.
+ * NOVE objednavky, a tim i potvrzovaci mail klientovi a nase notifikace.
  *
  * MENA: hranice je dohodnuta v korunach. U firmy, ktera ma sazbu v jine mene
  * (britsky klient ma libry), se zadna hranice neuplatnuje, dokud tady pro tu

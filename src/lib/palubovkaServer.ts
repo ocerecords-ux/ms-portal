@@ -3,7 +3,6 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { computeTotals } from '@/lib/doklady';
 import type { MesicObratu } from '@/lib/palubovka';
-import { uplatniSpodniHranici } from '@/lib/price';
 import type { Currency } from '@prisma/client';
 
 /**
@@ -243,13 +242,9 @@ export async function nactiPalubovku(dnes = new Date()): Promise<PalubovkaData> 
     // Bez nabídky se u audioknihy dá cena odhadnout z normostran a sazby
     // klienta - je to totéž, z čeho se dělá rozpočet.
     const odhad = s.nabidnuto === 0 && Boolean(p.pageCount && p.company?.ratePerPage);
-    // Spodní hranice ceny audioknihy (13. 10. 2026) - viz lib/price.ts.
-    const hodnota = odhad
-      ? uplatniSpodniHranici(
-          (p.pageCount ?? 0) * (p.company?.ratePerPage ?? 0),
-          p.company?.mena ?? 'CZK',
-        ).cena
-      : s.nabidnuto;
+    // Spodní hranice ceny se do odhadu NEPROMÍTÁ (14. 10. 2026) - je to
+    // pravidlo pro novou objednávku, ne přepočet běžících zakázek.
+    const hodnota = odhad ? (p.pageCount ?? 0) * (p.company?.ratePerPage ?? 0) : s.nabidnuto;
     const zbyva = Math.max(0, hodnota - s.vyfakturovano);
     if (zbyva <= 0) continue;
     vPalivu.push({
