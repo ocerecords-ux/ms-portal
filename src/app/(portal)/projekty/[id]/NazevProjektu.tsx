@@ -65,14 +65,21 @@ export function NazevProjektu({
     setUklada(true);
     setChyba(null);
     try {
-      const fd = new FormData();
-      fd.set('name', jmeno);
-      // Odkliknutá série = prázdno, tedy zrušit (viz route).
-      fd.set('serie', maSerii ? novaSerie.trim() : '');
-      fd.set('serieDil', maSerii ? novyDil.trim() : '');
+      /**
+       * PATCH A JSON, ne POST a FormData (oprava 14. 10. 2026: „Uložit se to
+       * nepodařilo"). Route /api/projects/[id]/meta má jedinou metodu PATCH
+       * a tělo čte přes `req.json()` - formulářová data na ní spadla hned
+       * při čtení. Stejně to posílá i ProjectMetaForm.
+       */
       const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/meta`, {
-        method: 'POST',
-        body: fd,
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: jmeno,
+          // Odkliknutá série = prázdno, tedy zrušit (viz route).
+          serie: maSerii ? novaSerie.trim() : '',
+          serieDil: maSerii ? novyDil.trim() : '',
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || t('serie.ulozeniSelhalo'));
