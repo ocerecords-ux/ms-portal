@@ -7798,8 +7798,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   /* Kapacita studií. */
   'kapacita.uvodPredTucnym': {
-    cs: 'Celý měsíc na jedné obrazovce: řádek je den, sloupec studio. Čím tmavší obdélníček, tím víc {tucne} proti otevírací době studia — prázdné místo je díra. Střih, casting ani blokace se nepočítají; hodiny ukáže najetí myší.',
-    en: 'A whole month on one screen: a row is a day, a column a studio. The darker the block, the more {tucne} against the studio’s opening hours — an empty space is a gap. Editing, casting and holds do not count; hovering shows the hours.',
+    cs: 'Celý měsíc na jedné obrazovce: řádek je den, sloupec studio. Čím tmavší obdélníček, tím víc {tucne} proti pracovnímu dni 9:00-17:00 — prázdné místo je díra. Střih, casting ani blokace se nepočítají; hodiny ukáže najetí myší.',
+    en: 'A whole month on one screen: a row is a day, a column a studio. The darker the block, the more {tucne} against a 9:00-17:00 working day — an empty space is a gap. Editing, casting and holds do not count; hovering shows the hours.',
   },
   'kapacita.natacenia': { cs: 'natáčení', en: 'recording' },
   'kapacita.mesicRok': { cs: '{mesic} {rok}', en: '{mesic} {rok}' },
@@ -7818,11 +7818,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'kapacita.stavNatoceno': { cs: '{hodin} h natáčení ({pocet}×)', en: '{hodin} h of recording ({pocet}×)' },
   'kapacita.stavNatocenoMimo': {
-    cs: '{hodin} h natáčení ({pocet}×), mimo otevírací dobu',
-    en: '{hodin} h of recording ({pocet}×), outside opening hours',
+    cs: '{hodin} h natáčení ({pocet}×), mimo 9:00-17:00',
+    en: '{hodin} h of recording ({pocet}×), outside 9:00-17:00',
   },
   'kapacita.stavVolno': { cs: 'volno', en: 'free' },
-  'kapacita.stavZavreno': { cs: 'zavřeno / jen po domluvě', en: 'closed / by arrangement only' },
+  'kapacita.stavZavreno': { cs: 'víkend - do procent se nepočítá', en: 'weekend - not counted in the percentage' },
   'kapacita.zaplnenostDne': { cs: 'Zaplněnost dne:', en: 'How full the day is:' },
   'kapacita.legendaVolno': { cs: 'volno', en: 'free' },
   'kapacita.legendaDo20': { cs: 'do 20 %', en: 'up to 20%' },
@@ -7831,8 +7831,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kapacita.legendaDo95': { cs: 'do 95 %', en: 'up to 95%' },
   'kapacita.legendaPlno': { cs: 'plno', en: 'full' },
   'kapacita.poznamkaKapacity': {
-    cs: 'Kapacita je otevírací doba studia (Administrace → Studia). Dny „jen po domluvě" (obvykle víkendy) kapacitu nemají — natáčení v nich je vidět, ale do procent se nepočítá, proto může měsíc přesáhnout 100 %.',
-    en: 'Capacity is the studio’s opening hours (Administration → Studios). Days marked „by arrangement only" (usually weekends) have no capacity — recording on them is visible but does not count towards the percentage, which is why a month can go over 100%.',
+    cs: '100 % je pondělí až pátek 9:00-17:00, tedy 8 hodin, a pro každé studio stejně. Víkendy kapacitu nemají — natáčení v nich je vidět, ale do procent se nepočítá, proto může měsíc přesáhnout 100 %.',
+    en: '100% is Monday to Friday, 9:00-17:00 — eight hours, the same for every studio. Weekends have no capacity — recording on them is visible but does not count towards the percentage, which is why a month can go over 100%.',
   },
 
   /* Analýzy roku pod mřížkou kapacity. */
@@ -7857,7 +7857,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Kolik z okna frekvence se za rok opravdu točilo. Když je jedno okno výrazně slabší, je kde brát.',
     en: 'How much of each session slot was actually recorded over the year. When one slot is clearly weaker, there is room to take.',
   },
-  'analyzy.otevreneDny': { cs: 'Otevřené dny ve studiích', en: 'Open days in the studios' },
+  'analyzy.otevreneDny': { cs: 'Pracovní dny ve studiích', en: 'Working days in the studios' },
   'analyzy.plno': { cs: 'plno (od 95 %)', en: 'full (95% and over)' },
   'analyzy.castecne': { cs: 'částečně obsazeno', en: 'partly booked' },
   'analyzy.volno': { cs: 'volno', en: 'free' },
@@ -7867,8 +7867,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'analyzy.dnuProcenta': { cs: '{pocet} dnů ({procenta} %)', en: '{pocet} days ({procenta}%)' },
   'analyzy.poznamkaVyuziti': {
-    cs: 'Počítá se den × studio, jen dny s otevírací dobou — {celkem} dnů za rok {rok}.',
-    en: 'Counted as day × studio, only days with opening hours — {celkem} days in {rok}.',
+    cs: 'Počítá se den × studio, jen pracovní dny — {celkem} dnů za rok {rok}.',
+    en: 'Counted as day × studio, working days only — {celkem} days in {rok}.',
   },
 
   /* Knihy a rozpočty - ukazatele, režim porady a podrobný rozpad. */

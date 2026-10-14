@@ -21,7 +21,8 @@ import { prelozit, prelozitKolem, prelozitS } from '@/lib/jazyk';
  * Nad tabulkou je proužek dvanácti měsíců s procenty - přeskočí se jím na
  * vytížený měsíc a je z něj vidět celý rok.
  *
- * Počítá se jen NATÁČENÍ proti otevírací době studia - viz lib/kapacitaServer.
+ * Počítá se jen NATÁČENÍ proti pevnému pracovnímu dni Po-Pá 9:00-17:00
+ * (8 hodin, pro každé studio stejně) - viz lib/kapacitaServer.
  */
 export const dynamic = 'force-dynamic';
 

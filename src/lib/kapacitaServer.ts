@@ -21,10 +21,30 @@ import { zonedToUtc } from '@/lib/calendar';
  * natáčení. Střih, casting, údržba, svátky ani dovolené ne: kapacita studia
  * je o tom, kolik hodin se v kabině dá točit.
  *
- * Kapacita dne = otevírací doba studia pro ten den v týdnu (Administrace →
- * Studia). Dny „jen po domluvě" (typicky víkendy) kapacitu nemají, ale když
- * se v nich točí, je to vidět - proto může měsíc vyjít přes 100 %.
+ * KAPACITA DNE JE PEVNÁ: PO-PÁ 9:00-17:00, TEDY 8 HODIN, A PRO KAŽDÉ STUDIO
+ * STEJNĚ (zadání 14. 10. 2026: „pro nás je prostě 100 % pro každé studio
+ * pondělí - pátek 9:00-17:00, tzn. 8 hodin").
+ *
+ * Do 14. 10. 2026 se kapacita brala z otevírací doby studia (Administrace →
+ * Studia). Jenže otevírací doba je o tom, KDY SE DÁ REZERVOVAT - u jednoho
+ * studia sahala od rána do večera, u druhého ne - a procenta pak nešlo mezi
+ * studii porovnat: stejně odtočený den vyšel jednou na 60 % a jinde na 100 %.
+ * Procento má odpovídat na jedinou otázku: kolik z osmihodinového pracovního
+ * dne se v té kabině točilo. Otevírací doba si dál dělá svou práci v
+ * rezervacích a v upozornění „termín je mimo otevírací dobu studia".
+ *
+ * Víkendy kapacitu nemají, ale když se v nich točí, je to vidět - proto může
+ * měsíc vyjít přes 100 %.
  */
+
+/** 100 % = běžný pracovní den v kabině. Od 9:00 do 17:00, Po-Pá. */
+export const PRACOVNI_DEN = { od: 9 * 60, do: 17 * 60 };
+
+/** Kapacita dne v minutách - mimo Po-Pá nula. */
+function kapacitaDne(denVTydnu: number): number {
+  const pracovni = denVTydnu >= 1 && denVTydnu <= 5;
+  return pracovni ? PRACOVNI_DEN.do - PRACOVNI_DEN.od : 0;
+}
 
 /** Jedna frekvence (ranní / odpolední) jednoho dne v jednom studiu. */
 export type BunkaFrekvence = {
@@ -144,7 +164,6 @@ export function dnuVMesici(rok: number, mesic: number): number {
   return new Date(Date.UTC(rok, mesic, 0)).getUTCDate();
 }
 
-type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
 type Udalost = { studioId: string; start: Date; end: Date };
 
 /** Natáčení ve studiích v daném rozsahu - potvrzené frekvence i ruční zápisy. */
@@ -179,7 +198,8 @@ export async function nactiKapacituRoku(rok: number): Promise<KapacitaRoku> {
   const studia = await prisma.studio.findMany({
     where: { active: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    include: { hours: true, presets: { orderBy: { sortOrder: 'asc' } } },
+    // Otevírací doba se tu už nečte - kapacita je pevných 8 hodin (viz výš).
+    include: { presets: { orderBy: { sortOrder: 'asc' } } },
   });
 
   const nataceni = await nactiNataceni(
@@ -217,7 +237,6 @@ export async function nactiKapacituRoku(rok: number): Promise<KapacitaRoku> {
   }
 
   const sloupce: StudioSloupec[] = studia.map((s) => {
-    const hodinyDne = new Map<number, Hodiny>((s.hours as Hodiny[]).map((h) => [h.weekday, h]));
     // Zkratky studia = sloupečky frekvencí. Bez nich se počítá 9-13 a 13-17.
     const zkratky = s.presets as { label: string; startMinutes: number; endMinutes: number }[];
     const frekvence: Frekvence[] =
@@ -242,19 +261,20 @@ export async function nactiKapacituRoku(rok: number): Promise<KapacitaRoku> {
 
     const bunky: BunkaDne[] = misto.map((m, i) => {
       const denVTydnu = mesice[m.mesic].dny[m.den].denVTydnu;
-      const h = hodinyDne.get(denVTydnu);
-      const otevreno = Boolean(h) && !h!.byArrangement;
-      const kapacita = otevreno ? Math.max(0, h!.endMinutes - h!.startMinutes) : 0;
+      const kapacita = kapacitaDne(denVTydnu);
       return {
         kapacitaMinut: kapacita,
         natoceno: 0,
         pocet: 0,
         casti: frekvence.map((f) => ({
           oknoMinut: Math.max(0, f.do - f.od),
-          // Kapacitou okna je jen ta část, která padne do otevírací doby.
-          kapacitaMinut: otevreno
-            ? Math.max(0, Math.min(f.do, h!.endMinutes) - Math.max(f.od, h!.startMinutes))
-            : 0,
+          // Kapacitou okna je jen ta část, která padne do pracovního dne.
+          // Zkratka studia může sahat i mimo 9-17; co je za hranicí, se
+          // do stovky nepočítá, ale natáčení v tom čase je dál vidět.
+          kapacitaMinut:
+            kapacita > 0
+              ? Math.max(0, Math.min(f.do, PRACOVNI_DEN.do) - Math.max(f.od, PRACOVNI_DEN.od))
+              : 0,
           natoceno: 0,
           pocet: 0,
         })),
