@@ -156,6 +156,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'serie.poleDil': { cs: 'Díl', en: 'Book' },
   'serie.ulozeniSelhalo': { cs: 'Uložit se to nepodařilo.', en: 'It could not be saved.' },
+  'serie.ulozeniSelhaloStav': {
+    cs: 'Uložit se to nepodařilo — server odpověděl {stav}.',
+    en: 'It could not be saved — the server answered {stav}.',
+  },
   // Přetažení souboru do plochy (zadání 13. 10. 2026, Karolína Zbořilová).
   // Společné pro celý portál - viz components/PlochaProPretazeni.tsx.
   'obecne.pustteSoubory': { cs: 'Pusťte soubory sem…', en: 'Drop the files here…' },

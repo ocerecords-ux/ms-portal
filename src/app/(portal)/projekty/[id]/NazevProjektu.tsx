@@ -81,8 +81,20 @@ export function NazevProjektu({
           serieDil: maSerii ? novyDil.trim() : '',
         }),
       });
+      /**
+       * HLÁŠKA MUSÍ ŘÍCT, CO SE STALO (14. 10. 2026). Samotné „Uložit se to
+       * nepodařilo" neposloužilo nikomu: server svou chybu posílá, ale když
+       * odpověď není JSON (405 ze špatné metody, 500 s HTML stránkou), zbyla
+       * z toho prázdná věta a hledalo se poslepu. Teď je v ní i číslo stavu.
+       */
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t('serie.ulozeniSelhalo'));
+      if (!res.ok) {
+        throw new Error(
+          data?.error
+            ? `${data.error} (${res.status})`
+            : t('serie.ulozeniSelhaloStav', { stav: res.status }),
+        );
+      }
       setUpravuje(false);
       router.refresh();
     } catch (e) {
