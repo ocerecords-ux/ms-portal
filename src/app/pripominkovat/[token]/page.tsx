@@ -9,7 +9,7 @@ import { stavSchvaleni } from '@/lib/schvaleniKlientem';
 import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { SpotTagger } from './VideoTagger';
 import { nactiJazyk } from '@/lib/jazykServer';
-import { prelozit } from '@/lib/jazyk';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * PŘIPOMÍNKOVÁNÍ REKLAMNÍHO SPOTU (zadání 18. 9. 2026).
@@ -27,6 +27,16 @@ export const metadata: Metadata = {
   title: 'Připomínkování spotu',
   robots: { index: false, follow: false },
 };
+
+/**
+ * Důvod, proč odkaz nepustí (dávka 7l). `pristupKVideu` vrací český text
+ * i klíč do slovníku; čeština je záloha pro klíč, který by ve slovníku ještě
+ * nebyl (pravidlo 1).
+ */
+function duvod(jazyk: Jazyk, pristup: { chyba: string; chybaKlic: string }): string {
+  const text = prelozit(jazyk, pristup.chybaKlic);
+  return text === pristup.chybaKlic ? pristup.chyba : text;
+}
 
 function Hlaska({ nadpis, text }: { nadpis: string; text: string }) {
   return (
@@ -56,7 +66,12 @@ export default async function PripominkovatPage({
    */
   const pristupProSeznam = zadano ? await pristupKVideu(params.token, zadano) : null;
   if (pristupProSeznam && 'chyba' in pristupProSeznam) {
-    return <Hlaska nadpis={prelozit(jazyk, 'pripominkovat.odkazNefunguje')} text={pristupProSeznam.chyba} />;
+    return (
+      <Hlaska
+        nadpis={prelozit(jazyk, 'pripominkovat.odkazNefunguje')}
+        text={duvod(jazyk, pristupProSeznam)}
+      />
+    );
   }
 
   const projektZOdkazu =
@@ -85,7 +100,7 @@ export default async function PripominkovatPage({
 
   const pristup = pristupProSeznam ?? (await pristupKVideu(params.token, fileId));
   if ('chyba' in pristup) {
-    return <Hlaska nadpis={prelozit(jazyk, 'pripominkovat.odkazNefunguje')} text={pristup.chyba} />;
+    return <Hlaska nadpis={prelozit(jazyk, 'pripominkovat.odkazNefunguje')} text={duvod(jazyk, pristup)} />;
   }
 
   const [meta, pripominky, session, schvaleni] = await Promise.all([

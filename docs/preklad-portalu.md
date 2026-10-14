@@ -85,6 +85,8 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7h | 10. 10. | Řetězce, na které se kontrolní skript nikdy nezeptal — hlavičky tabulek, `title`, `aria-label` a placeholdery: přehled reklam u klienta, přehled projektů (jazyk do buněk), lišta, tabule, část zakázky u faktur, upomínky, banka, složky na Disku u uživatele | [x] |
 | 7i | 11. 10. | Obrazovky z téhož dne, které s překladem nepočítaly — nabídková prezentace pro klienta (veřejná stránka i sestavování u projektu), knihovna ukázek, vzor prezentace a natáčecí pult | [x] |
 | 7j | 12. 10. | Číselníky a hlášky z `src/lib/*.ts`, které chodí na obrazovku natvrdo česky — názvy rychlých voleb, překážky mazání, hlášky počítání normostran z rukopisu, placeholdery úvodu a závěru knihy, číslo nové faktury, prázdné složky na Disku u uživatele | [x] |
+| 7k | 13. 10. | Přístupy do sekcí a jednotlivá práva na kartě uživatele — `src/lib/pristupy.ts` (11 sekcí a 43 práv, názvy i popisy zaškrtávátek) | [x] |
+| 7l | 14. 10. | Důvody a hlášky, které server posílá na obrazovku hotové česky — Tagy finální nahrávky, veřejné připomínkování spotu, konflikty v kalendáři a dvě zapomenuté záložní hlášky | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1188,6 +1190,162 @@ názvů voleb.**
 které si překlad nesou samy (`svatky.ts`), a mlčí o těch, co posílají český
 text propem jinam (`quickActions.ts`, `mazani.ts`). Spolehlivější je jít po
 tom, KAM text teče, ne po tom, jestli v souboru stojí `usePreklad`.
+
+### Dávka 7k je HOTOVÁ (13. 10. 2026)
+
+**Poslední velký český kus v `lib` je přeložený.** Dávka 7j ho nechala jako
+„dávku samu pro sebe" a byl to dobrý odhad: `src/lib/pristupy.ts` je číselník
+přístupů, který vykresluje KARTU UŽIVATELE, a je to **jedna obrazovka, dva
+soubory a slovník +108 klíčů (5 511 → 5 619)** — 11 sekcí a 43 jednotlivých
+práv, u každého název zaškrtávátka i věta pod ním.
+
+**Co se přeložilo:**
+
+- `lib/pristupy.ts` → `admin/users/[id]/UserEditForm.tsx` — **názvy a popisy
+  sekcí a práv.** Superadmin rozdává přístupy zaškrtáváním („Vidí faktury",
+  „Vystavuje faktury", „Vidí honoráře herců") a celá ta tabule svítila česky
+  i tomu, kdo má rozhraní v angličtině. Překládá se **podle KLÍČE PRÁVA**, ne
+  podle textu: klíče (`DOKLADY.FAKTURY_VYSTAVIT`) se ukládají do databáze
+  (`User.pristupy`) a český číselník zůstává zdrojem pravdy. Stejný vzor jako
+  `textSekce` z dávky 4 a `nazevAkce` z dávky 7j.
+- **Nový `textPristupu(jazyk, klic, 'nazev' | 'popis', zaloha)` v `lib/jazyk.ts`.**
+  Schválně NENÍ v `lib/pristupy.ts`: ten si bere `middleware.ts`, a kdyby si
+  sáhl na slovník, táhl by se celý desetitisícový `jazyk.ts` do edge runtime.
+  Pravidlo 8 se tím neporušuje — karta uživatele je klientská komponenta
+  a jazyk má z `useJazyk()`.
+- Popisek u ikony sekce (`IkonaTypu typProjektu={…}`) jde do bublinky pro
+  čtečku, takže se překládá taky.
+
+**Co kontrola našla a zůstává česky schválně:**
+
+- `lib/contracts.ts`, `lib/bruno*.ts`, `lib/socialni.ts`, `lib/menu.ts`,
+  `lib/stavyProjektu.ts`, `lib/projectTypes.ts` — všechno už rozhodnuté
+  v dávkách 7e a 7j, nic se nemění.
+- **Ukázky v políčkách** (`StudiosManager` — adresa studia a věta o parkování,
+  `SlozkyManager` — „Klientská zóna", `wikipedie/UdajeForm` — celé ukázky hesla).
+  Jsou to příklady toho, CO SE DO POLÍČKA PÍŠE česky: adresa studia je česká,
+  složky na Disku se tak jmenují a heslo se píše na českou Wikipedii. Anglická
+  ukázka by radila založit něco jiného — stejné rozhodnutí jako v dávkách 7b,
+  7c a u `SlozkyManager`, kde to stojí v komentáři.
+- `ChatDock.tsx` — české `console.error`. Čte je vývojář, ne klient.
+
+**Kontrolní skript lhal i dnes, a to oběma směry** (pokračování poučení z 7j):
+nahlásil `lib/ikonyTypu.tsx` (34 popisků ikon) a `lib/dokladyUProjektu.tsx`
+(stavy nabídky a faktury) — oba jsou přeložené od dávek 7g a 7e, jen si
+češtinu nesou v sobě a angličtinu berou ze slovníku podle kódu. Hledat se
+musí i na `prelozit(` a `en:`, ne jen na `usePreklad`.
+
+**Dnešní práce přišla přeložená — až na server.** Jediný dnešní commit
+(spodní hranice ceny audioknihy, 12 000 Kč) má `t('objednavka.cenaPodHranici')`
+i oba zvednuté stavy ve formuláři rovnou v obou jazycích (slovník +13 řádků od
+Ondřeje). Česky zůstala **hláška, kterou vrací `api/orders/route.ts`**, když si
+klient navrhne cenu pod hranicí („Minimální cena audioknihy je … Kč bez DPH"),
+a to včetně `toLocaleString('cs-CZ')`. Formulář tu větu hlásí sám a přeloženou,
+takže klient ji česky uvidí jen tehdy, když formulář objede — ale uvidí.
+**Patří to k rozhodnutí o `api/**` níž, ne k večerní dávce.**
+
+**Co se našlo a NEDĚLALO se to (pořád vlastní úkol, ne večerní dávka):**
+
+1. Routy v `api/**`, které vracejí text na obrazovku — viz dávky 7h a 7j.
+   Dnešní `api/orders` je další do seznamu a je to první z nich, kterou vidí
+   KLIENT, ne administrace. Rozhodnutí je pořád stejné: brát jazyk z cookie
+   (u volání z prohlížeče funguje), nebo z uživatele v databázi?
+2. `HostNataceni.chybaOdeslani` se ukládá do databáze česky — viz dávka 7h.
+3. Oznámení pod zvonkem a zapojení pošty — dávka 6, viz níž.
+4. V `.git` leží pět přejmenovaných zámků z dávek 7g–7i
+   (`HEAD.lock.smazat-rucne-7g` a spol.). Git nebrzdí, ale smazat je může jen
+   někdo u klávesnice. Platí dál `git rm --cached stubs/prisma-client.d.ts`
+   (viz dávka 7a).
+
+**Typová kontrola je čistá** — výstup se shoduje s
+`docs/preklad-kontrola-zname-hlasky.txt` na řádek, žádná nová hláška.
+
+### Dávka 7l je HOTOVÁ (14. 10. 2026)
+
+**Dnešní nález je jedna třída problému, ne kout:** server spočítá, že něco
+nejde, a pošle na obrazovku HOTOVOU ČESKOU VĚTU. Komponenta ji jen vykreslí,
+takže v anglickém portálu projde česky, i když je všechno kolem přeložené.
+Jsou to **tři obrazovky, devět souborů a slovník +14 klíčů (5 673 → 5 687)**.
+
+**Vzor, který to řeší, aniž by se otevřela otázka `api/**`:** modul v `lib`
+posílá vedle českého textu i KLÍČ DO SLOVNÍKU a obrazovka si text přeloží
+sama. Čeština zůstává zdrojem pravdy (pravidlo 1) a routy v `api/**` dál
+posílají přesně to, co posílaly — nemusí tedy vědět, jaký jazyk má kdo
+v liště. Je to totéž, co `textPristupu` v dávce 7k, jen obráceně: tam šel
+klíč ze číselníku, tady z návratové hodnoty.
+
+**Co se přeložilo:**
+
+- `lib/tagyServer.ts` → `projekty/[id]/TagySekce.tsx` — **Tagy finální
+  nahrávky, obrazovka z dnešního rána.** Čtyři důvody, proč se složka nedá
+  načíst („Projekt nemá složku na Disku.", „Portál se nepřihlásil ke Google
+  Disku.") dostaly `duvodKlic`. Navíc **„Složka projektu"** v nabídce složek:
+  je to jediná položka, která není jméno z Disku, ale náš popisek — pozná se
+  po `korenova: true` a překládá se klíčem `tagy.slozkaProjektu`. Jména
+  podsložek zůstávají, jak se jmenují na Disku (pravidlo 4).
+- `lib/reklamaPripominky.ts` → `pripominkovat/[token]/page.tsx` — **veřejné
+  připomínkování spotu.** Pět důvodů, proč odkaz nepustí („Odkaz už neplatí.",
+  „Soubor se nenašel."), dostalo `chybaKlic`. Tohle vidí KLIENT: nadpis
+  „The link does not work" byl přeložený od dávky 7i, ale věta pod ním byla
+  česká.
+- `lib/konfliktyServer.ts` → `kalendar/Konflikty.tsx` — **důvody překryvů
+  v kalendáři.** „Máte dvě věci naráz" a tři provozní věty se jménem studia,
+  herce nebo zvukaře. Věty se do teď skládaly do jednoho řetězce; teď je
+  každá jeden klíč se značkou `{nazev}` (pravidlo 7) a chodí v
+  `duvodyKlice`. **Český `duvod` zůstává:** když se překryv odklepne jako
+  záměr, ukládá se do databáze jako text a ten se nepřekládá.
+- `kalendar/nabidka/[id]/OfferBuilder.tsx` a `projekty/StavProjektuSelect.tsx`
+  — **dvě zapomenuté záložní hlášky.** „Termín se nepodařilo změnit." (dvakrát)
+  a „Stav se nepodařilo uložit."; obě jsou záloha pro případ, že server
+  nepošle `error`, takže se na ně kontrolní skript nikdy nezeptal. Druhá je
+  o to zrádnější, že `catch` hned pod ní už klíč `stav.neulozeno` používal.
+
+**Dnešní práce šla jinak přeložená.** Záložka Tagy, série u názvu, kapacita
+studií i dvě tlačítka v objednávce mají `t('…')` rovnou od Ondřeje; česky
+zůstaly jen komentáře (schválně) a `console.error`. Poučení z dávky 7j tedy
+platí v dobrém: **překlad psaný při psaní obrazovky nechává večerní dávce
+jen to, co leží na serveru.**
+
+**Typová kontrola byla špinavá, a ne naší vinou — opraveno v `gen-prisma-stub.py`:**
+HEAD hlásil dvě nové chyby (ověřeno na čisté kopii z `git archive`, tedy ještě
+před touhle dávkou): `React.DragEvent` v `components/PlochaProPretazeni.tsx`
+(přetahování souborů, 13. 10.) a `NextResponse` použitý jako TYP
+v `api/projekty/[id]/preposlech/route.ts`. Obojí je jen volnost stubů — ve
+skutečném buildu s `node_modules` to platí. Do `declare module 'react'` proto
+přibyly `DragEvent`, `MouseEvent` a zbylé události (v `namespace React` byly,
+v modulu ne) a k `NextResponse` i `export type`. Opraveno v `ENV_D_TS`
+i v `stubs/env.d.ts`, jak doporučuje „Kontrola na konci každé dávky" — po
+opravě se výstup shoduje se `docs/preklad-kontrola-zname-hlasky.txt` na řádek.
+
+**Dávka 7k šla na server až dnes.** Včerejší slovník (+108 klíčů a
+`textPristupu`) se v repozitáři svezl s Ondřejovým commitem, ale
+`admin/users/[id]/UserEditForm.tsx` — jediný, kdo ty klíče používá — zůstal
+necommitnutý, takže karta uživatele svítila česky dál. Jde dnes vlastním
+commitem před touhle dávkou. **Poučení: po commitu se vyplatí přepočítat, že
+v `git status` nezůstal žádný ze souborů dávky.**
+
+**Co se našlo a NEDĚLALO se to (pořád vlastní úkol, ne večerní dávka):**
+
+1. Routy v `api/**`, které vracejí text na obrazovku. Dnes k nim přibyly
+   `api/projekty/[id]/tagy` a `api/projekty/[id]/tagy/zapsat` (hlášky u
+   jednotlivých stop) a `api/orders` z dávky 7k. Rozhodnutí je pořád stejné:
+   brát jazyk z cookie, nebo z uživatele v databázi?
+2. **Tatáž třída důvodů v dalších modulech `lib`, které ale chodí na obrazovku
+   jen přes `api/**`** — `vystupyServer.smazVystup` („K výstupu už je vyrobený
+   rodný list"), `uctenkaServer`, `storage.ts` („Příloha je moc velká"),
+   `nataceniTextServer`, `rodnyListServer`, `preposlechPristup`,
+   `schvaleniKlientem`, `bookingServer`, `instagramServer`, `postaServer`.
+   Vzor z dnešní dávky na ně sedne, ale smysl dostanou až s bodem 1.
+3. Výchozí názvy, které se ukládají do databáze, zůstávají české schválně:
+   „Nová sada" a „Nová sekce" v technických parametrech, „Výstup"
+   u nového výstupu. Jsou to DATA, která pak vidí celý tým (pravidlo 4) —
+   přeložit je podle toho, kdo je zakládá, by znamenalo míchat v databázi dva
+   jazyky.
+4. `HostNataceni.chybaOdeslani` se ukládá do databáze česky — viz dávka 7h.
+5. Oznámení pod zvonkem a zapojení pošty — dávka 6, viz níž.
+6. V `.git` leží pět přejmenovaných zámků z dávek 7g–7i. Git nebrzdí, smazat
+   je může jen někdo u klávesnice. Platí dál `git rm --cached stubs/prisma-client.d.ts`
+   (viz dávka 7a).
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

@@ -35,6 +35,8 @@ type Konflikt = {
   den: string;
   cas: string;
   duvod: string;
+  /** Týž důvod klíči do slovníku (dávka 7l) - jméno je značka ve větě. */
+  duvodyKlice?: { klic: string; nazev?: string }[];
   udalosti: { cas: string; popis: string }[];
 };
 
@@ -140,6 +142,21 @@ export function Konflikty({
 
   const datum = (den: string) => datumDne(jazyk, den);
 
+  /**
+   * Důvod překryvu na obrazovku (dávka 7l). Server posílá český text i klíče;
+   * věta s jménem je jeden klíč se značkou `{nazev}` (pravidlo 7). Čeština
+   * ze serveru zůstává záloha.
+   */
+  const duvodText = (k: Konflikt) => {
+    if (!k.duvodyKlice?.length) return k.duvod;
+    return k.duvodyKlice
+      .map((d) => {
+        const text = d.nazev ? t(d.klic, { nazev: d.nazev }) : t(d.klic);
+        return text === d.klic ? k.duvod : text;
+      })
+      .join(' · ');
+  };
+
   const radky = (seznam: Konflikt[]) =>
     seznam.map((k) => (
       <span key={k.id} className="rounded-lg border border-line bg-paper flex flex-col">
@@ -156,7 +173,7 @@ export function Konflikty({
             <span className="font-heading text-xs tabular-nums" style={{ color: BARVA }}>
               {k.cas}
             </span>
-            <span className="text-xs font-body text-muted">{k.duvod}</span>
+            <span className="text-xs font-body text-muted">{duvodText(k)}</span>
           </span>
           {k.udalosti.map((u, i) => (
             <span key={i} className="text-xs font-body text-muted pl-0.5">

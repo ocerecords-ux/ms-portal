@@ -161,12 +161,12 @@ export function OfferBuilder({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Termín se nepodařilo změnit.');
+        setError(data?.error || t('nabidkaTerminu.chybaZmenyTerminu'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Termín se nepodařilo změnit.');
+      setError(t('nabidkaTerminu.chybaZmenyTerminu'));
     } finally {
       setBusy(false);
     }

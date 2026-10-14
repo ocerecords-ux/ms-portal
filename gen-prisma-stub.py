@@ -86,6 +86,16 @@ declare module 'react' {
   export type FormEvent<T = any> = any;
   export type ChangeEvent<T = any> = any;
   export type KeyboardEvent<T = any> = any;
+  /* Pretahovani souboru (13. 10. 2026) a dalsi udalosti, ktere se do modulu
+     nikdy nedopsaly - bez nich hlasi kontrola TS2614. */
+  export type DragEvent<T = any> = any;
+  export type MouseEvent<T = any> = any;
+  export type PointerEvent<T = any> = any;
+  export type TouchEvent<T = any> = any;
+  export type FocusEvent<T = any> = any;
+  export type ClipboardEvent<T = any> = any;
+  export type WheelEvent<T = any> = any;
+  export type UIEvent<T = any> = any;
   export function useState<T>(initial: T | (() => T)): [T, (value: T | ((prev: T) => T)) => void];
   export function useEffect(effect: () => void | (() => void), deps?: any[]): void;
   export function useRef<T>(initial: T): { current: T };
@@ -119,6 +129,8 @@ declare module 'next/server' {
     [key: string]: any;
   }
   export const NextResponse: any;
+  /* NextResponse se v routach pouziva i jako TYP (Promise<NextResponse>). */
+  export type NextResponse = any;
 }
 
 // --- doplnky (13. 9. 2026) ---

@@ -39,7 +39,7 @@ export function TagySekce({
         spolecne: SpolecneTagy;
         zapsanoAt: string | null;
       }
-    | { ok: false; duvod: string };
+    | { ok: false; duvod: string; duvodKlic?: string };
 }) {
   const t = usePreklad();
   const [data, setData] = useState(pocatecni);
@@ -139,7 +139,15 @@ export function TagySekce({
   }
 
   if (!data.ok) {
-    return <p className="text-sm font-body text-muted m-0">{data.duvod}</p>;
+    /* Server posila cesky duvod i klic do slovniku (davka 7l) - prelozeny
+       vyhrava, cestina zustava zalohou pro pripad klice, ktery ve slovniku
+       jeste neni. */
+    const text = data.duvodKlic ? t(data.duvodKlic) : data.duvod;
+    return (
+      <p className="text-sm font-body text-muted m-0">
+        {text === data.duvodKlic ? data.duvod : text}
+      </p>
+    );
   }
 
   return (
@@ -218,7 +226,7 @@ export function TagySekce({
               <select value={slozka} onChange={(e) => prepniSlozku(e.target.value)} className={pole}>
                 {data.slozky.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.nazev}
+                    {s.korenova ? t('tagy.slozkaProjektu') : s.nazev}
                   </option>
                 ))}
               </select>

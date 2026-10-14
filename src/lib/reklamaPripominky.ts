@@ -20,27 +20,53 @@ import { projektPodleTokenu } from '@/lib/preposlechOdkaz';
 
 export type PristupKVideu =
   | { caflouProjectId: string; fileId: string; nazev: string; mimeType: string; velikost: number | null }
-  | { chyba: string; status: number };
+  | {
+      /** Český text - zdroj pravdy, posílají ho dál i routy v `api/**`. */
+      chyba: string;
+      /**
+       * TÝŽ DŮVOD KLÍČEM DO SLOVNÍKU (dávka 7l). Veřejná stránka
+       * `pripominkovat/[token]` si ho přeloží podle lišty; funkce samotná
+       * jazyk nezná, protože ji volá i routa.
+       */
+      chybaKlic: string;
+      status: number;
+    };
 
 export async function pristupKVideu(token: string, fileId: string): Promise<PristupKVideu> {
   const caflouProjectId = await projektPodleTokenu(token);
-  if (!caflouProjectId) return { chyba: 'Odkaz už neplatí.', status: 403 };
+  if (!caflouProjectId) return { chyba: 'Odkaz už neplatí.', chybaKlic: 'pripominkovat.chybaOdkazNeplati', status: 403 };
 
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
     select: { driveUrl: true },
   });
   const rootId = meta?.driveUrl ? extractDriveFolderId(meta.driveUrl) : null;
-  if (!rootId) return { chyba: 'U tohohle projektu zatím není složka s nahrávkami.', status: 404 };
+  if (!rootId) return {
+      chyba: 'U tohohle projektu zatím není složka s nahrávkami.',
+      chybaKlic: 'pripominkovat.chybaBezSlozky',
+      status: 404,
+    };
 
   const pristup = await getAccessToken();
-  if (!pristup) return { chyba: 'Napojení na Google Disk zatím není nastavené.', status: 503 };
+  if (!pristup) return {
+      chyba: 'Napojení na Google Disk zatím není nastavené.',
+      chybaKlic: 'pripominkovat.chybaBezDisku',
+      status: 503,
+    };
 
   const uvnitr = fileId === rootId || (await isWithinRoot(fileId, rootId, pristup));
-  if (!uvnitr) return { chyba: 'K tomuhle souboru odkaz nepustí.', status: 403 };
+  if (!uvnitr) return {
+      chyba: 'K tomuhle souboru odkaz nepustí.',
+      chybaKlic: 'pripominkovat.chybaJinySoubor',
+      status: 403,
+    };
 
   const soubor = await getFileMeta(fileId, pristup);
-  if (!soubor) return { chyba: 'Soubor se nenašel.', status: 404 };
+  if (!soubor) return {
+      chyba: 'Soubor se nenašel.',
+      chybaKlic: 'pripominkovat.chybaSouborNenalezen',
+      status: 404,
+    };
 
   return {
     caflouProjectId,

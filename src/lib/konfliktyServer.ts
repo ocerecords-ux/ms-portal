@@ -47,8 +47,15 @@ export type Konflikt = {
   den: string;
   /** „10:00–11:30" - průnik obou událostí. */
   cas: string;
-  /** Čím to drhne: „Studio Brno I je obsazené dvakrát". */
+  /** Čím to drhne: „Studio Brno I je obsazené dvakrát". Český zdroj pravdy. */
   duvod: string;
+  /**
+   * TÝŽ DŮVOD KLÍČI DO SLOVNÍKU (dávka 7l). Panel konfliktů si věty přeloží
+   * sám - konflikty počítá routa v `api/**`, která jazyk z lišty nezná.
+   * Jméno studia, herce nebo zvukaře je značka ve větě (pravidlo 7); český
+   * `duvod` se dál ukládá do databáze, když se překryv odklepne jako záměr.
+   */
+  duvodyKlice: { klic: string; nazev?: string }[];
   udalosti: { cas: string; popis: string }[];
 };
 
@@ -185,19 +192,23 @@ async function provozniKonflikty(
       if (!koliduje(a, b)) continue;
 
       const duvody: string[] = [];
+      const klice: { klic: string; nazev?: string }[] = [];
       if (a.studioId && a.studioId === b.studioId && a.obsazujeStudio && b.obsazujeStudio) {
         duvody.push(`Studio ${a.studioName} je obsazené dvakrát`);
+        klice.push({ klic: 'konflikty.duvodStudioDvakrat', nazev: a.studioName ?? undefined });
       }
       const herecA = jmeno(a.herecId, a.herecJmeno);
       const herecB = jmeno(b.herecId, b.herecJmeno);
       if (herecA && herecB && (a.herecId ? a.herecId === b.herecId : herecA === herecB)) {
         duvody.push(`${herecA} je ve dvou natáčeních naráz`);
+        klice.push({ klic: 'konflikty.duvodHerecDveNataceni', nazev: herecA });
       }
       const zvukarA = jmeno(a.zvukarId, a.zvukarJmeno);
       const zvukarB = jmeno(b.zvukarId, b.zvukarJmeno);
       if (zvukarA && zvukarB && (a.zvukarId ? a.zvukarId === b.zvukarId : zvukarA === zvukarB)) {
         // Tohle platí i pro externistu: dvě věci naráz nestihne ani on.
         duvody.push(`Zvukař ${zvukarA} je na dvou místech naráz`);
+        klice.push({ klic: 'konflikty.duvodZvukarDveMista', nazev: zvukarA });
       }
       if (duvody.length === 0) continue;
 
@@ -221,6 +232,7 @@ async function provozniKonflikty(
         den: denVPraze(p.od),
         cas: p.popis,
         duvod: duvody.join(' · '),
+        duvodyKlice: klice,
         udalosti: [
           { cas: `${cas(a.start)}–${cas(a.end)}`, popis: a.popis },
           { cas: `${cas(b.start)}–${cas(b.end)}`, popis: b.popis },
@@ -254,6 +266,7 @@ async function mojeKonflikty(userId: string, od: Date, doKdy: Date): Promise<Kon
         den: denVPraze(zacatek),
         cas: kdy,
         duvod: 'Máte dvě věci naráz',
+        duvodyKlice: [{ klic: 'konflikty.duvodDveVeciNaraz' }],
         udalosti: [
           { cas: a.cas, popis: a.studio ? `${a.nazev} (${a.studio})` : a.nazev },
           { cas: b.cas, popis: b.studio ? `${b.nazev} (${b.studio})` : b.nazev },

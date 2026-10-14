@@ -45,7 +45,18 @@ export type SpolecneTagy = {
   vydavatel: string;
 };
 
-export type SlozkaKVyberu = { id: string; nazev: string };
+export type SlozkaKVyberu = {
+  id: string;
+  /** Jméno složky z Disku. U té projektové je to náš popisek - viz `korenova`. */
+  nazev: string;
+  /**
+   * Složka projektu sama (dávka 7l). Jediná položka v nabídce, která není
+   * jméno z Disku, ale náš text - obrazovka ji překládá klíčem
+   * `tagy.slozkaProjektu`. Podsložky si nechávají jméno, jaké mají na Disku
+   * (pravidlo 4).
+   */
+  korenova?: boolean;
+};
 
 export type TagyProjektu =
   | {
@@ -58,7 +69,17 @@ export type TagyProjektu =
       spolecne: SpolecneTagy;
       zapsanoAt: string | null;
     }
-  | { ok: false; duvod: string };
+  | {
+      ok: false;
+      /** Český důvod - zdroj pravdy; čte ho i ten, kdo obrazovku neotevře. */
+      duvod: string;
+      /**
+       * TÝŽ DŮVOD KLÍČEM DO SLOVNÍKU (dávka 7l). Obrazovka si ho přeloží
+       * sama - `nactiTagy` běží i v routě v `api/**`, kde jazyk z lišty
+       * nemá odkud vzít.
+       */
+      duvodKlic: string;
+    };
 
 /** „03_Kapitola tri.mp3" -> 3 */
 function cisloZNazvu(name: string): number | null {
@@ -129,21 +150,29 @@ export async function spolecneTagy(caflouProjectId: string): Promise<SpolecneTag
 /** Co je ve složce k otagování, i s tím, co už je o stopách uložené. */
 export async function nactiTagy(caflouProjectId: string, slozkaIdNavic?: string): Promise<TagyProjektu> {
   const slozka = await slozkaProjektu(caflouProjectId);
-  if (!slozka) return { ok: false, duvod: 'Projekt nemá složku na Disku.' };
+  if (!slozka) return { ok: false, duvod: 'Projekt nemá složku na Disku.', duvodKlic: 'tagy.duvodBezSlozky' };
 
   const token = await getAccessToken();
-  if (!token) return { ok: false, duvod: 'Portál se nepřihlásil ke Google Disku.' };
+  if (!token) return {
+      ok: false,
+      duvod: 'Portál se nepřihlásil ke Google Disku.',
+      duvodKlic: 'tagy.duvodBezPrihlaseni',
+    };
 
   let koren: DriveItem[];
   try {
     koren = await listFolder(slozka.id, token);
   } catch (err) {
     console.error('Tagy: vypis slozky projektu selhal:', err);
-    return { ok: false, duvod: 'Složku projektu se nepodařilo načíst.' };
+    return {
+      ok: false,
+      duvod: 'Složku projektu se nepodařilo načíst.',
+      duvodKlic: 'tagy.duvodSlozkaNeslo',
+    };
   }
 
   const slozky: SlozkaKVyberu[] = [
-    { id: slozka.id, nazev: 'Složka projektu' },
+    { id: slozka.id, nazev: 'Složka projektu', korenova: true },
     ...koren.filter((i) => i.isFolder).map((i) => ({ id: i.id, nazev: i.name })),
   ];
 
@@ -157,7 +186,11 @@ export async function nactiTagy(caflouProjectId: string, slozkaIdNavic?: string)
       obsah = await listFolder(vybrana, token);
     } catch (err) {
       console.error('Tagy: vypis podslozky selhal:', err);
-      return { ok: false, duvod: 'Vybranou složku se nepodařilo načíst.' };
+      return {
+        ok: false,
+        duvod: 'Vybranou složku se nepodařilo načíst.',
+        duvodKlic: 'tagy.duvodPodslozkaNeslo',
+      };
     }
   }
 

@@ -54,7 +54,7 @@ export function StavProjektuSelect({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setHodnota(puvodni);
-        setChyba(data?.error || 'Stav se nepodařilo uložit.');
+        setChyba(data?.error || t('stav.neulozeno'));
         return;
       }
       // Projekt může změnou stavu přeskočit mezi záložkami Aktivní
