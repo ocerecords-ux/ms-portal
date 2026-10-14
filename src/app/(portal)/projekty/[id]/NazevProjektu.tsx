@@ -27,7 +27,6 @@ export function NazevProjektu({
   nazev,
   serie,
   serieDil,
-  dily = [],
   muzeMenit,
   navrhySerii = [],
 }: {
@@ -35,7 +34,6 @@ export function NazevProjektu({
   nazev: string;
   serie: string | null;
   serieDil: number | null;
-  dily?: { id: number; name: string; dil: number | null }[];
   muzeMenit: boolean;
   /** Série, které u té firmy už jsou - proti třem podobám téhož názvu. */
   navrhySerii?: string[];
@@ -108,7 +106,7 @@ export function NazevProjektu({
     return (
       <span className="flex items-center gap-1.5 flex-wrap min-w-0">
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{nazev}</h1>
-        {serie && <OdznakSerie serie={serie} dil={serieDil} dily={dily} aktivniId={Number(caflouProjectId)} velky />}
+        {serie && <OdznakSerie serie={serie} dil={serieDil} aktivniId={Number(caflouProjectId)} velky />}
         {/* TLAČÍTKO S NÁPISEM, NE SAMOTNÁ TUŽKA (14. 10. 2026: „a kde to je?
             Nevidím tužku"). Ikonka v řádce s nadpisem, stavem a odznaky
             dokladu prostě zapadne - stejná léčka jako u výměny odkazu na složku

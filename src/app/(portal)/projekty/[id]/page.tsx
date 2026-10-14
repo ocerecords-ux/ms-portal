@@ -1270,7 +1270,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             }
             serie={metaPoSync?.serie ?? null}
             serieDil={metaPoSync?.serieDil ?? null}
-            dily={serieFirmy.dily}
             navrhySerii={serieFirmy.navrhy}
             muzeMenit={canEdit}
           />

@@ -17,27 +17,55 @@ import { usePreklad } from '@/app/(portal)/components/JazykProvider';
  * Je to JEN KE ČTENÍ. Série se zadává a mění v detailu projektu - na jednom
  * místě spolu s názvem knihy, ať se nezadává na dvou místech jinak.
  *
- * Díly si volání počítá ze seznamu, který už má v ruce (viz `dilySerie`
- * v lib/serie.ts) - žádný další dotaz do databáze. Klient tak v oknénku
- * uvidí jen díly své firmy, což je přesně správně.
+ * DÍLY SE NAČTOU AŽ PŘI OTEVŘENÍ, a to ze serveru (oprava 14. 10. 2026:
+ * „když jsem zadal celou sérii, tak ji nevidím. Musím to vidět vždy, i když
+ * je to v dokončených"). Původně se skládaly z projektů, které měla tabulka
+ * zrovna vykreslené - jenže aktivní a dokončené jsou dvě různé tabulky, takže
+ * ze třinácti dílů bylo vidět sedm. Série je série bez ohledu na to, kde se
+ * který díl zrovna nachází; kdo co smí vidět, řeší /api/serie.
  */
+type Dil = { id: number; name: string; dil: number | null };
+
 export function OdznakSerie({
   serie,
   dil,
-  dily = [],
   aktivniId,
   velky = false,
 }: {
   serie: string;
   dil: number | null;
-  /** Ostatní knihy téže série, seřazené podle dílu. */
-  dily?: { id: number; name: string; dil: number | null }[];
   aktivniId?: number;
   velky?: boolean;
 }) {
   const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
+  const [dily, setDily] = useState<Dil[]>([]);
+  const [nacitam, setNacitam] = useState(false);
+  const nacteno = useRef(false);
   const obal = useRef<HTMLSpanElement | null>(null);
+
+  // Díly se tahají jednou za život okénka - podruhé už jsou po ruce.
+  useEffect(() => {
+    if (!otevreno || nacteno.current) return;
+    nacteno.current = true;
+    let zruseno = false;
+    setNacitam(true);
+    fetch(`/api/serie?nazev=${encodeURIComponent(serie)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!zruseno && Array.isArray(data?.dily)) setDily(data.dily as Dil[]);
+      })
+      .catch((err) => {
+        console.error('Díly série se nepodařilo načíst:', err);
+        nacteno.current = false;
+      })
+      .finally(() => {
+        if (!zruseno) setNacitam(false);
+      });
+    return () => {
+      zruseno = true;
+    };
+  }, [otevreno, serie]);
 
   // Zavře se kliknutím vedle i klávesou Esc - oknénko nesmí zůstat viset
   // nad tabulkou, když už člověk pokračuje jinam.
@@ -83,7 +111,11 @@ export function OdznakSerie({
           <span className="block font-heading font-semibold text-sm text-ink break-words">{serie}</span>
           <span className="block text-[11px] font-body text-muted mt-0.5">
             {dil != null ? t('serie.kolikatyDil', { dil }) : t('serie.bezCisla')}
-            {dily.length > 1 ? ` · ${t('serie.unasDilu', { pocet: dily.length })}` : ''}
+            {nacitam
+              ? ` · ${t('obecne.nacitam')}`
+              : dily.length > 1
+                ? ` · ${t('serie.unasDilu', { pocet: dily.length })}`
+                : ''}
           </span>
           {dily.length > 1 && (
             <span className="flex flex-col gap-0.5 mt-2.5">

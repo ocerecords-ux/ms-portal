@@ -10,7 +10,6 @@ import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
 import { OdznakSerie } from '@/components/OdznakSerie';
-import { dilySerie } from '@/lib/serie';
 import { projectTypeLabel } from '@/lib/projectTypes';
 import { ValecProgresu } from '@/components/ValecProgresu';
 import type { ProgresNataceni } from '@/lib/progresNataceni';
@@ -392,7 +391,6 @@ export function ProjectsTable({
                       <OdznakSerie
                         serie={p.serie}
                         dil={p.serieDil ?? null}
-                        dily={dilySerie(projects, p.serie)}
                         aktivniId={p.id}
                       />
                     )}
@@ -610,7 +608,6 @@ export function AdminProjectsTable({
                     <OdznakSerie
                       serie={p.serie}
                       dil={p.serieDil ?? null}
-                      dily={dilySerie(projects, p.serie)}
                       aktivniId={p.id}
                     />
                   )}
@@ -932,22 +929,28 @@ function bunkaSloupce(
           </span>
           {/* break-words: nazev bez mezer (dlouhy jednoslovny titul) se jinak
               nezalomi vubec a vytekl by z bunky. */}
-          <Link
-            href={`/projekty/${p.id}`}
-            className="text-ink hover:text-brand-purple no-underline whitespace-normal break-words leading-snug"
-          >
-            {p.name}
-          </Link>
-          {/* Série jako kolečko hned za názvem (14. 10. 2026) - viz
-              components/OdznakSerie.tsx. */}
-          {p.serie && (
-            <OdznakSerie
-              serie={p.serie}
-              dil={p.serieDil ?? null}
-              dily={dilySerie(vsechny, p.serie)}
-              aktivniId={p.id}
-            />
-          )}
+          {/* NÁZEV A KOLEČKO SÉRIE JSOU JEDEN TEXTOVÝ BLOK (oprava 14. 10.
+              2026: „na mobilu to zasahuje do data“). Když bylo kolečko
+              samostatnou položkou flexu, postavilo se za celý zalomený název
+              a na úzkém displeji vyteklo z buňky přes datum. Takhle teče za
+              posledním slovem a v nouzi se zalomí s ním. */}
+          <span className="min-w-0 break-words leading-snug">
+            <Link
+              href={`/projekty/${p.id}`}
+              className="text-ink hover:text-brand-purple no-underline whitespace-normal break-words leading-snug"
+            >
+              {p.name}
+            </Link>
+            {/* Série jako kolečko hned za názvem (14. 10. 2026) - viz
+                components/OdznakSerie.tsx. */}
+            {p.serie && (
+              <OdznakSerie
+                serie={p.serie}
+                dil={p.serieDil ?? null}
+                aktivniId={p.id}
+              />
+            )}
+          </span>
           {/* Na telefonu se značky dokladů nevykreslují (6. 10. 2026) - viz výš. */}
           <span className="hidden sm:inline-flex items-center gap-2.5">
             {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
