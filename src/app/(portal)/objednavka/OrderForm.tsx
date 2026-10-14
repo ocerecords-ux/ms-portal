@@ -78,9 +78,26 @@ export function OrderForm({
    * už upravená kopie.
    */
   const [puvodniPdf, setPuvodniPdf] = useState<File | null>(null);
+  /**
+   * ÚPRAVY TEXTU AŽ NA TLAČÍTKO (zadání 14. 10. 2026: „at se te upravy
+   * textu tady ukazou az na tlacitko Upravit text. At je to prehlednejsi").
+   *
+   * Náhledy tří set stránek pod přílohou už nejsou náhled, ale stěna. Kdo
+   * chce jen objednat, tomu stačí jméno souboru; kdo chce vyhodit obálku
+   * a tiráž, si je otevře.
+   *
+   * `upravyBezely` drží, že už byly jednou otevřené: zavření je pak jen
+   * schování (`hidden`), ne odpojení. Odpojená komponenta zapomíná, které
+   * stránky klient vyřadil, a při další změně by je složila zpátky.
+   */
+  const [upravujeText, setUpravujeText] = useState(false);
+  const [upravyBezely, setUpravyBezely] = useState(false);
   const vyberSoubor = (f: File | null) => {
     setFile(f);
     setPuvodniPdf(f && /\.pdf$/i.test(f.name) ? f : null);
+    setUpravujeText(false);
+    setUpravyBezely(false);
+    pocetChtelKlient.current = false;
   };
   const [dragOver, setDragOver] = useState(false);
   /**
@@ -94,6 +111,17 @@ export function OrderForm({
    */
   const vstupSouboru = useRef<HTMLInputElement | null>(null);
   const pocetZeSouboru = useRef(false);
+  /**
+   * NORMOSTRANY AŽ NA TLAČÍTKO (zadání 14. 10. 2026: „kdyz klient vlozi text,
+   * at se automaticky nenactou NS, ale at je to na tlacitko. Nekdy klient ty
+   * NS vi a neusi se to hned pocitat").
+   *
+   * Dokud o to klient neřekne, se souborem se nepočítá nic. Kdo číslo zná,
+   * ho prostě napíše. Až KDYŽ SI JEDNOU NECHÁ SPOČÍTAT, počítá se pak
+   * už samo při každé změně přílohy - třeba když z PDF vyhodí obálku -
+   * aby mu v objednávce neuvízlo číslo, které už neplatí.
+   */
+  const pocetChtelKlient = useRef(false);
 
   function odeberSoubor() {
     vyberSoubor(null);
@@ -282,6 +310,8 @@ export function OrderForm({
     setDetailChyby(null);
     if (!file) return;
     if (!umimeSpocitat(file.name)) return;
+    // Jen když si klient výpočet už jednou vyžádal - viz `pocetChtelKlient`.
+    if (!pocetChtelKlient.current) return;
     void prepocitej(file, false);
   }, [file, prepocitej]);
 
@@ -539,8 +569,52 @@ export function OrderForm({
           </span>
         </div>
 
-        {/* Náhled a úprava PDF - mazání a otáčení stránek (22. 9. 2026). */}
-        {puvodniPdf && <UpravaPdf soubor={puvodniPdf} onZmena={setFile} />}
+        {/**
+          * DVĚ TLAČÍTKA POD PŘÍLOHOU (14. 10. 2026). Do té doby se po vložení
+          * souboru rovnou počítaly normostrany a rozbalila se stěna náhledů -
+          * obočí naráz a nevyžádaně. Teď se nestane nic, dokud o to klient
+          * neřekne; kdo počet normostran zná, napíše ho rovnou do políčka.
+          */}
+        {file && (umimeSpocitat(file.name) || puvodniPdf) && (
+          <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+            {umimeSpocitat(file.name) && !pocitam && !rozbor && !chybaRozboru && (
+              <button
+                type="button"
+                onClick={() => {
+                  pocetChtelKlient.current = true;
+                  void prepocitej(file, false);
+                }}
+                className="bg-brand-green text-brand-purpleDark rounded-md px-3.5 py-1.5 text-xs font-heading font-semibold"
+              >
+                {t('objednavka.spocitatNs')}
+              </button>
+            )}
+            {puvodniPdf && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUpravyBezely(true);
+                  setUpravujeText((v) => !v);
+                }}
+                className="border border-white/60 text-white rounded-md px-3.5 py-1.5 text-xs font-heading font-semibold hover:bg-white/15 transition-colors"
+              >
+                {upravujeText ? t('objednavka.skrytUpravyTextu') : t('objednavka.upravitText')}
+              </button>
+            )}
+            {!rozbor && !pocitam && !chybaRozboru && umimeSpocitat(file.name) && (
+              <span className="text-[11px] font-body text-white/60">{t('objednavka.nsNaTlacitko')}</span>
+            )}
+          </div>
+        )}
+
+        {/* Náhled a úprava PDF - mazání a otáčení stránek (22. 9. 2026),
+            od 14. 10. 2026 až na tlačítko. Zavřené se jen schová - viz
+            `upravyBezely` nahoře. */}
+        {puvodniPdf && upravyBezely && (
+          <div className={upravujeText ? '' : 'hidden'}>
+            <UpravaPdf soubor={puvodniPdf} onZmena={setFile} />
+          </div>
+        )}
 
         {/* Kalkulačka normostran nad přílohou (zadání 12. 9. 2026). */}
         {file && (

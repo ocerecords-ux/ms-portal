@@ -22,7 +22,7 @@ Když u vás děláme obojí, jsou nahoře dvě tlačítka — **Audiokniha** a 
 # Co se vyplňuje u audioknihy
 
 - **Název** — povinný. Pod tímhle názvem zakázku uvidíte v Projektech.
-- **Počet normostran** — nemusíte počítat ručně, viz příloha níž.
+- **Počet normostran** — napište ho, když ho znáte, nebo si ho nechte spočítat z přílohy, viz níž.
 - **Cena bez DPH** — spočítá se sama z normostran a vaší sazby. Pokud si cenu navrhujete sami, je políčko k vyplnění a částka je vždycky bez DPH.
 - **Minimální cena** — audiokniha má spodní hranici **12 000 Kč bez DPH**. Pod ní se projekt nerozjede: režisér, studio, postprodukce a korektura se zaplatí i u tenké knížky. U krátkého textu proto v objednávce uvidíte těch 12 000 Kč místo částky z normostran — pod cenou je napísané, proč. Jestli si cenu navrhujete sami, formulář návrh pod hranicí nepustí dál; ozvěte se nám a domluvíme se.
 - **Datum odevzdání** — dokdy nahrávku potřebujete.
@@ -31,9 +31,9 @@ Když u vás děláme obojí, jsou nahoře dvě tlačítka — **Audiokniha** a 
 
 # Příloha spočítá normostrany za vás
 
-Přetáhněte text do plochy s přílohou (nebo ho vyberte tlačítkem). Portál ho přečte **přímo u vás v prohlížeči** a napíše, kolik má normostran, znaků a slov. Pak stačí tlačítko **Doplnit do objednávky**.
+Přetáhněte text do plochy s přílohou (nebo ho vyberte tlačítkem). Samo se pak nestane nic — kdo počet normostran zná, napíše ho rovnou do políčka. Kdo ne, klikne na **Spočítat normostrany**: portál text přečte **přímo u vás v prohlížeči** a napíše, kolik má normostran, znaků a slov. Pak stačí tlačítko **Doplnit do objednávky**. Jakmile si jednou necháte spočítat, přepočítá se to už samo pokaždé, když s přílohou pohnete.
 
-Umí Word (.docx), PDF, RTF, ODT, EPUB a TXT. U PDF se navíc ukáže **náhled stránek**: obálku nebo tiráž jde vyřadit a ležatou stránku otočit — pošle se nám přeskládané PDF, které už odpovídá tomu, co se má načíst.
+Umí Word (.docx), PDF, RTF, ODT, EPUB a TXT. U PDF je navíc tlačítko **Upravit text**: otevře náhled stránek, kde jde obálku nebo tiráž vyřadit a ležatou stránku otočit — pošle se nám přeskládané PDF, které už odpovídá tomu, co se má načíst. Zavřením náhledu se o úpravy nepřijde.
 
 # Úvod a závěr audioknihy
 

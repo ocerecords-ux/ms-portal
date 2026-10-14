@@ -1042,6 +1042,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Z tohohle souboru normostrany spočítat neumím. Umím Word (.docx), PDF, RTF, ODT, EPUB a TXT.',
     en: 'I cannot count standard pages in this file. I can read Word (.docx), PDF, RTF, ODT, EPUB and TXT.',
   },
+  // Normostrany a úpravy textu až na tlačítko (zadání 14. 10. 2026).
+  'objednavka.spocitatNs': { cs: 'Spočítat normostrany', en: 'Count the standard pages' },
+  'objednavka.nsNaTlacitko': {
+    cs: 'Počet normostran si můžete nechat spočítat z přílohy — nebo ho rovnou napsat, když ho znáte.',
+    en: 'You can have the number of standard pages worked out from the file — or simply type it in if you know it.',
+  },
+  'objednavka.upravitText': { cs: 'Upravit text', en: 'Edit the text' },
+  'objednavka.skrytUpravyTextu': { cs: 'Skrýt úpravy textu', en: 'Hide the editing' },
   'objednavka.spocitatZnovu': { cs: 'Spočítat z textu znovu', en: 'Count from the text again' },
   'objednavka.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
   'objednavka.odeslat': { cs: 'Odeslat', en: 'Send' },
