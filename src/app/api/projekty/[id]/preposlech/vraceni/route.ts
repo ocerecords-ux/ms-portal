@@ -41,6 +41,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: pristup.message }, { status: pristup.status });
   }
 
+  /**
+   * UZAVŘENÝ PŘEPOSLECH SE NEVRACÍ (13. 10. 2026). Vrácení kroku je zápis do
+   * poznámek jako kterýkoli jiný, takže platí týž zámek jako u přidání
+   * a mazání - viz komentář u `zamcenoProNej` ve vedlejší route.
+   */
+  if (!pristup.interni) {
+    const stav = await prisma.preposlechStav
+      .findUnique({ where: { caflouProjectId: params.id }, select: { uzamceno: true } })
+      .catch(() => null);
+    if (stav?.uzamceno) {
+      return NextResponse.json(
+        {
+          error:
+            'Přeposlech je uzavřený. Potřebujete-li ještě něco doplnit, napište nám a odemkneme vám ho.',
+          uzamceno: true,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 

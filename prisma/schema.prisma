@@ -3323,6 +3323,18 @@ model PreposlechStav {
   reviewedAt      DateTime?
   reviewedByName  String?
 
+  /// PREPOSLECH UZAVREL KLIENT (zadani 13. 10. 2026: „kdyz toto tlacitko
+  /// zmackne, tak by se mel preposlech uzamknout a odemknout ho muzeme jen my
+  /// na nasi strane"). Duvod je prosty: klienti si tlacitko obcas spletou
+  /// s pauzou, a nez se to stalo nevratne, je potreba se zeptat a pak zamknout.
+  ///
+  /// Zamyka JEN klient - kdyz oznacime preposlechnuto my z portalu, nezamyka
+  /// se nic. Zamceny preposlech odmita zapis i na serveru, ne jen v okne:
+  /// klient ma odkaz z mailu porad otevreny a schovana tlacitka by nestacila.
+  uzamceno        Boolean   @default(false)
+  uzamcenoAt      DateTime?
+  uzamcenoKym     String?
+
   /// Kolik stop ma AudioTagger u projektu k dispozici (zadani 12. 9. 2026:
   /// sloupec „K preposlechu" u klienta). Zapisuje se pri kazdem nacteni stop
   /// - slozka na Disku je zdroj pravdy, tohle je jen jeji posledni znama

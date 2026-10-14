@@ -145,6 +145,18 @@ Když někdo z týmu poslouchá — v portálu i na odkazu, který šel klientov
 
 Jakmile někdo označí nahrávku jako **PŘEPOSLECHNUTO**, napíše **Bruno do kanálu projektu v chatu**: kdo to označil, kolik je poznámek k opravě, kolik stop a kolik procent textu. Cinkne to těm, kdo jsou v kanálu, podle jejich nastavení upozornění.
 
+# Když přeposlech uzavře klient
+
+Tlačítko **Označit jako přeposlechnuté** si klienti občas pletou s pauzou. Proto se jich portál nejdřív **zeptá oknem přes celou plochu** a napíše, co se stane: chyby už nepůjde přidávat, upravovat ani mazat, označení si sami nezruší — ale nahrávku i text si přehrají dál a **tabulku chyb si stáhnou i potom** (tlačítko je rovnou v tom okně). Když mají přeposlechnuto méně než 90 % textu, přibude žlutý řádek s procenty — uzavřít to nebrání, jen to řekne nahlas.
+
+Po potvrzení se přeposlech **uzamkne**:
+
+- Chyby zůstanou vidět, ale tužka a křížek u nich zmizí a klávesa **E** novou nezaloží. **Zámek drží server**, ne jen schovaná tlačítka — klient má odkaz z mailu často pořád otevřený a ten by jinak zapisoval dál.
+- V liště má klient „🔒 Přeposlech uzavřen" a tlačítko na stažení tabulky.
+- **My vidíme „🔒 Uzamkl klient" a tlačítko Odemknout klientovi.** Odemknutí vrátí přeposlech do práce (označení přeposlechnuto se tím zruší, stejně jako dřív tlačítko „zrušit").
+
+**Zamyká jen klient.** Když nahrávku označíme jako přeposlechnutou my z portálu — tedy u knih, které přeposloucháváme interně — nezamyká se nic a **nikomu neodejde žádný e-mail**. Zpráva „přeposlech hotový, pouštíme se do oprav" chodí klientovi jen tehdy, když přeposlech dokončil on sám.
+
 # Kolik je přeposlechnuto (procenta)
 
 Stopy k přeposlechu chodí po kouscích, takže „3 z 5 stop" o celé knize nic neřekne. Procento se proto počítá **podle stran PDF**: v hlavičce je proužek a „Přeposlechnuto 42 % · strana 120 z 286".

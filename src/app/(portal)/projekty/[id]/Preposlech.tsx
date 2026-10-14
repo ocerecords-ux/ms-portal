@@ -94,6 +94,13 @@ type Stav = {
   reviewed: boolean;
   reviewedByName: string | null;
   reviewedAt: string | null;
+  /**
+   * Přeposlech uzavřel klient (13. 10. 2026). Od té chvíle je pro něj jen ke
+   * čtení - a není to jen o schovaných tlačítkách, zápis odmítá i server.
+   */
+  uzamceno?: boolean;
+  uzamcenoKym?: string | null;
+  uzamcenoAt?: string | null;
   chyby: ChybaZeServeru[];
   historie?: Udalost[];
   /** Pořadí stop (od 1), které si přeposlouchávač odškrtl jako hotové. */
@@ -165,6 +172,12 @@ function hms(sec: number): string {
   const cele = Math.max(0, Math.round(sec));
   return `${pad2(Math.floor(cele / 3600))}:${pad2(Math.floor((cele % 3600) / 60))}:${pad2(cele % 60)}`;
 }
+
+/**
+ * Pod tímhle procentem přeposlechnutého textu se klienta při uzavírání ještě
+ * zeptáme nahlas (13. 10. 2026) - tlačítko si občas plete s pauzou.
+ */
+const PRAH_VAROVANI = 90;
 
 export function Preposlech({
   caflouProjectId,
@@ -287,6 +300,11 @@ export function Preposlech({
    * i zaskrtnuti, protoze prave to je ta velka akce.
    */
   const [potvrzujePreposlech, setPotvrzujePreposlech] = useState(false);
+  /**
+   * Zamčeno PRO TOHO, KDO se zrovna dívá. Klient už nepřidá ani nezmění
+   * poznámku; my vidíme, že je zamčeno, ale pracovat můžeme dál.
+   */
+  const zamcenoProMe = Boolean(stav.uzamceno) && jenPoslech;
   /**
    * Rychlost přehrávání (zadání 11. 9. 2026: „přidej do audiotaggeru
    * přepínání rychlé přehrávání"). Prohlížeč ji při výměně souboru zahodí,
@@ -1515,6 +1533,9 @@ export function Preposlech({
 
   function otevriForm(zvyrazneni: Zvyrazneni | null = null, cas?: number) {
     if (aktivni === null) return;
+    // Uzavřený přeposlech už novou poznámku nepřijme - ani klávesou E, ani
+    // označením textu myší (13. 10. 2026).
+    if (zamcenoProMe) return;
     audioRef.current?.pause();
     const stopa = stopyRef.current[aktivni];
     setZachyt({
@@ -1678,6 +1699,9 @@ export function Preposlech({
 
   async function prepniPreposlechnuto() {
     const reviewed = !stav.reviewed;
+    // Klient tím přeposlech ZAVÍRÁ (13. 10. 2026) - my jen odklikáváme hotovo
+    // a nic se nezamyká. Odkliknutí zpátky zámek vždycky pustí.
+    const zamknout = reviewed && jenPoslech;
     await posli(
       sKlicem(zaklad),
       {
@@ -1691,6 +1715,9 @@ export function Preposlech({
           reviewed,
           reviewedAt: reviewed ? new Date().toISOString() : null,
           reviewedByName: reviewed ? t('preposlech.odejdeSeSignalem') : null,
+          uzamceno: zamknout,
+          uzamcenoAt: zamknout ? new Date().toISOString() : null,
+          uzamcenoKym: zamknout ? t('preposlech.odejdeSeSignalem') : null,
         }),
       },
     );
@@ -2242,6 +2269,27 @@ export function Preposlech({
               takže je pořád vidět, kdo to odškrtl. */}
           {(stav.reviewed ? (
               <span className="flex items-center gap-2">
+                {/* UZAVŘENÍ PŘEPOSLECHU (13. 10. 2026). Klientovi říká zámek, že
+                    už do něj nesáhne; nám, že to zavřel on, ne my. Tabulku chyb
+                    si klient stáhne i potom - proto je rovnou tady v liště,
+                    panel s chybami už ji nikam neschová. */}
+                {stav.uzamceno && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-heading font-semibold bg-white/15 border border-white/30 rounded-pill px-2.5 py-1">
+                    <span aria-hidden="true">🔒</span>
+                    {jenPoslech ? t('preposlech.uzavreno') : t('preposlech.uzamklKlient')}
+                  </span>
+                )}
+                {zamcenoProMe && (
+                  <button
+                    type="button"
+                    onClick={stahniTabulku}
+                    disabled={stav.chyby.length === 0}
+                    title={t('preposlech.tabulkaNapoveda')}
+                    className="font-heading font-semibold text-[11px] rounded-lg border border-white/40 px-2.5 py-1 hover:border-white transition-colors disabled:opacity-40"
+                  >
+                    {t('preposlech.stahnoutTabulku')}
+                  </button>
+                )}
                 <span className="flex items-center gap-2 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-4 py-2.5">
                   <span className="grid place-items-center w-5 h-5 rounded-full bg-onAccent/15">✓</span>
                   {t('preposlech.stitekPreposlechnuto')}
@@ -2255,7 +2303,9 @@ export function Preposlech({
                     </>
                   )}
                 </span>
-                {rusiPreposlech ? (
+                {/* Zamčený přeposlech odemykáme jen my - klientovi tady není
+                    co nabídnout (13. 10. 2026). */}
+                {zamcenoProMe ? null : rusiPreposlech ? (
                   <span className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -2265,7 +2315,7 @@ export function Preposlech({
                       }}
                       className="font-heading font-semibold text-xs rounded-lg bg-white text-brand-purpleDeep px-3 py-1.5"
                     >
-                      {t('preposlech.opravduZrusit')}
+                      {stav.uzamceno ? t('preposlech.opravduOdemknout') : t('preposlech.opravduZrusit')}
                     </button>
                     <button
                       type="button"
@@ -2279,14 +2329,14 @@ export function Preposlech({
                   <button
                     type="button"
                     onClick={() => setRusiPreposlech(true)}
-                    title={t('preposlech.zrusitOznaceni')}
+                    title={stav.uzamceno ? t('preposlech.odemknout') : t('preposlech.zrusitOznaceni')}
                     className="font-heading text-xs text-white/60 hover:text-white underline"
                   >
-                    {t('preposlech.zrusitMale')}
+                    {stav.uzamceno ? t('preposlech.odemknout') : t('preposlech.zrusitMale')}
                   </button>
                 )}
               </span>
-            ) : potvrzujePreposlech ? (
+            ) : potvrzujePreposlech && !jenPoslech ? (
               <span className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-body text-white/85">
                   {t('preposlech.opravduOznacit')}
@@ -2321,6 +2371,110 @@ export function Preposlech({
             ))}
         </div>
       </div>
+
+      {/**
+       * UKONČENÍ PŘEPOSLECHU (zadání 13. 10. 2026: „na straně klienta někdo
+       * klikne na tlačítko označit jako přeposlechnuté, takby se ho to mělo
+       * zeptat… zároveň by se měl přeposlech uzamknout").
+       *
+       * PROČ OKNO A NE PROUŽEK V LIŠTĚ: klienti si to tlačítko občas spletou
+       * s pauzou. Proužek „Opravdu?" se da odkliknout stejně rychle jako
+       * omylem; okno člověka zastaví a řekne mu, co se stane.
+       *
+       * STÁHNOUT TABULKU JE ROVNOU TADY, ať ji má u sebe dřív, než zamkne.
+       * My tohle okno nevidíme - naše označení z portálu nic nezamyká.
+       */}
+      {potvrzujePreposlech && jenPoslech && (
+        <div
+          className="fixed inset-0 z-[70] grid place-items-center bg-bar/70 backdrop-blur-[2px] p-5"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('preposlech.uzavritNadpis')}
+          onClick={() => setPotvrzujePreposlech(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[min(520px,100%)] bg-surface rounded-card shadow-2xl overflow-hidden"
+          >
+            <div className="bg-brand-purpleDark text-white px-6 py-4 flex items-center gap-3">
+              <span className="grid place-items-center w-8 h-8 rounded-lg bg-white/15 text-base" aria-hidden="true">
+                🔒
+              </span>
+              <h3 className="font-heading font-bold text-base m-0">{t('preposlech.uzavritNadpis')}</h3>
+            </div>
+            <div className="px-6 pt-5 pb-2 flex flex-col gap-3">
+              <p className="text-sm font-body text-ink m-0">{t('preposlech.uzavritUvod')}</p>
+              <ul className="list-none m-0 p-0 flex flex-col gap-2">
+                {[
+                  { ano: false, text: t('preposlech.uzavritBodChyby') },
+                  { ano: false, text: t('preposlech.uzavritBodZrusit') },
+                  { ano: true, text: t('preposlech.uzavritBodPoslech') },
+                  { ano: true, text: t('preposlech.uzavritBodTabulka') },
+                ].map((b) => (
+                  <li key={b.text} className="flex items-start gap-2.5 text-sm font-body text-ink">
+                    <span
+                      aria-hidden="true"
+                      className={`shrink-0 grid place-items-center w-5 h-5 rounded-full text-[11px] font-heading font-bold mt-px ${
+                        b.ano ? 'bg-okTint text-status-done' : 'bg-dangerTint text-danger'
+                      }`}
+                    >
+                      {b.ano ? '✓' : '✕'}
+                    </span>
+                    <span>{b.text}</span>
+                  </li>
+                ))}
+              </ul>
+              {/* Žlutý řádek, když není přeposlechnuto skoro všechno - právě kvůli
+                  spletení s pauzou (13. 10. 2026). Nebrání uzavřít, jen to řekne. */}
+              {postup && postup.procent < PRAH_VAROVANI ? (
+                <p className="flex items-start gap-2 text-xs font-body text-ink bg-warnTint border border-line rounded-lg px-3.5 py-2.5 m-0">
+                  <span aria-hidden="true" className="text-status-progress font-bold">
+                    ⚠
+                  </span>
+                  <span>{t('preposlech.uzavritVarovani', { procent: postup.procent })}</span>
+                </p>
+              ) : (
+                <p className="text-xs font-body text-ink bg-tint border border-line rounded-lg px-3.5 py-2.5 m-0">
+                  {t('preposlech.uzavritSouhrn', {
+                    chyb: stav.chyby.length,
+                    procent: postup?.procent ?? 0,
+                  })}
+                </p>
+              )}
+              <p className="text-xs font-body text-muted m-0">{t('preposlech.uzavritNapiste')}</p>
+            </div>
+            <div className="flex items-center justify-between gap-3 flex-wrap px-6 py-4 mt-1 border-t border-line">
+              <button
+                type="button"
+                onClick={stahniTabulku}
+                disabled={stav.chyby.length === 0}
+                className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface text-ink px-4 py-2 hover:border-brand-purple transition-colors disabled:opacity-40"
+              >
+                {t('preposlech.stahnoutTabulku')}
+              </button>
+              <span className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setPotvrzujePreposlech(false)}
+                  className="font-heading font-semibold text-sm text-muted hover:text-ink px-3 py-2"
+                >
+                  {t('preposlech.uzavritJesteNe')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPotvrzujePreposlech(false);
+                    void prepniPreposlechnuto();
+                  }}
+                  className="bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-5 py-2.5"
+                >
+                  {t('preposlech.uzavritAno')}
+                </button>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!chybaHlaska && nacitamZvuk && (
         <p className="text-sm text-muted bg-surfaceSoft border border-line rounded-lg px-4 py-3 m-0">
@@ -2863,6 +3017,14 @@ export function Preposlech({
                     )}
                   </span>
                 </div>
+                {/* Po uzavření přeposlechu zůstanou chyby vidět, jen už nejdou
+                    měnit - ať je jasné proč a kam se obrátit (13. 10. 2026). */}
+                {zamcenoProMe && panel === 'chyby' && (
+                  <p className="flex items-start gap-2 text-xs font-body text-ink bg-warnTint border-b border-line px-4 py-2.5 m-0">
+                    <span aria-hidden="true">🔒</span>
+                    <span>{t('preposlech.uzavrenoNapoveda')}</span>
+                  </p>
+                )}
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   {panel === 'historie' ? (
                     <Historie zaznamy={stav.historie ?? []} onVratit={(id) => void vratKrok(id)} />

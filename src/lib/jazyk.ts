@@ -545,6 +545,50 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Označit jako přeposlechnuté',
     en: 'Mark as proof-listened',
   },
+  // UZAVŘENÍ PŘEPOSLECHU KLIENTEM (zadání 13. 10. 2026).
+  'preposlech.uzavritNadpis': { cs: 'Ukončit přeposlech?', en: 'Finish the proof-listening?' },
+  'preposlech.uzavritUvod': {
+    cs: 'Označením potvrzujete, že jste nahrávku přeposlechli a že je za vás hotová. Přeposlech se tím uzavře a zamkne.',
+    en: 'By marking it you confirm that you have listened to the whole recording and that it is done as far as you are concerned. This closes and locks the proof-listening.',
+  },
+  'preposlech.uzavritBodChyby': {
+    cs: 'Chyby už nepůjde přidávat, upravovat ani mazat.',
+    en: 'No more notes can be added, edited or deleted.',
+  },
+  'preposlech.uzavritBodZrusit': {
+    cs: 'Označení sami nezrušíte — odemknout může jen Mediaspace.',
+    en: 'You cannot undo the mark yourself — only Mediaspace can unlock it.',
+  },
+  'preposlech.uzavritBodPoslech': {
+    cs: 'Nahrávku i text si můžete dál kdykoliv přehrát.',
+    en: 'You can still play the recording and read the text whenever you like.',
+  },
+  'preposlech.uzavritBodTabulka': {
+    cs: 'Tabulku chyb si stáhnete i potom.',
+    en: 'You can still download the table of notes afterwards.',
+  },
+  'preposlech.uzavritSouhrn': {
+    cs: 'Zapsaných chyb: {chyb} · přeposlechnuto {procent} % textu',
+    en: 'Notes written: {chyb} · {procent} % of the text proof-listened',
+  },
+  'preposlech.uzavritVarovani': {
+    cs: 'Máte přeposlechnuto {procent} % textu. Zbytek už si po uzavření neoznačíte.',
+    en: 'You have proof-listened {procent} % of the text. Once it is closed, you cannot mark the rest.',
+  },
+  'preposlech.uzavritNapiste': {
+    cs: 'Potřebujete-li později ještě něco doplnit, napište nám a přeposlech vám odemkneme.',
+    en: 'If you need to add something later, write to us and we will unlock it for you.',
+  },
+  'preposlech.uzavritAno': { cs: 'Ano, ukončit přeposlech', en: 'Yes, finish the proof-listening' },
+  'preposlech.uzavritJesteNe': { cs: 'Ještě ne', en: 'Not yet' },
+  'preposlech.uzavreno': { cs: 'Přeposlech uzavřen', en: 'Proof-listening closed' },
+  'preposlech.uzamklKlient': { cs: 'Uzamkl klient', en: 'Locked by the customer' },
+  'preposlech.odemknout': { cs: 'Odemknout klientovi', en: 'Unlock for the customer' },
+  'preposlech.opravduOdemknout': { cs: 'Opravdu odemknout', en: 'Yes, unlock it' },
+  'preposlech.uzavrenoNapoveda': {
+    cs: 'Přeposlech je uzavřený, chyby už nejde měnit. Potřebujete něco doplnit? Napište nám a odemkneme vám ho.',
+    en: 'The proof-listening is closed, so the notes can no longer be changed. Need to add something? Write to us and we will unlock it.',
+  },
   'preposlech.textNahravky': { cs: 'Text nahrávky', en: 'Recording text' },
   'preposlech.nacistJinePdf': { cs: 'Načíst jiné PDF', en: 'Load a different PDF' },
   'preposlech.cisloStrany': { cs: 'Číslo strany', en: 'Page number' },

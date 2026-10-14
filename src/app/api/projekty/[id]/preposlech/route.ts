@@ -75,6 +75,30 @@ async function zapisUdalost(
     .catch((err) => console.error('Zápis do historie přeposlechu selhal:', err));
 }
 
+/**
+ * PŘEPOSLECH UZAVŘENÝ KLIENTEM (zadání 13. 10. 2026). Když klient stiskne
+ * „Označit jako přeposlechnuté", přeposlech se zamkne: od té chvíle do něj
+ * nikdo zvenčí nezapíše a odemknout ho můžeme jen my.
+ *
+ * KONTROLA JE TADY NA SERVERU, NE JEN V OKNĚ. Klient má odkaz z mailu často
+ * pořád otevřený ve vedlejším panelu a schovaná tlačítka by ho nezastavila.
+ */
+async function zamcenoProNej(caflouProjectId: string, kdo: { interni: boolean }): Promise<NextResponse | null> {
+  if (kdo.interni) return null;
+  const stav = await prisma.preposlechStav
+    .findUnique({ where: { caflouProjectId }, select: { uzamceno: true } })
+    .catch(() => null);
+  if (!stav?.uzamceno) return null;
+  return NextResponse.json(
+    {
+      error:
+        'Přeposlech je uzavřený. Potřebujete-li ještě něco doplnit, napište nám a odemkneme vám ho.',
+      uzamceno: true,
+    },
+    { status: 409 },
+  );
+}
+
 /** Kdo smí sáhnout na jeden záznam - viz komentář nahoře. */
 type Pristup = { userId: string | null; interni: boolean };
 function smiUpravit(chyba: { createdByUserId: string | null }, kdo: Pristup): boolean {
@@ -98,10 +122,18 @@ async function stav(caflouProjectId: string, kdo?: Pristup) {
     }),
   ]);
 
+  // Zamčený přeposlech je pro klienta jen ke čtení - tužka ani křížek se
+  // u záznamů vůbec neukážou (13. 10. 2026).
+  const zamceno = Boolean(preposlech?.uzamceno);
+  const smiPsat = Boolean(kdo) && (kdo!.interni || !zamceno);
+
   return {
     reviewed: Boolean(preposlech?.reviewed),
     reviewedByName: preposlech?.reviewedByName ?? null,
     reviewedAt: preposlech?.reviewedAt ? preposlech.reviewedAt.toISOString() : null,
+    uzamceno: zamceno,
+    uzamcenoKym: preposlech?.uzamcenoKym ?? null,
+    uzamcenoAt: preposlech?.uzamcenoAt ? preposlech.uzamcenoAt.toISOString() : null,
     chyby: chyby.map((ch) => ({
       id: ch.id,
       trackIndex: ch.trackIndex,
@@ -113,7 +145,7 @@ async function stav(caflouProjectId: string, kdo?: Pristup) {
       createdByName: ch.createdByName,
       createdAt: ch.createdAt.toISOString(),
       // At okno vi, u ktereho zaznamu ma ukazat tuzku a krizek.
-      muzuUpravit: kdo ? smiUpravit(ch, kdo) : false,
+      muzuUpravit: smiPsat ? smiUpravit(ch, kdo!) : false,
     })),
     historie: historie.map((u) => ({
       id: u.id,
@@ -126,7 +158,8 @@ async function stav(caflouProjectId: string, kdo?: Pristup) {
        * a jen tomu, kdo na tu poznamku smi (zadani 12. 9. 2026).
        */
       muzuVratit: Boolean(
-        kdo &&
+        smiPsat &&
+          kdo &&
           !u.vracenoAt &&
           ['PRIDANA', 'UPRAVENA', 'SMAZANA'].includes(u.typ) &&
           u.chybaId &&
@@ -169,6 +202,8 @@ const novaChyba = z.object({
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
+  const zamek = await zamcenoProNej(params.id, pristup);
+  if (zamek) return zamek;
 
   const parsed = novaChyba.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -206,8 +241,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const telo = await req.json().catch(() => ({}));
   const reviewed = Boolean((telo as { reviewed?: unknown })?.reviewed);
   const predtim = await prisma.preposlechStav
-    .findUnique({ where: { caflouProjectId: params.id }, select: { reviewed: true } })
+    .findUnique({ where: { caflouProjectId: params.id }, select: { reviewed: true, uzamceno: true } })
     .catch(() => null);
+
+  // Zamčený přeposlech odškrtne zpátky jen někdo od nás - klient už se k němu
+  // nedostane, o to tady celou dobu jde (13. 10. 2026).
+  const zamek = await zamcenoProNej(params.id, pristup);
+  if (zamek) return zamek;
+
+  /**
+   * ZAMYKÁ JEN KLIENT. Když přeposlechnuto odškrtneme my z portálu, nic se
+   * nezamyká - interní přeposlech si vedeme sami a nepotřebujeme se odemykat.
+   * Odškrtnutí zpátky (reviewed=false) zámek vždycky uvolní; je to naše
+   * „odemknout klientovi".
+   */
+  const zamknout = reviewed && !pristup.interni;
 
   await prisma.preposlechStav.upsert({
     where: { caflouProjectId: params.id },
@@ -216,18 +264,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       reviewed,
       reviewedAt: reviewed ? new Date() : null,
       reviewedByName: reviewed ? pristup.jmeno : null,
+      uzamceno: zamknout,
+      uzamcenoAt: zamknout ? new Date() : null,
+      uzamcenoKym: zamknout ? pristup.jmeno : null,
     },
     update: {
       reviewed,
       reviewedAt: reviewed ? new Date() : null,
       reviewedByName: reviewed ? pristup.jmeno : null,
+      uzamceno: zamknout,
+      uzamcenoAt: zamknout ? new Date() : null,
+      uzamcenoKym: zamknout ? pristup.jmeno : null,
     },
   });
 
   await zapisUdalost(
     params.id,
     reviewed ? 'PREPOSLECHNUTO' : 'ZNOVU',
-    reviewed ? 'Označil(a) nahrávku jako přeposlechnutou.' : 'Vrátil(a) nahrávku k přeposlechu.',
+    reviewed
+      ? zamknout
+        ? 'Označil(a) nahrávku jako přeposlechnutou a uzavřel(a) přeposlech.'
+        : 'Označil(a) nahrávku jako přeposlechnutou.'
+      : predtim?.uzamceno
+        ? 'Odemkl(a) přeposlech a vrátil(a) nahrávku k přeposlechu.'
+        : 'Vrátil(a) nahrávku k přeposlechu.',
     pristup.jmeno,
   );
 
@@ -246,9 +306,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
      * znění se bere ze Vzorů zpráv a u reklamní firmy neodejde vůbec.
      * Nesmí to shodit samotné označení, proto bez čekání na chybu.
      */
-    await posliNotifikaciKeStavu(params.id, STAV_PREPOSLECH_HOTOVO).catch((err) =>
-      console.error('Zprava klientovi o dokoncenem preposlechu selhala:', err),
-    );
+    /**
+     * JEN KDYŽ PŘEPOSLECH DOKONČIL KLIENT (upřesnění 13. 10. 2026: „u projektů,
+     * které přeposloucháváme my interně, tzn. z portálu, by neměl chodit email
+     * nikam"). Zpráva říká klientovi, že se pouštíme do oprav - když si
+     * nahrávku odškrtneme my sami, nemá komu chodit a jen mate.
+     */
+    if (!pristup.interni) {
+      await posliNotifikaciKeStavu(params.id, STAV_PREPOSLECH_HOTOVO).catch((err) =>
+        console.error('Zprava klientovi o dokoncenem preposlechu selhala:', err),
+      );
+    }
 
     /**
      * A PROJEKT SE PŘEKLOPÍ NA „OPRAVUJEME" (zadání 27. 9. 2026). Až TEĎ,
@@ -272,6 +340,8 @@ const upravaChyby = z.object({
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
+  const zamek = await zamcenoProNej(params.id, pristup);
+  if (zamek) return zamek;
 
   const parsed = upravaChyby.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -303,6 +373,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
+  const zamek = await zamcenoProNej(params.id, pristup);
+  if (zamek) return zamek;
 
   const chybaId = req.nextUrl.searchParams.get('chyba');
   if (!chybaId) return NextResponse.json({ error: 'Chybí ID záznamu.' }, { status: 400 });
