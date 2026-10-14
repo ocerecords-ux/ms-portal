@@ -57,6 +57,17 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
   const [smlouvy, setSmlouvy] = useState<Smlouva[]>([]);
   const [vychozi, setVychozi] = useState<Clovek | null>(null);
   const [lide, setLide] = useState<Clovek[]>([]);
+  /**
+   * Fakturuje se tahle zakázka na dvě části? (připomínka Barbory Šiblové
+   * 14. 10. 2026: „Bruno mi dává informaci o vložené smlouvě k projektu i když
+   * je to projekt, kde nefakturujeme zálohy. Možná by stačilo to nechat
+   * u klientů, kde zálohy fakturujeme.")
+   *
+   * Kde se fakturuje až na konci, se tlačítko „Dát vědět Báře" neukazuje -
+   * podepsaná smlouva tam není signál k vystavení zálohy. Poslat to někomu
+   * jde pořád, jen přes výběr člověka: je to vědomé rozhodnutí, ne jedno
+   * tlačítko navíc u každé smlouvy.
+   */
   const [soubor, setSoubor] = useState<File | null>(null);
   const [nazev, setNazev] = useState('');
   const [podepsano, setPodepsano] = useState('');
@@ -65,6 +76,7 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [vyberKomu, setVyberKomu] = useState<string | null>(null);
   const [komu, setKomu] = useState('');
+  const [naCasti, setNaCasti] = useState(true);
   const vstup = useRef<HTMLInputElement | null>(null);
 
   const nacti = useCallback(async () => {
@@ -74,6 +86,7 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
     setSmlouvy(d.smlouvy ?? []);
     setVychozi(d.vychoziPrijemce ?? null);
     setLide(d.lide ?? []);
+    setNaCasti(d.fakturujeNaCasti !== false);
   }, [adresa]);
 
   useEffect(() => {
@@ -166,6 +179,11 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
         {smlouvy.length > 0 && <span className="tabular-nums opacity-70">({smlouvy.length})</span>}
       </h3>
 
+      {/* Proč tu není tlačítko „Dát vědět" - ať to nevypadá jako chyba. */}
+      {!naCasti && smlouvy.length > 0 && (
+        <p className="text-xs font-body text-muted m-0">{t('smlouvyKl.bezZaloh')}</p>
+      )}
+
       {smlouvy.length > 0 && (
         <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
           {smlouvy.map((s) => (
@@ -226,6 +244,7 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
                 </span>
               ) : (
                 <span className="flex items-center gap-1">
+                  {naCasti && (
                   <button
                     type="button"
                     disabled={bezi === s.id || !vychozi}
@@ -243,16 +262,21 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
                           komu: vychozi ? komu3(vychozi.jmeno, jazyk) : '',
                         })}
                   </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
                       setKomu(vychozi?.id ?? lide[0]?.id ?? '');
                       setVyberKomu(s.id);
                     }}
-                    title={t('smlouvyKl.jinemu')}
-                    className="text-xs text-muted hover:text-brand-purple px-1"
+                    title={naCasti ? t('smlouvyKl.jinemu') : t('smlouvyKl.presto')}
+                    className={
+                      naCasti
+                        ? 'text-xs text-muted hover:text-brand-purple px-1'
+                        : 'text-xs font-heading font-semibold text-brand-purple hover:underline px-1 whitespace-nowrap'
+                    }
                   >
-                    ▾
+                    {naCasti ? '▾' : t('smlouvyKl.datVedetJinemu')}
                   </button>
                 </span>
               )}

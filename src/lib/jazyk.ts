@@ -5243,6 +5243,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Portál nic nezakazuje — jen ukazuje, kde se to pere. Co je schválně, odklepněte tlačítkem „Je to záměr".',
     en: 'The portal forbids nothing — it only shows where things clash. Sign off anything deliberate with the “It is intended” button.',
   },
+  'konflikty.duvodDveVeciNaraz': { cs: 'Máte dvě věci naráz', en: 'You have two things at once' },
+  'konflikty.duvodStudioDvakrat': {
+    cs: 'Studio {nazev} je obsazené dvakrát',
+    en: 'Studio {nazev} is booked twice',
+  },
+  'konflikty.duvodHerecDveNataceni': {
+    cs: '{nazev} je ve dvou natáčeních naráz',
+    en: '{nazev} is in two recording sessions at once',
+  },
+  'konflikty.duvodZvukarDveMista': {
+    cs: 'Zvukař {nazev} je na dvou místech naráz',
+    en: 'Sound engineer {nazev} is in two places at once',
+  },
 
   // --- historie kalendáře ---
   'historieKalendare.nazev': { cs: 'Historie kalendáře', en: 'Calendar history' },
@@ -5491,6 +5504,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Really cancel the whole offer? The sessions will be released.',
   },
   'nabidkaTerminu.chybaZruseni': { cs: 'Zrušení se nezdařilo.', en: 'Cancelling failed.' },
+  'nabidkaTerminu.chybaZmenyTerminu': {
+    cs: 'Termín se nepodařilo změnit.',
+    en: 'The session could not be changed.',
+  },
   'nabidkaTerminu.herecVybralNadpis': {
     cs: 'Herec vybral termíny',
     en: 'The narrator has chosen sessions',
@@ -7845,6 +7862,23 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tagy.stavHotovo': { cs: 'otagováno', en: 'tagged' },
   'tagy.stavChyba': { cs: 'nepovedlo se', en: 'failed' },
   'tagy.stavDrive': { cs: 'otagováno dřív', en: 'tagged earlier' },
+  'tagy.slozkaProjektu': { cs: 'Složka projektu', en: 'Project folder' },
+  'tagy.duvodBezSlozky': {
+    cs: 'Projekt nemá složku na Disku.',
+    en: 'The project has no folder on Drive.',
+  },
+  'tagy.duvodBezPrihlaseni': {
+    cs: 'Portál se nepřihlásil ke Google Disku.',
+    en: 'The portal could not sign in to Google Drive.',
+  },
+  'tagy.duvodSlozkaNeslo': {
+    cs: 'Složku projektu se nepodařilo načíst.',
+    en: 'The project folder could not be loaded.',
+  },
+  'tagy.duvodPodslozkaNeslo': {
+    cs: 'Vybranou složku se nepodařilo načíst.',
+    en: 'The selected folder could not be loaded.',
+  },
 
   /* Kapacita studií. */
   'kapacita.uvodPredTucnym': {
@@ -9099,6 +9133,20 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'heslo.email': { cs: 'E-mail', en: 'E-mail' },
 
   'pripominkovat.odkazNefunguje': { cs: 'Odkaz nefunguje', en: 'The link does not work' },
+  'pripominkovat.chybaOdkazNeplati': { cs: 'Odkaz už neplatí.', en: 'This link is no longer valid.' },
+  'pripominkovat.chybaBezSlozky': {
+    cs: 'U tohohle projektu zatím není složka s nahrávkami.',
+    en: 'This project has no recordings folder yet.',
+  },
+  'pripominkovat.chybaBezDisku': {
+    cs: 'Napojení na Google Disk zatím není nastavené.',
+    en: 'The Google Drive connection is not set up yet.',
+  },
+  'pripominkovat.chybaJinySoubor': {
+    cs: 'K tomuhle souboru odkaz nepustí.',
+    en: 'This link does not open that file.',
+  },
+  'pripominkovat.chybaSouborNenalezen': { cs: 'Soubor se nenašel.', en: 'The file could not be found.' },
 
   /* Připomínkování spotu - přehrávač a zápis připomínek (VideoTagger). */
   'pripominkovat.hlavicka': { cs: 'PŘIPOMÍNKOVÁNÍ SPOTU', en: 'ADVERT FEEDBACK' },
@@ -9560,6 +9608,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'smlouvyKl.posilam': { cs: 'Posílám…', en: 'Sending…' },
   'smlouvyKl.datVedet': { cs: '🤖 Dát vědět {komu}', en: '🤖 Let {komu} know' },
   'smlouvyKl.znovuDatVedet': { cs: '🤖 Znovu dát vědět {komu}', en: '🤖 Let {komu} know again' },
+  'smlouvyKl.presto': { cs: 'Přesto o ní dát někomu vědět', en: 'Let someone know anyway' },
+  'smlouvyKl.datVedetJinemu': { cs: 'Dát vědět…', en: 'Let someone know…' },
+  'smlouvyKl.bezZaloh': {
+    cs: 'U téhle firmy se nefakturuje na dvě části, takže se o podepsané smlouvě nedává vědět automaticky. Když je to přesto potřeba, vyber člověka přes „Dát vědět…".',
+    en: 'This company is not invoiced in two parts, so a signed contract is not announced automatically. If it is needed anyway, pick a person via „Let someone know…".',
+  },
   'smlouvyKl.jinemu': { cs: 'Poslat někomu jinému', en: 'Send to someone else' },
   'smlouvyKl.odebrat': { cs: 'Odebrat', en: 'Remove' },
   'smlouvyKl.souborKb': { cs: '{nazev} · {kb} kB', en: '{nazev} · {kb} kB' },
