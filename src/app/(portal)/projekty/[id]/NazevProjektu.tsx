@@ -90,15 +90,30 @@ export function NazevProjektu({
       <span className="flex items-center gap-1.5 flex-wrap min-w-0">
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{nazev}</h1>
         {serie && <OdznakSerie serie={serie} dil={serieDil} dily={dily} aktivniId={Number(caflouProjectId)} velky />}
+        {/* TLAČÍTKO S NÁPISEM, NE SAMOTNÁ TUŽKA (14. 10. 2026: „a kde to je?
+            Nevidím tužku"). Ikonka v řádce s nadpisem, stavem a odznaky
+            dokladu prostě zapadne - stejná léčka jako u výměny odkazu na složku
+            projektu (12. 10. 2026). */}
         {muzeMenit && (
           <button
             type="button"
             onClick={() => setUpravuje(true)}
-            title={t('serie.upravitNazev')}
-            aria-label={t('serie.upravitNazev')}
-            className="ml-1.5 grid place-items-center w-7 h-7 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors bg-transparent cursor-pointer"
+            className="ml-1.5 inline-flex items-center gap-1.5 font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent"
           >
-            ✎
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+              aria-hidden="true"
+            >
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+            {t('serie.upravitNazev')}
           </button>
         )}
       </span>
