@@ -29,6 +29,7 @@ export function OrderForm({
   cenuUrcujeKlient = false,
   herci,
   uvodZaver = false,
+  serie: navrhySerii = [],
 }: {
   ratePerPage: number;
   /**
@@ -48,11 +49,26 @@ export function OrderForm({
   herci: NarratorOption[];
   /** Úvod a závěr audioknihy (22. 9. 2026) - zatím jen Audiotéka. */
   uvodZaver?: boolean;
+  /**
+   * SÉRIE, KTERÉ U TÉ FIRMY UŽ JSOU (14. 10. 2026) - našeptávač pod polem.
+   * Bez něj vzniknou tři podoby téhož názvu a díly se neslepí dohromady.
+   */
+  serie?: string[];
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
   const router = useRouter();
   const [title, setTitle] = useState('');
+  /**
+   * SÉRIE (zadání 14. 10. 2026: „klient by mohl mít u názvu nějaké
+   * zaškrtávátko, že jde o sérii a v tu chvíli se mu odkryje pole, kde napíše
+   * název série a pořadovou číslovku").
+   *
+   * Pole se odkryjí až po zaškrtnutí - kdo sérii nemá, formulář se mu nezmění.
+   */
+  const [maSerii, setMaSerii] = useState(false);
+  const [serieNazev, setSerieNazev] = useState('');
+  const [serieDil, setSerieDil] = useState('');
   const [pageCount, setPageCount] = useState('');
   const [deadline, setDeadline] = useState('');
   const [narrators, setNarrators] = useState<string[]>([]);
@@ -202,6 +218,9 @@ export function OrderForm({
       const formData = new FormData();
       formData.set('kind', 'AUDIOBOOK');
       formData.set('title', title);
+      // Série jde do objednávky i do projektu, který z ní vznikne.
+      formData.set('serie', maSerii ? serieNazev.trim() : '');
+      formData.set('serieDil', maSerii ? serieDil.trim() : '');
       formData.set('pageCount', pageCount);
       // Cenu posílá jen klient, který si ji navrhuje sám - jinak si ji portál
       // spočítá ze sazby a z formuláře by ji nikdo přebíjet neměl.
@@ -234,6 +253,9 @@ export function OrderForm({
       setLastOrder({ title, price, varovani: body?.varovani ?? null });
       setDone(true);
       setTitle('');
+      setMaSerii(false);
+      setSerieNazev('');
+      setSerieDil('');
       setPageCount('');
       setCenaVlastni('');
       setDeadline('');
@@ -466,6 +488,52 @@ export function OrderForm({
                 })}
         </p>
       )}
+
+      {/* SÉRIE (zadání 14. 10. 2026). Zaškrtávátko pod názvem a pole se
+          odkryjí až po něm - kdo sérii nemá, formulář se mu nezmění. Do názvu
+          se série schválně nepíše, byl by strašně dlouhý. */}
+      <div className="flex flex-col gap-2.5">
+        <label className="flex items-center gap-2.5 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={maSerii}
+            onChange={(e) => setMaSerii(e.target.checked)}
+            className="w-4 h-4 accent-brand-green"
+          />
+          <span className="text-sm font-body text-white">{t('objednavka.jeVSerii')}</span>
+        </label>
+        {maSerii && (
+          <div className="flex gap-4 flex-wrap">
+            <Field label={t('objednavka.nazevSerie')} className="flex-[2_1_220px]">
+              <input
+                list="navrhy-serii-objednavka"
+                value={serieNazev}
+                onChange={(e) => setSerieNazev(e.target.value)}
+                placeholder={t('objednavka.nazevSeriePriklad')}
+                className="input"
+              />
+              {/* Našeptávač ze sérií, které u téhle firmy už jsou. */}
+              <datalist id="navrhy-serii-objednavka">
+                {navrhySerii.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label={t('objednavka.dilSerie')} className="flex-1 min-w-[110px]">
+              <input
+                type="number"
+                min={1}
+                max={99}
+                step={1}
+                value={serieDil}
+                onChange={(e) => setSerieDil(e.target.value)}
+                placeholder="1"
+                className="input"
+              />
+            </Field>
+          </div>
+        )}
+      </div>
 
       <Field label={t('objednavka.datumOdevzdani')}>
         <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />

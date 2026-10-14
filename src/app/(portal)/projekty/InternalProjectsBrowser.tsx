@@ -45,6 +45,9 @@ function matches(p: InternalProject, needle: string): boolean {
   const haystack = zjednodus(
     [
       p.name,
+      // Série se hledá jako text (14. 10. 2026) - „Musovských" najde všechny
+      // díly najednou, bez vlastního filtru.
+      p.serie ?? '',
       p.companyName,
       p.statusName,
       p.narrator ?? '',

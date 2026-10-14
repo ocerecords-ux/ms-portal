@@ -14,12 +14,15 @@ import type { Currency } from '@prisma/client';
  */
 export function OrderTypeSwitcher({
   ratePerPage,
+  serie = [],
   mena,
   cenuUrcujeKlient = false,
   herci,
   uvodZaver = false,
 }: {
   ratePerPage: number;
+  /** Série té firmy do našeptávače (14. 10. 2026). */
+  serie?: string[];
   /** Měna klienta (12. 10. 2026) - viz OrderForm. */
   mena: Currency;
   /** Cenu navrhuje klient (23. 9. 2026) - viz OrderForm. */
@@ -53,7 +56,7 @@ export function OrderTypeSwitcher({
         </button>
       </div>
 
-      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} mena={mena} cenuUrcujeKlient={cenuUrcujeKlient} herci={herci} uvodZaver={uvodZaver} /> : <AdOrderForm />}</div>
+      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} mena={mena} cenuUrcujeKlient={cenuUrcujeKlient} herci={herci} uvodZaver={uvodZaver} serie={serie} /> : <AdOrderForm />}</div>
     </div>
   );
 }

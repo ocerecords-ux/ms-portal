@@ -12,6 +12,7 @@ import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail } from '@/lib/email';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
 import { zajistiOdkaz, urlNahravek, urlPreposlechu } from '@/lib/preposlechOdkaz';
+import { nazevSeSerii } from '@/lib/serie';
 
 /**
  * Odeslání zprávy o změně stavu projektu (zadání 10. 9. 2026).
@@ -70,6 +71,8 @@ export async function posliNotifikaciKeStavu(
       where: { caflouProjectId },
       select: {
         name: true,
+        serie: true,
+        serieDil: true,
         driveUrl: true,
         companyId: true,
         companyName: true,
@@ -196,7 +199,13 @@ export async function posliNotifikaciKeStavu(
      * se dosazují až tady - vzor si pamatuje „{projekt}", ne konkrétní název,
      * takže se dá napsat jednou a platí pro všechny projekty.
      */
-    const nazevProjektu = projekt.name || `Projekt ${caflouProjectId}`;
+    /**
+     * V POŠTĚ SE SÉRIE PÍŠE CELÁ (14. 10. 2026). V portálu z ní je kolečko
+     * u názvu, ale v mailu se klient musí poznat, o který díl jde - viz
+     * nazevSeSerii v lib/serie.ts.
+     */
+    const nazevProjektu =
+      nazevSeSerii(projekt.name, projekt.serie, projekt.serieDil) || `Projekt ${caflouProjectId}`;
     const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
     const vzor = await vzorProStav(stav, druh);
 

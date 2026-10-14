@@ -35,6 +35,8 @@ import { ZnackyDokladu } from '@/lib/dokladyUProjektu';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
 import { uplatniSpodniHranici } from '@/lib/price';
+import { nactiSerieFirmy } from '@/lib/serieServer';
+import { NazevProjektu } from './NazevProjektu';
 import { expenseTotalMinor } from '@/lib/expenses';
 import { sessionsForPages } from '@/lib/calendar';
 import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
@@ -301,6 +303,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   });
   // Firma projektu tak, jak je vyplnena v portalu.
   const firmaProjektu = metaPoSync?.company ?? null;
+
+  /**
+   * SÉRIE (14. 10. 2026) - díly téhož titulu do oknénka u kolečka
+   * a návrhy do našeptávače v úpravě názvu. Viz lib/serieServer.ts.
+   */
+  const serieFirmy = await nactiSerieFirmy(metaPoSync?.companyId, metaPoSync?.serie);
 
   /**
    * ZA KOLIK DNÍ SE STAV PŘEKLOPÍ SÁM (zadání 16. 9. 2026: „bylo by dobré tam
@@ -1251,9 +1259,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           {prelozit(jazyk, 'projekt.zpetNaProjekty')}
         </Link>
         <div className="flex items-center gap-4 flex-wrap mt-2">
-          <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
-            {project?.name ?? prelozitS(jazyk, 'projekt.zaloha.nazev', { id: caflouProjectId })}
-          </h1>
+          <NazevProjektu
+            caflouProjectId={caflouProjectId}
+            nazev={
+              metaPoSync?.name ||
+              project?.name ||
+              prelozitS(jazyk, 'projekt.zaloha.nazev', { id: caflouProjectId })
+            }
+            serie={metaPoSync?.serie ?? null}
+            serieDil={metaPoSync?.serieDil ?? null}
+            dily={serieFirmy.dily}
+            navrhySerii={serieFirmy.navrhy}
+            muzeMenit={canEdit}
+          />
           {/* Stav z portalu ma prednost - od 10. 9. 2026 ho prehazuje clovek. */}
           {project && (
             <StatusPill

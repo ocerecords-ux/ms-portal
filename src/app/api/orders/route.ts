@@ -16,6 +16,7 @@ import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/em
 import { noveIdProjektu } from '@/lib/projektId';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 import { nazevProjektuVelky } from '@/lib/nazevProjektu';
+import { cisloDilu, nazevSeSerii } from '@/lib/serie';
 import { zalozKanalProjektu } from '@/lib/kanalProjektuServer';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
@@ -39,6 +40,12 @@ const ORDER_KINDS = ['AUDIOBOOK', 'AD'] as const;
 const orderSchema = z.object({
   kind: z.enum(ORDER_KINDS).default('AUDIOBOOK'),
   title: z.string().trim().min(1, 'Název je povinný.'),
+  /**
+   * SÉRIE (zadání 14. 10. 2026). Klient ji vyplní zaškrtávátkem u názvu,
+   * aby se série nemusela psát do názvu knihy - ten by byl strašně dlouhý.
+   */
+  serie: z.string().trim().max(200).optional(),
+  serieDil: z.string().trim().max(4).optional(),
   pageCount: z.string().optional(),
   // Cena od klienta (23. 9. 2026) - jen u firem, ktere si ji navrhuji samy
   // (Company.cenuUrcujeKlient). U ostatnich se ignoruje a pocita se ze sazby.
@@ -84,6 +91,8 @@ export async function POST(req: NextRequest) {
   const parsed = orderSchema.safeParse({
     kind: formData.get('kind') || undefined,
     title: formData.get('title'),
+    serie: formData.get('serie') ?? undefined,
+    serieDil: formData.get('serieDil') ?? undefined,
     pageCount: formData.get('pageCount'),
     price: formData.get('price') ?? undefined,
     deadline: formData.get('deadline'),
@@ -131,6 +140,9 @@ export async function POST(req: NextRequest) {
   // Název projektu i objednávky držíme velkými (zadání 22. 9. 2026).
   const title = nazevProjektuVelky(parsed.data.title);
   const isAudiobook = kind === 'AUDIOBOOK';
+  // Série jen u audioknihy - u reklamy nedává smysl.
+  const serie = isAudiobook ? (parsed.data.serie ?? '').trim() || null : null;
+  const serieDil = serie ? cisloDilu(parsed.data.serieDil) : null;
   const preferredNarrator = parsed.data.preferredNarrator?.trim() || null;
   const pageCount = isAudiobook && parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;
   const deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
@@ -253,6 +265,8 @@ export async function POST(req: NextRequest) {
       createdByUserId: userId,
       kind,
       title,
+      serie,
+      serieDil,
       pageCount,
       ratePerPageSnapshot: isAudiobook ? company.ratePerPage : null,
       priceEstimate,
@@ -361,6 +375,10 @@ export async function POST(req: NextRequest) {
         data: {
           caflouProjectId,
           name: title,
+          // Série si projekt přebírá z objednávky (14. 10. 2026) - v přehledu
+          // z ní je kolečko s číslem dílu u názvu.
+          serie,
+          serieDil,
           companyId,
           companyName: company.name,
           klientUserId: userId,
@@ -516,7 +534,9 @@ export async function POST(req: NextRequest) {
     const spolecne = {
       companyId,
       companyName: company.name,
-      title,
+      // V poště se série píše celá (14. 10. 2026) - kolečko jako v přehledu
+      // tam být nemůže, viz nazevSeSerii v lib/serie.ts.
+      title: nazevSeSerii(title, serie, serieDil),
       pageCount,
       priceEstimate,
       deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
@@ -575,7 +595,7 @@ export async function POST(req: NextRequest) {
       to: session.user.email,
       name: orderingUser?.name ?? null,
       isAudiobook,
-      title,
+      title: nazevSeSerii(title, serie, serieDil),
       companyName: company.name,
       pageCount,
       priceEstimate,

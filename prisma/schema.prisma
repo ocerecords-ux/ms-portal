@@ -711,6 +711,11 @@ model Order {
 
   title               String
   pageCount           Int?
+  /// Série audioknihy z objednávky (14. 10. 2026) - klient ji vyplní
+  /// zaškrtávátkem u názvu. Projekt si ji přebírá do ProjectMeta; tady
+  /// zůstává jako to, co klient opravdu objednal.
+  serie               String?
+  serieDil            Int?
   ratePerPageSnapshot Int?              // sazba v okamziku objednavky (pro dohledatelnost, i kdyz se sazba klienta pozdeji zmeni)
   priceEstimate        Int?             // predbezna cena = pageCount * ratePerPageSnapshot
   deadline             DateTime?
@@ -912,6 +917,21 @@ model ProjectMeta {
   // se odkazuji doklady, vykazy, rozpocty i rodne listy. Nove projekty
   // dostanou vlastni ID; jen uz nepochazi z Caflou.
   name            String?
+  /// SÉRIE AUDIOKNIHY (zadání 14. 10. 2026: „u některých audioknížek
+  /// potřebujeme někde naznačit sérii. Akorát to nechci psát do názvu,
+  /// protože je pak strašně dlouhý").
+  ///
+  /// Vlastní údaj vedle názvu, ne jeho část: v přehledu z něj je kolečko
+  /// s číslem dílu u názvu a název série se ukáže po rozkliknutí. Název
+  /// série je prostý text - číselník sérií by znamenal vlastní správu
+  /// a klient si sérii zakládá sám v objednávce; proti překlepům je
+  /// našeptávač ze sérií té firmy.
+  ///
+  /// Číslo dílu je celé a nejvýš dvouciferné - musí se vejít do kolečka
+  /// a řadí se podle něj.
+  serie       String?
+  serieDil    Int?
+
   companyId       String?
   company         Company?         @relation("ProjektFirma", fields: [companyId], references: [id])
   /// Nazev firmy textem - projekt zustane citelny, i kdyz firma v portalu neni.

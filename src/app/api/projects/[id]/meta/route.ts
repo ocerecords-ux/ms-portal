@@ -10,6 +10,7 @@ import { zpravaOSchvaleniKFakturaci } from '@/lib/fakturaceZpravaServer';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { nazevProjektuVelky } from '@/lib/nazevProjektu';
+import { cisloDilu } from '@/lib/serie';
 import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
 import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
 
@@ -51,6 +52,14 @@ const schema = z.object({
   narrator: z.string().trim().max(200).optional(),
   /** Nazev projektu - u projektu zalozenych v portalu jde zmenit. */
   name: z.string().trim().max(300).optional(),
+  /**
+   * SÉRIE AUDIOKNIHY (zadání 14. 10. 2026). Mění se spolu s názvem v detailu
+   * projektu, protože se obojí často přepisuje naráz - typicky když se série
+   * vyndává z názvu, který klient napsal celý do jednoho pole.
+   * Prázdný řetězec = sérii zrušit.
+   */
+  serie: z.string().trim().max(200).optional(),
+  serieDil: z.string().trim().max(4).optional(),
   /** YYYY-MM-DD, prazdny retezec = smazat. Upravuje se i primo v prehledu. */
   endDate: z.string().trim().optional(),
   // Ucel a uzemi uziti licence u reklamy (zadani 17. 9. 2026).
@@ -269,6 +278,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Název projektu držíme velkými (zadání 22. 9. 2026) - i když ho někdo
     // napíše malými.
     if (data.name) values.name = nazevProjektuVelky(data.name);
+    /**
+     * Série (14. 10. 2026). Když se zruší název série, zmizí s ním i číslo
+     * dílu - samotné číslo bez série by v přehledu nebylo k čemu.
+     */
+    if (data.serie !== undefined) {
+      const nazevSerie = data.serie.trim();
+      values.serie = nazevSerie || null;
+      if (!nazevSerie) values.serieDil = null;
+    }
+    if (data.serieDil !== undefined && (data.serie === undefined || data.serie.trim())) {
+      values.serieDil = cisloDilu(data.serieDil);
+    }
     // Data se drzi jako pulnoc UTC - v prehledu se tiskne jen datum a nesmi
     // se posunout podle pasma, ve kterem se zrovna uklada.
     for (const klic of ['endDate', 'releaseDate'] as const) {

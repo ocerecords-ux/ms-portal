@@ -22,6 +22,7 @@ Když u vás děláme obojí, jsou nahoře dvě tlačítka — **Audiokniha** a 
 # Co se vyplňuje u audioknihy
 
 - **Název** — povinný. Pod tímhle názvem zakázku uvidíte v Projektech.
+- **Kniha je součástí série** — zaškrtávátko pod názvem. Teprve po něm se odkryje **Název série** a **kolikátý díl** to je. Sérii tak nemusíte psát do názvu knihy, který by tím byl strašně dlouhý. U názvu série se nabízejí série, které u nás už máte — vyberte radši z nabídky, ať se díly drží pohromadě. V přehledu projektů je pak u názvu **malé kolečko s číslem dílu**; po kliknutí se ukáže název série a ostatní díly, mezi kterými se dá proklikat.
 - **Počet normostran** — napište ho, když ho znáte, nebo si ho nechte spočítat z přílohy, viz níž.
 - **Cena bez DPH** — spočítá se sama z normostran a vaší sazby. Pokud si cenu navrhujete sami, je políčko k vyplnění a částka je vždycky bez DPH.
 - **Minimální cena** — audiokniha má spodní hranici **12 000 Kč bez DPH**. Pod ní se projekt nerozjede: režisér, studio, postprodukce a korektura se zaplatí i u tenké knížky. U krátkého textu proto v objednávce uvidíte těch 12 000 Kč místo částky z normostran — pod cenou je napísané, proč. Jestli si cenu navrhujete sami, formulář návrh pod hranicí nepustí dál; ozvěte se nám a domluvíme se.

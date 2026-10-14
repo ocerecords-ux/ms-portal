@@ -38,6 +38,8 @@ export async function loadInternalProjects(): Promise<InternalProjectsResult> {
       select: {
         caflouProjectId: true,
         name: true,
+        serie: true,
+        serieDil: true,
         statusName: true,
         finished: true,
         priority: true,
@@ -75,6 +77,8 @@ export async function findInternalProject(
       select: {
         caflouProjectId: true,
         name: true,
+        serie: true,
+        serieDil: true,
         statusName: true,
         finished: true,
         priority: true,

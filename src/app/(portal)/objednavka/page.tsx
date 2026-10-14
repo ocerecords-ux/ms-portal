@@ -8,6 +8,7 @@ import { bezTitulu } from '@/lib/jmena';
 import { firmaChceUvodZaver } from '@/lib/uvodZaver';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
+import { nactiSerieFirmy } from '@/lib/serieServer';
 
 export default async function ObjednavkaPage() {
   const session = await getServerSession(authOptions);
@@ -55,6 +56,13 @@ export default async function ObjednavkaPage() {
   // Úvod a závěr audioknihy (22. 9. 2026) - zatím jen Audiotéka.
   const uvodZaver = firmaChceUvodZaver(company.name);
 
+  /**
+   * SÉRIE, KTERÉ U TÉHLE FIRMY UŽ JSOU (14. 10. 2026) - našeptávač v objednávce.
+   * Bez něj by vznikly tři podoby téhož názvu a díly by se neslepily
+   * dohromady; viz lib/serieServer.ts.
+   */
+  const serie = company.dealsAudiobooks ? (await nactiSerieFirmy(company.id)).navrhy : [];
+
   return (
     <section>
       {company.dealsAudiobooks && company.dealsAds ? (
@@ -65,6 +73,7 @@ export default async function ObjednavkaPage() {
           cenuUrcujeKlient={company.cenuUrcujeKlient}
           herci={herci}
           uvodZaver={uvodZaver}
+          serie={serie}
         />
       ) : company.dealsAudiobooks ? (
         <OrderForm
@@ -74,6 +83,7 @@ export default async function ObjednavkaPage() {
           cenuUrcujeKlient={company.cenuUrcujeKlient}
           herci={herci}
           uvodZaver={uvodZaver}
+          serie={serie}
         />
       ) : (
         <AdOrderForm />

@@ -141,6 +141,21 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'obecne.otevrit': { cs: 'Otevřít', en: 'Open' },
   'obecne.upravit': { cs: 'Upravit', en: 'Edit' },
   'obecne.stahnout': { cs: 'Stáhnout', en: 'Download' },
+  // SÉRIE AUDIOKNIHY (zadání 14. 10. 2026) - kolečko u názvu a úprava v detailu.
+  'serie.dilZSerie': { cs: '{serie} — {dil}. díl', en: '{serie} — book {dil}' },
+  'serie.kolikatyDil': { cs: '{dil}. díl', en: 'Book {dil}' },
+  'serie.bezCisla': { cs: 'Součást série', en: 'Part of a series' },
+  'serie.unasDilu': { cs: 'u nás {pocet} dílů', en: '{pocet} books with us' },
+  'serie.upravitNazev': { cs: 'Upravit název a sérii', en: 'Edit the title and series' },
+  'serie.poleNazev': { cs: 'Název knihy', en: 'Book title' },
+  'serie.jeVSerii': { cs: 'Kniha je součástí série', en: 'The book is part of a series' },
+  'serie.poleNazevSerie': { cs: 'Název série', en: 'Series name' },
+  'serie.poleNazevSeriePriklad': {
+    cs: 'např. Tajemství rodu Musovských',
+    en: 'e.g. The Musov Family Secrets',
+  },
+  'serie.poleDil': { cs: 'Díl', en: 'Book' },
+  'serie.ulozeniSelhalo': { cs: 'Uložit se to nepodařilo.', en: 'It could not be saved.' },
   // Přetažení souboru do plochy (zadání 13. 10. 2026, Karolína Zbořilová).
   // Společné pro celý portál - viz components/PlochaProPretazeni.tsx.
   'obecne.pustteSoubory': { cs: 'Pusťte soubory sem…', en: 'Drop the files here…' },
@@ -950,6 +965,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'objednavka.nazev': { cs: 'Název', en: 'Title' },
   'objednavka.nazevPriklad': { cs: 'např. Stín nad Vltavou', en: 'e.g. Shadow over the Vltava' },
+  // Série v objednávce (zadání 14. 10. 2026) - zaškrtávátko pod názvem.
+  'objednavka.jeVSerii': { cs: 'Kniha je součástí série', en: 'The book is part of a series' },
+  'objednavka.nazevSerie': { cs: 'Název série', en: 'Series name' },
+  'objednavka.nazevSeriePriklad': {
+    cs: 'např. Tajemství rodu Musovských',
+    en: 'e.g. The Musov Family Secrets',
+  },
+  'objednavka.dilSerie': { cs: 'Kolikátý díl', en: 'Which book' },
   'objednavka.pocetNs': { cs: 'Počet normostran', en: 'Number of standard pages' },
   'objednavka.cenaBezDph': { cs: 'Cena bez DPH', en: 'Price excluding VAT' },
   'objednavka.cenaNavrhujete': {

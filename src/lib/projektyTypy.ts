@@ -16,6 +16,13 @@ export type DisplayProject = {
   id: number;
   name: string;
   /**
+   * SÉRIE (14. 10. 2026). V přehledu z toho je kolečko s číslem dílu
+   * u názvu; název série se ukáže až po rozkliknutí. Nepovinné: starší
+   * volání to neposílají a kniha bez série vypadá jako dřív.
+   */
+  serie?: string | null;
+  serieDil?: number | null;
+  /**
    * Dokončený projekt. Dřív to byl příznak z Caflou, teď vlastní sloupec —
    * přehazuje se ručně spolu se stavem (viz lib/stavyProjektu.ts).
    */
@@ -59,6 +66,8 @@ export type AdminDisplayProject = DisplayProject & {
 export type ProjektZDatabaze = {
   caflouProjectId: string;
   name: string | null;
+  serie?: string | null;
+  serieDil?: number | null;
   statusName: string | null;
   finished: boolean;
   priority: ProjectPriority | null;
@@ -78,6 +87,8 @@ export function projektZMeta(m: ProjektZDatabaze): AdminDisplayProject {
   return {
     id: Number(m.caflouProjectId),
     name: m.name ?? '',
+    serie: m.serie ?? null,
+    serieDil: m.serieDil ?? null,
     finished: m.finished,
     statusName: m.statusName ?? '',
     priority: m.priority,

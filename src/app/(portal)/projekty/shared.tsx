@@ -9,6 +9,8 @@ import type { DokladKlienta } from '@/lib/dokladyKlientaServer';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
+import { OdznakSerie } from '@/components/OdznakSerie';
+import { dilySerie } from '@/lib/serie';
 import { projectTypeLabel } from '@/lib/projectTypes';
 import { ValecProgresu } from '@/components/ValecProgresu';
 import type { ProgresNataceni } from '@/lib/progresNataceni';
@@ -381,7 +383,20 @@ export function ProjectsTable({
                     musi byt cele. Kdyz to nevejde, dej to na dalsi radek").
                     Radek se o to zvysi - 52 px je u tabulky minimum, ne strop. */}
                 <td className="px-4 py-2 font-heading font-semibold text-sm text-ink align-middle">
-                  <span className="block leading-tight break-words">{p.name}</span>
+                  {/* SÉRIE JAKO KOLEČKO U NÁZVU (14. 10. 2026) - řádek se o ně
+                      nezvýší a kniha bez série vypadá jako dřív. Díly se berou
+                      z projektů, které už tahle tabulka má. */}
+                  <span className="block leading-tight break-words">
+                    {p.name}
+                    {p.serie && (
+                      <OdznakSerie
+                        serie={p.serie}
+                        dil={p.serieDil ?? null}
+                        dily={dilySerie(projects, p.serie)}
+                        aktivniId={p.id}
+                      />
+                    )}
+                  </span>
                 </td>
                 {showKontakt && (
                   <td className="px-4 py-2 align-middle">
@@ -591,6 +606,14 @@ export function AdminProjectsTable({
                   title={p.name}
                 >
                   {p.name}
+                  {p.serie && (
+                    <OdznakSerie
+                      serie={p.serie}
+                      dil={p.serieDil ?? null}
+                      dily={dilySerie(projects, p.serie)}
+                      aktivniId={p.id}
+                    />
+                  )}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted truncate" title={p.companyName}>
                   {p.companyName}
@@ -830,6 +853,8 @@ function bunkaSloupce(
    * Výchozí čeština zůstává pro případ, že by tabulku vzal někdo bez jazyka.
    */
   jazyk: Jazyk = 'cs',
+  /** Ostatní projekty v tabulce - z nich se skládají díly série (14. 10. 2026). */
+  vsechny: InternalProject[] = [],
 ) {
   const id = String(p.id);
   switch (key) {
@@ -913,6 +938,16 @@ function bunkaSloupce(
           >
             {p.name}
           </Link>
+          {/* Série jako kolečko hned za názvem (14. 10. 2026) - viz
+              components/OdznakSerie.tsx. */}
+          {p.serie && (
+            <OdznakSerie
+              serie={p.serie}
+              dil={p.serieDil ?? null}
+              dily={dilySerie(vsechny, p.serie)}
+              aktivniId={p.id}
+            />
+          )}
           {/* Na telefonu se značky dokladů nevykreslují (6. 10. 2026) - viz výš. */}
           <span className="hidden sm:inline-flex items-center gap-2.5">
             {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
@@ -1660,7 +1695,7 @@ export function InternalProjectsTable({
                     key={sloupec.key}
                     className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-0 text-sm font-heading truncate'}
                   >
-                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri, jazyk)}
+                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri, jazyk, projects)}
                   </td>
                 ))}
                 {canEditColumns && <td />}
