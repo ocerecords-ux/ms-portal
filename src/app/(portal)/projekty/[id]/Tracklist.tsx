@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
-import { cisloTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
+import { bezDiakritiky, cisloTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
 
 /**
  * TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026: „vytvoř v detailu každého
@@ -86,7 +86,9 @@ export function Tracklist({
 
   function nastav(i: number, co: keyof Radek, hodnota: string) {
     const nove = [...tracky];
-    nove[i] = { ...nove[i], [co]: hodnota };
+    // Z názvu tracku se stává název souboru, takže se diakritika odstraňuje
+    // rovnou při psaní (15. 10. 2026). Název kapitoly ji mít má - jde do tagu.
+    nove[i] = { ...nove[i], [co]: co === 'nazevTracku' ? bezDiakritiky(hodnota) : hodnota };
     setTracky(nove);
   }
 
@@ -98,7 +100,7 @@ export function Tracklist({
   function podleVzoru(poradi: number): string {
     const cislo = cisloTracku(poradi);
     const text = vzor.trim();
-    return text ? `${cislo}_${text}` : cislo;
+    return text ? `${cislo}_${bezDiakritiky(text)}` : cislo;
   }
 
   /**

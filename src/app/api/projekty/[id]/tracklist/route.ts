@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { nactiTracklist } from '@/lib/tracklistServer';
+import { bezDiakritiky } from '@/lib/tracklist';
 
 /**
  * TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026).
@@ -54,7 +55,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   // Úplně prázdné řádky se zahazují - vznikají klepnutím na „Přidat stopu"
   // navíc. Stačí ale vyplněný jeden ze dvou názvů, aby řádek zůstal.
   const tracky = parsed.data.tracky
-    .map((t) => ({ nazevTracku: t.nazevTracku.trim(), nazevKapitoly: t.nazevKapitoly.trim() }))
+    // Název tracku bez diakritiky i tady, ne jen v prohlížeči - je to
+    // pravidlo předpisu, ne vlastnost jednoho formuláře (15. 10. 2026).
+    .map((t) => ({
+      nazevTracku: bezDiakritiky(t.nazevTracku.trim()),
+      nazevKapitoly: t.nazevKapitoly.trim(),
+    }))
     .filter((t) => t.nazevTracku || t.nazevKapitoly);
 
   try {
