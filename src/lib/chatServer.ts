@@ -121,10 +121,49 @@ export async function loadConversations(
     }
   }
 
+  /**
+   * KANÁLY PO SMAZANÝCH PROJEKTECH (oprava 15. 10. 2026: „máme nějaký
+   * nepořádek v kanálech… Umění vydávat peníze je tam třeba 3x").
+   *
+   * Kanál se váže na ID projektu, ale smazáním projektu nezmizí - zůstane
+   * viset v seznamu, a když se projekt mezitím založil znovu, je tam jméno
+   * dvakrát i třikrát. Kanál, ke kterému UŽ ŽÁDNÝ PROJEKT NENÍ a ve kterém
+   * NIKDO NIC NENAPSAL, se proto do seznamu nedává.
+   *
+   * MAŽE SE NIC (zadání: „ale nemaž kanály, ve kterých něco je napsané").
+   * Tohle je jen výpis - kanál v databázi zůstává a ten, kde je napsané
+   * aspoň slovo, se ukazuje dál, i když projekt zmizel. Historie se nikam
+   * neztrácí.
+   */
+  const idKanaluProjektu = conversations
+    .filter((c) => c.kind === 'PROJEKT' && c.caflouProjectId)
+    .map((c) => c.caflouProjectId as string);
+  const osireleKanaly = new Set<string>();
+  if (idKanaluProjektu.length > 0) {
+    const [zijici, sezpravami] = await Promise.all([
+      prisma.projectMeta.findMany({
+        where: { caflouProjectId: { in: idKanaluProjektu } },
+        select: { caflouProjectId: true },
+      }),
+      prisma.message.groupBy({
+        by: ['conversationId'],
+        where: { conversationId: { in: conversations.map((c) => c.id) } },
+        _count: { _all: true },
+      }),
+    ]);
+    const maProjekt = new Set(zijici.map((m) => m.caflouProjectId));
+    const maZpravy = new Set(sezpravami.filter((z) => z._count._all > 0).map((z) => z.conversationId));
+    for (const c of conversations) {
+      if (c.kind !== 'PROJEKT' || !c.caflouProjectId) continue;
+      if (!maProjekt.has(c.caflouProjectId) && !maZpravy.has(c.id)) osireleKanaly.add(c.id);
+    }
+  }
+
   // UKLIZENE ROZHOVORY (zadani 12. 9. 2026). Zmizi ze seznamu, dokud v nich
   // nekdo nenapise - pak se vrati samy, protoze prijit o zpravu kvuli jednomu
   // prejeti prstem by bylo horsi nez mit v seznamu radek navic.
   const videt = conversations.filter((c) => {
+    if (osireleKanaly.has(c.id)) return false;
     if (c.caflouProjectId && skryteKanaly.has(c.caflouProjectId)) return false;
     const moje = c.members.find((m) => m.userId === userId);
     if (!moje?.skryto) return true;
