@@ -454,11 +454,21 @@ export async function posliPozvanky(
 
   for (const host of komu) {
     /**
-     * Přesun termínu se pozná podle toho, že hostovi už jedna pozvánka šla -
-     * a mail pak začne tím, že platí ten nový čas. Bez toho by to vypadalo
-     * jako druhá pozvánka na druhé natáčení.
+     * Přesun termínu se pozná podle toho, že hostovi už pozvánka šla NA JINÝ
+     * ZAČÁTEK - mail pak začne tím, že platí ten nový čas. Bez toho by to
+     * vypadalo jako druhá pozvánka na druhé natáčení.
+     *
+     * OPRAVA 15. 10. 2026: do teď stačilo, že pozvánka někdy odešla, takže
+     * i obyčejné poslání znovu na tentýž termín dorazilo jako „termín se
+     * posunul" - a u řádku svítilo „změna termínu", i když se nic neměnilo.
+     * Rozhoduje proto porovnání času: když se začátek nezměnil, je to prostě
+     * tatáž pozvánka ještě jednou.
      */
-    const zmena = Boolean(host.pozvankaAt);
+    const zmena = Boolean(
+      host.pozvankaAt &&
+        host.pozvankaStart &&
+        new Date(host.pozvankaStart).getTime() !== new Date(nataceni.start).getTime(),
+    );
     // Jazyk se bere U KAŽDÉHO HOSTA (10. 10. 2026: „co když budeme mít anglicky
     // mluvící účastníky?“) - na jedno natáčení chodí česká i anglická pozvánka.
     const jazyk = host.jazyk;
