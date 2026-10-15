@@ -633,6 +633,7 @@ export default async function KalendarPage({
       ukazSchuzky={ukazSchuzky}
       puvodniSchuzky={puvodniSchuzky}
       vychoziUlozeno={Boolean(ja?.vychoziKalendareNastaveno)}
+      vychoziKalendare={ja?.vychoziKalendare ?? []}
       muzeSchuzky={spravceKalendare}
       ja={{ id: session.user.id, label: session.user.name || session.user.email }}
       lidiTymu={lidiTymu.map((u) => ({ id: u.id, label: u.name || u.email }))}

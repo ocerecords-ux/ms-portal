@@ -291,6 +291,7 @@ export function CalendarBrowser({
   ukazSchuzky,
   puvodniSchuzky,
   vychoziUlozeno,
+  vychoziKalendare,
   muzeSchuzky,
   puvodniStudioIds,
   puvodniNepritomnost,
@@ -344,6 +345,8 @@ export function CalendarBrowser({
    * 15. 10. 2026.) Podle toho se u tlačítka nabídne i zrušení.
    */
   vychoziUlozeno: boolean;
+  /** Co přesně má uložené - podle toho se pozná, jestli hvězdička sedí. */
+  vychoziKalendare: string[];
   muzeSchuzky: boolean;
   /**
    * SOLO REŽIM (zadání 20. 9. 2026: „ať to funguje jako prozatímní sólo
@@ -521,14 +524,41 @@ export function CalendarBrowser({
   const [vychoziUklada, setVychoziUklada] = useState(false);
   const [vychoziHotovo, setVychoziHotovo] = useState<'ulozeno' | 'zruseno' | 'chyba' | null>(null);
   const [vychoziJe, setVychoziJe] = useState(vychoziUlozeno);
+  const [vychoziSada, setVychoziSada] = useState<string[]>(vychoziKalendare);
 
-  async function ulozVychozi() {
-    const kalendare = [
+  /** Co by se uložilo: zaškrtnutí, ne sólo (to je ze své podstaty dočasné). */
+  const vychoziTed = useMemo(
+    () => [
       ...puvodniStudioIds,
       ...(puvodniNepritomnost ? [KALENDAR_MIMO] : []),
       ...(puvodniPorady ? [KALENDAR_PORADY] : []),
       ...(puvodniSchuzky ? [KALENDAR_SCHUZKY] : []),
-    ];
+    ],
+    [puvodniStudioIds, puvodniNepritomnost, puvodniPorady, puvodniSchuzky],
+  );
+
+  /**
+   * Sedí hvězdička s tím, co je teď rozsvícené? Plná hvězdička znamená
+   * „přesně tohle mám uložené" - a jen tehdy ji druhý klik zruší. Když si
+   * člověk výběr mezitím změnil, hvězdička zhasne a klikem se uloží nový
+   * stav; jinak by se mu nastavení omylem smazalo místo přepsání.
+   */
+  const vychoziSedi = useMemo(() => {
+    if (!vychoziJe) return false;
+    if (vychoziSada.length !== vychoziTed.length) return false;
+    const ulozene = new Set(vychoziSada);
+    return vychoziTed.every((k) => ulozene.has(k));
+  }, [vychoziJe, vychoziSada, vychoziTed]);
+
+  // Potvrzení samo zmizí, ať v řadě štítků nezůstane viset text.
+  useEffect(() => {
+    if (!vychoziHotovo) return;
+    const casovac = window.setTimeout(() => setVychoziHotovo(null), 4000);
+    return () => window.clearTimeout(casovac);
+  }, [vychoziHotovo]);
+
+  async function ulozVychozi() {
+    const kalendare = vychoziTed;
     setVychoziUklada(true);
     setVychoziHotovo(null);
     try {
@@ -539,6 +569,7 @@ export function CalendarBrowser({
       });
       if (!res.ok) throw new Error(String(res.status));
       setVychoziJe(true);
+      setVychoziSada(kalendare);
       setVychoziHotovo('ulozeno');
     } catch {
       setVychoziHotovo('chyba');
@@ -554,6 +585,7 @@ export function CalendarBrowser({
       const res = await fetch('/api/kalendar/vychozi', { method: 'DELETE' });
       if (!res.ok) throw new Error(String(res.status));
       setVychoziJe(false);
+      setVychoziSada([]);
       setVychoziHotovo('zruseno');
     } catch {
       setVychoziHotovo('chyba');
@@ -1486,28 +1518,29 @@ export function CalendarBrowser({
         {/* VÝCHOZÍ ZAPNUTÍ KALENDÁŘŮ (zadání Helči, 15. 10. 2026). Tlačítko
             je schválně až za štítky: čte se jako „a tohle si zapamatuj",
             tedy po tom, co si člověk kalendáře naklikal. Ukládá zaškrtnutí,
-            ne sólo. */}
+            ne sólo.
+
+            JEN HVĚZDIČKA, BEZ POPISKU (15. 10. 2026: „nech tam jen tu
+            hvězdičku bez textu"). Prázdná = výchozí si člověk ještě
+            neuložil, plná = uložené má; co která dělá, řekne bublina.
+            Druhý klik na plnou hvězdičku nastavení zruší, takže v řadě
+            štítků nepřibývá nic dalšího. */}
         <button
           type="button"
-          onClick={ulozVychozi}
+          onClick={vychoziSedi ? zrusVychozi : ulozVychozi}
           disabled={vychoziUklada}
-          title={t('kalendar.ulozitVychoziPopis')}
-          className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold text-muted hover:text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
+          title={vychoziSedi ? t('kalendar.zrusitVychoziPopis') : t('kalendar.ulozitVychoziPopis')}
+          aria-label={vychoziSedi ? t('kalendar.zrusitVychozi') : t('kalendar.ulozitVychozi')}
+          aria-pressed={vychoziSedi}
+          className={`shrink-0 inline-flex items-center justify-center rounded-pill border w-7 h-7 sm:w-8 sm:h-8 text-base leading-none transition-colors disabled:opacity-60 ${
+            vychoziSedi
+              ? 'border-brand-purple text-brand-purple'
+              : 'border-line text-muted hover:text-ink hover:border-brand-purple'
+          }`}
         >
-          <span aria-hidden="true">☆</span>
-          {vychoziUklada ? t('kalendar.ulozitVychoziUklada') : t('kalendar.ulozitVychozi')}
+          <span aria-hidden="true">{vychoziSedi ? '★' : '☆'}</span>
         </button>
-        {vychoziJe && (
-          <button
-            type="button"
-            onClick={zrusVychozi}
-            disabled={vychoziUklada}
-            title={t('kalendar.zrusitVychoziPopis')}
-            className="shrink-0 whitespace-nowrap text-xs sm:text-sm font-body text-muted hover:text-ink underline underline-offset-2 disabled:opacity-60"
-          >
-            {t('kalendar.zrusitVychozi')}
-          </button>
-        )}
+        {/* Hláška jen na chvíli - je to potvrzení kliknutí, ne popisek. */}
         {vychoziHotovo && (
           <span
             className={`shrink-0 whitespace-nowrap text-xs sm:text-sm font-body ${
