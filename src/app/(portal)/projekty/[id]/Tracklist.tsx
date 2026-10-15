@@ -67,9 +67,9 @@ export function Tracklist({
    */
   function precisluj(seznam: Radek[]): Radek[] {
     return seznam.map((radek, i) => {
-      const shoda = /^(.*?)(\d{1,3})\s*$/.exec(radek.nazevTracku);
+      const shoda = /^\s*(\d{1,3})(_.*)?$/s.exec(radek.nazevTracku);
       if (!shoda) return radek;
-      return { ...radek, nazevTracku: `${shoda[1]}${cisloTracku(i + 1)}` };
+      return { ...radek, nazevTracku: `${cisloTracku(i + 1)}${shoda[2] ?? ''}` };
     });
   }
 
@@ -90,14 +90,14 @@ export function Tracklist({
   }
 
   /**
-   * Název stopy ze vzoru: pořadové číslo se vždycky přilepí na konec
-   * (upřesnění 15. 10. 2026 - žádná proměnná ve vzoru, je zbytečná).
-   * „Kuchaři smrti" a trojka dají „Kuchaři smrti 03".
+   * Název tracku ze vzoru. TVAR JE „01_NÁZEV" (upřesnění 15. 10. 2026) -
+   * číslo napřed, podtržítko, pak název. Tak se jmenují i soubory, takže
+   * se název dá z portálu rovnou zkopírovat do DAW.
    */
   function podleVzoru(poradi: number): string {
     const cislo = cisloTracku(poradi);
     const text = vzor.trim();
-    return text ? `${text} ${cislo}` : cislo;
+    return text ? `${cislo}_${text}` : cislo;
   }
 
   /**
