@@ -104,8 +104,17 @@ declare module 'react' {
   export function useCallback<T>(fn: T, deps?: any[]): T;
   /** React 18 - plynulý přechod bez probliknutí (kalendář, 20. 9. 2026). */
   export function useTransition(): [boolean, (fn: () => void) => void];
-  export function createContext<T>(vychozi: T): any;
-  export function useContext<T>(kontext: any): T;
+  /**
+   * Kontext s typem, ať `useContext` ví, co vrací (dávka 7m). Do teď
+   * `createContext` vracel `any`, takže se `T` nedalo odvodit a kontext
+   * vyšel jako `{}` - u Neuložených změn padalo `kontext.nahlas`.
+   */
+  export interface Context<T> {
+    Provider: any;
+    Consumer: any;
+  }
+  export function createContext<T>(vychozi: T): Context<T>;
+  export function useContext<T>(kontext: Context<T>): T;
   /** Meri rozmery pred vykreslenim - Zpetna vazba a kalendar (22. 9. 2026). */
   export function useLayoutEffect(effect: () => void | (() => void), deps?: any[]): void;
   export const Children: any;

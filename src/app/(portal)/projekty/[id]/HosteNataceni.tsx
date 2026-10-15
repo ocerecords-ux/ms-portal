@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePreklad } from '../../components/JazykProvider';
+import { useJazyk, usePreklad } from '../../components/JazykProvider';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import {
   casKlienta,
   jeEmail,
@@ -85,16 +86,16 @@ export function HosteNataceni({
  * zkoušku později - ať produkce vidí přesně to číslo, které hostovi odejde
  * v pozvánce, a nemusí si ho počítat. Konec zůstává podle kalendáře.
  */
-function kdySlovy(start: string, end: string): string {
+function kdySlovy(start: string, end: string, jazyk: Jazyk = 'cs'): string {
   const s = casKlienta(start);
   const e = new Date(end);
-  const den = new Intl.DateTimeFormat('cs-CZ', {
+  const den = new Intl.DateTimeFormat(kodJazyka(jazyk), {
     weekday: 'long',
     day: 'numeric',
     month: 'numeric',
   }).format(s);
   const cas = (d: Date) =>
-    new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+    new Intl.DateTimeFormat(kodJazyka(jazyk), { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
   return `${den}, ${cas(s)}–${cas(e)}`;
 }
 
@@ -176,6 +177,7 @@ function TerminSHosty({
   onZmena: (nove: NataceniData) => void;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -311,7 +313,7 @@ function TerminSHosty({
           aria-hidden
         />
         <span className="font-heading font-semibold text-ink" title={t('hoste.casKlientaNapoveda')}>
-          {kdySlovy(nataceni.start, nataceni.end)}
+          {kdySlovy(nataceni.start, nataceni.end, jazyk)}
         </span>
         <span className="text-sm font-body text-muted">{nataceni.studioNazev}</span>
         {nataceni.hoste.length > 0 && (
@@ -529,7 +531,7 @@ function TerminSHosty({
               který klientovi opravdu odchází. */}
           <div className="flex flex-col gap-1 rounded-card border border-dashed border-line p-3">
             <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-              Naše natáčecí prostředí – zkouška
+              {t('hoste.pultNadpis')}
             </span>
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -538,12 +540,9 @@ function TerminSHosty({
                 disabled={pracuje}
                 className="rounded-pill border border-brand-purple bg-surface text-brand-purple font-heading font-semibold text-xs px-4 py-1.5 cursor-pointer disabled:opacity-50"
               >
-                Otevřít zkušební pult
+                {t('hoste.pultOtevrit')}
               </button>
-              <span className="text-[11px] font-body text-muted">
-                Text z výstupů vlevo, účastníci vpravo. Do pozvánek se neposílá – ty
-                pořád vedou do Google Meetu.
-              </span>
+              <span className="text-[11px] font-body text-muted">{t('hoste.pultPopis')}</span>
             </div>
           </div>
 
@@ -601,6 +600,7 @@ function RadekHosta({
   onPosliZnovu: () => void;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [potvrzuji, setPotvrzuji] = useState(false);
   const [upravuje, setUpravuje] = useState(false);
   const [historie, setHistorie] = useState(false);
@@ -691,14 +691,14 @@ function RadekHosta({
           title={t('hoste.historieNapoveda')}
           className="text-[11px] font-body text-muted underline underline-offset-2 bg-transparent border-0 p-0 cursor-pointer"
         >
-          {t('hoste.pozvankaOdeslana', { kdy: kdyOdeslano(host.historie[0].kdy) })}
+          {t('hoste.pozvankaOdeslana', { kdy: kdyOdeslano(host.historie[0].kdy, jazyk) })}
           {host.historie.length > 1 ? ` · ${t('hoste.historiePocet', { pocet: host.historie.length })}` : ''}
         </button>
       )}
       {host.pozvankaAt && host.historie.length === 0 && !ceka && (
         <span className="text-[11px] font-body text-muted">
           {t('hoste.pozvankaOdeslana', {
-            kdy: new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(
+            kdy: new Intl.DateTimeFormat(kodJazyka(jazyk), { day: 'numeric', month: 'numeric' }).format(
               new Date(host.pozvankaAt),
             ),
           })}
@@ -751,7 +751,7 @@ function RadekHosta({
         <ul className="list-none p-0 m-0 mt-1 w-full basis-full flex flex-col gap-0.5 border-t border-line pt-1.5">
           {host.historie.map((o) => (
             <li key={`${o.kdy}-${o.email}`} className="text-[11px] font-body text-muted tabular-nums">
-              {kdyOdeslano(o.kdy)}
+              {kdyOdeslano(o.kdy, jazyk)}
               {/* Adresa se už mohla změnit - u starších odeslání musí být vidět ta tehdejší. */}
               {o.email.trim().toLowerCase() !== host.email.trim().toLowerCase() ? ` · ${o.email}` : ''}
               {o.zmena ? ` · ${t('hoste.historieZmena')}` : ''}
@@ -773,8 +773,8 @@ function RadekHosta({
 }
 
 /** „10. 10. 14:32" - den a hodina; rok se u pozvánky řešit nemusí. */
-function kdyOdeslano(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ', {
+function kdyOdeslano(iso: string, jazyk: Jazyk = 'cs'): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
     day: 'numeric',
     month: 'numeric',
     hour: '2-digit',

@@ -105,7 +105,12 @@ export function toCzkMinor(minor: number, rate: number): number {
   return Math.round(minor * rate);
 }
 
-/** "25.12" → hezky vypsaný kurz. */
-export function formatRate(rate: number): string {
-  return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(rate);
+/**
+ * "25.12" → hezky vypsaný kurz. Česky „25,120", britsky „25.120" (dávka 7m).
+ *
+ * Jazyk sem chodí KÓDEM, ne jako `Jazyk`: cnb.ts si bere i routy v `api/**`
+ * a slovník z `lib/jazyk.ts` by se s nimi táhl zbytečně.
+ */
+export function formatRate(rate: number, kod: 'cs-CZ' | 'en-GB' = 'cs-CZ'): string {
+  return new Intl.NumberFormat(kod, { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(rate);
 }

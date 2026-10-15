@@ -2,7 +2,8 @@
 
 import { Fragment, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatumCas } from '@/lib/jazyk';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import { cisloTracku, type Track } from '@/lib/tracklist';
 import type { StopaKTagovani, SpolecneTagy, SlozkaKVyberu } from '@/lib/tagyServer';
@@ -48,6 +49,7 @@ export function TagySekce({
     | { ok: false; duvod: string; duvodKlic?: string };
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [data, setData] = useState(pocatecni);
   const [spolecne, setSpolecne] = useState<SpolecneTagy>(
@@ -329,7 +331,7 @@ export function TagySekce({
           {hlaska && <p className="text-xs font-body text-muted m-0">{hlaska}</p>}
           {data.zapsanoAt && (
             <p className="text-xs font-body text-muted m-0">
-              {t('tagy.naposledy', { kdy: new Date(data.zapsanoAt).toLocaleString('cs-CZ') })}
+              {t('tagy.naposledy', { kdy: formatDatumCas(jazyk, new Date(data.zapsanoAt)) })}
             </p>
           )}
         </div>

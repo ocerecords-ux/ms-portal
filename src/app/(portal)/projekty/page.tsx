@@ -793,7 +793,7 @@ async function InternalProjektySection({
         </div>
         {error && (
           <span className="text-xs font-heading text-danger bg-dangerTint border border-line rounded-lg px-3 py-2">
-            Projekty se nepodařilo načíst. {error}
+            {prelozitS(jazyk, 'projekty.nejdeNacist', { chyba: error })}
           </span>
         )}
       </div>

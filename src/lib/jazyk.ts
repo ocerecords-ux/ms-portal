@@ -11390,6 +11390,31 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Zakládá přístupy klientům a mění je. Bez toho je seznam jen ke čtení.',
     en: 'Creates and changes client access. Without it the list is read-only.',
   },
+  /* --- dávka 7m: bublinové nápovědy, záložní hlášky a zkušební pult --- */
+  'projekty.nejdeNacist': {
+    cs: 'Projekty se nepodařilo načíst. {chyba}',
+    en: 'The projects could not be loaded. {chyba}',
+  },
+  'projekty.herecBezUctu': {
+    cs: '{jmeno} — herec zatím nemá přiřazený účet, doplní se v detailu projektu',
+    en: '{jmeno} — the narrator has no account yet, it gets added in the project detail',
+  },
+  'projekty.sl.nazevSloupce': { cs: 'Název sloupce {nazev}', en: 'Column name {nazev}' },
+  'projekty.sl.odebrat': { cs: 'Odebrat {nazev}', en: 'Remove {nazev}' },
+  'projekty.sl.seraditPodle': { cs: 'Seřadit podle: {nazev}', en: 'Sort by: {nazev}' },
+  'hoste.pultNadpis': {
+    cs: 'Naše natáčecí prostředí – zkouška',
+    en: 'Our own recording desk — test',
+  },
+  'hoste.pultOtevrit': { cs: 'Otevřít zkušební pult', en: 'Open the test desk' },
+  'hoste.pultPopis': {
+    cs: 'Text z výstupů vlevo, účastníci vpravo. Do pozvánek se neposílá – ty pořád vedou do Google Meetu.',
+    en: 'The script on the left, the participants on the right. It is not sent out in invitations — those still lead to Google Meet.',
+  },
+  'uzivatel.bezEmailu': {
+    cs: 'Přihlašovací jméno bez e-mailu — pozvánka ani obnova hesla na něj neodejde, heslo mu nastavte níž.',
+    en: 'A username without an email — no invitation or password reset can be sent to it, so set the password below.',
+  },
 };
 
 /**

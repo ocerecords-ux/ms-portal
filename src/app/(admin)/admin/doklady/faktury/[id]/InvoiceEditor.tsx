@@ -23,7 +23,7 @@ import { SlevaPole } from '../../SlevaPole';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
-import { formatDatum, formatDatumCas, prelozitKolem, type Jazyk } from '@/lib/jazyk';
+import { formatDatum, formatDatumCas, kodJazyka, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 import { CASTI_FAKTURY, popisCasti, type CastFaktury } from '@/lib/fakturaCast';
 
 type Item = {
@@ -445,7 +445,7 @@ export function InvoiceEditor({
 
   // Kurz CNB je jedna veta i s datem - rozdeli se az kvuli tomu, ze datum je
   // v ni sedive (pravidlo 7 v docs/preklad-portalu.md).
-  const kurzHodnoty = { mena: form.currency, kurz: formatRate(invoice.exchangeRate) };
+  const kurzHodnoty = { mena: form.currency, kurz: formatRate(invoice.exchangeRate, kodJazyka(jazyk)) };
   const [kurzPred, kurzPo] = prelozitKolem(jazyk, 'faktura.kurzKeDni', 'datum', kurzHodnoty);
 
   // Editor je omezeny sirkou a vycentrovany (zadani 10. 9. 2026: "ta

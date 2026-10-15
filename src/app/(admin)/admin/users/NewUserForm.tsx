@@ -252,8 +252,7 @@ export function NewUserForm({
             />
             {email.trim() !== '' && !jeEmail(email) && (
               <span className="block text-xs font-body text-muted mt-1">
-                Přihlašovací jméno bez e-mailu — pozvánka ani obnova hesla na něj neodejde, heslo mu
-                nastavte níž.
+                {t('uzivatel.bezEmailu')}
               </span>
             )}
           </AdminField>

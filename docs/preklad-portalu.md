@@ -87,6 +87,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7j | 12. 10. | Číselníky a hlášky z `src/lib/*.ts`, které chodí na obrazovku natvrdo česky — názvy rychlých voleb, překážky mazání, hlášky počítání normostran z rukopisu, placeholdery úvodu a závěru knihy, číslo nové faktury, prázdné složky na Disku u uživatele | [x] |
 | 7k | 13. 10. | Přístupy do sekcí a jednotlivá práva na kartě uživatele — `src/lib/pristupy.ts` (11 sekcí a 43 práv, názvy i popisy zaškrtávátek) | [x] |
 | 7l | 14. 10. | Důvody a hlášky, které server posílá na obrazovku hotové česky — Tagy finální nahrávky, veřejné připomínkování spotu, konflikty v kalendáři a dvě zapomenuté záložní hlášky | [x] |
+| 7m | 15. 10. | Co nejde přes slovník: datum a čas natvrdo `cs-CZ` (natáčecí plán klienta, hosté natáčení, Tagy, kurz ČNB u faktury i výdaje) a řetězce v bublinách, `aria-label` a záložních hláškách (hlavička přehledu projektů, zkušební pult, přihlašovací jméno bez e-mailu) | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1346,6 +1347,87 @@ v `git status` nezůstal žádný ze souborů dávky.**
 6. V `.git` leží pět přejmenovaných zámků z dávek 7g–7i. Git nebrzdí, smazat
    je může jen někdo u klávesnice. Platí dál `git rm --cached stubs/prisma-client.d.ts`
    (viz dávka 7a).
+
+### Dávka 7m je HOTOVÁ (15. 10. 2026)
+
+**Dnešní nález není český text, ale český FORMÁT.** Obrazovka má všechny věty
+ze slovníku, do věty ale dosazuje datum z `new Intl.DateTimeFormat('cs-CZ', …)`
+napsaného natvrdo — takže v anglickém portálu stojí „pozvánka odešla 15. 10.
+14:32" uprostřed anglické větve. Kontrolní skript takový řádek nikdy
+neohlásí: žádná diakritika v něm není a `t('…')` v souboru je. Druhá polovina
+dávky jsou řetězce, které nejsou vidět v textu stránky, ale v BUBLINĚ a ve
+čtečce (`title`, `aria-label`) a v záložních hláškách. Celkem **šest
+obrazovek, jedenáct souborů a slovník +9 klíčů (5 755 → 5 764)**.
+
+**Datum a čas podle jazyka (nové klíče nepotřebují, jen `kodJazyka`):**
+
+- `projekty/TerminyKlienta.tsx` — **natáčecí plán v přehledu klienta.** `kdy()`
+  skládá „út 7. 10. · 10:00–13:00" a je to JEDINÝ český zbytek na obrazovce,
+  kterou vidí klient. Jazyk bere `SeznamTerminu` hookem a posílá ho do funkce
+  parametrem (modulová funkce, hook v ní být nemůže).
+- `projekty/[id]/HosteNataceni.tsx` — `kdySlovy()` (den v týdnu slovy!),
+  `kdyOdeslano()` a jedno `Intl` přímo v JSX u data pozvánky. Pozor na
+  `jazyk` uvnitř: **host má taky `jazyk`** (čeština/angličtina pozvánky), takže
+  v `rozeber` zůstává stínící `const jazyk = s[i]?.jazyk` schválně — to je
+  jazyk POZVÁNKY, ne portálu.
+- `projekty/[id]/TagySekce.tsx` — „naposledy zapsáno" šlo přes
+  `toLocaleString('cs-CZ')`; teď `formatDatumCas(jazyk, …)`, takže i tady
+  platí naše pásmo (`NASE_PASMO`) jako ve zbytku portálu.
+- `lib/cnb.ts` → `formatRate(rate, kod)` a volající `InvoiceEditor`
+  a `ExpenseEditor` — kurz ČNB česky „25,120", britsky „25.120". **Jazyk sem
+  chodí KÓDEM, ne jako `Jazyk`:** `cnb.ts` si bere i routy v `api/**` a slovník
+  by se s nimi táhl zbytečně.
+
+**Řetězce, na které se nikdo nepodíval, protože nejsou v textu stránky:**
+
+- `projekty/shared.tsx` — hlavička přehledu projektů: „Název sloupce {nazev}",
+  „Odebrat {nazev}", „Seřadit podle: {nazev}" a bublina u herce bez účtu.
+  Vlastní NÁZEV SLOUPCE se nepřekládá — je to text uživatele (pravidlo 4),
+  dosazuje se značkou do přeložené věty (pravidlo 7).
+- `projekty/page.tsx` — „Projekty se nepodařilo načíst. {chyba}". Záložní
+  hláška, na kterou se skript nezeptal, protože se ukáže jen při pádu dotazu.
+- `projekty/[id]/HosteNataceni.tsx` — **zkušební pult** (11. 10.): nadpis,
+  tlačítko a vysvětlení, že do pozvánek nejde. Tři klíče `hoste.pult*`.
+- `admin/users/NewUserForm.tsx` a `admin/users/[id]/UserEditForm.tsx` —
+  „Přihlašovací jméno bez e-mailu…" byla tatáž věta na dvou místech, takže
+  jeden klíč `uzivatel.bezEmailu` do obou.
+
+**Typová kontrola: dvě hlášky navíc nebyly z dávky a jsou opravené ve stubu.**
+HEAD hlásil `Property 'nahlas' does not exist on type '{}'`
+v `components/NeulozeneZmeny.tsx` (ověřeno na čisté kopii z `git archive`).
+Vinou byl stub: `createContext<T>` vracel `any`, takže `useContext<T>(kontext: any)`
+nemělo z čeho `T` odvodit a kontext vyšel jako `{}`. Ve `stubs/env.d.ts`
+i v `ENV_D_TS` je teď `interface Context<T>` a `useContext(kontext: Context<T>)`.
+Zároveň **ze seznamu známých hlášek ubyla** `lib/caflou.ts` TS2871 — Ondřej ji
+mezitím opravil, takže podle pravidla „když se známá hláška opraví, uber ji ze
+seznamu ve stejném commitu" je `docs/preklad-kontrola-zname-hlasky.txt` o řádek
+krátší (28 řádků) a diff je prázdný.
+
+**Co se našlo a NEDĚLALO se to (schválně):**
+
+1. `layout.tsx` — hláška o nouzovém režimu databáze je přeložená
+   **ternárním operátorem v JSX**, ne klíčem ve slovníku. Funguje, ale je to
+   jediné takové místo v portálu; při nejbližším sáhnutí do layoutu patří do
+   slovníku.
+2. `ChatDock.tsx` — čtyři `throw new Error('Server odmítl …')`. Na obrazovku
+   nejdou: `catch` vedle nich ukazuje `t('chat.poradiNeulozeno')` a česká věta
+   skončí v `console.error`. Stejná třída jako komentáře — zůstává česky.
+3. `Nepritomnost.tsx` a `CalendarBrowser.tsx` — `Intl` s natvrdo `cs-CZ` tam
+   plní `<input type="time">`. Není to text pro čtení, ale HODNOTA pro
+   prohlížeč, a ta musí zůstat 24hodinová.
+4. `LicencniListSection.delkaZMesicu` („3 roky", „18 měsíců") a
+   `NewContractForm` s částkou „30 000 Kč" — text, který se píše DO SMLOUVY
+   a do licenčního listu. Ty se řídí jazykem dokumentu (pravidlo 5), ne
+   přepínačem v liště.
+5. `lib/price.ts formatKc` — natvrdo `cs-CZ`, ale nikdo ho nevolá. Mrtvý kód,
+   ne nepřeložená obrazovka.
+6. Routy v `api/**` a moduly `lib`, které chodí na obrazovku jen přes ně —
+   pořád vlastní úkol, viz dávka 7l.
+
+**Dnešních 25 commitů (Tracklist, bonusy, přepínání firem, výchozí kalendáře,
+pozvánky hostům) přišlo s `t('…')` rovnou.** Večerní dávce z nich nezbylo nic
+než formáty — poučení z 7j a 7l se potvrdilo i ve dni, kdy se portál měnil
+nejvíc za celý týden.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

@@ -1046,7 +1046,7 @@ function bunkaSloupce(
       return (
         <span
           className="block truncate text-muted"
-          title={`${p.narrator} — herec zatím nemá přiřazený účet, doplní se v detailu projektu`}
+          title={prelozitS(jazyk, 'projekty.herecBezUctu', { jmeno: p.narrator })}
         >
           {p.narrator}
         </span>
@@ -1360,7 +1360,7 @@ function SortableHeader({
             onChange={(e) => onLabelChange?.(sloupec.key, e.target.value)}
             onMouseDown={(e) => e.stopPropagation()}
             draggable={false}
-            aria-label={`Název sloupce ${sloupec.label}`}
+            aria-label={prelozitS(jazyk, 'projekty.sl.nazevSloupce', { nazev: sloupec.label })}
             className={`w-full min-w-[100px] bg-transparent px-1 py-0.5 font-heading text-xs text-white placeholder-white/50 outline-none ${
               vpravo ? 'text-right' : ''
             }`}
@@ -1372,8 +1372,8 @@ function SortableHeader({
             onMouseDown={(e) => e.stopPropagation()}
             onDragStart={(e) => e.preventDefault()}
             onClick={() => onHide?.(sloupec.key)}
-            title={`Odebrat ${sloupec.label}`}
-            aria-label={`Odebrat ${sloupec.label}`}
+            title={prelozitS(jazyk, 'projekty.sl.odebrat', { nazev: sloupec.label })}
+            aria-label={prelozitS(jazyk, 'projekty.sl.odebrat', { nazev: sloupec.label })}
             className="w-4 h-4 shrink-0 rounded-full bg-white/90 text-brand-purpleDeep text-[10px] font-bold leading-none flex items-center justify-center hover:bg-white"
           >
             ×
@@ -1391,7 +1391,7 @@ function SortableHeader({
       <button
         type="button"
         onClick={() => onSort(sloupec.key as ProjectSortKey)}
-        title={`Seřadit podle: ${sloupec.label}`}
+        title={prelozitS(jazyk, 'projekty.sl.seraditPodle', { nazev: sloupec.label })}
         className={`inline-flex items-end gap-1.5 max-w-full text-left font-heading text-xs leading-tight transition-colors hover:text-brand-green ${
           active ? 'text-brand-green' : 'text-white/85'
         } ${vpravo ? 'flex-row-reverse text-right' : ''}`}

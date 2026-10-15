@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { usePreklad } from '../components/JazykProvider';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import type { TerminKlienta } from '@/lib/terminyKlientaServer';
 
 /**
@@ -77,6 +78,7 @@ export function TlacitkoTerminu({
 /** Rozbalený seznam termínů - vykresluje se ve vlastním řádku pod projektem. */
 export function SeznamTerminu({ terminy: vychozi }: { terminy: TerminKlienta[] }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   /**
    * REŽIE KLIENTA SE ZAŠKRTÁVÁ ROVNOU TADY (zadání 12. 10. 2026). Stav si
    * seznam drží u sebe a na server posílá jen tu jednu změnu - celá stránka
@@ -145,7 +147,7 @@ export function SeznamTerminu({ terminy: vychozi }: { terminy: TerminKlienta[] }
             } ${pristi && x.id === pristi.id ? 'border border-brand-purple/40' : ''}`}
           >
             <span className="font-heading text-sm tabular-nums whitespace-nowrap">
-              {kdy(x.start, x.end)}
+              {kdy(x.start, x.end, jazyk)}
             </span>
             {x.herec && <span className="text-xs font-body">{x.herec}</span>}
             <span className="text-[11px] font-body text-muted">{x.studio}</span>
@@ -210,15 +212,15 @@ export function SeznamTerminu({ terminy: vychozi }: { terminy: TerminKlienta[] }
 }
 
 /** „út 7. 10. · 10:00–13:00" - v pásmu toho, kdo se dívá. */
-function kdy(start: string, end: string): string {
+function kdy(start: string, end: string, jazyk: Jazyk = 'cs'): string {
   const s = new Date(start);
   const e = new Date(end);
-  const den = new Intl.DateTimeFormat('cs-CZ', {
+  const den = new Intl.DateTimeFormat(kodJazyka(jazyk), {
     weekday: 'short',
     day: 'numeric',
     month: 'numeric',
   }).format(s);
   const cas = (d: Date) =>
-    new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+    new Intl.DateTimeFormat(kodJazyka(jazyk), { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
   return `${den} · ${cas(s)}–${cas(e)}`;
 }

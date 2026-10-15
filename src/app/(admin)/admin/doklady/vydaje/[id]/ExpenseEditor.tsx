@@ -15,7 +15,7 @@ import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
-import { formatDatum, formatDatumCas, prelozitKolem, type Jazyk } from '@/lib/jazyk';
+import { formatDatum, formatDatumCas, kodJazyka, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 
 type Expense = {
   id: string;
@@ -523,7 +523,7 @@ export function ExpenseEditor({
               <span className="block text-xs font-body">
                 {t('vydaj.kurzCnb', {
                   mena: expense.currency,
-                  kurz: formatRate(expense.exchangeRate),
+                  kurz: formatRate(expense.exchangeRate, kodJazyka(jazyk)),
                   datum: formatDatum(jazyk, new Date(expense.exchangeRateDate)),
                 })}
               </span>
