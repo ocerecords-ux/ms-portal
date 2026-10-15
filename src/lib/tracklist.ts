@@ -36,3 +36,15 @@ export function bezDiakritiky(text: string): string {
     .replace(/[Ł]/g, 'L')
     .replace(/[ł]/g, 'l');
 }
+
+/**
+ * NÁZEV TRACKU DO PŘEDPISU (zadání 15. 10. 2026: „do mezer mezi slova se musí
+ * dát pomlčky. Tzn.: 01_KUCHARI-SMRTI").
+ *
+ * Z názvu tracku se stává název souboru, takže z něj jde pryč diakritika
+ * a mezery nahradí pomlčky. Název kapitoly je proti tomu text pro člověka -
+ * ten zůstává, jak je napsaný, a s diakritikou jde do tagu.
+ */
+export function nazevTracku(text: string): string {
+  return bezDiakritiky(text).trim().replace(/\s+/g, '-');
+}
