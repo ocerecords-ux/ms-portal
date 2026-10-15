@@ -37,15 +37,24 @@ export function OdznakStrany({ strana, jazyk = 'cs' }: { strana: number; jazyk?:
  * Poslední strana pro každého herce z natáčecího protokolu. Protokol chodí
  * od nejnovějšího, takže první nález pro daného herce je ten platný.
  *
- * Záznam bez herce (projekt s jediným hercem, kde ho nikdo nepsal) se do mapy
- * nedostane — nebylo by ke komu ho přiřadit.
+ * ZÁZNAM BEZ HERCE PATŘÍ JEDINÉMU HERCI PROJEKTU (oprava 15. 10. 2026:
+ * „u herečky v detailu není číslo stránky, v přehledu je"). Bruno čte zápisy
+ * z chatu a u knihy s jedním hercem se jméno ve zprávě nepíše - není koho
+ * rozlišovat. Přehled projektů s tím počítal od začátku, detail ne, a tak
+ * u stejného projektu svítila strana v seznamu a v detailu ne.
+ *
+ * Kde je herců víc, se takový záznam dál nepřiřazuje: hádat, komu patří,
+ * je horší než strana neukázat.
  */
 export function posledniStranyHercu(
   zaznamy?: { strana: number; userId: string | null }[],
+  /** Má-li projekt jediného herce, patří mu i zápisy bez jména. */
+  jedinyHerecId?: string | null,
 ): Record<string, number> {
   const mapa: Record<string, number> = {};
   for (const z of zaznamy ?? []) {
-    if (z.userId && mapa[z.userId] === undefined) mapa[z.userId] = z.strana;
+    const komu = z.userId ?? jedinyHerecId ?? null;
+    if (komu && mapa[komu] === undefined) mapa[komu] = z.strana;
   }
   return mapa;
 }

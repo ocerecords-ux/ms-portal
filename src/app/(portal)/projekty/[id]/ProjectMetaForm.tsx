@@ -310,7 +310,12 @@ export function ProjectMetaForm({
    * stavu: protokol vede Bruno na serveru, formulář ho nijak nemění, takže
    * se jen přepočítá z toho, co přišlo v props.
    */
-  const strany = posledniStranyHercu(natoceniZaznamy);
+  const strany = posledniStranyHercu(
+    natoceniZaznamy,
+    // Zápis bez jména patří jedinému herci projektu - stejné pravidlo jako
+    // v přehledu projektů (oprava 15. 10. 2026).
+    values.actorUserIds.length === 1 ? values.actorUserIds[0] : null,
+  );
   const [dotoceniBezi, setDotoceniBezi] = useState<string | null>(null);
   /**
    * CO SE STANE, NEŽ SE KLIKNE (zadání 30. 9. 2026: „dal bych tam pojistku,
