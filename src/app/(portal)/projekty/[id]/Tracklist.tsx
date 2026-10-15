@@ -55,6 +55,34 @@ export function Tracklist({
     'w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple';
   const popisek = 'text-[11px] font-heading font-semibold uppercase tracking-wide text-muted';
 
+  /**
+   * POŘADOVÉ ČÍSLO V NÁZVU TRACKU DRŽÍ KROK S POŘADÍM (upřesnění 15. 10. 2026:
+   * „ten název tracku musí jít zkopírovat i s tím pořadovým číslem tracku.
+   * Zvukaři to takto kopírují do názvu tracku").
+   *
+   * Název stopy se kopíruje do DAW i do názvu souboru, takže v něm číslo být
+   * musí - a nesmí lhát. Po rozdělení, přidání nebo odebrání stopy se proto
+   * číslo na konci názvu přepíše podle nového pořadí. Název, který na číslo
+   * nekončí, zůstane, jak je: do něj portál nemá co mluvit.
+   */
+  function precisluj(seznam: Radek[]): Radek[] {
+    return seznam.map((radek, i) => {
+      const shoda = /^(.*?)(\d{1,3})\s*$/.exec(radek.nazevTracku);
+      if (!shoda) return radek;
+      return { ...radek, nazevTracku: `${shoda[1]}${cisloTracku(i + 1)}` };
+    });
+  }
+
+  /** Název stopy do schránky - zvukař si ho lepí do DAW. */
+  async function zkopiruj(nazev: string) {
+    try {
+      await navigator.clipboard.writeText(nazev);
+      setHlaska(t('tracklist.zkopirovano', { nazev }));
+    } catch {
+      setChyba(t('tracklist.kopirovaniNeslo'));
+    }
+  }
+
   function nastav(i: number, co: keyof Radek, hodnota: string) {
     const nove = [...tracky];
     nove[i] = { ...nove[i], [co]: hodnota };
@@ -85,7 +113,7 @@ export function Tracklist({
       // Kapitola zůstává prázdná - doplňuje se ručně z knihy.
       nazevKapitoly: '',
     }));
-    setTracky([...tracky, ...nove]);
+    setTracky(precisluj([...tracky, ...nove]));
     setHlaska(t('tracklist.zalozeno', { pocet: kolik }));
   }
 
@@ -127,7 +155,7 @@ export function Tracklist({
     for (let k = od; k <= doKonce; k += 1) {
       nove[k] = { ...nove[k], nazevKapitoly: cast(k - od + 1) };
     }
-    setTracky(nove);
+    setTracky(precisluj(nove));
   }
 
   /** Nalepený seznam jde do NÁZVŮ KAPITOL - z obsahu knihy se kopírují ty. */
@@ -141,7 +169,7 @@ export function Tracklist({
       nazevTracku: tracky[i]?.nazevTracku ?? podleVzoru(i + 1),
       nazevKapitoly: kapitola,
     }));
-    setTracky([...nove, ...tracky.slice(radky.length)]);
+    setTracky(precisluj([...nove, ...tracky.slice(radky.length)]));
     setVlozeny('');
     setVkladani(false);
   }
@@ -212,7 +240,7 @@ export function Tracklist({
             <span className={`${popisek} w-8 text-right`}>{t('tracklist.cislo')}</span>
             <span className={`${popisek} flex-1 min-w-[180px]`}>{t('tracklist.nazevTracku')}</span>
             <span className={`${popisek} flex-1 min-w-[180px]`}>{t('tracklist.nazevKapitoly')}</span>
-            <span className="w-[150px]" />
+            <span className="w-[180px]" />
           </div>
 
           <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
@@ -233,7 +261,16 @@ export function Tracklist({
                   className={`${pole} flex-1 min-w-[180px]`}
                   placeholder={t('tracklist.nazevKapitoly')}
                 />
-                <span className="w-[150px] shrink-0 flex items-center justify-end gap-1">
+                <span className="w-[180px] shrink-0 flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void zkopiruj(radek.nazevTracku)}
+                    title={t('tracklist.zkopirovat')}
+                    aria-label={t('tracklist.zkopirovat')}
+                    className="text-muted hover:text-brand-purple px-1.5 bg-transparent border-0 cursor-pointer"
+                  >
+                    ⧉
+                  </button>
                   <button
                     type="button"
                     onClick={() => rozdel(i)}
@@ -244,7 +281,7 @@ export function Tracklist({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTracky(tracky.filter((_, j) => j !== i))}
+                    onClick={() => setTracky(precisluj(tracky.filter((_, j) => j !== i)))}
                     title={t('tracklist.odebrat')}
                     aria-label={t('tracklist.odebrat')}
                     className="text-muted hover:text-danger px-1.5 bg-transparent border-0 cursor-pointer"

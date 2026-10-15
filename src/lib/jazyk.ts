@@ -7858,6 +7858,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.neulozeno': { cs: 'Neuložené změny', en: 'Unsaved changes' },
   'tracklist.zadne': { cs: 'Zatím tu žádné stopy nejsou.', en: 'There are no tracks here yet.' },
   'tracklist.odebrat': { cs: 'Odebrat stopu', en: 'Remove the track' },
+  'tracklist.zkopirovat': { cs: 'Zkopírovat název tracku', en: 'Copy the track name' },
+  'tracklist.zkopirovano': { cs: 'Zkopírováno: {nazev}', en: 'Copied: {nazev}' },
+  'tracklist.kopirovaniNeslo': { cs: 'Zkopírovat se to nepodařilo.', en: 'Copying failed.' },
   'tracklist.rozdelit': { cs: 'Rozdělit track', en: 'Split the track' },
   'tracklist.rozdelitPopis': {
     cs: 'Rozdělit track — vzniknou dvě stopy a ke kapitole se doplní „Část 1" a „Část 2".',
