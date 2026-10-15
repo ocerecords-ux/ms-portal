@@ -47,7 +47,6 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
   const [rate, setRate] = useState('');
   /** Měna klienta (12. 10. 2026) - sazba za normostranu je v ní. */
   const [mena, setMena] = useState<Currency>('CZK');
-  const [caflouCompanyId, setCaflouCompanyId] = useState('');
   const [driveUrl, setDriveUrl] = useState('');
   // Druh zakazek (zadani 12. 9. 2026) - podle tohoto se klientovi na
   // /objednavka zobrazi jen prislusny typ objednavky.
@@ -75,7 +74,6 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
     setAddressCountry(DEFAULT_COUNTRY);
     setBankAccount('');
     setRate('');
-    setCaflouCompanyId('');
     setDriveUrl('');
     setDealsAudiobooks(true);
     setDealsAds(false);
@@ -138,7 +136,6 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
               ...common,
               ratePerPage: dealsAudiobooks ? rate : '',
               mena,
-              caflouCompanyId,
               driveFolderUrl: driveUrl,
               dealsAudiobooks,
               dealsAds,
@@ -303,15 +300,6 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
                 </option>
               ))}
             </select>
-          </AdminField>
-
-          <AdminField label={t('firmy.caflouId')} hint={t('firmy.caflouIdNapoveda')}>
-            <input
-              value={caflouCompanyId}
-              onChange={(e) => setCaflouCompanyId(e.target.value)}
-              placeholder={t('firmy.caflouIdPriklad')}
-              className="admin-input"
-            />
           </AdminField>
 
           <AdminField label={t('firmy.odkazNaDisk')}>

@@ -165,8 +165,6 @@ export default async function CompanyDetailPage({
         {/* key = company.id - stejny duvod jako key na UserEditForm
             (/admin/users/[id]/page.tsx): bez nej by pri prechodu mezi firmami
             klientsky formular mohl zustat s puvodnimi hodnotami. */}
-        {/* Test napojeni na Caflou je od 6. 9. 2026 vypnuty (zadani) -
-            komponenta CaflouTestPanel v repu zustava, jen se nezobrazuje. */}
         <CompanyForm
           key={company.id}
           company={company}

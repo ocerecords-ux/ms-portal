@@ -35,7 +35,6 @@ export async function GET(_req: Request) {
     NEXTAUTH_SECRET_nastaveno: Boolean(process.env.NEXTAUTH_SECRET),
     DATABASE_URL_nastaveno: Boolean(process.env.DATABASE_URL),
     SMTP_nastaveno: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD),
-    CAFLOU_nastaveno: Boolean(process.env.CAFLOU_API_KEY && process.env.CAFLOU_ACCOUNT_ID),
     GOOGLE_DISK_nastaveno: Boolean(
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
     ),

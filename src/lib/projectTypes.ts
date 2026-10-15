@@ -38,7 +38,7 @@ export function projectTypeLabel(key: string | null | undefined): string | null 
  * na portalu maji byt v Dokoncenych").
  *
  * Caflou dava dva nezavisle signaly a NEDRZI je synchronizovane (overeno na
- * zivo 8. 9. 2026 pres /api/admin/caflou-debug?najdi=... nad celym uctem -
+ * zivo 8. 9. 2026 jeste pres Caflou nad celym uctem -
  * 703 projektu):
  *
  *   1) project_status_name - stitek workflow, ktery si tym prepina rucne

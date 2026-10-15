@@ -70,9 +70,6 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/pozvanky': ['ADMIN', 'PRODUKCE'],
   // Administrace - jen Zuzo-labuzo.
   '/admin': ['ADMIN'],
-  // Firmy z Caflou uz nejsou v menu (odpojeni 11. 9. 2026), stranka ale
-  // zustava - je to posledni cesta, jak neco z Caflou dohledat.
-  '/admin/caflou-firmy': ['ADMIN'],
   '/admin/vzory-zprav': ['ADMIN'],
   // Nastaveni sekci pod ozubenym kolem (28. 9. 2026) - viz lib/nastaveniSekci.ts.
   // Procesy - nase pracovni postupy (28. 9. 2026). Cte je cely tym, pise

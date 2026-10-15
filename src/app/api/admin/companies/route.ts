@@ -36,7 +36,6 @@ const schema = z.discriminatedUnion('type', [
     ratePerPage: z.coerce.number().int().min(0).optional(),
     /** Měna klienta (12. 10. 2026) - sazba za normostranu je v ní. */
     mena: z.enum(['CZK', 'EUR', 'USD', 'GBP']).optional(),
-    caflouCompanyId: z.string().trim().optional(),
     driveFolderUrl: z.string().trim().optional(),
     dealsAudiobooks: z.boolean().optional(),
     audioknihyNaKlic: z.boolean().optional(),
@@ -90,7 +89,6 @@ export async function POST(req: NextRequest) {
             type: 'KLIENT',
             ratePerPage: data.ratePerPage ?? 0,
             mena: data.mena ?? 'CZK',
-            caflouCompanyId: data.caflouCompanyId || null,
             driveFolderUrl: data.driveFolderUrl || null,
             // Chybi-li v pozadavku, zustava vychozi hodnota ze schema.prisma
             // (dealsAudiobooks true, dealsAds false).

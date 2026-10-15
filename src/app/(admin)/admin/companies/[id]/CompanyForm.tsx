@@ -93,7 +93,6 @@ export function CompanyForm({
   const [mena, setMena] = useState<Currency>(
     ((company as { mena?: Currency }).mena ?? 'CZK') as Currency,
   );
-  const [caflouCompanyId, setCaflouCompanyId] = useState(company.caflouCompanyId ?? '');
   const [driveUrl, setDriveUrl] = useState(company.driveFolderUrl ?? '');
   const [dealsAudiobooks, setDealsAudiobooks] = useState(company.dealsAudiobooks);
   const [dealsAds, setDealsAds] = useState(company.dealsAds);
@@ -207,7 +206,6 @@ export function CompanyForm({
           ...(isClient
             ? {
                 ratePerPage: dealsAudiobooks ? rate : '',
-                caflouCompanyId,
                 driveFolderUrl: driveUrl,
                 dealsAudiobooks,
                 dealsAds,
@@ -566,10 +564,6 @@ export function CompanyForm({
                 </option>
               ))}
             </select>
-          </AdminField>
-
-          <AdminField label={t('firma.caflouId')} hint={t('firma.caflouIdHint')}>
-            <input value={caflouCompanyId} onChange={(e) => setCaflouCompanyId(e.target.value)} placeholder={t('firma.caflouIdPlaceholder')} className="admin-input" />
           </AdminField>
 
           <AdminField label={t('firma.drive')}>

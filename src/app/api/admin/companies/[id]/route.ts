@@ -33,7 +33,6 @@ const schema = z.object({
   contactPhone: z.string().trim().optional(),
 
   ratePerPage: z.string().trim().optional(),
-  caflouCompanyId: z.string().trim().optional(),
   driveFolderUrl: z.string().trim().optional(),
   dealsAudiobooks: z.boolean().optional(),
   audioknihyNaKlic: z.boolean().optional(),
@@ -94,7 +93,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               // Sazba za normostranu dava smysl jen u audioknih - u reklamnich
               // klientu se cena pocita z Ceniku (zadani 6. 9. 2026).
               ratePerPage: data.dealsAudiobooks === false ? null : toIntOrNull(data.ratePerPage),
-              caflouCompanyId: data.caflouCompanyId || null,
               driveFolderUrl: data.driveFolderUrl || null,
               ...(data.dealsAudiobooks !== undefined ? { dealsAudiobooks: data.dealsAudiobooks } : {}),
               ...(data.audioknihyNaKlic !== undefined ? { audioknihyNaKlic: data.audioknihyNaKlic } : {}),
