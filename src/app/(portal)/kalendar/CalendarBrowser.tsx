@@ -17,6 +17,7 @@ import {
 } from '@/lib/porady';
 import { NAZVY_ZEMI, svatkyProDny, zemePodlePasma, type Svatek, type Zeme } from '@/lib/svatky';
 import { OdberKalendare } from './OdberKalendare';
+import { KALENDAR_MIMO, KALENDAR_PORADY, KALENDAR_SCHUZKY } from '@/lib/vychoziKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 
 /** Červený rámeček události, kde je režie na dálku (zadání 23. 9. 2026). */
@@ -289,6 +290,7 @@ export function CalendarBrowser({
   schuzky,
   ukazSchuzky,
   puvodniSchuzky,
+  vychoziUlozeno,
   muzeSchuzky,
   puvodniStudioIds,
   puvodniNepritomnost,
@@ -337,6 +339,11 @@ export function CalendarBrowser({
   schuzky: PoradaVKalendari[];
   ukazSchuzky: boolean;
   puvodniSchuzky: boolean;
+  /**
+   * Má člověk uložené vlastní výchozí zapnutí kalendářů? (zadání Helči,
+   * 15. 10. 2026.) Podle toho se u tlačítka nabídne i zrušení.
+   */
+  vychoziUlozeno: boolean;
   muzeSchuzky: boolean;
   /**
    * SOLO REŽIM (zadání 20. 9. 2026: „ať to funguje jako prozatímní sólo
@@ -501,6 +508,59 @@ export function CalendarBrowser({
     druh?: DruhPorady;
   } | null>(null);
   const [hledani, setHledani] = useState('');
+
+  /**
+   * VÝCHOZÍ ZAPNUTÍ KALENDÁŘŮ (zadání Helči, 15. 10. 2026: „prosím o možnost
+   * nastavit si výchozí zapnutí kalendářů. Abych měla, když zapnu kalendář,
+   * defaultně zapnuté Brno I, Brno II, Praha").
+   *
+   * Ukládá se ZAŠKRTNUTÍ, ne sólo: sólo je ze své podstaty dočasné a člověk,
+   * který si zrovna prohlíží jedno studio, si tím nechce přepsat nastavení.
+   * Proto `puvodniStudioIds` a původní zaškrtnutí ostatních kalendářů.
+   */
+  const [vychoziUklada, setVychoziUklada] = useState(false);
+  const [vychoziHotovo, setVychoziHotovo] = useState<'ulozeno' | 'zruseno' | 'chyba' | null>(null);
+  const [vychoziJe, setVychoziJe] = useState(vychoziUlozeno);
+
+  async function ulozVychozi() {
+    const kalendare = [
+      ...puvodniStudioIds,
+      ...(puvodniNepritomnost ? [KALENDAR_MIMO] : []),
+      ...(puvodniPorady ? [KALENDAR_PORADY] : []),
+      ...(puvodniSchuzky ? [KALENDAR_SCHUZKY] : []),
+    ];
+    setVychoziUklada(true);
+    setVychoziHotovo(null);
+    try {
+      const res = await fetch('/api/kalendar/vychozi', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kalendare }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      setVychoziJe(true);
+      setVychoziHotovo('ulozeno');
+    } catch {
+      setVychoziHotovo('chyba');
+    } finally {
+      setVychoziUklada(false);
+    }
+  }
+
+  async function zrusVychozi() {
+    setVychoziUklada(true);
+    setVychoziHotovo(null);
+    try {
+      const res = await fetch('/api/kalendar/vychozi', { method: 'DELETE' });
+      if (!res.ok) throw new Error(String(res.status));
+      setVychoziJe(false);
+      setVychoziHotovo('zruseno');
+    } catch {
+      setVychoziHotovo('chyba');
+    } finally {
+      setVychoziUklada(false);
+    }
+  }
   /**
    * CELÁ OBRAZOVKA (zadání 25. 9. 2026: „udělej v kalendáři v prohlížeči
    * nějakou ikonku pro full screen mód").
@@ -1422,6 +1482,44 @@ export function CalendarBrowser({
             {t('kalendar.soloStitek', { nazev: nazevSola })}
             <span className="font-body font-normal text-muted">{t('kalendar.soloZpet')}</span>
           </button>
+        )}
+        {/* VÝCHOZÍ ZAPNUTÍ KALENDÁŘŮ (zadání Helči, 15. 10. 2026). Tlačítko
+            je schválně až za štítky: čte se jako „a tohle si zapamatuj",
+            tedy po tom, co si člověk kalendáře naklikal. Ukládá zaškrtnutí,
+            ne sólo. */}
+        <button
+          type="button"
+          onClick={ulozVychozi}
+          disabled={vychoziUklada}
+          title={t('kalendar.ulozitVychoziPopis')}
+          className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold text-muted hover:text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
+        >
+          <span aria-hidden="true">☆</span>
+          {vychoziUklada ? t('kalendar.ulozitVychoziUklada') : t('kalendar.ulozitVychozi')}
+        </button>
+        {vychoziJe && (
+          <button
+            type="button"
+            onClick={zrusVychozi}
+            disabled={vychoziUklada}
+            title={t('kalendar.zrusitVychoziPopis')}
+            className="shrink-0 whitespace-nowrap text-xs sm:text-sm font-body text-muted hover:text-ink underline underline-offset-2 disabled:opacity-60"
+          >
+            {t('kalendar.zrusitVychozi')}
+          </button>
+        )}
+        {vychoziHotovo && (
+          <span
+            className={`shrink-0 whitespace-nowrap text-xs sm:text-sm font-body ${
+              vychoziHotovo === 'chyba' ? 'text-danger' : 'text-muted'
+            }`}
+          >
+            {vychoziHotovo === 'ulozeno'
+              ? t('kalendar.vychoziUlozeno')
+              : vychoziHotovo === 'zruseno'
+                ? t('kalendar.vychoziZruseno')
+                : t('kalendar.vychoziChyba')}
+          </span>
         )}
         {/* Hledani na stejnem radku jako kalendare (zadani 20. 9. 2026:
             „hledání může být na řádku s výběrem kalendářů a stavy dejme úplně

@@ -4834,6 +4834,21 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Zpět na původní výběr kalendářů',
     en: 'Back to the original choice of calendars',
   },
+  /* Výchozí zapnutí kalendářů (zadání Helči, 15. 10. 2026). */
+  'kalendar.ulozitVychozi': { cs: 'Uložit jako výchozí', en: 'Save as my default' },
+  'kalendar.ulozitVychoziUklada': { cs: 'Ukládám…', en: 'Saving…' },
+  'kalendar.ulozitVychoziPopis': {
+    cs: 'Zapamatuje si, které kalendáře teď svítí. Příště se vám kalendář otevře přesně takhle. Platí jen pro vás a odkaz s vybranými kalendáři má pořád přednost.',
+    en: 'Remembers which calendars are on right now. Next time the calendar opens exactly like this. It applies only to you and a link with calendars chosen in it still takes precedence.',
+  },
+  'kalendar.zrusitVychozi': { cs: 'zrušit výchozí', en: 'clear my default' },
+  'kalendar.zrusitVychoziPopis': {
+    cs: 'Kalendář se zase bude otevírat se všemi kalendáři zapnutými.',
+    en: 'The calendar will open with every calendar switched on again.',
+  },
+  'kalendar.vychoziUlozeno': { cs: 'Uloženo jako výchozí.', en: 'Saved as your default.' },
+  'kalendar.vychoziZruseno': { cs: 'Výchozí zrušeno.', en: 'Your default is gone.' },
+  'kalendar.vychoziChyba': { cs: 'Nepodařilo se uložit.', en: 'It could not be saved.' },
   'kalendar.jenMoje': { cs: 'Jen moje události', en: 'My events only' },
   'kalendar.jenMojeSolo': { cs: 'Jen moje události (sólo)', en: 'My events only (solo)' },
   'kalendar.soloStitek': { cs: 'SÓLO: {nazev}', en: 'SOLO: {nazev}' },

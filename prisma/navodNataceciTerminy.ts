@@ -93,6 +93,8 @@ Malá ikonka **postavy** vedle šipek ‹ Dnes › funguje stejně jako sólo: u
 
 Poslední zapnutý kalendář se kolečkem vypnout nedá, aby mřížka nezůstala prázdná. Vypnutý štítek má šedé kolečko (Mimo studio prázdné kolečko), zapnutý svítí svou barvou.
 
+**Výchozí zapnutí kalendářů** (15. 10. 2026). Naklikejte si kalendáře, jak je chcete mít, a za štítky zmáčkněte **☆ Uložit jako výchozí**. Od té chvíle se vám kalendář otevře přesně takhle — třeba jen Brno I, Brno II a Praha. Platí to jen pro vás, ukládá se zaškrtnutí (ne sólo, to je ze své podstaty na chvíli) a počítá se do toho i Mimo studio, Porady a Schůzky. Odkaz, ve kterém jsou kalendáře vybrané, má pořád přednost — sdílený odkaz tak všem ukáže totéž. Odkazem **zrušit výchozí** se vrátí původní stav, kdy svítí všechno.
+
 **Hledání nad kalendářem** projde **celý kalendář**, ne jen zobrazený týden. Napište kus názvu projektu, jméno herce nebo zvukaře a pod polem se vypíše **seznam výskytů** — kdy, kde, co to bylo a s kým, od nejnovějšího. Nahoře je i počet, kolikrát se kdo objevil. Kliknutím na řádek kalendář skočí na ten den a rovnou zapne studio, kdyby bylo vypnuté. Seznam zavřete tlačítkem **Zavřít seznam**, klávesou Esc nebo smazáním textu.
 
 **Na další nebo předchozí týden** se nemusíte proklikávat šipkami: kalendář je **jeden dlouhý pás** — vedle sebe leží minulý, zobrazený a příští týden. V mobilu ho **táhněte prstem** doleva nebo doprava, na Macu posuňte **dvěma prsty po touchpadu** (nebo po Magic Mouse) do strany. Pás jede přímo pod prstem, nic se nenačítá a nic neproblikne; když ho pustíte, dorovná se na celý týden. Šipky nahoře dělají totéž, jen plynule samy. Stejně to funguje u dne i měsíce. V mobilu se týden nejdřív doroluje ke kraji (neděli) a teprve další tah posune pás.

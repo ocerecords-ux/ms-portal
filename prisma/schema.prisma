@@ -298,6 +298,21 @@ model User {
   /// clovek zadny podil nema a zalozku Moje bonusy vubec nevidi.
   podilNaObratu Float?
 
+  /// VYCHOZI KALENDARE (zadani Helcy, 15. 10. 2026: „prosim o moznost nastavit
+  /// si vychozi zapnuti kalendaru. Abych mela, kdyz zapnu kalendar, defaultne
+  /// zapnute Brno I, Brno II, Praha").
+  ///
+  /// Co se ma rozsvitit, kdyz clovek otevre /kalendar bez parametru v adrese.
+  /// Drzi se tu id studii a znacky ostatnich kalendaru ('mimo', 'porady',
+  /// 'schuzky') v jednom seznamu - je to tataz mnozina, jakou clovek vidi
+  /// v lavici nad kalendarem, a sedi s tim, co umi adresa.
+  ///
+  /// `vychoziKalendareNastaveno` odlisuje „jeste si nic nenastavil" (sviti
+  /// vsechno jako dosud) od „nastavil si prazdno" (nesviti nic). Bez nej by
+  /// se prazdny seznam nedal poznat od nevyplneneho.
+  vychoziKalendare           String[] @default([])
+  vychoziKalendareNastaveno  Boolean  @default(false)
+
   /// Smi byt manazerem projektu (zadani 10. 9. 2026: "manazera projektu bych
   /// dal na vyber jen me nebo Karolinu"). Zamerne priznak na uctu, ne seznam
   /// jmen v kodu - lidi se meni a kod by o tom nevedel.

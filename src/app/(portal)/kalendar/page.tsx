@@ -18,6 +18,7 @@ import {
   type CalendarView,
 } from '@/lib/calendar';
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
+import { KALENDAR_MIMO, KALENDAR_PORADY, KALENDAR_SCHUZKY } from '@/lib/vychoziKalendare';
 import { bezTitulu } from '@/lib/jmena';
 import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { INTERNAL_ROLES } from '@/lib/roles';
@@ -86,7 +87,19 @@ export default async function KalendarPage({
   // Úklid a načtení studií spolu nesouvisí, takže běží najednou (zpráva
   // 9. 9. 2026 o zpomaleném webu). Dřív se čekalo nejdřív na úklid a teprve
   // pak na studia - dvě kolečka do databáze za sebou tam, kde stačí jedno.
-  const [, studios] = await Promise.all([releaseExpiredHolds(), loadStudios()]);
+  const [, studios, ja] = await Promise.all([
+    releaseExpiredHolds(),
+    loadStudios(),
+    /**
+     * VLASTNÍ VÝCHOZÍ ZAPNUTÍ KALENDÁŘŮ (zadání Helči, 15. 10. 2026: „prosím
+     * o možnost nastavit si výchozí zapnutí kalendářů"). Čte se jen to, co
+     * svítí, když v adrese nic není - sdílený odkaz s parametry má přednost.
+     */
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { vychoziKalendare: true, vychoziKalendareNastaveno: true },
+    }),
+  ]);
   if (studios.length === 0) {
     return (
       <section className="flex flex-col gap-4">
@@ -109,8 +122,24 @@ export default async function KalendarPage({
   // Značka „zadne" = všechna studia zhasnutá, v kalendáři zbyl jen Mimo
   // studio (klik na jeho název, 20. 9. 2026). Prázdný parametr dál znamená
   // „všechna studia", aby zkrácené odkazy fungovaly jako dřív.
-  const puvodni = parametrStudii === ZADNE_STUDIO ? [] : vybrana.length > 0 ? vybrana : studios;
-  const puvodniNepritomnost = searchParams?.nepritomnost !== '0';
+  /**
+   * Vlastní výchozí zapnutí se použije jen tam, kde adresa mlčí. Každý
+   * kalendář se rozhoduje zvlášť: v odkazu bývá jen `studia`, a kdyby tím
+   * zmizely Porady, přišel by člověk o schůzky, aniž by na ně sáhl.
+   */
+  const vychozi = ja?.vychoziKalendareNastaveno ? new Set(ja.vychoziKalendare) : null;
+  const vychoziStudia = vychozi ? studios.filter((s) => vychozi.has(s.id)) : null;
+
+  const puvodni =
+    parametrStudii === ZADNE_STUDIO
+      ? []
+      : vybrana.length > 0
+        ? vybrana
+        : (vychoziStudia ?? studios);
+  const puvodniNepritomnost =
+    searchParams?.nepritomnost !== undefined
+      ? searchParams.nepritomnost !== '0'
+      : (vychozi?.has(KALENDAR_MIMO) ?? true);
 
   // SÓLO (20. 9. 2026) - dočasně svítí jen jeden kalendář, původní výběr
   // zůstává v adrese a vrátí se, jakmile sólo zmizí.
@@ -135,8 +164,14 @@ export default async function KalendarPage({
           : soloMoje
             ? SOLO_MOJE
             : '';
-  const puvodniPorady = searchParams?.porady !== '0';
-  const puvodniSchuzky = searchParams?.schuzky !== '0';
+  const puvodniPorady =
+    searchParams?.porady !== undefined
+      ? searchParams.porady !== '0'
+      : (vychozi?.has(KALENDAR_PORADY) ?? true);
+  const puvodniSchuzky =
+    searchParams?.schuzky !== undefined
+      ? searchParams.schuzky !== '0'
+      : (vychozi?.has(KALENDAR_SCHUZKY) ?? true);
 
   const aktivni = soloMoje ? studios : solo ? (soloStudio ? [soloStudio] : []) : puvodni;
   // Mřížka (pásmo a otevírací doba) se musí o něco opřít i bez studií.
@@ -597,6 +632,7 @@ export default async function KalendarPage({
       schuzky={schuzky}
       ukazSchuzky={ukazSchuzky}
       puvodniSchuzky={puvodniSchuzky}
+      vychoziUlozeno={Boolean(ja?.vychoziKalendareNastaveno)}
       muzeSchuzky={spravceKalendare}
       ja={{ id: session.user.id, label: session.user.name || session.user.email }}
       lidiTymu={lidiTymu.map((u) => ({ id: u.id, label: u.name || u.email }))}
