@@ -7843,8 +7843,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.pocetStop': { cs: 'Počet stop', en: 'Number of tracks' },
   'tracklist.vzorNazvu': { cs: 'Vzor názvu tracku', en: 'Track name pattern' },
   'tracklist.vzorPopis': {
-    cs: 'Místo {c} se doplní pořadové číslo. Další stopa by se jmenovala: {priklad}',
-    en: 'The number goes where {c} is. The next track would be called: {priklad}',
+    cs: 'Pořadové číslo se doplní na konec. Další stopa by se jmenovala: {priklad}',
+    en: 'The number is added at the end. The next track would be called: {priklad}',
   },
   'tracklist.zalozit': { cs: 'Založit stopy', en: 'Create the tracks' },
   'tracklist.zalozeno': { cs: 'Přibylo {pocet} stop. Uložíš je tlačítkem níž.', en: '{pocet} tracks added. Save them with the button below.' },

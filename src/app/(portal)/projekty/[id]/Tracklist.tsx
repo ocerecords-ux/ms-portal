@@ -25,9 +25,6 @@ import { cisloTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
  */
 type Radek = { nazevTracku: string; nazevKapitoly: string };
 
-/** Ve vzoru se {c} nahradí pořadovým číslem; bez něj se číslo přilepí na konec. */
-const ZNACKA_CISLA = /\{c\}/gi;
-
 export function Tracklist({
   caflouProjectId,
   nazevProjektu,
@@ -45,7 +42,7 @@ export function Tracklist({
   const [tracky, setTracky] = useState<Radek[]>(naRadky(pocatecni));
   const [ulozene, setUlozene] = useState<string>(JSON.stringify(naRadky(pocatecni)));
   const [pocet, setPocet] = useState('20');
-  const [vzor, setVzor] = useState(`${nazevProjektu} {c}`);
+  const [vzor, setVzor] = useState(nazevProjektu);
   const [vkladani, setVkladani] = useState(false);
   const [vlozeny, setVlozeny] = useState('');
   const [bezi, setBezi] = useState(false);
@@ -64,15 +61,15 @@ export function Tracklist({
     setTracky(nove);
   }
 
-  /** Název z pole podle vzoru - „Kuchaři smrti {c}" a trojka dají „Kuchaři smrti 03". */
+  /**
+   * Název stopy ze vzoru: pořadové číslo se vždycky přilepí na konec
+   * (upřesnění 15. 10. 2026 - žádná proměnná ve vzoru, je zbytečná).
+   * „Kuchaři smrti" a trojka dají „Kuchaři smrti 03".
+   */
   function podleVzoru(poradi: number): string {
     const cislo = cisloTracku(poradi);
     const text = vzor.trim();
-    if (!text) return cislo;
-    // Pozor na `test` nad regulárem s /g - pamatuje si pozici a druhé volání
-    // by vrátilo false. Proto se hledá přes indexOf a nahrazuje se zvlášť.
-    const maZnacku = text.toLowerCase().includes('{c}');
-    return maZnacku ? text.replace(ZNACKA_CISLA, cislo) : `${text} ${cislo}`;
+    return text ? `${text} ${cislo}` : cislo;
   }
 
   /**
@@ -105,20 +102,30 @@ export function Tracklist({
   function rozdel(i: number) {
     const puvodni = tracky[i];
     const base = zakladKapitoly(puvodni.nazevKapitoly);
-    const nove = [...tracky];
-    nove.splice(i + 1, 0, { nazevTracku: puvodni.nazevTracku, nazevKapitoly: base });
+    const cast = (poradi: number) =>
+      base ? base + ', ' + t('tracklist.cast', { cislo: poradi }) : t('tracklist.cast', { cislo: poradi });
 
+    const nove = [...tracky];
+    // Nova stopa je kopie te puvodni - vsechno ostatni zustava, meni se jen
+    // nazev kapitoly a poradova cisla stop za ni (ta se dopocitavaji sama).
+    nove.splice(i + 1, 0, { ...puvodni });
+
+    /**
+     * SKUPINU HLEDAME JEN U POJMENOVANE KAPITOLY (oprava 15. 10. 2026).
+     * Dokud jsou kapitoly prazdne - a hned po zalozeni seznamu jsou - maji
+     * prazdny zaklad VSECHNY stopy, takze by precislovani udelalo z cele
+     * knihy "Cast 1" az "Cast 50". U prazdne kapitoly se proto deli jen ta
+     * jedna dvojice.
+     */
     let od = i;
-    while (od > 0 && zakladKapitoly(nove[od - 1].nazevKapitoly) === base) od -= 1;
     let doKonce = i + 1;
-    while (doKonce + 1 < nove.length && zakladKapitoly(nove[doKonce + 1].nazevKapitoly) === base) doKonce += 1;
+    if (base) {
+      while (od > 0 && zakladKapitoly(nove[od - 1].nazevKapitoly) === base) od -= 1;
+      while (doKonce + 1 < nove.length && zakladKapitoly(nove[doKonce + 1].nazevKapitoly) === base) doKonce += 1;
+    }
 
     for (let k = od; k <= doKonce; k += 1) {
-      const cislo = k - od + 1;
-      nove[k] = {
-        ...nove[k],
-        nazevKapitoly: base ? `${base}, ${t('tracklist.cast', { cislo })}` : t('tracklist.cast', { cislo }),
-      };
+      nove[k] = { ...nove[k], nazevKapitoly: cast(k - od + 1) };
     }
     setTracky(nove);
   }
