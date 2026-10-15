@@ -10,6 +10,7 @@ import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
 import { OdznakSerie } from '@/components/OdznakSerie';
+import { OdznakFrekvenci } from '@/components/OdznakFrekvenci';
 import { projectTypeLabel } from '@/lib/projectTypes';
 import { ValecProgresu } from '@/components/ValecProgresu';
 import type { ProgresNataceni } from '@/lib/progresNataceni';
@@ -694,6 +695,12 @@ export type InternalProjectMeta = {
    * buňka je prázdná.
    */
   preposlech?: StavPreposlechu | null;
+  /**
+   * TERMÍNY NATÁČENÍ (připomínka Helči 15. 10. 2026) - ikona kalendáře za
+   * názvem. `prvni` je nejbližší neodbytá frekvence, `zacatek` ta úplně
+   * první (podle ní se řadí). Projekt bez naplánovaného natáčení ikonu nemá.
+   */
+  frekvence?: { prvni: string; zacatek: string; pocet: number } | null;
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -718,7 +725,10 @@ export type ProjectSortKey =
   | 'narrator'
   | 'pageCount'
   | 'endDate'
-  | 'releaseDate';
+  | 'releaseDate'
+  /** Od první frekvence (připomínka Helči 15. 10. 2026) - nemá sloupec,
+   *  přepíná se tlačítkem vedle hledání. */
+  | 'prvniFrekvence';
 
 export type ProjectSort = { key: ProjectSortKey; dir: 'asc' | 'desc' };
 
@@ -757,6 +767,12 @@ export function compareProjects(
     // "Datum dokonceni" je Konec z Caflou; finished_at je jen zaloha.
     if (sort.key === 'endDate') return p.endDate?.getTime() ?? p.finishedAt?.getTime() ?? null;
     if (sort.key === 'releaseDate') return p.releaseDate?.getTime() ?? null;
+    // Řadí se podle PRVNÍ frekvence projektu, ne podle nejbližší - jinak by
+    // rozdělaný projekt přeskakoval nahoru a dolů podle toho, co už odbyl.
+    if (sort.key === 'prvniFrekvence') {
+      const zacatek = p.meta?.frekvence?.zacatek;
+      return zacatek ? new Date(zacatek).getTime() : null;
+    }
     if (sort.key === 'priority') {
       const value = p.priority ?? p.meta?.priority ?? null;
       return value ? PRIORITY_RANK[value] : null;
@@ -768,6 +784,7 @@ export function compareProjects(
     sort.key === 'pageCount' ||
     sort.key === 'endDate' ||
     sort.key === 'releaseDate' ||
+    sort.key === 'prvniFrekvence' ||
     sort.key === 'priority'
   ) {
     const av = numeric(a);
@@ -948,6 +965,17 @@ function bunkaSloupce(
                 serie={p.serie}
                 dil={p.serieDil ?? null}
                 aktivniId={p.id}
+              />
+            )}
+            {/* Termíny natáčení (15. 10. 2026) - viz components/OdznakFrekvenci.tsx.
+                Je ve stejném textovém bloku jako název a kolečko série, aby
+                na úzkém displeji tekla za posledním slovem a nevylezla přes
+                sousední sloupec. */}
+            {p.meta?.frekvence && (
+              <OdznakFrekvenci
+                caflouProjectId={String(p.id)}
+                prvni={p.meta.frekvence.prvni}
+                pocet={p.meta.frekvence.pocet}
               />
             )}
           </span>

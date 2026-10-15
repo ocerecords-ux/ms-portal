@@ -6134,6 +6134,21 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'prehledProjektu.zalozkaAktivni': { cs: 'Aktivní', en: 'Active' },
   'prehledProjektu.zalozkaDokoncene': { cs: 'Dokončené', en: 'Completed' },
+  /* Termíny natáčení u názvu projektu (připomínka Helči 15. 10. 2026). */
+  'prehledProjektu.odPrvniFrekvence': { cs: 'Od první frekvence', en: 'By first session' },
+  'prehledProjektu.odPrvniFrekvencePopis': {
+    cs: 'Seřadí projekty podle toho, kdy se u nich začíná točit. Projekty bez naplánovaného natáčení jdou dolů; dalším klepnutím se řazení vrátí na název.',
+    en: 'Sorts the projects by when recording starts. Projects with nothing scheduled go to the bottom; click again to sort by name as before.',
+  },
+  'frekvence.prvniFrekvence': { cs: 'První frekvence {kdy}', en: 'First session {kdy}' },
+  'frekvence.zacaloSe': { cs: 'Natáčení začalo {kdy}', en: 'Recording started {kdy}' },
+  'frekvence.dnes': { cs: 'dnes', en: 'today' },
+  'frekvence.zitra': { cs: 'zítra', en: 'tomorrow' },
+  'frekvence.zaDny': { cs: 'za {pocet} dny', en: 'in {pocet} days' },
+  'frekvence.zaDnu': { cs: 'za {pocet} dnů', en: 'in {pocet} days' },
+  'frekvence.pocetFrekvenci': { cs: '{pocet}× natáčení', en: '{pocet} sessions' },
+  'frekvence.bezHerce': { cs: 'Bez herce', en: 'No narrator' },
+  'frekvence.zadneTerminy': { cs: 'Žádné termíny.', en: 'No sessions.' },
   'prehledProjektu.hledatPole': {
     cs: 'Hledat projekt, firmu, herce, manažera, číslo…',
     en: 'Search by project, company, narrator, manager or number…',

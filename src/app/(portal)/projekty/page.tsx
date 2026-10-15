@@ -39,6 +39,7 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 import { bezTitulu } from '@/lib/jmena';
 import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
+import { nactiPrvniFrekvence } from '@/lib/frekvenceProjektuServer';
 import { slozStavNabidky, stavyNabidekZDokladu } from '@/lib/nabidkaStavServer';
 import { dokladyUProjektu } from '@/lib/dokladyUProjektuServer';
 
@@ -662,6 +663,14 @@ async function InternalProjektySection({
   const preposlechMapa = await nactiPreposlechPrehled(projects.map((p) => String(p.id)));
 
   /**
+   * TERMÍNY NATÁČENÍ (připomínka Helči 15. 10. 2026: „hodilo by se mi, kdybych
+   * si mohla ty projekty seřadit právě od první frekvence"). Do přehledu jde
+   * jen první termín a počet - celý rozpis se čte až po otevření okénka
+   * u názvu. Jedno kolečko do databáze na celý seznam, ne na projekt.
+   */
+  const frekvenceMapa = await nactiPrvniFrekvence(projects.map((p) => String(p.id)));
+
+  /**
    * Schválená nabídka v Dokladech přebíjí ruční značku (25. 9. 2026: „když dám
    * schválit nabídku ručně, tak je taky prostě schválená").
    */
@@ -686,6 +695,8 @@ async function InternalProjektySection({
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
         // Sluchatka se stavem preposlechu (25. 9. 2026).
         preposlech: preposlechMapa.get(m.caflouProjectId) ?? null,
+        // Ikona kalendáře s termíny natáčení (15. 10. 2026).
+        frekvence: frekvenceMapa.get(m.caflouProjectId) ?? null,
         // Je to reklama? Jedno pravidlo pro celý portál - viz
         // lib/reklamniProjekt.ts. Rozhoduje o kratší nabídce stavů rovnou
         // v seznamu, stejně jako v detailu projektu.
