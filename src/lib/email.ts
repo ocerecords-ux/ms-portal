@@ -3603,7 +3603,9 @@ export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string 
 export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
   const transport = getTransport();
   if (!transport) {
-    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+    // `false as const`, ne `false`: bez toho je typ `sent: boolean` a volající
+    // si po `if (!odeslano.sent)` nesáhne na messageId (15. 10. 2026).
+    return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' as const, messageId: null, odpoved: null };
   }
 
   const jazyk = input.jazyk ?? 'cs';
