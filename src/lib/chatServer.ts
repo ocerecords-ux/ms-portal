@@ -137,21 +137,29 @@ export async function loadConversations(
    * Tohle je jen výpis - konverzace i všechny zprávy zůstávají v databázi
    * stejně jako u kanálů uzavřených projektů. Kdyby se projekt pod stejným
    * ID vrátil, kanál se vrátí s ním.
+   *
+   * KANÁL BEZ ID PROJEKTU (oprava 15. 10. 2026: „duplicity nezmizely",
+   * „není založen dvakrát"). Zarchivování projektu kanálu `caflouProjectId`
+   * vynulovalo (viz lib/archivServer.ts), takže podmínka výše ho vůbec
+   * nedokázala poznat - právě tyhle řádky v seznamu zbyly. Kanál druhu
+   * PROJEKT bez ID projektu je vždycky pozůstatek a do seznamu nepatří;
+   * nově se zavírá rovnou při archivaci, tohle je záchranná síť na ty,
+   * které tam už visí.
    */
   const idProjektuKanalu = conversations
     .map((c) => (c.kind === 'PROJEKT' ? c.caflouProjectId : c.kind === 'DOTAZ' ? c.dotazProjektId : null))
     .filter((id): id is string => Boolean(id));
   const osireleKanaly = new Set<string>();
-  if (idProjektuKanalu.length > 0) {
+  {
     const zijici = await prisma.projectMeta.findMany({
       where: { caflouProjectId: { in: idProjektuKanalu } },
       select: { caflouProjectId: true },
     });
     const maProjekt = new Set(zijici.map((m) => m.caflouProjectId));
     for (const c of conversations) {
-      const idProjektu = c.kind === 'PROJEKT' ? c.caflouProjectId : c.kind === 'DOTAZ' ? c.dotazProjektId : null;
-      if (!idProjektu) continue;
-      if (!maProjekt.has(idProjektu)) osireleKanaly.add(c.id);
+      if (c.kind !== 'PROJEKT' && c.kind !== 'DOTAZ') continue;
+      const idProjektu = c.kind === 'PROJEKT' ? c.caflouProjectId : c.dotazProjektId;
+      if (!idProjektu || !maProjekt.has(idProjektu)) osireleKanaly.add(c.id);
     }
   }
 

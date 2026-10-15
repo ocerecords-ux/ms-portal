@@ -302,7 +302,20 @@ export async function odstranProjekt(vstup: {
     await tx.expense.updateMany(odpojit);
     await tx.contract.updateMany(odpojit);
     await tx.timesheetEntry.updateMany(odpojit);
-    await tx.conversation.updateMany(odpojit);
+    /**
+     * KANÁL ZARCHIVOVANÉHO PROJEKTU SE ZAVŘE (oprava 15. 10. 2026:
+     * „duplicity nezmizely", „není založen dvakrát").
+     *
+     * Kanál se tu odpojoval od projektu - zůstal v seznamu jako řádek se
+     * jménem, ke kterému už žádný projekt není. Když se kniha po čase
+     * natáčela znovu, viselo tam jméno dvakrát i třikrát. Proto rovnou
+     * dostane `uzavrenoAt` jako kanál ukončeného projektu: ze seznamu
+     * zmizí, ale konverzace ani zprávy se nemažou, historie zůstává.
+     */
+    await tx.conversation.updateMany({
+      where: { caflouProjectId },
+      data: { caflouProjectId: null, uzavrenoAt: new Date() },
+    });
 
     await tx.recordingRequest.deleteMany({ where: { caflouProjectId } });
     await tx.rodnyList.deleteMany({ where: { caflouProjectId } });
