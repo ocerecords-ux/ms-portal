@@ -1222,7 +1222,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     tabs.push({
       key: 'tagy',
       label: prelozit(jazyk, 'projekt.zalozka.tagy'),
-      content: <TagySekce caflouProjectId={caflouProjectId} pocatecni={tagy} />,
+      content: (
+        <TagySekce
+          caflouProjectId={caflouProjectId}
+          tracklist={await nactiTracklist(caflouProjectId)}
+          pocatecni={tagy}
+        />
+      ),
     });
   }
 
