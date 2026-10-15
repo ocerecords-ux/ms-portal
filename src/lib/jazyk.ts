@@ -5721,6 +5721,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // --- bonusy zvukařů: stav (klíč je KÓD, ne text) ---
   'vykaz.bonus.stav.NAVRZENO': { cs: 'Čeká na schválení', en: 'Awaiting approval' },
   'vykaz.bonus.stav.SCHVALENO': { cs: 'Schváleno', en: 'Approved' },
+  'vykaz.bonus.stav.STORNOVANO': { cs: 'Stornováno', en: 'Cancelled' },
+  'vykaz.bonus.stornovat': { cs: 'Stornovat bonus', en: 'Cancel the bonus' },
+  'vykaz.bonus.stornovatPopis': {
+    cs: 'Vzít přiznaný bonus zpátky. Zůstane v historii se stavem Stornováno.',
+    en: 'Take an awarded bonus back. It stays in the history as Cancelled.',
+  },
+  'vykaz.bonus.narokPadl': {
+    cs: 'Nárok padl — podíl klesl z {puvodni} % na {ted} %. Po navržení bonusu přibyl výkaz.',
+    en: 'No longer eligible — the share dropped from {puvodni}% to {ted}%. A timesheet was added after the bonus was proposed.',
+  },
   'vykaz.bonus.stav.ZAMITNUTO': { cs: 'Zamítnuto', en: 'Rejected' },
 
   // --- bonusy zvukařů: úvodní vysvětlení ---

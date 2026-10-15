@@ -3687,6 +3687,15 @@ enum StavBonusu {
   NAVRZENO
   SCHVALENO
   ZAMITNUTO
+  /// Bonus už byl přiznaný, ale pak se ukázalo, že na něj zvukař nárok nemá
+  /// (zadání 15. 10. 2026: „Peter včera překlopil projekt do dokončeno ke
+  /// schválení a zvukař si tam pak dnes ještě zapsal dodatečně výkaz
+  /// a tím pádem na ten bonus nemá nárok").
+  ///
+  /// Není to totéž co ZAMITNUTO: zamítnutí je rozhodnutí nad návrhem,
+  /// storno je vzetí zpátky něčeho, co už platilo. Ve výplatě se liší -
+  /// schválený bonus mohl odejít.
+  STORNOVANO
 }
 
 /// BONUS ZVUKARE ZA AUDIOKNIHU (zadani 15. 9. 2026: „aby nam portal
@@ -3735,6 +3744,13 @@ model BonusZvukare {
   rozhodlJmeno  String?
   /// Duvod zamitnuti, pripadne poznamka ke schvaleni.
   poznamka      String?
+
+  /// PODÍL V OKAMŽIKU, KDY SE NA ZTRÁTU NÁROKU PŘIŠLO (15. 10. 2026).
+  /// Drží se zvlášť od `podilProcent`, ten je z chvíle navržení - teprve
+  /// dvojice „bylo 100 %, je 71 %" řekne, co se stalo.
+  podilPoZmeneProcent Int?
+  /// Kdy portál poprvé upozornil, že nárok padl - ať se nehlásí pořád dokola.
+  narokPadlAt         DateTime?
 
   @@unique([caflouProjectId, userId])
   @@index([stav])

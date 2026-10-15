@@ -112,6 +112,8 @@ export default async function TimesheetsPage({
     vlastni: b.userId === session.user.id,
     rucne: b.rucne,
     poznamka: b.poznamka,
+    podilPoZmeneProcent: b.podilPoZmeneProcent ?? null,
+    narokPadlAt: b.narokPadlAt ? b.narokPadlAt.toISOString() : null,
   }));
 
   /**

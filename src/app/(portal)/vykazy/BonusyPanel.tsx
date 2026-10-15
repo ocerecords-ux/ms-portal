@@ -31,7 +31,7 @@ export type Bonus = {
   podilProcent: number;
   minutZvukare: number;
   minutCelkem: number;
-  stav: 'NAVRZENO' | 'SCHVALENO' | 'ZAMITNUTO';
+  stav: 'NAVRZENO' | 'SCHVALENO' | 'ZAMITNUTO' | 'STORNOVANO';
   navrzenoAt: string;
   rozhodnutoAt: string | null;
   rozhodlJmeno: string | null;
@@ -40,6 +40,12 @@ export type Bonus = {
   /** Přidal ho člověk ručně - podíl na střihu pak nic neznamená. */
   rucne: boolean;
   poznamka: string | null;
+  /**
+   * NÁROK SPADL PO NAVRŽENÍ (15. 10. 2026) - podíl, na kolik klesl, a kdy se
+   * na to přišlo. Vyplněné znamená: u téhle řádky je potřeba něco udělat.
+   */
+  podilPoZmeneProcent: number | null;
+  narokPadlAt: string | null;
 };
 
 export type VolbaProjektu = { id: string; label: string };
@@ -53,12 +59,14 @@ const STAV_KLICE: Record<Bonus['stav'], string> = {
   NAVRZENO: 'vykaz.bonus.stav.NAVRZENO',
   SCHVALENO: 'vykaz.bonus.stav.SCHVALENO',
   ZAMITNUTO: 'vykaz.bonus.stav.ZAMITNUTO',
+  STORNOVANO: 'vykaz.bonus.stav.STORNOVANO',
 };
 
 const STAV_TRIDY: Record<Bonus['stav'], string> = {
   NAVRZENO: 'bg-warnTint text-status-progress',
   SCHVALENO: 'bg-okTint text-brand-greenDeep',
   ZAMITNUTO: 'bg-dangerTint text-danger',
+  STORNOVANO: 'bg-dangerTint text-danger',
 };
 
 // Pomocna funkce mimo komponentu - jazyk si bere parametrem, hook by tu nefungoval.
@@ -136,7 +144,7 @@ export function BonusyPanel({
   const rozhodnute = bonusy.filter((b) => b.stav !== 'NAVRZENO');
 
   /** „smazat" zahodi navrh uplne; zbytek je rozhodnuti. */
-  async function rozhodni(id: string, akce: 'schvalit' | 'zamitnout' | 'zpet' | 'smazat') {
+  async function rozhodni(id: string, akce: 'schvalit' | 'zamitnout' | 'zpet' | 'smazat' | 'stornovat') {
     setBusyId(id);
     setChyba(null);
     try {
@@ -284,7 +292,7 @@ function Tabulka({
   prazdno: string;
   muzeSchvalovat: boolean;
   busyId: string | null;
-  rozhodni: (id: string, akce: 'schvalit' | 'zamitnout' | 'zpet' | 'smazat') => void;
+  rozhodni: (id: string, akce: 'schvalit' | 'zamitnout' | 'zpet' | 'smazat' | 'stornovat') => void;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -348,6 +356,20 @@ function Tabulka({
                     {b.rucne && b.minutCelkem > 0 && (
                       <span className="block text-xs font-body text-muted">{t('vykaz.bonus.pridanoRucne')}</span>
                     )}
+                    {/* ZAŘVE TO (zadání 15. 10. 2026). Červeně a s čísly, ať
+                        je hned vidět, že po navržení bonusu přibyl výkaz
+                        a podíl spadl pod hranici. */}
+                    {b.narokPadlAt && b.stav !== 'STORNOVANO' && b.stav !== 'ZAMITNUTO' && (
+                      <span className="mt-1 flex items-start gap-1.5 text-xs font-heading font-semibold text-danger">
+                        <span aria-hidden="true">⚠</span>
+                        <span>
+                          {t('vykaz.bonus.narokPadl', {
+                            puvodni: b.podilProcent,
+                            ted: b.podilPoZmeneProcent ?? 0,
+                          })}
+                        </span>
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums text-right">
                     {formatCzk(b.castka, jazyk)}
@@ -396,6 +418,22 @@ function Tabulka({
                     )}
                     {muzeSchvalovat && b.vlastni && b.stav === 'NAVRZENO' && (
                       <span className="text-xs font-body text-muted">{t('vykaz.bonus.vlastniSchvalujeKolega')}</span>
+                    )}
+                    {/* STORNO = vzít zpátky bonus, který už platil. Nabízí se
+                        u schváleného bonusu; červeně ve chvíli, kdy mu spadl
+                        nárok, jinak nenápadně vedle „Vrátit k rozhodnutí". */}
+                    {muzeSchvalovat && b.stav === 'SCHVALENO' && (
+                      <button
+                        type="button"
+                        onClick={() => rozhodni(b.id, 'stornovat')}
+                        disabled={busyId === b.id}
+                        title={t('vykaz.bonus.stornovatPopis')}
+                        className={`text-xs font-heading mr-3 disabled:opacity-60 ${
+                          b.narokPadlAt ? 'text-danger font-semibold' : 'text-muted hover:text-danger'
+                        }`}
+                      >
+                        {t('vykaz.bonus.stornovat')}
+                      </button>
                     )}
                     {muzeSchvalovat && b.stav !== 'NAVRZENO' && (
                       <button

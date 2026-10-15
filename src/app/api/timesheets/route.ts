@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { polozkyVykazu, schemaVykazu } from '@/lib/timesheetyVstup';
 import { hlaskaOKolizi, najdiKolizi } from '@/lib/timesheetyKolize';
+import { zkontrolujNarokNaBonusy } from '@/lib/bonusyServer';
 
 // Vykazy zvukaru (zadani 6. 9. 2026).
 //
@@ -51,6 +52,14 @@ export async function POST(req: NextRequest) {
         hourlyRateSnapshot: user?.hourlyRate ?? DEFAULT_HOURLY_RATE,
       },
     });
+
+    /**
+     * DOPSANÝ VÝKAZ MŮŽE SHODIT UŽ PŘIZNANÝ BONUS (zadání 15. 10. 2026:
+     * „zvukař si tam pak dnes ještě zapsal dodatečně výkaz a tím pádem na
+     * ten bonus nemá nárok. Takže by to mělo nějak zařvat"). Kontrola nic
+     * neruší, jen přepočítá podíl a jednou upozorní Žůžo-labůžo.
+     */
+    await zkontrolujNarokNaBonusy(entry.caflouProjectId);
 
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {

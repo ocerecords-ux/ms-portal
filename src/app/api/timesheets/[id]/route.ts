@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { polozkyVykazu, schemaVykazu } from '@/lib/timesheetyVstup';
 import { hlaskaOKolizi, najdiKolizi } from '@/lib/timesheetyKolize';
+import { zkontrolujNarokNaBonusy } from '@/lib/bonusyServer';
 
 // Smazani vykazu. Zvukar smi mazat jen svoje, admin cokoliv.
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -20,6 +21,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     }
 
     await prisma.timesheetEntry.delete({ where: { id: params.id } });
+    // Smazaný výkaz může nárok na bonus i VRÁTIT - viz zkontrolujNarokNaBonusy.
+    await zkontrolujNarokNaBonusy(entry.caflouProjectId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/timesheets/[id] selhalo:', err);
@@ -76,6 +79,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       where: { id: params.id },
       data: pripraveno.data,
     });
+
+    // Posunutý nebo prodloužený střih mění podíly stejně jako nový výkaz.
+    await zkontrolujNarokNaBonusy(upraveny.caflouProjectId);
 
     return NextResponse.json(upraveny);
   } catch (err) {

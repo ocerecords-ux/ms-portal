@@ -20,7 +20,13 @@ import { oznamSchvalenyBonus } from '@/lib/bonusyServer';
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  akce: z.enum(['schvalit', 'zamitnout', 'zpet']),
+  /**
+   * STORNO JE VLASTNÍ AKCE, NE ZAMÍTNUTÍ (zadání 15. 10. 2026: „potřebuju
+   * u bonusu udělat nějaké tlačítko, kdy Peter bude stornovat bonus").
+   * Zamítnutí je rozhodnutí nad návrhem; storno je vzetí zpátky něčeho, co
+   * už platilo - a ve výplatě je to rozdíl.
+   */
+  akce: z.enum(['schvalit', 'zamitnout', 'zpet', 'stornovat']),
   poznamka: z.string().trim().max(500).optional(),
 });
 
@@ -40,11 +46,28 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       select: { id: true, userId: true, stav: true },
     });
     if (!bonus) return NextResponse.json({ error: 'Bonus nenalezen.' }, { status: 404 });
-    if (bonus.userId === session.user.id) {
+    const kdo = session.user.name || session.user.email || null;
+
+    // Vlastni bonus si clovek schvalit nesmi - je to jeho odmena, ne jeho
+    // rozhodnuti. Stornovat ho ale muze; vzdat se odmeny neni konflikt zajmu.
+    if (bonus.userId === session.user.id && parsed.data.akce !== 'stornovat') {
       return NextResponse.json({ error: 'Vlastní bonus si schválit nemůžete.' }, { status: 409 });
     }
 
-    const kdo = session.user.name || session.user.email || null;
+    if (parsed.data.akce === 'stornovat') {
+      // Stornovat jde i vlastní bonus - vzít si odměnu zpátky smí každý.
+      await prisma.bonusZvukare.update({
+        where: { id: bonus.id },
+        data: {
+          stav: 'STORNOVANO',
+          rozhodnutoAt: new Date(),
+          rozhodlId: session.user.id,
+          rozhodlJmeno: kdo,
+          poznamka: parsed.data.poznamka || null,
+        },
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     if (parsed.data.akce === 'zpet') {
       await prisma.bonusZvukare.update({

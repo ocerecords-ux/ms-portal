@@ -191,7 +191,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 - **Píše klientovi** zprávy o stavu projektu podle toho, co má jeho firma zapnuté; text se bere ze Vzorů zpráv. Navíc mu u audioknihy odejde zpráva **„Přeposlech dokončen"** ve chvíli, kdy v AudioTaggeru klepne na PŘEPOSLECHNUTO — že přeposlech máme kompletní a pouštíme se do finálních oprav. Tahle jediná chodí i bez zapnutí na kartě firmy (vypnout jde tamtéž, přepnutím na Neposílat); u reklamní firmy neodejde vůbec.
 - **Čte účtárenskou schránku** a z příloh zakládá nezařazené výdaje — z účtenky si navíc přečte částku, datum i dodavatele.
 - **Vyrobí rodný list** spotu, jakmile je reklama hotová.
-- **Navrhne bonus** zvukaři, který odvedl většinu střihu.
+- **Navrhne bonus** zvukaři, který odvedl většinu střihu. A když se na ten projekt **dopíše výkaz až potom** a podíl spadne pod hranici, **upozorní Žůžo-labůžo zvonečkem** a u bonusu v seznamu červeně napíše, z kolika na kolik podíl klesl. Sám nic neruší — u schváleného bonusu se nabídne **Stornovat bonus** (zůstane v historii se stavem Stornováno, do výplat se nepočítá), u návrhu se prostě zamítne. Když kolega svůj výkaz zase smaže a nárok se vrátí, varování zmizí samo.
 - **Nabídne zvukaři výkaz** pět minut před koncem jeho natáčení, castingu nebo střihu v kalendáři — přijde upozornění do zvonečku i do mobilu a ve **Výkazech** čeká řádek, který se jedním klikem („Přidat výkaz") překlopí do výkazu. Produkce s tím nic nedělá.
 - **Šestého v měsíci** pošle zvukařům přehled jejich výkazů za minulý měsíc.
 - **Bruno** čte kanály projektů v chatu, pozná, kam se doteklo natáčení, a zapíše to do karty projektu. Když si není jistý, zeptá se v kanálu.
