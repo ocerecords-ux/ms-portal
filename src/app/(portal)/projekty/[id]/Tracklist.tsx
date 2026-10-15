@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import { cisloTracku, nazevTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
@@ -36,6 +37,7 @@ export function Tracklist({
   pocatecni: Track[];
 }) {
   const t = usePreklad();
+  const router = useRouter();
   const adresa = `/api/projekty/${encodeURIComponent(caflouProjectId)}/tracklist`;
   const naRadky = (seznam: Track[]): Radek[] =>
     seznam.map((x) => ({ nazevTracku: x.nazevTracku, nazevKapitoly: x.nazevKapitoly }));
@@ -198,13 +200,26 @@ export function Tracklist({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('tracklist.ulozeniNeslo'));
+        // Stav odpovědi do hlášky - bez něj se nepozná, jestli jde o práva,
+        // o data nebo o chybu serveru (stejně jako u názvu projektu).
+        setChyba(`${data?.error || t('tracklist.ulozeniNeslo')} (${res.status})`);
         return false;
       }
       const nove = naRadky((data.tracky ?? []) as Track[]);
       setTracky(nove);
       setUlozene(JSON.stringify(nove));
       setHlaska(t('tracklist.ulozeno'));
+      /**
+       * BEZ TOHOHLE ŘÁDKU SE ULOŽENÝ TRACKLIST „ZTRATÍ" (oprava 15. 10. 2026:
+       * „ten tracklist se celkově nějak neukládá i když dám uložit").
+       *
+       * Stránka projektu se vykresluje na serveru, ale prohlížeč si její
+       * podobu drží v paměti pro návrat zpátky. Uložit se uložilo, jen se
+       * při návratu ukázala ta stará, prázdná verze. `refresh` tu paměť
+       * zahodí a stránka se natáhne znovu - stejně to dělají ostatní
+       * formuláře v detailu projektu.
+       */
+      router.refresh();
       return true;
     } catch {
       setChyba(t('tracklist.ulozeniNeslo'));

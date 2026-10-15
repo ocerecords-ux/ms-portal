@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import type { StopaKTagovani, SpolecneTagy, SlozkaKVyberu } from '@/lib/tagyServer';
@@ -43,6 +44,7 @@ export function TagySekce({
     | { ok: false; duvod: string; duvodKlic?: string };
 }) {
   const t = usePreklad();
+  const router = useRouter();
   const [data, setData] = useState(pocatecni);
   const [spolecne, setSpolecne] = useState<SpolecneTagy>(
     pocatecni.ok ? pocatecni.spolecne : { autor: '', album: '', interpret: '', rok: null, zanr: '', vydavatel: '' },
@@ -107,6 +109,8 @@ export function TagySekce({
       }
       setUlozene(JSON.stringify({ spolecne, stopy }));
       setHlaska(t('tagy.ulozeno'));
+      // Ať se po návratu na stránku neukáže její stará podoba - viz Tracklist.
+      router.refresh();
       return true;
     } catch {
       setHlaska(t('tagy.ulozeniNeslo'));
