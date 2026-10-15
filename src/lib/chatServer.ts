@@ -122,40 +122,36 @@ export async function loadConversations(
   }
 
   /**
-   * KANÁLY PO SMAZANÝCH PROJEKTECH (oprava 15. 10. 2026: „máme nějaký
-   * nepořádek v kanálech… Umění vydávat peníze je tam třeba 3x").
+   * KANÁLY PO SMAZANÝCH PROJEKTECH (zadání 15. 10. 2026: „máme nějaký
+   * nepořádek v kanálech… Umění vydávat peníze je tam třeba 3x", po prvním
+   * pokusu „duplicity nezmizely").
    *
    * Kanál se váže na ID projektu, ale smazáním projektu nezmizí - zůstane
    * viset v seznamu, a když se projekt mezitím založil znovu, je tam jméno
-   * dvakrát i třikrát. Kanál, ke kterému UŽ ŽÁDNÝ PROJEKT NENÍ a ve kterém
-   * NIKDO NIC NENAPSAL, se proto do seznamu nedává.
+   * dvakrát i třikrát. Napoprvé jsme schovávali jen kanály prázdné, jenže
+   * přesně v těch duplicitách někdo něco napsal - a zůstaly v seznamu dál.
+   * Proto ze seznamu padá KAŽDÝ kanál, ke kterému už žádný projekt není,
+   * ať je v něm napsáno cokoliv. Totéž platí pro kanály dotazů klienta.
    *
-   * MAŽE SE NIC (zadání: „ale nemaž kanály, ve kterých něco je napsané").
-   * Tohle je jen výpis - kanál v databázi zůstává a ten, kde je napsané
-   * aspoň slovo, se ukazuje dál, i když projekt zmizel. Historie se nikam
-   * neztrácí.
+   * NIC SE NEMAŽE (zadání: „ale nemaž kanály, ve kterých něco je napsané").
+   * Tohle je jen výpis - konverzace i všechny zprávy zůstávají v databázi
+   * stejně jako u kanálů uzavřených projektů. Kdyby se projekt pod stejným
+   * ID vrátil, kanál se vrátí s ním.
    */
-  const idKanaluProjektu = conversations
-    .filter((c) => c.kind === 'PROJEKT' && c.caflouProjectId)
-    .map((c) => c.caflouProjectId as string);
+  const idProjektuKanalu = conversations
+    .map((c) => (c.kind === 'PROJEKT' ? c.caflouProjectId : c.kind === 'DOTAZ' ? c.dotazProjektId : null))
+    .filter((id): id is string => Boolean(id));
   const osireleKanaly = new Set<string>();
-  if (idKanaluProjektu.length > 0) {
-    const [zijici, sezpravami] = await Promise.all([
-      prisma.projectMeta.findMany({
-        where: { caflouProjectId: { in: idKanaluProjektu } },
-        select: { caflouProjectId: true },
-      }),
-      prisma.message.groupBy({
-        by: ['conversationId'],
-        where: { conversationId: { in: conversations.map((c) => c.id) } },
-        _count: { _all: true },
-      }),
-    ]);
+  if (idProjektuKanalu.length > 0) {
+    const zijici = await prisma.projectMeta.findMany({
+      where: { caflouProjectId: { in: idProjektuKanalu } },
+      select: { caflouProjectId: true },
+    });
     const maProjekt = new Set(zijici.map((m) => m.caflouProjectId));
-    const maZpravy = new Set(sezpravami.filter((z) => z._count._all > 0).map((z) => z.conversationId));
     for (const c of conversations) {
-      if (c.kind !== 'PROJEKT' || !c.caflouProjectId) continue;
-      if (!maProjekt.has(c.caflouProjectId) && !maZpravy.has(c.id)) osireleKanaly.add(c.id);
+      const idProjektu = c.kind === 'PROJEKT' ? c.caflouProjectId : c.kind === 'DOTAZ' ? c.dotazProjektId : null;
+      if (!idProjektu) continue;
+      if (!maProjekt.has(idProjektu)) osireleKanaly.add(c.id);
     }
   }
 

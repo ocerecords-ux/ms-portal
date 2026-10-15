@@ -29,10 +29,9 @@ export type Id3Tagy = {
   rok?: number | null;
   /** TCON - žánr, domluveno „Speech". */
   zanr?: string | null;
-  /** TRCK - číslo stopy; zapisuje se „01" i „01/24". */
+  /** TRCK - číslo stopy, vždy dvojmístně: „01". Bez lomítka a bez počtu stop
+   *  (zadání 15. 10. 2026: „v tagu to dej bez lomítka, tzn. 01, ne 01/54"). */
   cislo?: number | null;
-  /** Celkem stop - když je známo, zapíše se „01/24". */
-  celkem?: number | null;
   /** TPUB - vydavatel. */
   vydavatel?: string | null;
 };
@@ -69,9 +68,7 @@ function synchsafe(hodnota: number): Buffer {
 
 function cisloStopy(tagy: Id3Tagy): string | null {
   if (tagy.cislo == null) return null;
-  const cislo = String(tagy.cislo).padStart(2, '0');
-  if (tagy.celkem == null || tagy.celkem <= 0) return cislo;
-  return `${cislo}/${String(tagy.celkem).padStart(2, '0')}`;
+  return String(tagy.cislo).padStart(2, '0');
 }
 
 /** Hotová značka ID3v2.3 i s hlavičkou - připraveno na začátek souboru. */

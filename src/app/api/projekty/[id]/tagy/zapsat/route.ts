@@ -69,7 +69,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     rok: spolecne.rok,
     zanr: spolecne.zanr,
     cislo: stopa.cislo,
-    celkem: obsah.stopy.length,
     vydavatel: spolecne.vydavatel,
   });
 

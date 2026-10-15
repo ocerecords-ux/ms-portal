@@ -121,7 +121,6 @@ export function TagySekce({
 
   /** Jak budou tagy v souboru vypadat - to samé, co zapíše lib/id3.ts. */
   function nahledTagu(stopa: StopaKTagovani): { popisek: string; hodnota: string }[] {
-    const celkem = stopy.length;
     return [
       { popisek: t('tagy.nahledTitle'), hodnota: stopa.title },
       { popisek: t('tagy.nahledArtist'), hodnota: spolecne.autor },
@@ -129,10 +128,7 @@ export function TagySekce({
       { popisek: t('tagy.nahledAlbum'), hodnota: spolecne.album },
       { popisek: t('tagy.nahledRok'), hodnota: spolecne.rok != null ? String(spolecne.rok) : '' },
       { popisek: t('tagy.nahledZanr'), hodnota: spolecne.zanr },
-      {
-        popisek: t('tagy.nahledTrack'),
-        hodnota: celkem > 0 ? `${cisloTracku(stopa.cislo)}/${cisloTracku(celkem)}` : cisloTracku(stopa.cislo),
-      },
+      { popisek: t('tagy.nahledTrack'), hodnota: cisloTracku(stopa.cislo) },
       { popisek: t('tagy.nahledVydavatel'), hodnota: spolecne.vydavatel },
     ];
   }
@@ -363,21 +359,13 @@ export function TagySekce({
                   return (
                     <tr key={stopa.driveFileId} className="border-t border-line align-middle">
                       <td className="px-3 py-1.5">
-                        {/* DVOJMÍSTNĚ, STEJNĚ JAKO V TRACKLISTU (zadání 15. 10.
-                            2026: „pořadové číslo tracku musí být 01, 02, 03,
-                            jako v tracklistu"). Píše se 1 i 01 - do pole se
-                            vrátí tvar s nulou napřed. */}
-                        <input
-                          inputMode="numeric"
-                          value={cisloTracku(stopa.cislo)}
-                          onChange={(e) => {
-                            const cislo = parseInt(e.target.value.replace(/\D/g, ''), 10);
-                            const nove = [...stopy];
-                            nove[i] = { ...stopa, cislo: Number.isFinite(cislo) && cislo > 0 ? cislo : 1 };
-                            setStopy(nove);
-                          }}
-                          className={`${pole} text-center tabular-nums px-1.5`}
-                        />
+                        {/* JEN NÁPIS, NE POLE (zadání 15. 10. 2026: „číslo
+                            tracku nemusíme editovat"). Pořadí si bere z názvu
+                            souboru a mění se v tracklistu, ne tady - editovatelné
+                            pole se navíc v úzkém sloupci ořezávalo. */}
+                        <span className="block text-sm font-body text-ink tabular-nums">
+                          {cisloTracku(stopa.cislo)}
+                        </span>
                       </td>
                       <td className="px-3 py-1.5">
                         <input
