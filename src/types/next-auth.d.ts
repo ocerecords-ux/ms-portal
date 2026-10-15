@@ -21,6 +21,13 @@ declare module 'next-auth' {
       jenNahled?: boolean;
       /** Který pohled si náhledový účet zrovna půjčil; u ostatních null. */
       nahledVolba?: NahledVolba | null;
+      /**
+       * DALŠÍ FIRMY, ZA KTERÉ SMÍ VYSTUPOVAT (15. 10. 2026). Prázdné u všech,
+       * kdo přepínač firem nemá. `companyId` výše je už ta vybraná.
+       */
+      dalsiFirmy?: string[];
+      /** Domovská firma účtu - `companyId` výše je ta právě vybraná. */
+      domovskaFirma?: string | null;
     };
   }
 }
@@ -45,5 +52,10 @@ declare module 'next-auth/jwt' {
      */
     pristupy?: string[];
     superadmin?: boolean;
+    /**
+     * Firmy navic (15. 10. 2026) - podle nich se overuje cookie s vybranou
+     * firmou. V tokenu schvalne, aby se kvuli prepnuti nechodilo do databaze.
+     */
+    dalsiFirmy?: string[];
   }
 }

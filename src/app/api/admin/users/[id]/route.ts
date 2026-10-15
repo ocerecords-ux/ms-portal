@@ -78,6 +78,8 @@ const schema = z.object({
   slozkyDisku: z.array(z.string()).optional(),
   /** Které naše firmy účet vidí v Dokladech (12. 10. 2026); prázdné = všechny. */
   viditelneFirmy: z.array(z.string()).optional(),
+  /** Firmy navíc, za které klient smí vystupovat (15. 10. 2026). */
+  dalsiFirmy: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
   dic: z.string().trim().optional(),
@@ -144,6 +146,9 @@ function readFormData(formData: FormData) {
     viditelneFirmy: has('viditelneFirmyPrazdne')
       ? formData.getAll('viditelneFirmy').map(String)
       : undefined,
+    // Firmy navíc (15. 10. 2026) - stejný průvodce, ať jde poslední firmu
+    // odškrtnout a přepínač tím zmizí.
+    dalsiFirmy: has('dalsiFirmyPrazdne') ? formData.getAll('dalsiFirmy').map(String) : undefined,
     // Stejný trik jako u studií: prázdné pole se pozná podle průvodce, ne
     // podle chybějícího klíče - jinak by odškrtnutí všeho nic neuložilo.
     pristupy: has('pristupyPrazdne') ? formData.getAll('pristupy').map(String) : undefined,
@@ -342,6 +347,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // odškrtnutá složka zmizí. Bez ohledu na roli - složka se přiděluje
       // člověku, ne roli.
       ...(data.viditelneFirmy !== undefined ? { viditelneFirmy: data.viditelneFirmy } : {}),
+      /**
+       * FIRMY NAVÍC (15. 10. 2026). Domovská firma mezi nimi být nemusí -
+       * přepínač si ji přidá sám - a uloží se jen u role, která firmu má.
+       */
+      ...(data.dalsiFirmy !== undefined
+        ? {
+            dalsiFirmy: COMPANY_REQUIRED_ROLES.includes(nextRole)
+              ? data.dalsiFirmy.filter((id) => id !== nextCompanyId)
+              : [],
+          }
+        : {}),
       ...(data.slozkyDisku !== undefined
         ? { slozkyDisku: { set: data.slozkyDisku.map((id) => ({ id })) } }
         : {}),

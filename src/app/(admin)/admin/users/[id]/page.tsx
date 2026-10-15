@@ -139,6 +139,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           hourlyRate: user.hourlyRate,
           mzdyEmail: user.mzdyEmail,
           viditelneFirmy: user.viditelneFirmy ?? [],
+          dalsiFirmy: user.dalsiFirmy ?? [],
           podilNaObratu: user.podilNaObratu,
           manazerProjektu: user.manazerProjektu,
           smlouvyPodepisuje: user.smlouvyPodepisuje,

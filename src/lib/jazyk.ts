@@ -4117,6 +4117,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'timesheets are calculated from it',
   },
   /* Které naše firmy účet vidí v Dokladech (12. 10. 2026). */
+  /* Přepínání mezi firmami u jednoho účtu (zadání 15. 10. 2026). */
+  'uzivatel.poleDalsiFirmy': { cs: 'Další firmy k přepnutí', en: 'Other companies to switch to' },
+  'uzivatel.dalsiFirmyNapoveda': {
+    cs: 'Firmy, za které tenhle člověk smí vystupovat navíc k té své. Jakmile nějakou vyberete, objeví se mu v liště přepínač a portál mu ukazuje projekty, objednávky i doklady té firmy, kterou si zvolí. Přihlašuje se pořád jedním e-mailem.',
+    en: 'Companies this person may also act for, on top of their own. As soon as you pick one, a switcher appears in their top bar and the portal shows the projects, orders and documents of whichever company they choose. They still sign in with one email.',
+  },
+  'prepinacFirem.stitek': { cs: 'Firma', en: 'Company' },
+  'prepinacFirem.prepinam': { cs: 'Přepínám…', en: 'Switching…' },
+  'prepinacFirem.prepnoutNa': { cs: 'Přepnout na {firma}', en: 'Switch to {firma}' },
+  'prepinacFirem.popis': {
+    cs: 'Portál ukazuje projekty, objednávky i doklady vybrané firmy.',
+    en: 'The portal shows the projects, orders and documents of the chosen company.',
+  },
   'uzivatel.poleViditelneFirmy': { cs: 'Vidí doklady firem', en: 'Sees documents of' },
   'uzivatel.viditelneFirmyNapoveda': {
     cs: 'nic zaškrtnutého = vidí doklady všech našich firem',

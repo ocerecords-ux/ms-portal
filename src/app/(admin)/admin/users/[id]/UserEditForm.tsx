@@ -50,6 +50,8 @@ type EditableUser = {
   mzdyEmail: string | null;
   /** Které naše firmy vidí v Dokladech (12. 10. 2026); prázdné = všechny. */
   viditelneFirmy: string[];
+  /** Firmy navíc, za které klient smí vystupovat (15. 10. 2026). */
+  dalsiFirmy: string[];
   podilNaObratu: number | null;
   /** Smí být manažerem projektu (zadání 10. 9. 2026). */
   manazerProjektu: boolean;
@@ -207,6 +209,13 @@ export function UserEditForm({
    */
   const [viditelneFirmy, setViditelneFirmy] = useState<string[]>(user.viditelneFirmy ?? []);
 
+  /**
+   * FIRMY NAVÍC (zadání 15. 10. 2026: „máme jednoho klienta, který by
+   * potřeboval přepínat mezi firmami Audiolibrix a Čti mi!"). Prázdné =
+   * účet žádný přepínač nemá a chová se jako dosud.
+   */
+  const [dalsiFirmy, setDalsiFirmy] = useState<string[]>(user.dalsiFirmy ?? []);
+
   // Herec
   const [studioLocations, setStudioLocations] = useState<string[]>(user.studioLocations);
   const [birthNumber, setBirthNumber] = useState(user.birthNumber ?? '');
@@ -342,6 +351,9 @@ export function UserEditForm({
       // jako u složek: bez něj by odškrtnutí poslední firmy server nepoznal.
       fd.set('viditelneFirmyPrazdne', '1');
       viditelneFirmy.forEach((id) => fd.append('viditelneFirmy', id));
+      // Firmy navíc (15. 10. 2026) - stejný průvodce jako výš.
+      fd.set('dalsiFirmyPrazdne', '1');
+      dalsiFirmy.forEach((id) => fd.append('dalsiFirmy', id));
       if (isZvukar) {
         fd.set('vedeStudiaPrazdne', '1');
         vedeStudia.forEach((id) => fd.append('vedeStudia', id));
@@ -1243,6 +1255,35 @@ export function UserEditForm({
                 ))}
               </VyberPole>
             </AdminField>
+
+            {/* FIRMY NAVÍC (zadání 15. 10. 2026: „máme jednoho klienta, který
+                by potřeboval přepínat mezi firmami Audiolibrix a Čti mi!.
+                Přihlašoval by se jen tímto mailem").
+
+                Domovská firma výše se tu schválně nenabízí - ta platí vždycky.
+                Jakmile je tu aspoň jedna, objeví se takovému účtu v liště
+                přepínač; prázdné pole znamená, že se nic nemění. */}
+            <div className="mt-3">
+              <AdminField label={t('uzivatel.poleDalsiFirmy')} hint={t('uzivatel.dalsiFirmyNapoveda')}>
+                <div className="flex flex-wrap gap-2">
+                  {companies
+                    .filter((c) => c.id !== companyId)
+                    .map((c) => (
+                      <Volba
+                        key={c.id}
+                        vybrano={dalsiFirmy.includes(c.id)}
+                        onZmena={() =>
+                          setDalsiFirmy((p) =>
+                            p.includes(c.id) ? p.filter((x) => x !== c.id) : [...p, c.id],
+                          )
+                        }
+                      >
+                        <span className="text-sm font-body text-ink">{c.name}</span>
+                      </Volba>
+                    ))}
+                </div>
+              </AdminField>
+            </div>
           </div>
         )}
       </div>

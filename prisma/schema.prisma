@@ -298,6 +298,18 @@ model User {
   /// clovek zadny podil nema a zalozku Moje bonusy vubec nevidi.
   podilNaObratu Float?
 
+  /// DALSI FIRMY, ZA KTERE SMI VYSTUPOVAT (zadani 15. 10. 2026: „mame jednoho
+  /// klienta, ktery by potreboval prepinat mezi firmami Audiolibrix a Cti mi!.
+  /// Prihlasoval by se jen timto mailem").
+  ///
+  /// Id firem navic k `companyId`, ktere zustava domovskou. Prepinac v liste
+  /// zapise cookie a lib/auth.ts podle ni vymeni firmu v session - cely portal
+  /// se uz rozhoduje podle ni, takze projekty, objednavky i doklady sedi samy.
+  /// Cookie se VZDY overuje proti tomuhle seznamu; co v nem neni, se ignoruje.
+  ///
+  /// Tyka se klientskych uctu. Interni role firmu nemaji.
+  dalsiFirmy                 String[] @default([])
+
   /// VYCHOZI KALENDARE (zadani Helcy, 15. 10. 2026: „prosim o moznost nastavit
   /// si vychozi zapnuti kalendaru. Abych mela, kdyz zapnu kalendar, defaultne
   /// zapnute Brno I, Brno II, Praha").

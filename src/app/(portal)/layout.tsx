@@ -29,6 +29,7 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { JazykProvider } from './components/JazykProvider';
 import { NeulozenoProvider } from './components/NeulozeneZmeny';
 import { PrepinacNahledu } from './components/PrepinacNahledu';
+import { PrepinacFirem } from './components/PrepinacFirem';
 import { nahledZHodnoty } from '@/lib/nahledRole';
 import { maStudioSRezervacemi } from '@/lib/bookingServer';
 
@@ -188,6 +189,31 @@ export default async function PortalLayout({ children }: { children: React.React
    * naše interní nápovědy"). Tým ho má vždy; herec a klient jen tehdy, když
    * je zveřejněný návod zaškrtnutý přímo pro jejich roli.
    */
+  /**
+   * PŘEPÍNAČ FIRMY (zadání 15. 10. 2026: „máme jednoho klienta, který by
+   * potřeboval přepínat mezi firmami Audiolibrix a Čti mi!").
+   *
+   * Načítá se jen tomu, kdo nějakou firmu navíc má - u všech ostatních se
+   * nejde do databáze vůbec. Jména firem jsou kvůli liště, vybranou firmu
+   * drží session (viz lib/auth.ts).
+   */
+  const firmyKPrepnuti =
+    (session.user.dalsiFirmy?.length ?? 0) > 0
+      ? await prisma.company
+          .findMany({
+            where: {
+              id: {
+                in: [session.user.domovskaFirma, ...(session.user.dalsiFirmy ?? [])].filter(
+                  Boolean,
+                ) as string[],
+              },
+            },
+            select: { id: true, name: true },
+            orderBy: { name: 'asc' },
+          })
+          .catch(() => [])
+      : [];
+
   const maNapovedu = internal
     ? true
     : await prisma.navod
@@ -230,6 +256,10 @@ export default async function PortalLayout({ children }: { children: React.React
           účet - ostatním se nevykreslí vůbec. */}
       {session.user.jenNahled && (
         <PrepinacNahledu volba={nahledZHodnoty(session.user.nahledVolba)} />
+      )}
+      {/* Pruh s firmami (15. 10. 2026) - jen u účtu, který jich má víc. */}
+      {firmyKPrepnuti.length > 1 && (
+        <PrepinacFirem firmy={firmyKPrepnuti} aktivni={session.user.companyId} />
       )}
       {/* Panel Úkolů je připnutý na pravé hraně okna, takže obsahu vpravo
           uvolníme místo - jinak se přes něj tabulky "usekávaly"

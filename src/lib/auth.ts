@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { jeZahlceniDatabaze, zkusDatabazi } from '@/lib/dbZnovu';
 import { NAHLED_COOKIE, nahledZHodnoty, pohledNahledu } from '@/lib/nahledRole';
+import { FIRMA_COOKIE, povolenaFirma } from '@/lib/firmaKlienta';
 
 /**
  * Ucty klientu zaklada vyhradne administrator Mediaspace (zadna verejna
@@ -82,6 +83,9 @@ export const authOptions: NextAuthOptions = {
           name: user.name ?? user.email,
           role: user.role,
           companyId: user.companyId,
+          // Firmy navic (15. 10. 2026) - uz pri prihlaseni, at prepinac
+          // funguje hned a ne az po prvnim overeni tokenu.
+          dalsiFirmy: user.dalsiFirmy ?? [],
           jenNahled: user.jenNahled,
           // Zaskrtavatka sekci do tokenu uz pri prihlaseni (6. 10. 2026),
           // at se na ne middleware muze ptat hned, ne az po prvnim overeni.
@@ -114,6 +118,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.companyId = (user as any).companyId;
+        token.dalsiFirmy = ((user as any).dalsiFirmy ?? []) as string[];
         token.jenNahled = (user as any).jenNahled === true;
         /**
          * PŘÍSTUPY DO SEKCÍ I V TOKENU (oprava 6. 10. 2026: „Tomáš Ilavský už
@@ -147,6 +152,7 @@ export const authOptions: NextAuthOptions = {
           select: {
             role: true,
             companyId: true,
+            dalsiFirmy: true,
             active: true,
             jenNahled: true,
             // Zaskrtavatka sekci (6. 10. 2026) - rozhoduje podle nich
@@ -162,6 +168,7 @@ export const authOptions: NextAuthOptions = {
         }
         token.role = ucet.role;
         token.companyId = ucet.companyId;
+        token.dalsiFirmy = (ucet.dalsiFirmy ?? []) as string[];
         token.jenNahled = ucet.jenNahled === true;
         token.pristupy = (ucet.pristupy ?? []) as string[];
         token.superadmin = ucet.superadmin === true;
@@ -201,6 +208,41 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).companyId = token.companyId;
         (session.user as any).jenNahled = token.jenNahled === true;
         (session.user as any).nahledVolba = null;
+
+        /**
+         * PŘEPNUTÁ FIRMA (zadání 15. 10. 2026: „máme jednoho klienta, který by
+         * potřeboval přepínat mezi firmami Audiolibrix a Čti mi!").
+         *
+         * Je to schválně tady, vedle náhledového účtu: `companyId` v session
+         * je pro celý portál zdroj pravdy o tom, čí data člověk vidí. Když se
+         * vymění jen tady, chovají se projekty, objednávky i doklady samy
+         * podle vybrané firmy a nikde jinde se kvůli tomu nesahalo.
+         *
+         * Cookie se VŽDYCKY ověřuje proti seznamu u účtu - cizí firma spadne
+         * zpátky na domovskou. `dalsiFirmy` v tokenu drží jen id, takže se
+         * kvůli přepnutí nechodí do databáze.
+         *
+         * `cookies()` je v try/catch ze stejného důvodu jako níže u náhledu:
+         * session se čte i mimo požadavek (cron) a tam by to spadlo.
+         */
+        const dalsiFirmy = Array.isArray(token.dalsiFirmy) ? (token.dalsiFirmy as string[]) : [];
+        (session.user as any).dalsiFirmy = dalsiFirmy;
+        // Domovská firma zvlášť: `companyId` výše je ta PRÁVĚ VYBRANÁ, takže
+        // bez tohohle by se po přepnutí nedalo nabídnout zpátky.
+        (session.user as any).domovskaFirma = (token.companyId as string | null) ?? null;
+        if (dalsiFirmy.length > 0) {
+          let vybranaFirma: string | null = null;
+          try {
+            vybranaFirma = cookies().get(FIRMA_COOKIE)?.value ?? null;
+          } catch {
+            vybranaFirma = null;
+          }
+          (session.user as any).companyId = povolenaFirma(
+            vybranaFirma,
+            (token.companyId as string | null) ?? null,
+            dalsiFirmy,
+          );
+        }
 
         if (token.jenNahled === true) {
           let vybrano: string | null = null;
