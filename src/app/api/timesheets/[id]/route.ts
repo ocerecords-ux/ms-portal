@@ -22,7 +22,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
     await prisma.timesheetEntry.delete({ where: { id: params.id } });
     // Smazaný výkaz může nárok na bonus i VRÁTIT - viz zkontrolujNarokNaBonusy.
-    await zkontrolujNarokNaBonusy(entry.caflouProjectId);
+    if (entry.caflouProjectId) await zkontrolujNarokNaBonusy(entry.caflouProjectId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/timesheets/[id] selhalo:', err);
@@ -81,7 +81,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
 
     // Posunutý nebo prodloužený střih mění podíly stejně jako nový výkaz.
-    await zkontrolujNarokNaBonusy(upraveny.caflouProjectId);
+    if (upraveny.caflouProjectId) await zkontrolujNarokNaBonusy(upraveny.caflouProjectId);
 
     return NextResponse.json(upraveny);
   } catch (err) {

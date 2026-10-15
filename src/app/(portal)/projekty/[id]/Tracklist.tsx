@@ -91,14 +91,6 @@ export function Tracklist({
     setTracky(nove);
   }
 
-  function prohod(i: number, smer: -1 | 1) {
-    const j = i + smer;
-    if (j < 0 || j >= tracky.length) return;
-    const nove = [...tracky];
-    [nove[i], nove[j]] = [nove[j], nove[i]];
-    setTracky(nove);
-  }
-
   /**
    * Nalepený seznam jde do NÁZVŮ KAPITOL - z obsahu knihy se kopírují ty.
    * Když už tracky existují, jen se jim kapitoly doplní po řádcích; co je
@@ -235,7 +227,7 @@ export function Tracklist({
         <>
           {/* Záhlaví jen na širší obrazovce - na telefonu by se tři sloupce
               stejně nevešly a pole mají vlastní popisky v placeholderu. */}
-          <div className="hidden sm:grid grid-cols-[34px_1fr_1fr_100px] gap-2 px-0.5">
+          <div className="hidden sm:grid grid-cols-[34px_1fr_1fr_150px] gap-2 px-0.5">
             <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
               {t('tracklist.cislo')}
             </span>
@@ -250,7 +242,7 @@ export function Tracklist({
 
           <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
             {tracky.map((radek, i) => (
-              <li key={i} className="grid grid-cols-[34px_1fr_100px] sm:grid-cols-[34px_1fr_1fr_100px] gap-2 items-center">
+              <li key={i} className="grid grid-cols-[34px_1fr_150px] sm:grid-cols-[34px_1fr_1fr_150px] gap-2 items-center">
                 <span className="text-right text-xs font-heading font-semibold text-muted tabular-nums">
                   {cisloTracku(i + 1)}
                 </span>
@@ -267,41 +259,25 @@ export function Tracklist({
                   className={`${pole} col-start-2 sm:col-start-auto`}
                   placeholder={t('tracklist.nazevKapitoly')}
                 />
-                <span className="flex items-center gap-0.5 row-start-1 col-start-3 sm:col-start-auto">
-                  <button
-                    type="button"
-                    onClick={() => prohod(i, -1)}
-                    disabled={i === 0}
-                    title={t('tracklist.nahoru')}
-                    className="text-muted hover:text-brand-purple px-1 bg-transparent border-0 cursor-pointer disabled:opacity-30"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => prohod(i, 1)}
-                    disabled={i === tracky.length - 1}
-                    title={t('tracklist.dolu')}
-                    className="text-muted hover:text-brand-purple px-1 bg-transparent border-0 cursor-pointer disabled:opacity-30"
-                  >
-                    ↓
-                  </button>
+                <span className="flex items-center justify-end gap-1 row-start-1 col-start-3 sm:col-start-auto">
+                  {/* TLACITKO S NAPISEM, NE IKONA (upresneni 15. 10. 2026:
+                      „u kazdeho radku napravo tlacitko Rozdelit"). */}
                   <button
                     type="button"
                     onClick={() => rozdel(i)}
                     title={t('tracklist.rozdelitPopis')}
-                    aria-label={t('tracklist.rozdelit')}
-                    className="text-muted hover:text-brand-purple px-1 bg-transparent border-0 cursor-pointer"
+                    className="font-heading font-semibold text-xs rounded-lg px-2.5 py-1.5 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent whitespace-nowrap"
                   >
-                    ⫲
+                    {t('tracklist.rozdelit')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setTracky(tracky.filter((_, j) => j !== i))}
                     title={t('tracklist.odebrat')}
+                    aria-label={t('tracklist.odebrat')}
                     className="text-muted hover:text-danger px-1 bg-transparent border-0 cursor-pointer"
                   >
-                    ×
+                    x
                   </button>
                 </span>
               </li>

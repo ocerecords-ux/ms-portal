@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
      * ten bonus nemá nárok. Takže by to mělo nějak zařvat"). Kontrola nic
      * neruší, jen přepočítá podíl a jednou upozorní Žůžo-labůžo.
      */
-    await zkontrolujNarokNaBonusy(entry.caflouProjectId);
+    // Vykaz bez projektu (druh prace Ostatni) zadny bonus neovlivni.
+    if (entry.caflouProjectId) await zkontrolujNarokNaBonusy(entry.caflouProjectId);
 
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {
