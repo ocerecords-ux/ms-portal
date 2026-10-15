@@ -388,6 +388,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hoste.odeslano': { cs: 'Odesláno: {pocet}.', en: 'Sent: {pocet}.' },
   'hoste.historiePocet': { cs: 'celkem {pocet}×', en: '{pocet}× in total' },
   'hoste.historieZmena': { cs: 'změna termínu', en: 'rescheduled' },
+  'hoste.posteOdeslano': { cs: 'odesláno', en: 'sent' },
+  'hoste.odeslanoNapoveda': {
+    cs: 'Poštovní server zprávu přijal k odeslání.',
+    en: 'The mail server accepted the message for delivery.',
+  },
   /* Poslat pozvánku znovu jednomu hostovi (15. 10. 2026). */
   'hoste.poslatZnovu': { cs: 'Poslat znovu', en: 'Send again' },
   'hoste.poslatZnovuNapoveda': {

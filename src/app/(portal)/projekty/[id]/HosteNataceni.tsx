@@ -755,15 +755,26 @@ function RadekHosta({
               {/* Adresa se už mohla změnit - u starších odeslání musí být vidět ta tehdejší. */}
               {o.email.trim().toLowerCase() !== host.email.trim().toLowerCase() ? ` · ${o.email}` : ''}
               {o.zmena ? ` · ${t('hoste.historieZmena')}` : ''}
-              {/* CO ŘEKL POŠTOVNÍ SERVER (15. 10. 2026). Je to technický text
-                  a nepřekládá se - přesně tahle věta se hledá v logu u
-                  poskytovatele pošty. U starších odeslání chybí, tehdy se
-                  neukládal. */}
-              {(o.odpovedServeru || o.messageId) && (
-                <span className="block break-all text-[10px] text-muted/80">
-                  {[o.odpovedServeru, o.messageId].filter(Boolean).join(' · ')}
-                </span>
-              )}
+              {/* POŠTA ZPRÁVU VZALA (15. 10. 2026: „nedávej tam žádné kódy,
+                  ale třeba zelenou fajfku a Odesláno, ať příště víme, že to
+                  odešlo").
+
+                  Do historie se zapisuje jen to, co poštovní server přijal -
+                  co nepřijal, skončí jako červená chyba u hosta. Každý řádek
+                  historie tedy znamená „odešlo" a stačí to říct lidsky.
+                  Odpověď serveru a číslo zprávy zůstávají v bublině: je to
+                  technický text, který se hledá v logu u poskytovatele pošty,
+                  a v seznamu by jen překážel. */}
+              <span
+                className="inline-flex items-center gap-1 ml-1.5 text-status-done"
+                title={
+                  [o.odpovedServeru, o.messageId].filter(Boolean).join(' · ') ||
+                  t('hoste.odeslanoNapoveda')
+                }
+              >
+                <span aria-hidden="true">✓</span>
+                {t('hoste.posteOdeslano')}
+              </span>
             </li>
           ))}
         </ul>
