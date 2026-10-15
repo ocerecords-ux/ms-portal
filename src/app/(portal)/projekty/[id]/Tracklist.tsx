@@ -67,7 +67,8 @@ export function Tracklist({
    */
   function precisluj(seznam: Radek[]): Radek[] {
     return seznam.map((radek, i) => {
-      const shoda = /^\s*(\d{1,3})(_.*)?$/s.exec(radek.nazevTracku);
+      // Bez vlajky /s - ta vyzaduje novejsi cil prekladu. [\s\S] delá totéž.
+      const shoda = /^\s*(\d{1,3})(_[\s\S]*)?$/.exec(radek.nazevTracku);
       if (!shoda) return radek;
       return { ...radek, nazevTracku: `${cisloTracku(i + 1)}${shoda[2] ?? ''}` };
     });
