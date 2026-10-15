@@ -2173,7 +2173,9 @@ export async function sendMzdovyPodkladEmail(input: MzdovyPodkladInput) {
 function overOdeslani(
   vysledek: { accepted?: unknown[]; rejected?: unknown[]; response?: string; messageId?: string } | null | undefined,
   co: string,
-): { sent: true; reason: undefined } | { sent: false; reason: string } {
+):
+  | { sent: true; reason: undefined; messageId: string | null; odpoved: string | null }
+  | { sent: false; reason: string; messageId: string | null; odpoved: string | null } {
   const prijato = vysledek?.accepted ?? [];
   const odmitnuto = vysledek?.rejected ?? [];
 
@@ -2181,11 +2183,26 @@ function overOdeslani(
     const kdo = odmitnuto.length > 0 ? ` (${odmitnuto.map(String).join(', ')})` : '';
     const duvod = `SMTP_REJECTED${kdo}: ${vysledek?.response ?? 'bez odpovědi'}`;
     console.error(`${co}: pošta zprávu nevzala - ${duvod}`);
-    return { sent: false as const, reason: duvod };
+    return {
+      sent: false as const,
+      reason: duvod,
+      messageId: vysledek?.messageId ?? null,
+      odpoved: vysledek?.response ?? null,
+    };
   }
 
   console.log(`${co}: předáno poště ${vysledek?.messageId ?? '?'} · ${vysledek?.response ?? ''}`);
-  return { sent: true as const, reason: undefined };
+  /**
+   * ODPOVĚĎ SERVERU SE VRACÍ VEN (15. 10. 2026: „ty pozvánky šly jen na
+   * Tomáše Šišku, nikomu dalšímu to nedošlo"). Log Vercelu po pár hodinách
+   * zmizí; kdo si to chce uložit k záznamu, má to odsud.
+   */
+  return {
+    sent: true as const,
+    reason: undefined,
+    messageId: vysledek?.messageId ?? null,
+    odpoved: vysledek?.response ?? null,
+  };
 }
 
 async function odesliAOver(

@@ -366,6 +366,16 @@ function TerminSHosty({
               onSmaz={() =>
                 zavolej(`${zaklad}/hoste/${encodeURIComponent(h.id)}`, { method: 'DELETE' })
               }
+              /* POSLAT ZNOVU JEDNOMU (15. 10. 2026: „ty pozvánky šly jen na
+                 Tomáše Šišku, nikomu dalšímu to nedošlo"). Když se doručení
+                 řeší, musí jít zkusit jedna adresa - ne rozeslat celé sestavě
+                 pozvánku podruhé. */
+              onPosliZnovu={() =>
+                zavolej(`${zaklad}/pozvanky`, {
+                  method: 'POST',
+                  body: JSON.stringify({ hostId: h.id }),
+                })
+              }
             />
           ))}
         </ul>
@@ -579,6 +589,7 @@ function RadekHosta({
   pracuje,
   onUloz,
   onSmaz,
+  onPosliZnovu,
 }: {
   host: HostData;
   start: string;
@@ -586,6 +597,8 @@ function RadekHosta({
   pracuje: boolean;
   onUloz: (zmena: Record<string, unknown>) => void;
   onSmaz: () => void;
+  /** Poslat pozvánku znovu jen tomuhle hostovi (15. 10. 2026). */
+  onPosliZnovu: () => void;
 }) {
   const t = usePreklad();
   const [potvrzuji, setPotvrzuji] = useState(false);
@@ -701,12 +714,23 @@ function RadekHosta({
       {canManage && (
         <button
           type="button"
+          disabled={pracuje || !jeEmail(host.email)}
+          onClick={onPosliZnovu}
+          title={t('hoste.poslatZnovuNapoveda')}
+          className="ml-auto shrink-0 rounded-pill border-0 bg-transparent text-muted text-xs font-heading cursor-pointer hover:text-ink transition-colors disabled:opacity-50"
+        >
+          {t('hoste.poslatZnovu')}
+        </button>
+      )}
+      {canManage && (
+        <button
+          type="button"
           disabled={pracuje}
           onClick={() => {
             setEmail(host.email);
             setUpravuje(true);
           }}
-          className="ml-auto shrink-0 rounded-pill border-0 bg-transparent text-muted text-xs font-heading cursor-pointer hover:text-ink transition-colors disabled:opacity-50"
+          className="shrink-0 rounded-pill border-0 bg-transparent text-muted text-xs font-heading cursor-pointer hover:text-ink transition-colors disabled:opacity-50"
         >
           {t('obecne.upravit')}
         </button>
@@ -731,6 +755,15 @@ function RadekHosta({
               {/* Adresa se už mohla změnit - u starších odeslání musí být vidět ta tehdejší. */}
               {o.email.trim().toLowerCase() !== host.email.trim().toLowerCase() ? ` · ${o.email}` : ''}
               {o.zmena ? ` · ${t('hoste.historieZmena')}` : ''}
+              {/* CO ŘEKL POŠTOVNÍ SERVER (15. 10. 2026). Je to technický text
+                  a nepřekládá se - přesně tahle věta se hledá v logu u
+                  poskytovatele pošty. U starších odeslání chybí, tehdy se
+                  neukládal. */}
+              {(o.odpovedServeru || o.messageId) && (
+                <span className="block break-all text-[10px] text-muted/80">
+                  {[o.odpovedServeru, o.messageId].filter(Boolean).join(' · ')}
+                </span>
+              )}
             </li>
           ))}
         </ul>

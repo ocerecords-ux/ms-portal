@@ -2846,6 +2846,18 @@ model PozvankaHostaLog {
   /// Kdo odeslani spustil; prazdne u automatu.
   odeslalId  String?
 
+  /// CO ODPOVEDEL POSTOVNI SERVER (zadani 15. 10. 2026: „ty pozvanky sly jen
+  /// na Tomase Sisku, nikomu dalsimu to nedoslo").
+  ///
+  /// Do ted to slo jen do logu Vercelu, ktery po par hodinach zmizi - kdyz
+  /// nekdo za tyden rekne, ze mu nic neprislo, nemeli jsme se ceho chytit.
+  /// `messageId` je cislo zpravy, pod kterym ji najde spravce posty; v
+  /// `odpovedServeru` je surova odpoved (napr. „250 2.0.0 Ok: queued as ...").
+  /// Nic z toho neni tajne a obojí je prvni, na co se pri nedorucene poste
+  /// kouka.
+  messageId      String?
+  odpovedServeru String?
+
   @@index([hostId, odeslanoAt])
 }
 

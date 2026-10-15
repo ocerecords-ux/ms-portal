@@ -388,6 +388,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hoste.odeslano': { cs: 'Odesláno: {pocet}.', en: 'Sent: {pocet}.' },
   'hoste.historiePocet': { cs: 'celkem {pocet}×', en: '{pocet}× in total' },
   'hoste.historieZmena': { cs: 'změna termínu', en: 'rescheduled' },
+  /* Poslat pozvánku znovu jednomu hostovi (15. 10. 2026). */
+  'hoste.poslatZnovu': { cs: 'Poslat znovu', en: 'Send again' },
+  'hoste.poslatZnovuNapoveda': {
+    cs: 'Pošle pozvánku znovu jen na tuhle adresu. Ostatním nic nechodí. V historii pak u odeslání uvidíte, co odpověděl poštovní server.',
+    en: 'Sends the invitation again to this address only. Nobody else gets anything. The history then shows what the mail server replied.',
+  },
   'hoste.historieNapoveda': {
     cs: 'Klepnutím ukáže, kdy a na jakou adresu pozvánky odcházely.',
     en: 'Click to see when the invitations were sent and to which address.',

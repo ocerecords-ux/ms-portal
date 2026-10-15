@@ -36,7 +36,18 @@ export type HostData = {
    * říká jen, kdy šla poslední; tohle, kolikrát a na jakou adresu se posílalo -
    * adresa se dá opravit a záznam o tom, co komu odkdy odkud odeslo, zůstává.
    */
-  historie: { kdy: string; email: string; zmena: boolean }[];
+  historie: {
+    kdy: string;
+    email: string;
+    zmena: boolean;
+    /**
+     * CO ODPOVĚDĚL POŠTOVNÍ SERVER (15. 10. 2026). `messageId` je číslo
+     * zprávy pro správce pošty, `odpovedServeru` jeho surová odpověď. Prázdné
+     * u záznamů staršího data - tehdy se to ještě neukládalo.
+     */
+    messageId: string | null;
+    odpovedServeru: string | null;
+  }[];
 };
 
 export type NataceniData = {

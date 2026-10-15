@@ -19,7 +19,11 @@ import { nactiNataceni, posliPozvanky } from '@/lib/hosteNataceniServer';
  */
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({ vsem: z.boolean().optional() });
+const schema = z.object({
+  vsem: z.boolean().optional(),
+  /** Jen jednomu hostovi (15. 10. 2026) - při řešení nedoručené pozvánky. */
+  hostId: z.string().trim().min(1).optional(),
+});
 
 export async function POST(
   req: NextRequest,
@@ -40,6 +44,7 @@ export async function POST(
   const telo = await req.json().catch(() => ({}));
   const data = schema.safeParse(telo ?? {});
   const vsem = data.success ? Boolean(data.data.vsem) : false;
+  const hostId = data.success ? (data.data.hostId ?? null) : null;
 
   const meta = await prisma.projectMeta
     .findUnique({ where: { caflouProjectId: id }, select: { name: true } })
@@ -47,6 +52,7 @@ export async function POST(
 
   const vysledek = await posliPozvanky(blockId, {
     jenNove: !vsem,
+    jenHostId: hostId,
     odpovedNa: session.user.email ?? null,
     projectName: (meta as { name: string | null } | null)?.name ?? null,
     odeslalId: session.user.id ?? null,

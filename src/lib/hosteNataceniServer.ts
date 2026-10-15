@@ -52,7 +52,13 @@ type BlokZDb = {
     pozvankaAt: Date | null;
     pozvankaStart: Date | null;
     chybaOdeslani: string | null;
-    odeslane: { odeslanoAt: Date; email: string; zmena: boolean }[];
+    odeslane: {
+      odeslanoAt: Date;
+      email: string;
+      zmena: boolean;
+      messageId: string | null;
+      odpovedServeru: string | null;
+    }[];
   }[];
 };
 
@@ -90,7 +96,13 @@ const VYBER_BLOKU = {
       // Historie odeslaných pozvánek (10. 10. 2026) - od nejnovější.
       odeslane: {
         orderBy: { odeslanoAt: 'desc' },
-        select: { odeslanoAt: true, email: true, zmena: true },
+        select: {
+          odeslanoAt: true,
+          email: true,
+          zmena: true,
+          messageId: true,
+          odpovedServeru: true,
+        },
       },
     },
   },
@@ -110,6 +122,8 @@ function naHosta(h: BlokZDb['hoste'][number]): HostData {
       kdy: o.odeslanoAt.toISOString(),
       email: o.email,
       zmena: o.zmena,
+      messageId: o.messageId,
+      odpovedServeru: o.odpovedServeru,
     })),
   };
 }
@@ -405,6 +419,12 @@ export async function posliPozvanky(
      * mail odejde dřív, než je se seznamem hotová.
      */
     jenJizPozvani?: boolean;
+    /**
+     * JEN JEDNOMU HOSTOVI (15. 10. 2026: „ty pozvánky šly jen na Tomáše
+     * Šišku"). Když se doručení řeší, musí jít zkusit jedna adresa a ne
+     * rozeslat všem znovu. Má přednost před ostatními volbami.
+     */
+    jenHostId?: string | null;
     odpovedNa?: string | null;
     projectName?: string | null;
     /** Kdo odeslání spustil - do historie. */
@@ -421,11 +441,13 @@ export async function posliPozvanky(
   const pasmo = (studio as { timezone: string } | null)?.timezone || 'Europe/Prague';
 
   const nazevProjektu = volby.projectName?.trim() || nataceni.nazev;
-  const komu = volby.jenJizPozvani
-    ? nataceni.hoste.filter((h) => h.pozvankaAt)
-    : (volby.jenNove ?? true)
-      ? nataceni.hoste.filter((h) => pozvankaJeNaPoslani(h, nataceni.start))
-      : nataceni.hoste;
+  const komu = volby.jenHostId
+    ? nataceni.hoste.filter((h) => h.id === volby.jenHostId)
+    : volby.jenJizPozvani
+      ? nataceni.hoste.filter((h) => h.pozvankaAt)
+      : (volby.jenNove ?? true)
+        ? nataceni.hoste.filter((h) => pozvankaJeNaPoslani(h, nataceni.start))
+        : nataceni.hoste;
 
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
   const vysledek: VysledekPozvanek = { odeslano: 0, chyby: [] };
@@ -500,6 +522,10 @@ export async function posliPozvanky(
             jazyk,
             zmena,
             odeslalId: volby.odeslalId ?? null,
+            // Co na to řekl poštovní server (15. 10. 2026) - viz komentář
+            // u modelu PozvankaHostaLog.
+            messageId: odeslano.messageId ?? null,
+            odpovedServeru: odeslano.odpoved ?? null,
           },
         })
         .catch((err) => {
