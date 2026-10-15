@@ -284,6 +284,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekt.zalozka.pripominky': { cs: 'Připomínky', en: 'Comments' },
   'projekt.zalozka.preposlech': { cs: 'Přeposlech', en: 'Proof-listening' },
   'projekt.zalozka.tagy': { cs: 'Tagy', en: 'Tags' },
+  'projekt.zalozka.tracklist': { cs: 'Tracklist', en: 'Tracklist' },
   'projekt.zalozka.protokol': { cs: 'Natáčecí protokol', en: 'Recording log' },
   'projekt.zalozka.historie': { cs: 'Historie', en: 'History' },
   'projekt.zalozka.doklady': { cs: 'Doklady', en: 'Documents' },
@@ -7824,6 +7825,43 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'obecne.denKratce.5': { cs: 'pá', en: 'Fri' },
   'obecne.denKratce.6': { cs: 'so', en: 'Sat' },
 
+  /* Tracklist audioknihy (15. 10. 2026). */
+  'tracklist.uvod': {
+    cs: 'Seznam stop tak, jak mají být v hotové audioknize. Pořadové číslo se dopočítá samo (01, 02, 03…), název tracku je jméno samotné stopy a název kapitoly je, jak se jmenuje ve výchozí knize. Kapitola může zůstat prázdná — kniha ji pojmenovanou mít nemusí.',
+    en: 'The list of tracks as they should be in the finished audiobook. The number is worked out automatically (01, 02, 03…), the track name is the name of the track itself and the chapter name is what it is called in the source book. The chapter can stay empty — not every book names them.',
+  },
+  'tracklist.cislo': { cs: 'Č.', en: 'No.' },
+  'tracklist.nazevTracku': { cs: 'Název tracku', en: 'Track name' },
+  'tracklist.nazevKapitoly': { cs: 'Název kapitoly', en: 'Chapter name' },
+  'tracklist.pridat': { cs: '+ Přidat stopu', en: '+ Add a track' },
+  'tracklist.ulozit': { cs: 'Uložit tracklist', en: 'Save the tracklist' },
+  'tracklist.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'tracklist.ulozeniNeslo': { cs: 'Uložit se to nepodařilo.', en: 'Saving failed.' },
+  'tracklist.neulozeno': { cs: 'Neuložené změny', en: 'Unsaved changes' },
+  'tracklist.zadne': { cs: 'Zatím tu žádné stopy nejsou.', en: 'There are no tracks here yet.' },
+  'tracklist.nahoru': { cs: 'O stopu výš', en: 'One track up' },
+  'tracklist.dolu': { cs: 'O stopu níž', en: 'One track down' },
+  'tracklist.odebrat': { cs: 'Odebrat stopu', en: 'Remove the track' },
+  'tracklist.rozdelit': { cs: 'Rozdělit track', en: 'Split the track' },
+  'tracklist.rozdelitPopis': {
+    cs: 'Rozdělit track — vzniknou dvě stopy a ke kapitole se doplní „Část 1" a „Část 2".',
+    en: 'Split the track — two tracks appear and the chapter gets „Part 1" and „Part 2".',
+  },
+  'tracklist.cast': { cs: 'Část {cislo}', en: 'Part {cislo}' },
+  'tracklist.vlozitSeznam': { cs: 'Vložit seznam kapitol', en: 'Paste a list of chapters' },
+  'tracklist.vlozitPopis': {
+    cs: 'Nalep obsah knihy, jednu kapitolu na řádek. Pořadová čísla na začátku řádků se zahodí, doplní se sama.',
+    en: 'Paste the book’s table of contents, one chapter per line. Numbers at the start of the lines are dropped and added back automatically.',
+  },
+  'tracklist.vlozitPriklad': {
+    cs: '1. Jak se koťátko probudilo\n2. Cesta do města\n3. Návrat domů',
+    en: '1. How the kitten woke up\n2. The journey to town\n3. Coming home',
+  },
+  'tracklist.nahraditSeznam': { cs: 'Doplnit kapitoly', en: 'Fill in the chapters' },
+  'tracklist.zDisku': { cs: 'Načíst tracky z Disku', en: 'Load the tracks from the Drive' },
+  'tracklist.zDiskuNacteno': { cs: 'Načteno {pocet} stop ze složky projektu.', en: '{pocet} tracks loaded from the project folder.' },
+  'tracklist.zDiskuNeslo': { cs: 'Nahrávky se nepodařilo načíst.', en: 'The recordings could not be loaded.' },
+
   /* Tagy finální nahrávky (14. 10. 2026). */
   'tagy.uvod': {
     cs: 'Vlastnosti souboru pro hotové MP3 ve složce projektu. Údaje vlevo platí pro celou knihu a zadávají se jednou; u každé stopy se mění jen její název. Zápis přelepí značku rovnou v souborech na Disku - zvuk zůstane beze změny.',
@@ -9608,6 +9646,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'smlouvyKl.posilam': { cs: 'Posílám…', en: 'Sending…' },
   'smlouvyKl.datVedet': { cs: '🤖 Dát vědět {komu}', en: '🤖 Let {komu} know' },
   'smlouvyKl.znovuDatVedet': { cs: '🤖 Znovu dát vědět {komu}', en: '🤖 Let {komu} know again' },
+  'smlouvyKl.presto': { cs: 'Přesto o ní dát někomu vědět', en: 'Let someone know anyway' },
+  'smlouvyKl.datVedetJinemu': { cs: 'Dát vědět…', en: 'Let someone know…' },
+  'smlouvyKl.bezZaloh': {
+    cs: 'U téhle firmy se nefakturuje na dvě části, takže se o podepsané smlouvě nedává vědět automaticky. Když je to přesto potřeba, vyber člověka přes „Dát vědět…".',
+    en: 'This company is not invoiced in two parts, so a signed contract is not announced automatically. If it is needed anyway, pick a person via „Let someone know…".',
+  },
   'smlouvyKl.jinemu': { cs: 'Poslat někomu jinému', en: 'Send to someone else' },
   'smlouvyKl.odebrat': { cs: 'Odebrat', en: 'Remove' },
   'smlouvyKl.souborKb': { cs: '{nazev} · {kb} kB', en: '{nazev} · {kb} kB' },

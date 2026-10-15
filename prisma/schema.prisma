@@ -5070,3 +5070,33 @@ model TagStopa {
   @@unique([caflouProjectId, driveFileId])
   @@index([caflouProjectId])
 }
+
+/// TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026: „vytvoř v detailu každého
+/// projektu, který je audiokniha, ještě záložku tracklist. Tam bude seznam
+/// tracků editovatelný").
+///
+/// Seznam kapitol tak, jak mají být pojmenované v hotové audioknize - vedle
+/// nahrávek na Disku, které se jmenují, jak se zrovna jmenují. Je to náš
+/// dohodnutý pořádek: podle něj se pojmenují finální soubory a z něj se
+/// berou názvy do tagů (viz model TagStopa a lib/tagyServer.ts).
+///
+/// POŘADÍ JE SLOUPEC, NE POŘADÍ ŘÁDKŮ V DATABÁZI. Ukládá se celý seznam
+/// najednou (smazat a zapsat znovu), takže se přečíslování nemusí řešit po
+/// kouskách a nemůže vzniknout dvakrát stejné číslo.
+model TrackProjektu {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  /// 1, 2, 3… Čísluje se od jedničky a drží se bez děr.
+  poradi          Int
+  /// NÁZEV TRACKU - jak se jmenuje samotný soubor / stopa („Track 01",
+  /// „Hrdelni pravo 03"). Tohle vidí přehrávač, když kniha názvy kapitol
+  /// nemá: pak se do tagu title dává právě tenhle název, jen s diakritikou.
+  nazevTracku     String   @default("")
+  /// NÁZEV KAPITOLY z výchozí knihy („Jak se koťátko probudilo"). Může
+  /// chybět - ne každá kniha kapitoly pojmenované má.
+  nazevKapitoly   String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([caflouProjectId])
+}

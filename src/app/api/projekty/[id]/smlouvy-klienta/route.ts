@@ -48,7 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.redirect(odkaz);
   }
 
-  const [smlouvy, vychozi, lide] = await Promise.all([
+  const [smlouvy, vychozi, lide, meta] = await Promise.all([
     nactiSmlouvyKlienta(params.id),
     vychoziPrijemceSmlouvy(),
     prisma.user.findMany({
@@ -56,11 +56,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
+    /**
+     * FAKTURUJE SE TAHLE ZAKÁZKA NA DVĚ ČÁSTI? (připomínka Barbory Šiblové
+     * 14. 10. 2026: „Bruno mi dává informaci o vložené smlouvě k projektu
+     * i když je to projekt, kde nefakturujeme zálohy. Možná by stačilo to
+     * nechat u klientů, kde zálohy fakturujeme.")
+     *
+     * Celé to oznámení existuje proto, aby se po podpisu vystavila první
+     * polovina - kde se fakturuje až na konci, nemá komu co říct.
+     */
+    prisma.projectMeta.findUnique({
+      where: { caflouProjectId: params.id },
+      select: { company: { select: { fakturujeNaCasti: true } } },
+    }),
   ]);
   return NextResponse.json({
     smlouvy,
     vychoziPrijemce: vychozi,
     lide: lide.map((l) => ({ id: l.id, jmeno: userLabel(l) })),
+    fakturujeNaCasti: meta?.company?.fakturujeNaCasti === true,
   });
 }
 

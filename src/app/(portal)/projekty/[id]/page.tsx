@@ -36,6 +36,9 @@ import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts
 import { computeTotals } from '@/lib/doklady';
 import { nactiSerieFirmy } from '@/lib/serieServer';
 import { TagySekce } from './TagySekce';
+import { Tracklist } from './Tracklist';
+import { nactiTracklist } from '@/lib/tracklistServer';
+import { jeReklamaProjekt } from '@/lib/reklamniProjektServer';
 import { nactiTagy, tagovaniPovoleno } from '@/lib/tagyServer';
 import { NazevProjektu } from './NazevProjektu';
 import { expenseTotalMinor } from '@/lib/expenses';
@@ -1181,6 +1184,29 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       ),
     });
   }
+  /**
+   * TRACKLIST (zadání 15. 10. 2026: „vytvoř v detailu každého projektu, který
+   * je audiokniha, ještě záložku tracklist. Tam bude seznam tracků
+   * editovatelný").
+   *
+   * JEN U AUDIOKNIHY - u reklamy žádné kapitoly nejsou. Rozhoduje o tom totéž
+   * pravidlo jako jinde v portálu (lib/reklamniProjekt.ts), ne název projektu.
+   * Zatím jen náš tým: je to výrobní podklad, podle kterého se pojmenují
+   * finální soubory.
+   */
+  if (isInternalRole(session.user.role) && !(await jeReklamaProjekt(caflouProjectId))) {
+    tabs.push({
+      key: 'tracklist',
+      label: prelozit(jazyk, 'projekt.zalozka.tracklist'),
+      content: (
+        <Tracklist
+          caflouProjectId={caflouProjectId}
+          pocatecni={await nactiTracklist(caflouProjectId)}
+        />
+      ),
+    });
+  }
+
   /**
    * TAGY FINÁLNÍ NAHRÁVKY (zadání 14. 10. 2026: „potřebuju nějak pořešit to,
    * abychom mohli finální nahrávku otagovat. Mělo by to fungovat u Albatrosu

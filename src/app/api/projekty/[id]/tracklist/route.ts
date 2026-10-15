@@ -1,0 +1,75 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { z } from 'zod';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { isInternalRole } from '@/lib/roles';
+import { nactiTracklist, nazvyZNahravek } from '@/lib/tracklistServer';
+
+/**
+ * TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026).
+ *
+ * GET            seznam stop
+ * GET ?zDisku=1  návrh seznamu z nahrávek ve složce projektu - NEUKLÁDÁ se,
+ *                obrazovka ho jen nabídne a člověk rozhodne
+ * PUT            uloží celý seznam najednou (viz model TrackProjektu)
+ *
+ * Jen náš tým: je to výrobní podklad, podle kterého se pojmenují finální
+ * soubory. Klientovi se zatím neukazuje.
+ */
+export const dynamic = 'force-dynamic';
+
+async function jaInterni() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !isInternalRole(session.user.role)) return null;
+  return session.user;
+}
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!(await jaInterni())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+
+  if (req.nextUrl.searchParams.get('zDisku') === '1') {
+    return NextResponse.json(await nazvyZNahravek(params.id));
+  }
+  return NextResponse.json({ tracky: await nactiTracklist(params.id) });
+}
+
+const schema = z.object({
+  tracky: z
+    .array(
+      z.object({
+        nazevTracku: z.string().trim().max(300),
+        nazevKapitoly: z.string().trim().max(300),
+      }),
+    )
+    .max(500),
+});
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!(await jaInterni())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+
+  const parsed = schema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+  }
+  // Úplně prázdné řádky se zahazují - vznikají klepnutím na „Přidat stopu"
+  // navíc. Stačí ale vyplněný jeden ze dvou názvů, aby řádek zůstal.
+  const tracky = parsed.data.tracky
+    .map((t) => ({ nazevTracku: t.nazevTracku.trim(), nazevKapitoly: t.nazevKapitoly.trim() }))
+    .filter((t) => t.nazevTracku || t.nazevKapitoly);
+
+  try {
+    // Celý seznam naráz: staré pryč, nové podle pořadí v poli. Jedna
+    // transakce, takže v půlce uložení nikdo neuvidí poloviční tracklist.
+    await prisma.$transaction([
+      prisma.trackProjektu.deleteMany({ where: { caflouProjectId: params.id } }),
+      prisma.trackProjektu.createMany({
+        data: tracky.map((t, i) => ({ caflouProjectId: params.id, poradi: i + 1, ...t })),
+      }),
+    ]);
+    return NextResponse.json({ tracky: await nactiTracklist(params.id) });
+  } catch (err) {
+    console.error('Tracklist: ulozeni selhalo:', err);
+    return NextResponse.json({ error: 'Uložení se nepodařilo.' }, { status: 500 });
+  }
+}
