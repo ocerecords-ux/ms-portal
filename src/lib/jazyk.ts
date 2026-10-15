@@ -7835,6 +7835,20 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'obecne.denKratce.5': { cs: 'pá', en: 'Fri' },
   'obecne.denKratce.6': { cs: 'so', en: 'Sat' },
 
+  /* Pojistka proti ztrátě rozdělané práce (15. 10. 2026). */
+  'neulozeno.ulozitAOdejit': {
+    cs: 'Máte rozdělanou práci, která ještě není uložená. Uložit ji a pokračovat? (Zrušit = zůstat na stránce)',
+    en: 'You have unsaved work here. Save it and carry on? (Cancel = stay on the page)',
+  },
+  'neulozeno.opravduOdejit': {
+    cs: 'Máte rozdělanou práci, která ještě není uložená. Opravdu odejít? (Zrušit = zůstat na stránce)',
+    en: 'You have unsaved work here. Leave anyway? (Cancel = stay on the page)',
+  },
+  'neulozeno.ulozeniSelhalo': {
+    cs: 'Uložit se to nepodařilo, takže jsme zůstali na stránce. Zkuste to prosím znovu.',
+    en: 'Saving failed, so we stayed on the page. Please try again.',
+  },
+
   /* Tracklist audioknihy (15. 10. 2026). */
   'tracklist.uvod': {
     cs: 'Předpis, jak se mají tracky hotové audioknihy jmenovat. Pořadové číslo se dopočítá samo (01, 02, 03…), názvy tracků se založí naráz podle vzoru a názvy kapitol se dopisují ručně z knihy.',

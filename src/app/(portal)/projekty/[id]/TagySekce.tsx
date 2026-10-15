@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import type { StopaKTagovani, SpolecneTagy, SlozkaKVyberu } from '@/lib/tagyServer';
 
 /**
@@ -53,6 +54,13 @@ export function TagySekce({
   const [uklada, setUklada] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
+  /** Co bylo naposledy uloženo - podle toho se pozná rozdělaná práce. */
+  const [ulozene, setUlozene] = useState<string>(() =>
+    JSON.stringify(pocatecni.ok ? { spolecne: pocatecni.spolecne, stopy: pocatecni.stopy } : null),
+  );
+
+  /** Pojistka při odchodu ze stránky (15. 10. 2026) - viz NeulozeneZmeny.tsx. */
+  useNeulozeno(JSON.stringify({ spolecne, stopy }) !== ulozene, uloz);
 
   const pole =
     'w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple';
@@ -97,6 +105,7 @@ export function TagySekce({
         setHlaska(telo?.error || t('tagy.ulozeniNeslo'));
         return false;
       }
+      setUlozene(JSON.stringify({ spolecne, stopy }));
       setHlaska(t('tagy.ulozeno'));
       return true;
     } catch {

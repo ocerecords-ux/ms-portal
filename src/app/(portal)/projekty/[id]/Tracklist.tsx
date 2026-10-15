@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import { bezDiakritiky, cisloTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
 
 /**
@@ -50,6 +51,13 @@ export function Tracklist({
   const [chyba, setChyba] = useState<string | null>(null);
 
   const zmeneno = JSON.stringify(tracky) !== ulozene;
+
+  /**
+   * POJISTKA PŘI ODCHODU ZE STRÁNKY (zadání 15. 10. 2026: „měli jsme vyplněný
+   * tracklist a překlikli se a všechno zmizelo"). Portál se zeptá a na jedno
+   * kliknutí tracklist uloží - viz components/NeulozeneZmeny.tsx.
+   */
+  useNeulozeno(zmeneno, uloz);
 
   const pole =
     'w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple';
@@ -177,7 +185,8 @@ export function Tracklist({
     setVkladani(false);
   }
 
-  async function uloz() {
+  /** Vrací, jestli se uložení povedlo - podle toho se pozná, že se smí odejít. */
+  async function uloz(): Promise<boolean> {
     setBezi(true);
     setChyba(null);
     setHlaska(null);
@@ -190,14 +199,16 @@ export function Tracklist({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setChyba(data?.error || t('tracklist.ulozeniNeslo'));
-        return;
+        return false;
       }
       const nove = naRadky((data.tracky ?? []) as Track[]);
       setTracky(nove);
       setUlozene(JSON.stringify(nove));
       setHlaska(t('tracklist.ulozeno'));
+      return true;
     } catch {
       setChyba(t('tracklist.ulozeniNeslo'));
+      return false;
     } finally {
       setBezi(false);
     }

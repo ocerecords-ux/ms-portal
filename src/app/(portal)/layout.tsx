@@ -27,6 +27,7 @@ import { odkazNaFotku } from '@/lib/fotky';
 import { zkusDatabazi } from '@/lib/dbZnovu';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { JazykProvider } from './components/JazykProvider';
+import { NeulozenoProvider } from './components/NeulozeneZmeny';
 import { PrepinacNahledu } from './components/PrepinacNahledu';
 import { nahledZHodnoty } from '@/lib/nahledRole';
 import { maStudioSRezervacemi } from '@/lib/bookingServer';
@@ -196,6 +197,10 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <JazykProvider jazyk={jazyk}>
+    {/* POJISTKA PROTI ZTRÁTĚ ROZDĚLANÉ PRÁCE (15. 10. 2026) - viz
+        components/NeulozeneZmeny.tsx. Formulář řekne „mám neuložené změny"
+        a tenhle obal se při odchodu zeptá, jestli je má uložit. */}
+    <NeulozenoProvider>
     <div className="min-h-screen bg-paper">
       {/* odznaky: kolik bonusu ceka na schvaleni u odkazu Vykazy (zadani
           15. 9. 2026). Tyka se jen Zuzo-labuzo - zvukar bonusy neschvaluje. */}
@@ -295,6 +300,7 @@ export default async function PortalLayout({ children }: { children: React.React
           overuje, ze projekt patri firme prihlaseneho klienta. */}
       {!internal && role === 'CLIENT' && <DotazyDock />}
     </div>
+    </NeulozenoProvider>
     </JazykProvider>
   );
 }
