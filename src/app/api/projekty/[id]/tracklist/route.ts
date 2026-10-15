@@ -4,15 +4,17 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
-import { nactiTracklist, nazvyZNahravek } from '@/lib/tracklistServer';
+import { nactiTracklist } from '@/lib/tracklistServer';
 
 /**
  * TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026).
  *
- * GET            seznam stop
- * GET ?zDisku=1  návrh seznamu z nahrávek ve složce projektu - NEUKLÁDÁ se,
- *                obrazovka ho jen nabídne a člověk rozhodne
- * PUT            uloží celý seznam najednou (viz model TrackProjektu)
+ * GET  seznam stop
+ * PUT  uloží celý seznam najednou (viz model TrackProjektu)
+ *
+ * Odnikud se nic nenačítá (upřesnění 15. 10. 2026: „nechci nikde načítat
+ * tracklist") - tracklist je předpis, podle kterého se stopy teprve
+ * pojmenují, ne soupis toho, co na Disku leží.
  *
  * Jen náš tým: je to výrobní podklad, podle kterého se pojmenují finální
  * soubory. Klientovi se zatím neukazuje.
@@ -25,12 +27,9 @@ async function jaInterni() {
   return session.user;
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await jaInterni())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
-  if (req.nextUrl.searchParams.get('zDisku') === '1') {
-    return NextResponse.json(await nazvyZNahravek(params.id));
-  }
   return NextResponse.json({ tracky: await nactiTracklist(params.id) });
 }
 

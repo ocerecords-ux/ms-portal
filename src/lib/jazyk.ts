@@ -7837,9 +7837,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   /* Tracklist audioknihy (15. 10. 2026). */
   'tracklist.uvod': {
-    cs: 'Seznam stop tak, jak mají být v hotové audioknize. Pořadové číslo se dopočítá samo (01, 02, 03…), název tracku je jméno samotné stopy a název kapitoly je, jak se jmenuje ve výchozí knize. Kapitola může zůstat prázdná — kniha ji pojmenovanou mít nemusí.',
-    en: 'The list of tracks as they should be in the finished audiobook. The number is worked out automatically (01, 02, 03…), the track name is the name of the track itself and the chapter name is what it is called in the source book. The chapter can stay empty — not every book names them.',
+    cs: 'Předpis, jak se mají stopy hotové audioknihy jmenovat. Pořadové číslo se dopočítá samo (01, 02, 03…), názvy tracků se založí naráz podle vzoru a názvy kapitol se dopisují ručně z knihy.',
+    en: 'The rule for how the tracks of the finished audiobook should be named. The number is worked out automatically (01, 02, 03…), track names are created in one go from a pattern and chapter names are typed in from the book.',
   },
+  'tracklist.pocetStop': { cs: 'Počet stop', en: 'Number of tracks' },
+  'tracklist.vzorNazvu': { cs: 'Vzor názvu tracku', en: 'Track name pattern' },
+  'tracklist.vzorPopis': {
+    cs: 'Místo {c} se doplní pořadové číslo. Další stopa by se jmenovala: {priklad}',
+    en: 'The number goes where {c} is. The next track would be called: {priklad}',
+  },
+  'tracklist.zalozit': { cs: 'Založit stopy', en: 'Create the tracks' },
+  'tracklist.zalozeno': { cs: 'Přibylo {pocet} stop. Uložíš je tlačítkem níž.', en: '{pocet} tracks added. Save them with the button below.' },
   'tracklist.cislo': { cs: 'Č.', en: 'No.' },
   'tracklist.nazevTracku': { cs: 'Název tracku', en: 'Track name' },
   'tracklist.nazevKapitoly': { cs: 'Název kapitoly', en: 'Chapter name' },
@@ -7849,8 +7857,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.ulozeniNeslo': { cs: 'Uložit se to nepodařilo.', en: 'Saving failed.' },
   'tracklist.neulozeno': { cs: 'Neuložené změny', en: 'Unsaved changes' },
   'tracklist.zadne': { cs: 'Zatím tu žádné stopy nejsou.', en: 'There are no tracks here yet.' },
-  'tracklist.nahoru': { cs: 'O stopu výš', en: 'One track up' },
-  'tracklist.dolu': { cs: 'O stopu níž', en: 'One track down' },
   'tracklist.odebrat': { cs: 'Odebrat stopu', en: 'Remove the track' },
   'tracklist.rozdelit': { cs: 'Rozdělit track', en: 'Split the track' },
   'tracklist.rozdelitPopis': {
@@ -7868,9 +7874,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: '1. How the kitten woke up\n2. The journey to town\n3. Coming home',
   },
   'tracklist.nahraditSeznam': { cs: 'Doplnit kapitoly', en: 'Fill in the chapters' },
-  'tracklist.zDisku': { cs: 'Načíst tracky z Disku', en: 'Load the tracks from the Drive' },
-  'tracklist.zDiskuNacteno': { cs: 'Načteno {pocet} stop ze složky projektu.', en: '{pocet} tracks loaded from the project folder.' },
-  'tracklist.zDiskuNeslo': { cs: 'Nahrávky se nepodařilo načíst.', en: 'The recordings could not be loaded.' },
 
   /* Tagy finální nahrávky (14. 10. 2026). */
   'tagy.uvod': {

@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
-// Z čisté části knihovny - tracklistServer sahá na Prismu a na Disk,
-// a ten se do prohlížeče zabalit nesmí (viz lib/tracklist.ts).
 import { cisloTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
 
 /**
@@ -12,23 +10,31 @@ import { cisloTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
  * tracků editovatelný" → „pořadové číslo, název tracku, název kapitoly"
  * → „01, 02, 03").
  *
- * Řádek = jedna stopa, tři sloupce. ČÍSLO SE NEZADÁVÁ: dopočítá se z pořadí
- * a píše se dvojmístně (01, 02, 03) - jinak by se při každém přehození
- * muselo přečíslovat ručně a dvě stopy by mohly mít totéž číslo.
+ * TRACKLIST SE NIKDE NENAČÍTÁ (upřesnění 15. 10. 2026: „nechci nikde načítat
+ * tracklist. Tohle by se mělo dít v první fázi, když tam nebude žádný track.
+ * Tohle je právě manuál na to, jak to popisovat"). Je to PŘEDPIS, ne soupis
+ * toho, co už na Disku leží: podle něj se stopy teprve pojmenují. Proto se
+ * zakládá na začátku a z vlastního vzoru, ne z hotových souborů.
  *
- * TŘI ZPŮSOBY, JAK HO NAPLNIT, protože každý začíná jinde:
- *  - psát po jedné (nová kniha, tracklist vzniká od stolu),
- *  - nalepit názvy kapitol z obsahu knihy naráz (nejčastější),
- *  - načíst názvy tracků z nahrávek ve složce projektu (když se natáčelo
- *    dřív, než se tracklist psal).
+ * ZALOŽENÍ NARÁZ (upřesnění: „chci mít i možnost přidat naráz i třeba 50
+ * tracků jedním klikem. Nastaví se pořadová čísla a názvy tracků podle vzoru.
+ * Na to může být někde pole"). Padesát řádků po jednom nikdo klikat nebude.
+ *
+ * NÁZEV KAPITOLY ZŮSTÁVÁ PRÁZDNÝ („jen je doplním") - ten se z ničeho
+ * odvodit nedá a vypisuje se ručně z knihy.
  */
 type Radek = { nazevTracku: string; nazevKapitoly: string };
 
+/** Ve vzoru se {c} nahradí pořadovým číslem; bez něj se číslo přilepí na konec. */
+const ZNACKA_CISLA = /\{c\}/gi;
+
 export function Tracklist({
   caflouProjectId,
+  nazevProjektu,
   pocatecni,
 }: {
   caflouProjectId: string;
+  nazevProjektu: string;
   pocatecni: Track[];
 }) {
   const t = usePreklad();
@@ -38,9 +44,11 @@ export function Tracklist({
 
   const [tracky, setTracky] = useState<Radek[]>(naRadky(pocatecni));
   const [ulozene, setUlozene] = useState<string>(JSON.stringify(naRadky(pocatecni)));
+  const [pocet, setPocet] = useState('20');
+  const [vzor, setVzor] = useState(`${nazevProjektu} {c}`);
   const [vkladani, setVkladani] = useState(false);
   const [vlozeny, setVlozeny] = useState('');
-  const [bezi, setBezi] = useState<string | null>(null);
+  const [bezi, setBezi] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
 
@@ -48,6 +56,7 @@ export function Tracklist({
 
   const pole =
     'w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple';
+  const popisek = 'text-[11px] font-heading font-semibold uppercase tracking-wide text-muted';
 
   function nastav(i: number, co: keyof Radek, hodnota: string) {
     const nove = [...tracky];
@@ -55,19 +64,43 @@ export function Tracklist({
     setTracky(nove);
   }
 
+  /** Název z pole podle vzoru - „Kuchaři smrti {c}" a trojka dají „Kuchaři smrti 03". */
+  function podleVzoru(poradi: number): string {
+    const cislo = cisloTracku(poradi);
+    const text = vzor.trim();
+    if (!text) return cislo;
+    // Pozor na `test` nad regulárem s /g - pamatuje si pozici a druhé volání
+    // by vrátilo false. Proto se hledá přes indexOf a nahrazuje se zvlášť.
+    const maZnacku = text.toLowerCase().includes('{c}');
+    return maZnacku ? text.replace(ZNACKA_CISLA, cislo) : `${text} ${cislo}`;
+  }
+
   /**
-   * ROZDĚLENÍ TRACKU (zadání 15. 10. 2026: „někdy se stane, že potřebujeme
-   * track rozdělit kvůli délce, tak si dokážu představit, že tam bude u toho
-   * tracku nějaké tlačítko rozdělit track, automaticky se přidá k názvu
-   * kapitoly ‚Část 1'").
+   * Založí stopy naráz. Když už nějaké jsou, PŘIDÁ SE ZA NĚ a čísluje se dál -
+   * přepsat hotovou práci jedním kliknutím by byla past.
+   */
+  function zalozNaraz() {
+    const kolik = Math.min(300, Math.max(1, parseInt(pocet.replace(/\D/g, ''), 10) || 0));
+    if (kolik <= 0) return;
+    const od = tracky.length;
+    const nove: Radek[] = Array.from({ length: kolik }, (_, i) => ({
+      nazevTracku: podleVzoru(od + i + 1),
+      // Kapitola zůstává prázdná - doplňuje se ručně z knihy.
+      nazevKapitoly: '',
+    }));
+    setTracky([...tracky, ...nove]);
+    setHlaska(t('tracklist.zalozeno', { pocet: kolik }));
+  }
+
+  /**
+   * ROZDĚLENÍ TRACKU (upřesnění 15. 10. 2026: „když to tlačítko zmáčknu, tak
+   * se jen změní pořadové číslo, název tracku zůstane a zkopíruje se název
+   * kapitoly, protože tu kapitolu dělíme, a přidá se ‚Část 1'").
    *
-   * Z jedné kapitoly se udělají dvě stopy a obě dostanou k názvu kapitoly
-   * „Část 1" a „Část 2". Když je kapitola rozdělená už teď, přibyde další
-   * část a CELÁ SKUPINA SE PŘEČÍSLUJE - jinak by po rozdělení prostřední
+   * Vznikne druhá stopa se stejným názvem tracku a toutéž kapitolou; obě
+   * dostanou „Část 1" a „Část 2". Když je kapitola rozdělená už teď, přibyde
+   * další část a CELÁ SKUPINA SE PŘEČÍSLUJE - jinak by po rozdělení prostřední
    * části vznikly dvě „Část 2".
-   *
-   * Název tracku se do nové stopy zkopíruje; jak se doopravdy bude jmenovat
-   * soubor, ví až ten, kdo ho vyrábí.
    */
   function rozdel(i: number) {
     const puvodni = tracky[i];
@@ -75,7 +108,6 @@ export function Tracklist({
     const nove = [...tracky];
     nove.splice(i + 1, 0, { nazevTracku: puvodni.nazevTracku, nazevKapitoly: base });
 
-    // Souvislý blok stop se stejnou kapitolou kolem rozděleného místa.
     let od = i;
     while (od > 0 && zakladKapitoly(nove[od - 1].nazevKapitoly) === base) od -= 1;
     let doKonce = i + 1;
@@ -91,57 +123,24 @@ export function Tracklist({
     setTracky(nove);
   }
 
-  /**
-   * Nalepený seznam jde do NÁZVŮ KAPITOL - z obsahu knihy se kopírují ty.
-   * Když už tracky existují, jen se jim kapitoly doplní po řádcích; co je
-   * navíc, přibude jako nové stopy.
-   */
+  /** Nalepený seznam jde do NÁZVŮ KAPITOL - z obsahu knihy se kopírují ty. */
   function vlozSeznam() {
     const radky = vlozeny
       .split('\n')
-      // Z obsahu knihy se často kopíruje i číslo kapitoly - to si doplníme sami.
       .map((r) => r.replace(/^\s*\d{1,3}\s*[._)\-]\s*/, '').trim())
       .filter(Boolean);
     if (radky.length === 0) return;
     const nove: Radek[] = radky.map((kapitola, i) => ({
-      nazevTracku: tracky[i]?.nazevTracku ?? '',
+      nazevTracku: tracky[i]?.nazevTracku ?? podleVzoru(i + 1),
       nazevKapitoly: kapitola,
     }));
-    // Stopy navíc, ke kterým se kapitola nenašla, zůstanou tak, jak byly.
     setTracky([...nove, ...tracky.slice(radky.length)]);
     setVlozeny('');
     setVkladani(false);
   }
 
-  async function zDisku() {
-    setBezi('disk');
-    setChyba(null);
-    setHlaska(null);
-    try {
-      const res = await fetch(`${adresa}?zDisku=1`, { cache: 'no-store' });
-      const data = await res.json().catch(() => null);
-      if (!data?.ok) {
-        setChyba(data?.duvod || t('tracklist.zDiskuNeslo'));
-        return;
-      }
-      // Názvy kapitol se nepřepisují - ty ze souboru poznat nejde.
-      const zDiskuTracky = data.tracky as Track[];
-      setTracky(
-        zDiskuTracky.map((x, i) => ({
-          nazevTracku: x.nazevTracku,
-          nazevKapitoly: tracky[i]?.nazevKapitoly ?? '',
-        })),
-      );
-      setHlaska(t('tracklist.zDiskuNacteno', { pocet: zDiskuTracky.length }));
-    } catch {
-      setChyba(t('tracklist.zDiskuNeslo'));
-    } finally {
-      setBezi(null);
-    }
-  }
-
   async function uloz() {
-    setBezi('ulozit');
+    setBezi(true);
     setChyba(null);
     setHlaska(null);
     try {
@@ -162,15 +161,104 @@ export function Tracklist({
     } catch {
       setChyba(t('tracklist.ulozeniNeslo'));
     } finally {
-      setBezi(null);
+      setBezi(false);
     }
   }
 
   return (
-    <div className="flex flex-col gap-3 max-w-[900px]">
+    <div className="flex flex-col gap-4 max-w-[900px]">
       <p className="text-sm font-body text-muted m-0">{t('tracklist.uvod')}</p>
 
-      <div className="flex gap-2 flex-wrap">
+      {/* ZALOŽENÍ NARÁZ - padesát stop jedním kliknutím. */}
+      <div className="rounded-card border border-line bg-field p-4 flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1.5 w-[110px]">
+          <span className={popisek}>{t('tracklist.pocetStop')}</span>
+          <input
+            inputMode="numeric"
+            value={pocet}
+            onChange={(e) => setPocet(e.target.value.replace(/\D/g, ''))}
+            className={pole}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+          <span className={popisek}>{t('tracklist.vzorNazvu')}</span>
+          <input value={vzor} onChange={(e) => setVzor(e.target.value)} className={pole} />
+        </label>
+        <button
+          type="button"
+          onClick={zalozNaraz}
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer hover:bg-brand-purpleDeep transition-colors"
+        >
+          {t('tracklist.zalozit')}
+        </button>
+        <span className="basis-full text-xs font-body text-muted">
+          {t('tracklist.vzorPopis', { priklad: podleVzoru(tracky.length + 1) })}
+        </span>
+      </div>
+
+      {tracky.length === 0 ? (
+        <p className="text-sm font-body text-muted m-0">{t('tracklist.zadne')}</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {/* Záhlaví kopíruje rozměry řádku níž - jedna a tatáž struktura. */}
+          <div className="hidden sm:flex items-center gap-2 px-0.5">
+            <span className={`${popisek} w-8 text-right`}>{t('tracklist.cislo')}</span>
+            <span className={`${popisek} flex-1 min-w-[180px]`}>{t('tracklist.nazevTracku')}</span>
+            <span className={`${popisek} flex-1 min-w-[180px]`}>{t('tracklist.nazevKapitoly')}</span>
+            <span className="w-[150px]" />
+          </div>
+
+          <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
+            {tracky.map((radek, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-2">
+                <span className="w-8 shrink-0 text-right text-xs font-heading font-semibold text-muted tabular-nums">
+                  {cisloTracku(i + 1)}
+                </span>
+                <input
+                  value={radek.nazevTracku}
+                  onChange={(e) => nastav(i, 'nazevTracku', e.target.value)}
+                  className={`${pole} flex-1 min-w-[180px]`}
+                  placeholder={t('tracklist.nazevTracku')}
+                />
+                <input
+                  value={radek.nazevKapitoly}
+                  onChange={(e) => nastav(i, 'nazevKapitoly', e.target.value)}
+                  className={`${pole} flex-1 min-w-[180px]`}
+                  placeholder={t('tracklist.nazevKapitoly')}
+                />
+                <span className="w-[150px] shrink-0 flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => rozdel(i)}
+                    title={t('tracklist.rozdelitPopis')}
+                    className="font-heading font-semibold text-xs rounded-lg px-2.5 py-1.5 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent whitespace-nowrap"
+                  >
+                    {t('tracklist.rozdelit')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTracky(tracky.filter((_, j) => j !== i))}
+                    title={t('tracklist.odebrat')}
+                    aria-label={t('tracklist.odebrat')}
+                    className="text-muted hover:text-danger px-1.5 bg-transparent border-0 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setTracky([...tracky, { nazevTracku: podleVzoru(tracky.length + 1), nazevKapitoly: '' }])}
+          className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent"
+        >
+          {t('tracklist.pridat')}
+        </button>
         <button
           type="button"
           onClick={() => setVkladani((v) => !v)}
@@ -180,12 +268,15 @@ export function Tracklist({
         </button>
         <button
           type="button"
-          onClick={zDisku}
-          disabled={bezi !== null}
-          className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent disabled:opacity-50"
+          onClick={uloz}
+          disabled={bezi || !zmeneno}
+          className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 bg-brand-green text-onAccent border-0 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {bezi === 'disk' ? t('obecne.nacitam') : t('tracklist.zDisku')}
+          {bezi ? t('obecne.ukladam') : t('tracklist.ulozit')}
         </button>
+        {zmeneno && <span className="text-xs font-body text-muted">{t('tracklist.neulozeno')}</span>}
+        {hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>}
+        {chyba && <span className="text-xs font-body text-danger">{chyba}</span>}
       </div>
 
       {vkladani && (
@@ -220,92 +311,6 @@ export function Tracklist({
           </div>
         </div>
       )}
-
-      {tracky.length === 0 ? (
-        <p className="text-sm font-body text-muted m-0">{t('tracklist.zadne')}</p>
-      ) : (
-        <>
-          {/* Záhlaví jen na širší obrazovce - na telefonu by se tři sloupce
-              stejně nevešly a pole mají vlastní popisky v placeholderu. */}
-          <div className="hidden sm:grid grid-cols-[34px_1fr_1fr_150px] gap-2 px-0.5">
-            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
-              {t('tracklist.cislo')}
-            </span>
-            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
-              {t('tracklist.nazevTracku')}
-            </span>
-            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
-              {t('tracklist.nazevKapitoly')}
-            </span>
-            <span />
-          </div>
-
-          <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
-            {tracky.map((radek, i) => (
-              <li key={i} className="grid grid-cols-[34px_1fr_150px] sm:grid-cols-[34px_1fr_1fr_150px] gap-2 items-center">
-                <span className="text-right text-xs font-heading font-semibold text-muted tabular-nums">
-                  {cisloTracku(i + 1)}
-                </span>
-                <input
-                  value={radek.nazevTracku}
-                  onChange={(e) => nastav(i, 'nazevTracku', e.target.value)}
-                  className={pole}
-                  placeholder={t('tracklist.nazevTracku')}
-                />
-                {/* Na telefonu je kapitola pod trackem, ať se pole nezmáčknou. */}
-                <input
-                  value={radek.nazevKapitoly}
-                  onChange={(e) => nastav(i, 'nazevKapitoly', e.target.value)}
-                  className={`${pole} col-start-2 sm:col-start-auto`}
-                  placeholder={t('tracklist.nazevKapitoly')}
-                />
-                <span className="flex items-center justify-end gap-1 row-start-1 col-start-3 sm:col-start-auto">
-                  {/* TLACITKO S NAPISEM, NE IKONA (upresneni 15. 10. 2026:
-                      „u kazdeho radku napravo tlacitko Rozdelit"). */}
-                  <button
-                    type="button"
-                    onClick={() => rozdel(i)}
-                    title={t('tracklist.rozdelitPopis')}
-                    className="font-heading font-semibold text-xs rounded-lg px-2.5 py-1.5 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent whitespace-nowrap"
-                  >
-                    {t('tracklist.rozdelit')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTracky(tracky.filter((_, j) => j !== i))}
-                    title={t('tracklist.odebrat')}
-                    aria-label={t('tracklist.odebrat')}
-                    className="text-muted hover:text-danger px-1 bg-transparent border-0 cursor-pointer"
-                  >
-                    x
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setTracky([...tracky, { nazevTracku: '', nazevKapitoly: '' }])}
-          className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent"
-        >
-          {t('tracklist.pridat')}
-        </button>
-        <button
-          type="button"
-          onClick={uloz}
-          disabled={bezi !== null || !zmeneno}
-          className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 bg-brand-green text-onAccent border-0 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {bezi === 'ulozit' ? t('obecne.ukladam') : t('tracklist.ulozit')}
-        </button>
-        {zmeneno && <span className="text-xs font-body text-muted">{t('tracklist.neulozeno')}</span>}
-        {hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>}
-        {chyba && <span className="text-xs font-body text-danger">{chyba}</span>}
-      </div>
     </div>
   );
 }

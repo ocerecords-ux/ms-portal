@@ -1201,6 +1201,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       content: (
         <Tracklist
           caflouProjectId={caflouProjectId}
+          nazevProjektu={metaPoSync?.name || project?.name || ''}
           pocatecni={await nactiTracklist(caflouProjectId)}
         />
       ),
