@@ -33,6 +33,7 @@ export function HudbaSekce({
   const [skladby, setSkladby] = useState<SkladbaProjektu[]>(pocatecni);
   const [nahrava, setNahrava] = useState<Stav[]>([]);
   const [chyba, setChyba] = useState<string | null>(null);
+  const [pretahuje, setPretahuje] = useState(false);
   const vstup = useRef<HTMLInputElement | null>(null);
 
   async function nahrajJeden(soubor: File, klic: string) {
@@ -53,24 +54,33 @@ export function HudbaSekce({
     const { odkaz, cesta } = (await podpis.json()) as { odkaz: string; cesta: string };
 
     // 2) soubor rovnou do Dropboxu, s ukazatelem postupu
-    await new Promise<void>((hotovo) => {
+    //
+    // VÝSLEDEK SE PŘEDÁVÁ HODNOTOU, NE PŘES STAV (oprava 16. 10. 2026: „nic se
+    // neděje"). Čtení `nahrava` hned po nahrání vracelo starý obsah - React
+    // stav se v rozběhnuté funkci nezmění - takže se chyba nikdy nepoznala
+    // a zápis se zkoušel i po neúspěšném nahrání.
+    const chybaNahrani = await new Promise<string | null>((hotovo) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', odkaz);
       xhr.setRequestHeader('Content-Type', 'application/octet-stream');
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) uprav({ procenta: Math.round((e.loaded / e.total) * 100) });
       };
-      xhr.onload = () => {
-        if (xhr.status < 200 || xhr.status >= 300) uprav({ chyba: t('hudba.chybaNahrani') });
-        hotovo();
-      };
-      xhr.onerror = () => {
-        uprav({ chyba: t('hudba.chybaNahrani') });
-        hotovo();
-      };
+      // Kód odpovědi jde do hlášky - bez něj se nedá poznat, jestli Dropbox
+      // odmítl soubor, nebo adresa mezitím vypršela.
+      xhr.onload = () =>
+        hotovo(
+          xhr.status >= 200 && xhr.status < 300
+            ? null
+            : `${t('hudba.chybaNahrani')} (${xhr.status})`,
+        );
+      xhr.onerror = () => hotovo(t('hudba.chybaNahrani'));
       xhr.send(soubor);
     });
-    if (nahrava.find((s) => s.klic === klic)?.chyba) return;
+    if (chybaNahrani) {
+      uprav({ chyba: chybaNahrani });
+      return;
+    }
 
     // 3) zápis do portálu - server si u Dropboxu ověří, že soubor leží na místě
     const zapis = await fetch(`/api/projekty/${caflouProjectId}/hudba`, {
@@ -88,18 +98,29 @@ export function HudbaSekce({
     setNahrava((p) => p.filter((s) => s.klic !== klic));
   }
 
-  async function vyber(soubory: FileList | null) {
-    if (!soubory || soubory.length === 0) return;
+  async function vyber(soubory: FileList | File[] | null) {
+    const seznam = soubory ? Array.from(soubory) : [];
+    if (seznam.length === 0) return;
     setChyba(null);
-    const seznam = Array.from(soubory);
+    /**
+     * KLÍČ SE SPOČÍTÁ JEDNOU (oprava 16. 10. 2026: „nic se neděje"). Do té
+     * doby se zakládal `Date.now()` při vykreslení řádku a podruhé při
+     * nahrávání - mezi tím uběhla milisekunda, klíče se rozešly a ukazatel
+     * postupu ani hláška o chybě neměly co aktualizovat. Ukazatel tak navěky
+     * ukazoval 0 % a případná chyba se vůbec neobjevila.
+     */
+    const davka = seznam.map((soubor, i) => ({
+      soubor,
+      klic: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+    }));
     setNahrava((p) => [
       ...p,
-      ...seznam.map((s, i) => ({ klic: `${Date.now()}-${i}`, nazev: s.name, procenta: 0 })),
+      ...davka.map(({ soubor, klic }) => ({ klic, nazev: soubor.name, procenta: 0 })),
     ]);
     // Postupně, ne všechno naráz: pět padesátimegových souborů současně
     // ucpe linku a žádný se nedokončí dřív než ostatní.
-    for (let i = 0; i < seznam.length; i += 1) {
-      await nahrajJeden(seznam[i], `${Date.now()}-${i}`);
+    for (const { soubor, klic } of davka) {
+      await nahrajJeden(soubor, klic);
     }
     if (vstup.current) vstup.current.value = '';
   }
@@ -241,7 +262,34 @@ export function HudbaSekce({
 
       {chyba && <p className="text-sm font-heading text-danger m-0">{chyba}</p>}
 
-      <div>
+      {/* PŘETAŽENÍM I TLAČÍTKEM (zadání 16. 10. 2026: „taky by tam mělo být
+          drag and drop"). Hudbu člověk tahá z Finderu, ne vybírá v dialogu. */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (dropboxNastaven) setPretahuje(true);
+        }}
+        onDragLeave={() => setPretahuje(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setPretahuje(false);
+          if (dropboxNastaven) void vyber(e.dataTransfer.files);
+        }}
+        className={`flex flex-col items-center justify-center gap-2.5 rounded-card border-[1.5px] border-dashed px-4 py-8 text-center transition-colors ${
+          pretahuje ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
+        } ${dropboxNastaven ? '' : 'opacity-50'}`}
+      >
+        <span className="text-sm font-body text-muted">
+          {pretahuje ? t('hudba.pusteSoubory') : t('hudba.pretahnete')}
+        </span>
+        <button
+          type="button"
+          onClick={() => vstup.current?.click()}
+          disabled={!dropboxNastaven}
+          className="rounded-pill border-0 bg-brand-purple px-4 py-2 text-sm font-heading font-semibold text-white cursor-pointer hover:bg-brand-purpleDark transition-colors disabled:opacity-50"
+        >
+          {t('hudba.zvolitSoubory')}
+        </button>
         <input
           ref={vstup}
           type="file"
@@ -249,7 +297,7 @@ export function HudbaSekce({
           accept="audio/*,.wav,.aif,.aiff,.mp3,.flac"
           onChange={(e) => vyber(e.target.files)}
           disabled={!dropboxNastaven}
-          className="block text-sm font-body text-muted file:mr-3 file:rounded-pill file:border-0 file:bg-brand-purple file:px-4 file:py-2 file:text-sm file:font-heading file:font-semibold file:text-white hover:file:bg-brand-purpleDark file:cursor-pointer disabled:opacity-50"
+          className="hidden"
         />
       </div>
     </div>

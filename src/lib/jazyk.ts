@@ -295,6 +295,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The Dropbox connection is not set up yet, so music cannot be added.',
   },
   'hudba.zadnaHudba': { cs: 'Zatím tu žádná hudba není.', en: 'No music here yet.' },
+  'hudba.pretahnete': {
+    cs: 'Přetáhněte sem skladby, nebo je vyberte tlačítkem.',
+    en: 'Drag tracks here, or pick them with the button.',
+  },
+  'hudba.pusteSoubory': { cs: 'Pusťte soubory sem.', en: 'Drop the files here.' },
+  'hudba.zvolitSoubory': { cs: 'Zvolit soubory', en: 'Choose files' },
   'hudba.nazev': { cs: 'Název', en: 'Name' },
   'hudba.zdroj': { cs: 'Zdroj', en: 'Source' },
   'hudba.zdrojPriklad': { cs: 'např. Artlist', en: 'e.g. Artlist' },
