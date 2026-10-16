@@ -66,14 +66,19 @@ export function HudbaSekce({
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) uprav({ procenta: Math.round((e.loaded / e.total) * 100) });
       };
-      // Kód odpovědi jde do hlášky - bez něj se nedá poznat, jestli Dropbox
-      // odmítl soubor, nebo adresa mezitím vypršela.
-      xhr.onload = () =>
-        hotovo(
-          xhr.status >= 200 && xhr.status < 300
-            ? null
-            : `${t('hudba.chybaNahrani')} (${xhr.status})`,
-        );
+      // Kód odpovědi I DŮVOD OD DROPBOXU jdou do hlášky (16. 10. 2026).
+      // Samotné „(409)" neřekne nic - teprve tělo odpovědi prozradí, jestli
+      // vadí cesta, místo na disku, nebo něco jiného. Tenhle soubor jde
+      // z prohlížeče rovnou do Dropboxu, takže na serveru se ta odpověď
+      // nikde neobjeví a jinde než tady ji nemáme kde přečíst.
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          hotovo(null);
+          return;
+        }
+        const duvod = (xhr.responseText || '').trim().slice(0, 200);
+        hotovo(`${t('hudba.chybaNahrani')} (${xhr.status}) ${duvod}`);
+      };
       xhr.onerror = () => hotovo(t('hudba.chybaNahrani'));
       xhr.send(soubor);
     });
