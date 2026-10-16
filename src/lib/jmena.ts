@@ -35,11 +35,25 @@ export function bezTitulu(jmeno: string | null | undefined): string {
   const cele = (jmeno ?? '').trim();
   if (!cele) return '';
 
-  const kousky = cele.split(/\s+/);
+  /**
+   * I TITUL PŘILEPENÝ K JMÉNU (oprava 16. 10. 2026: „v těch bublinách
+   * u herců by neměly svítit tituly"). „MgA.Robert Jícha" se píše bez mezery
+   * za tečkou - dělení podle mezer z toho udělalo jeden kus „MgA.Robert",
+   * který žádnému titulu neodpovídá, a titul zůstal svítit v bublině.
+   *
+   * Dělí se proto i za tečkou. „Ph.D." se tím rozpadne na „Ph" a „D" - oba
+   * kusy seznam titulů za jménem zná, takže to vyjde nastejno.
+   */
+  const kousky = cele.replace(/\.(?=[^\s.])/g, '. ').split(/\s+/);
+  const puvodniPocet = kousky.length;
   // Zepředu: „Mgr. Jan Novák" i „doc. Ing. Jan Novák".
   while (kousky.length > 1 && PRED_JMENEM.has(klic(kousky[0]))) kousky.shift();
   // Zezadu: „Jan Novák, Ph.D." i „Jan Novák DiS.".
   while (kousky.length > 1 && ZA_JMENEM.has(klic(kousky[kousky.length - 1]))) kousky.pop();
+
+  // Když se nic neodebralo, vrací se PŮVODNÍ ZÁPIS - rozdělování za tečkou
+  // je jen pomůcka pro hledání titulů a nesmí nikomu přepsat jméno.
+  if (kousky.length === puvodniPocet) return cele;
 
   const vysledek = kousky.join(' ').replace(/[,\s]+$/, '').trim();
   // Kdyby z jména nic nezbylo (samé tituly), radši vrátíme původní zápis.
