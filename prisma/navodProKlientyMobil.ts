@@ -26,7 +26,7 @@ Trvá to půl minuty. Nejdřív se v telefonu přihlaste na **msportal.cz**, ať
 
 Adresu nemusíte do mobilu přepisovat — namiřte na kód fotoaparát telefonu a klepněte na odkaz, který se objeví.
 
-![QR kód na msportal.cz](/navody/mobil-qr.png)
+![QR kód na msportal.cz](/navody/mobil-qr.jpg)
 
 Na iPhonu dbejte na to, aby se portál otevřel v **Safari** — z jiného prohlížeče volba „Přidat na plochu“ není.
 
@@ -34,23 +34,23 @@ Na iPhonu dbejte na to, aby se portál otevřel v **Safari** — z jiného prohl
 
 Musí to být Safari — v jiném prohlížeči na iPhonu tahle volba není.
 
-![Značka sdílení v dolní liště Safari](/navody/mobil-ios-1.png)
+![Spodní lišta Safari se zvýrazněnou značkou sdílení](/navody/mobil-ios-1.jpg)
 
 Dole na liště klepněte na **značku sdílení** — čtvereček se šipkou nahoru.
 
-![Volba Přidat na plochu v nabídce](/navody/mobil-ios-2.png)
+![Nabídka sdílení v Safari s volbou Přidat na plochu](/navody/mobil-ios-2.jpg)
 
 V nabídce sjeďte níž na **Přidat na plochu** a potvrďte **Přidat** vpravo nahoře. Název můžete nechat, jak je.
 
 # Android (Chrome)
 
-![Volba Instalovat aplikaci v nabídce Chromu](/navody/mobil-android.png)
+![Nabídka Chromu na Androidu s volbou Instalovat aplikaci](/navody/mobil-android.jpg)
 
 Klepněte na **tři tečky** a vyberte **Instalovat aplikaci**. Podle verze Chromu se volba může jmenovat **Přidat na plochu** — je to totéž. Pak potvrďte.
 
 # Hotovo
 
-![Ikona portálu na ploše telefonu](/navody/mobil-hotovo.png)
+![Ikona portálu na ploše telefonu](/navody/mobil-hotovo.jpg)
 
 Na ploše máte fialovou ikonu **MS portal**. Otevře se na celou obrazovku a pamatuje si přihlášení — heslo budete psát jen při prvním přihlášení nebo po odhlášení.
 

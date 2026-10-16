@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+import { NahledSmlouvy } from './NahledSmlouvy';
 
 /**
  * HONORÁŘE HERCE (zadání 19. 9. 2026: „uděláme jim tam ještě sekci Honoráře,
@@ -33,6 +34,8 @@ type Polozka = {
   datum: string | null;
   /** Stránka smlouvy - k podpisu, nebo podepsaná i s doložkou (19. 9. 2026). */
   odkaz: string;
+  /** Token smlouvy - z něj se skládá i adresa PDF do náhledu (16. 10. 2026). */
+  token: string;
   kPodpisu: boolean;
 };
 
@@ -126,6 +129,7 @@ export default async function HonorarePage() {
       // Smlouva je dostupna vzdy - i podepsana (zadani 19. 9. 2026: „meli by
       // se tam dostat i na smlouvy podepsane").
       odkaz: `/smlouva/${s.accessToken}`,
+      token: s.accessToken,
       kPodpisu: s.status === 'SENT',
     };
 
@@ -226,13 +230,10 @@ export default async function HonorarePage() {
                           {prelozit(jazyk, 'honorare.podepsat')}
                         </Link>
                       ) : (
-                        <Link
-                          href={p.odkaz}
-                          target="_blank"
-                          className="inline-block text-xs font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 no-underline hover:bg-surfaceSoft"
-                        >
-                          {prelozit(jazyk, 'honorare.smlouvaOdkaz')}
-                        </Link>
+                        /* NÁHLED MÍSTO DRUHÉ ZÁLOŽKY (16. 10. 2026) - smlouva
+                           se otevře v okně nad seznamem a jde z něj stáhnout
+                           jako PDF; viz honorare/NahledSmlouvy.tsx. */
+                        <NahledSmlouvy token={p.token} cislo={p.cislo} projekt={p.projekt} />
                       )}
                     </div>
                   </li>

@@ -9133,7 +9133,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'honorare.smlouvaCislo': { cs: 'Smlouva {cislo}', en: 'Contract {cislo}' },
   'honorare.datumSPopisem': { cs: '{popis} {datum}', en: '{popis} {datum}' },
   'honorare.podepsat': { cs: 'Podepsat', en: 'Sign' },
-  'honorare.smlouvaOdkaz': { cs: 'Smlouva ↗', en: 'Contract ↗' },
+  'honorare.smlouvaOdkaz': { cs: 'Smlouva', en: 'Contract' },
+  'honorare.nahledSmlouvy': { cs: 'Náhled smlouvy', en: 'Contract preview' },
+  'honorare.stahnoutPdf': { cs: 'Stáhnout PDF', en: 'Download PDF' },
+  'honorare.otevritStranku': { cs: 'Otevřít stránku smlouvy', en: 'Open contract page' },
 
   /* Pozvánky herců. */
   'pozvanky.nadpis': { cs: 'Pozvánky herců', en: 'Narrator invitations' },
