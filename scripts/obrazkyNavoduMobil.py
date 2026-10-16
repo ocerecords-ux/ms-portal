@@ -24,12 +24,19 @@ Potřebuje: pip install playwright qrcode && playwright install chromium
 a Pillow; k tomu písmo Poppins v systému (jinak se obrázky vykreslí náhradním
 písmem).
 """
+import base64
 import io
 from pathlib import Path
 from PIL import Image
 from playwright.sync_api import sync_playwright
 
-VEN = Path(__file__).resolve().parent.parent / 'public' / 'navody'
+KOREN = Path(__file__).resolve().parent.parent
+VEN = KOREN / 'public' / 'navody'
+
+# SKUTEČNÁ IKONA PORTÁLU (16. 10. 2026: „to pořád není ikona portálu").
+# Bere se ten samý soubor, který si telefon stáhne z manifestu - kreslit ji
+# znovu by znamenalo, že se jednou rozejde s tím, co má klient na ploše.
+IKONA = KOREN / 'public' / 'ikony' / 'portal-512.png'
 SIRKA, VYSKA = 1200, 860
 ADRESA_PORTALU = 'https://www.msportal.cz'
 
@@ -125,8 +132,7 @@ body{
 .grabber{width:40px;height:5px;border-radius:3px;background:#C9C5D6;margin:4px auto 12px}
 .sdilet-hlava{display:flex;align-items:center;gap:11px;background:#fff;border-radius:14px;
   padding:11px 13px;margin-bottom:12px}
-.sdilet-hlava .fav{width:38px;height:38px;border-radius:10px;background:var(--fialova);
-  display:grid;place-items:center;flex:0 0 auto}
+.sdilet-hlava .fav{width:38px;height:38px;flex:0 0 auto;overflow:hidden;border-radius:10px}
 .sdilet-hlava .txt{min-width:0}
 .sdilet-hlava .t1{font-size:14.5px;font-weight:600}
 .sdilet-hlava .t2{font-size:12.5px;color:var(--seda)}
@@ -160,7 +166,7 @@ body{
 .appka .ctverec{width:60px;height:60px;border-radius:17px;margin:0 auto 7px;
   background:linear-gradient(160deg,#4B4166,#39314F)}
 .appka .jmeno{font-size:10.5px;color:rgba(255,255,255,.82)}
-.appka.nase .ctverec{background:linear-gradient(160deg,#7B3FF2,#4A15B5);display:grid;place-items:center;
+.appka.nase .ctverec{background:none;overflow:hidden;
   box-shadow:0 10px 22px -8px rgba(107,42,240,.9)}
 .dok{margin:auto 16px 16px;height:84px;border-radius:26px;background:rgba(255,255,255,.14);
   display:flex;align-items:center;justify-content:space-around;padding:0 14px}
@@ -173,6 +179,21 @@ body{
 .qr-obal{text-align:center}
 .qr-adresa{margin-top:20px;font-size:19px;font-weight:700;color:var(--fialova);text-align:center}
 """
+
+def ikona_portalu(velikost: int, radius: int) -> str:
+    """Ikona portálu jako <img> - vložená přímo do stránky, bez serveru."""
+    data = base64.b64encode(IKONA.read_bytes()).decode()
+    return (f'<img src="data:image/png;base64,{data}" alt="" '
+            f'style="width:{velikost}px;height:{velikost}px;border-radius:{radius}px;display:block">')
+
+
+def znacka(barva='var(--zelena)', velikost=22) -> str:
+    """Tři pruhy z ikony portálu - do hlavičky, kde se ikona nehodí."""
+    return (f'<svg width="{velikost}" height="{velikost}" viewBox="0 0 24 24" fill="{barva}">'
+            '<rect x="5.6" y="7.0" width="3.1" height="10.0" rx="1.55"/>'
+            '<rect x="10.5" y="4.0" width="3.2" height="16.0" rx="1.6"/>'
+            '<rect x="15.3" y="5.7" width="3.1" height="12.6" rx="1.55"/></svg>')
+
 
 def ekv(barva='var(--zelena)', vysky=(8, 14, 20, 11, 16)):
     return '<div class="ekv">' + ''.join(
@@ -217,7 +238,7 @@ def stav_radek():
 def hlavicka():
     return f"""<div class="hlava">
       <span class="znacka">MS <em>portal</em></span>
-      {ekv()}
+      {znacka('#A3E635', 24)}
     </div>"""
 
 
@@ -291,7 +312,7 @@ def scena_ios_sheet():
     sheet = f"""<div class="zaclona"></div><div class="sheet">
       <div class="grabber"></div>
       <div class="sdilet-hlava">
-        <span class="fav">{ekv('var(--zelena)', (6, 10, 14, 8))}</span>
+        <span class="fav">{ikona_portalu(38, 10)}</span>
         <span class="txt"><div class="t1">MS portal</div><div class="t2">msportal.cz</div></span>
       </div>
       <div class="appky">
@@ -337,7 +358,7 @@ def scena_plocha():
     for i in range(12):
         if i == 5:
             appky.append(f"""<div class="appka nase zvyraznit"><div class="ctverec">
-              {ekv('var(--zelena)', (10, 16, 22, 13, 18))}</div><div class="jmeno">MS portal</div></div>""")
+              {ikona_portalu(60, 17)}</div><div class="jmeno">MS portal</div></div>""")
         else:
             appky.append('<div class="appka"><div class="ctverec"></div><div class="jmeno">&nbsp;</div></div>')
     vnitrek = (stav_radek().replace('class="stav"', 'class="stav tmavy"')
