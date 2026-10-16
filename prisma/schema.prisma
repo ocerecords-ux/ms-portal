@@ -779,6 +779,13 @@ model Order {
   attachmentUrl        String?
   attachmentName       String?
 
+  /// DALŠÍ PŘÍLOHY OBJEDNÁVKY (zadání 16. 10. 2026: „klient u objednávky
+  /// audioknihy nemůže vložit více příloh. To by mělo jít"). Hlavní příloha
+  /// zůstává v attachmentUrl - je to ten rukopis, ze kterého se počítají
+  /// normostrany a který se dá před odesláním upravit. Všechno ostatní
+  /// (obálka, poznámky k výslovnosti, druhý díl textu) je tady.
+  dalsiPrilohy         DalsiPrilohaObjednavky[]
+
   /// Úvod a závěr audioknihy (zadání 22. 9. 2026, zatím Audiotéka) - údaje,
   /// ze kterých se text skládá, a výsledné texty tak, jak je klient odeslal.
   autorKnihy           String?
@@ -5186,4 +5193,18 @@ model TrackProjektu {
   updatedAt       DateTime @updatedAt
 
   @@index([caflouProjectId])
+}
+
+/// Jedna z dalších příloh objednávky (16. 10. 2026) - viz Order.dalsiPrilohy.
+/// Stejný tvar jako PrilohaVydaje u dokladů: soubor leží v úložišti portálu
+/// a tady je jen adresa a název, pod kterým ho klient poslal.
+model DalsiPrilohaObjednavky {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  url       String   @db.Text
+  nazev     String
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
 }

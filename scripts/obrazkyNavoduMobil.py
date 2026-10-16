@@ -10,7 +10,11 @@ nepomohly.
 
 Spouští se ručně po úpravě: python3 scripts/obrazkyNavoduMobil.py
 Výsledek: public/navody/mobil-*.png
+
+Potřebuje Pillow a (kvůli QR kódu) knihovnu `qrcode`:
+    pip install Pillow qrcode
 """
+import qrcode
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
@@ -25,6 +29,10 @@ INK = (26, 22, 37)
 SEDA = (122, 118, 138)
 LINKA = (223, 219, 235)
 BILA = (255, 255, 255)
+
+# Adresa, ze které se kreslí QR kód (16. 10. 2026). Mění se tady, nikde jinde.
+ADRESA_PORTALU = 'https://www.msportal.cz'
+ADRESA_POPISEK = 'msportal.cz'
 
 SIRKA, VYSKA = 1200, 860
 TEL_X, TEL_Y, TEL_S, TEL_V = 90, 60, 420, 740
@@ -223,8 +231,59 @@ def obrazek_plocha():
     uloz(img, 'mobil-hotovo.png')
 
 
+def obrazek_qr():
+    """
+    QR KÓD NA PORTÁL (zadání 16. 10. 2026: „pojďme do manuálu přidat QR kód").
+
+    Návod čte klient na počítači, ale udělat to má v telefonu - a přepisovat
+    adresu z monitoru do mobilu je ta nejotravnější část celého postupu.
+    Fotoaparát telefonu QR kód přečte sám.
+
+    Kód se kreslí Z ADRESY V KONSTANTĚ, ne z obrázku staženého odjinud: když
+    se adresa někdy změní, přegeneruje se tenhle soubor a je hotovo.
+    """
+    img, d = zaklad()
+
+    kod = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, border=0)
+    kod.add_data(ADRESA_PORTALU)
+    kod.make(fit=True)
+    mrizka = kod.get_matrix()
+
+    # Bílá karta s QR kódem zhruba tam, kde na ostatních obrázcích stojí telefon.
+    KARTA = 520
+    kx, ky = TEL_X - 14, 150
+    d.rounded_rectangle([kx, ky, kx + KARTA, ky + KARTA], radius=36, fill=BILA,
+                        outline=LINKA, width=2)
+
+    okraj = 54
+    plocha = KARTA - okraj * 2
+    modul = plocha // len(mrizka)
+    posun_x = kx + (KARTA - modul * len(mrizka)) // 2
+    posun_y = ky + (KARTA - modul * len(mrizka)) // 2
+    for r, radek in enumerate(mrizka):
+        for c, tmavy in enumerate(radek):
+            if not tmavy:
+                continue
+            x = posun_x + c * modul
+            y = posun_y + r * modul
+            d.rectangle([x, y, x + modul - 1, y + modul - 1], fill=INK)
+
+    d.text((kx, ky + KARTA + 24), ADRESA_POPISEK, font=font('Bold', 26), fill=FIALOVA)
+
+    popisek(img, d, 'Naskenujte a jste tam', [
+        'Namiřte na kód fotoaparát telefonu.',
+        'Objeví se odkaz — klepněte na něj',
+        'a portál se otevře v prohlížeči.',
+        '',
+        'Na iPhonu to musí skončit v Safari,',
+        'jinak volba „Přidat na plochu“ chybí.',
+    ])
+    uloz(img, 'mobil-qr.png')
+
+
 if __name__ == '__main__':
     print('Kreslím obrázky do', VEN)
+    obrazek_qr()
     obrazek_safari()
     obrazek_ios_nabidka()
     obrazek_android()

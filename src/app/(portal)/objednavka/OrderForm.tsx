@@ -23,6 +23,9 @@ import { CURRENCY_LABELS } from '@/lib/doklady';
 import { minimalniCena, uplatniSpodniHranici } from '@/lib/price';
 import type { Currency } from '@prisma/client';
 
+/** Položka „jiná / nová série" v rozbalovátku - není to název série. */
+const VLASTNI_SERIE = '__nova__';
+
 export function OrderForm({
   ratePerPage,
   mena,
@@ -67,6 +70,13 @@ export function OrderForm({
    * Pole se odkryjí až po zaškrtnutí - kdo sérii nemá, formulář se mu nezmění.
    */
   const [maSerii, setMaSerii] = useState(false);
+  /**
+   * VÝBĚR ZE SVÝCH SÉRIÍ (zadání 16. 10. 2026). Prázdno = klient ještě
+   * nevybral, VLASTNI_SERIE = píše novou. Jinak je ve volbě rovnou název
+   * série přesně v té podobě, jak je psaná u starších dílů - díly se tím
+   * slepí dohromady, aniž by se kdokoliv musel trefit do diakritiky.
+   */
+  const [serieVolba, setSerieVolba] = useState('');
   const [serieNazev, setSerieNazev] = useState('');
   const [serieDil, setSerieDil] = useState('');
   const [pageCount, setPageCount] = useState('');
@@ -115,6 +125,32 @@ export function OrderForm({
     setUpravyBezely(false);
     pocetChtelKlient.current = false;
   };
+  /**
+   * DALŠÍ PŘÍLOHY (zadání 16. 10. 2026: „klient u objednávky audioknihy
+   * nemůže vložit více příloh. To by mělo jít").
+   *
+   * Hlavní příloha zůstává jedna a je to pořád ta samá: text, ze kterého se
+   * počítají normostrany a který jde před odesláním upravit. Všechno další -
+   * obálka, poznámky k výslovnosti, druhý soubor textu - je tady. Kdyby
+   * hlavní byla najednou „jedna z mnoha", nebylo by z čeho počítat NS.
+   */
+  const [dalsiPrilohy, setDalsiPrilohy] = useState<File[]>([]);
+  /**
+   * Z vybraných souborů je první ten hlavní (když ještě žádný není), zbytek
+   * jsou další přílohy. Klient tak může vybrat všechno naráz a nemusí
+   * přemýšlet, co kam patří.
+   */
+  const vyberSoubory = (seznam: File[]) => {
+    if (seznam.length === 0) return;
+    if (!file) {
+      vyberSoubor(seznam[0]);
+      if (seznam.length > 1) setDalsiPrilohy((d) => [...d, ...seznam.slice(1)]);
+    } else {
+      setDalsiPrilohy((d) => [...d, ...seznam]);
+    }
+  };
+  const odeberDalsiPrilohu = (i: number) =>
+    setDalsiPrilohy((d) => d.filter((_, index) => index !== i));
   const [dragOver, setDragOver] = useState(false);
   /**
    * ODEBRÁNÍ PŘÍLOHY (zadání 24. 9. 2026: „když klient nahraje v objednávce
@@ -241,6 +277,15 @@ export function OrderForm({
         formData.set('attachmentKey', klic);
         formData.set('attachmentName', file.name);
       }
+      // Další přílohy jdou do úložiště stejnou cestou, jedna po druhé -
+      // objednávka pak nese jen jejich klíče a názvy (16. 10. 2026).
+      if (dalsiPrilohy.length > 0) {
+        const nahrane: { key: string; name: string }[] = [];
+        for (const priloha of dalsiPrilohy) {
+          nahrane.push({ key: await nahrajPrilohu(priloha, jazyk), name: priloha.name });
+        }
+        formData.set('dalsiPrilohy', JSON.stringify(nahrane));
+      }
 
       const res = await fetch('/api/orders', { method: 'POST', body: formData });
       const body = await res.json().catch(() => ({}));
@@ -254,6 +299,7 @@ export function OrderForm({
       setDone(true);
       setTitle('');
       setMaSerii(false);
+      setSerieVolba('');
       setSerieNazev('');
       setSerieDil('');
       setPageCount('');
@@ -267,6 +313,7 @@ export function OrderForm({
       setUvodVlastni(null);
       setZaverVlastni(null);
       vyberSoubor(null);
+      setDalsiPrilohy([]);
       setRozbor(null);
       setChybaRozboru(null);
       setDetailChyby(null);
@@ -281,8 +328,7 @@ export function OrderForm({
   function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragOver(false);
-    const dropped = e.dataTransfer.files?.[0];
-    if (dropped) vyberSoubor(dropped);
+    vyberSoubory(Array.from(e.dataTransfer.files ?? []));
   }
 
   /**
@@ -504,21 +550,46 @@ export function OrderForm({
         </label>
         {maSerii && (
           <div className="flex gap-4 flex-wrap">
-            <Field label={t('objednavka.nazevSerie')} className="flex-[2_1_220px]">
-              <input
-                list="navrhy-serii-objednavka"
-                value={serieNazev}
-                onChange={(e) => setSerieNazev(e.target.value)}
-                placeholder={t('objednavka.nazevSeriePriklad')}
-                className="input"
-              />
-              {/* Našeptávač ze sérií, které u téhle firmy už jsou. */}
-              <datalist id="navrhy-serii-objednavka">
-                {navrhySerii.map((n) => (
-                  <option key={n} value={n} />
-                ))}
-              </datalist>
-            </Field>
+            {/* ROZBALOVÁTKO MÍSTO PSANÍ NASLEPO (zadání 16. 10. 2026). Do
+                16. 10. tu bylo textové pole s tichým našeptávačem, o kterém
+                klient nemusel vůbec vědět - a vznikaly tři podoby téhož názvu,
+                které se pak neslepily do jedné série. Teď si vybírá ze sérií
+                SVÉ FIRMY a psát jde až po tom, co se podívá, co už má.
+                Když firma ještě žádnou sérii nemá, není z čeho vybírat
+                a pole na psaní se ukáže rovnou. */}
+            {navrhySerii.length > 0 && (
+              <Field label={t('objednavka.ktereSerie')} className="flex-[2_1_220px]">
+                <select
+                  value={serieVolba}
+                  onChange={(e) => {
+                    const volba = e.target.value;
+                    setSerieVolba(volba);
+                    // U vybrané série se ukládá přesně ta podoba názvu, jakou
+                    // mají starší díly - proto se volba kopíruje do názvu.
+                    setSerieNazev(volba === VLASTNI_SERIE ? '' : volba);
+                  }}
+                  className="input"
+                >
+                  <option value="">{t('objednavka.vyberteSerii')}</option>
+                  {navrhySerii.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                  <option value={VLASTNI_SERIE}>{t('objednavka.jinaSerie')}</option>
+                </select>
+              </Field>
+            )}
+            {(navrhySerii.length === 0 || serieVolba === VLASTNI_SERIE) && (
+              <Field label={t('objednavka.nazevSerie')} className="flex-[2_1_220px]">
+                <input
+                  value={serieNazev}
+                  onChange={(e) => setSerieNazev(e.target.value)}
+                  placeholder={t('objednavka.nazevSeriePriklad')}
+                  className="input"
+                />
+              </Field>
+            )}
             <Field label={t('objednavka.dilSerie')} className="flex-1 min-w-[110px]">
               <input
                 type="number"
@@ -615,12 +686,20 @@ export function OrderForm({
           </span>
           <span className="inline-flex items-center gap-2">
             <label className="shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
-              {file ? t('objednavka.vybratJiny') : t('objednavka.vybratSoubor')}
+              {/* Když text už je vybraný, další soubory se PŘIDÁVAJÍ (16. 10.
+                  2026) - „Vybrat jiný" by lhalo. Vyměnit se dá tlačítkem
+                  Odebrat a novým výběrem. */}
+              {file ? t('objednavka.pridatDalsi') : t('objednavka.vybratSoubor')}
               <input
                 ref={vstupSouboru}
                 type="file"
+                multiple
                 className="hidden"
-                onChange={(e) => vyberSoubor(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  vyberSoubory(Array.from(e.target.files ?? []));
+                  // Vstup se vynuluje, aby sel tyz soubor vybrat znovu.
+                  e.target.value = '';
+                }}
               />
             </label>
             {/* Odebrat přílohu (24. 9. 2026) - ať se špatně vybraný soubor
@@ -636,6 +715,32 @@ export function OrderForm({
             )}
           </span>
         </div>
+
+        {/* DALŠÍ PŘÍLOHY (16. 10. 2026) - vypisují se pod plochou, každá
+            s křížkem. Přidávají se tímtéž tlačítkem i přetažením: vybrat
+            jich jde víc najednou. */}
+        {dalsiPrilohy.length > 0 && (
+          <ul className="mt-2.5 flex flex-col gap-1.5 list-none p-0 m-0">
+            {dalsiPrilohy.map((p, i) => (
+              <li
+                key={`${p.name}-${i}`}
+                className="flex items-center gap-2 text-sm font-body text-white/85 bg-white/5 rounded-md px-3 py-1.5"
+              >
+                <span className="truncate">{p.name}</span>
+                <button
+                  type="button"
+                  onClick={() => odeberDalsiPrilohu(i)}
+                  aria-label={t('objednavka.odebrat')}
+                  title={t('objednavka.odebrat')}
+                  className="ml-auto shrink-0 border-0 bg-transparent text-white/70 hover:text-white cursor-pointer text-sm leading-none"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-2 text-[11px] font-body text-white/60">{t('objednavka.vicePriloh')}</p>
 
         {/**
           * DVĚ TLAČÍTKA POD PŘÍLOHOU (14. 10. 2026). Do té doby se po vložení

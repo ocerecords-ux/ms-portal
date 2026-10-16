@@ -120,6 +120,11 @@ export default async function ProjektyPage() {
           klient: { select: { name: true, email: true } },
           caflouProjectId: true,
           name: true,
+          // SERIE I U KLIENTA (oprava 16. 10. 2026: „klient nevidi informaci
+          // o serii, nema tam to cislo v kolecku"). Dotaz ji proste nenacital,
+          // takze kolecko u nazvu nemelo z ceho vzniknout.
+          serie: true,
+          serieDil: true,
           statusName: true,
           finished: true,
           priority: true,
@@ -170,6 +175,8 @@ export default async function ProjektyPage() {
   const naRadek = (p: (typeof firemniMeta)[number]): DisplayProject => ({
     id: Number(p.caflouProjectId),
     name: p.name ?? '',
+    serie: p.serie ?? null,
+    serieDil: p.serieDil ?? null,
     finished: p.finished,
     statusName: p.statusName ?? '',
     priority: p.priority,

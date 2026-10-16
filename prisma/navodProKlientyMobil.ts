@@ -22,6 +22,14 @@ export const KLIENT_MOBIL = {
 
 Trvá to půl minuty. Nejdřív se v telefonu přihlaste na **msportal.cz**, ať máte portál otevřený.
 
+# Otevřít portál v telefonu
+
+Adresu nemusíte do mobilu přepisovat — namiřte na kód fotoaparát telefonu a klepněte na odkaz, který se objeví.
+
+![QR kód na msportal.cz](/navody/mobil-qr.png)
+
+Na iPhonu dbejte na to, aby se portál otevřel v **Safari** — z jiného prohlížeče volba „Přidat na plochu“ není.
+
 # iPhone (Safari)
 
 Musí to být Safari — v jiném prohlížeči na iPhonu tahle volba není.

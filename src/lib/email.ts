@@ -256,6 +256,12 @@ type OrderEmailInput = {
   note: string | null;
   attachmentUrl: string | null;
   attachmentName: string | null;
+  /**
+   * DALŠÍ PŘÍLOHY OBJEDNÁVKY (16. 10. 2026) - odkazy přes portál, stejně
+   * jako hlavní příloha. Ve stejné kolonce, ať se mail nenafoukne o řádek,
+   * který je u většiny objednávek prázdný.
+   */
+  dalsiPrilohy?: { nazev: string; url: string }[];
   requestedByName: string | null;
   requestedByEmail: string;
   /**
@@ -284,11 +290,23 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
   const deadlineText = input.deadline ?? '—';
   const narratorText = input.preferredNarrator ? escapeHtml(input.preferredNarrator) : '—';
   const noteText = input.note ? escapeHtml(input.note) : '—';
-  const attachmentCell = input.attachmentUrl
-    ? `<a href="${escapeHtml(input.attachmentUrl)}">${escapeHtml(
-        input.attachmentName || prelozitEmail(jazyk, 'mail.objednavkaInterni.prilohaNazev'),
-      )} ↗</a>`
-    : '—';
+  const odkazyPriloh = [
+    ...(input.attachmentUrl
+      ? [
+          {
+            url: input.attachmentUrl,
+            nazev: input.attachmentName || prelozitEmail(jazyk, 'mail.objednavkaInterni.prilohaNazev'),
+          },
+        ]
+      : []),
+    ...(input.dalsiPrilohy ?? []),
+  ];
+  const attachmentCell =
+    odkazyPriloh.length > 0
+      ? odkazyPriloh
+          .map((p) => `<a href="${escapeHtml(p.url)}">${escapeHtml(p.nazev)} ↗</a>`)
+          .join('<br>')
+      : '—';
   const nameText = input.requestedByName ? escapeHtml(input.requestedByName) : '—';
   const receivedAt = datumCasPosty(jazyk, new Date());
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
@@ -403,7 +421,10 @@ function buildInternalNotificationText(input: OrderEmailInput): string {
     prelozitEmailS(jazyk, 'mail.objednavkaInterni.textHerec', { hodnota: input.preferredNarrator ?? '-' }),
     prelozitEmailS(jazyk, 'mail.objednavkaInterni.textPoznamka', { hodnota: input.note ?? '-' }),
     prelozitEmailS(jazyk, 'mail.objednavkaInterni.textPriloha', {
-      hodnota: input.attachmentUrl ?? prelozitEmail(jazyk, 'mail.objednavkaInterni.textBezPrilohy'),
+      hodnota:
+        [input.attachmentUrl, ...(input.dalsiPrilohy ?? []).map((p) => p.url)]
+          .filter(Boolean)
+          .join(' , ') || prelozitEmail(jazyk, 'mail.objednavkaInterni.textBezPrilohy'),
     }),
     prelozitEmailS(jazyk, 'mail.objednavkaInterni.textJmeno', { hodnota: input.requestedByName ?? '-' }),
     prelozitEmailS(jazyk, 'mail.objednavkaInterni.textObjednal', { hodnota: input.requestedByEmail }),
@@ -765,6 +786,8 @@ type OrderConfirmationInput = {
   preferredNarrator: string | null;
   note: string | null;
   attachmentName: string | null;
+  /** Názvy dalších příloh (16. 10. 2026) - v potvrzení stačí jména. */
+  dalsiPrilohy?: string[];
   /** Jazyk příjemce (pravidlo 5). Bez něj čeština. */
   jazyk?: Jazyk;
 };
@@ -801,9 +824,13 @@ export function buildOrderConfirmationHtml(input: OrderConfirmationInput): strin
       `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.poznamka')}</td><td class="value regular">${escapeHtml(input.note)}</td></tr>`,
     );
   }
-  if (input.attachmentName) {
+  // Příloha i další přílohy v jedné kolonce, každá na svém řádku.
+  const nazvyPriloh = [input.attachmentName, ...(input.dalsiPrilohy ?? [])].filter(Boolean) as string[];
+  if (nazvyPriloh.length > 0) {
     rows.push(
-      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.priloha')}</td><td class="value regular">${escapeHtml(input.attachmentName)}</td></tr>`,
+      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.priloha')}</td><td class="value regular">${nazvyPriloh
+        .map((n) => escapeHtml(n))
+        .join('<br>')}</td></tr>`,
     );
   }
 

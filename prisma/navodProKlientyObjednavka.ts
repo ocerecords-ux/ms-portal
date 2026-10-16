@@ -22,7 +22,7 @@ Když u vás děláme obojí, jsou nahoře dvě tlačítka — **Audiokniha** a 
 # Co se vyplňuje u audioknihy
 
 - **Název** — povinný. Pod tímhle názvem zakázku uvidíte v Projektech.
-- **Kniha je součástí série** — zaškrtávátko pod názvem. Teprve po něm se odkryje **Název série** a **kolikátý díl** to je. Sérii tak nemusíte psát do názvu knihy, který by tím byl strašně dlouhý. U názvu série se nabízejí série, které u nás už máte — vyberte radši z nabídky, ať se díly drží pohromadě. V přehledu projektů je pak u názvu **malé kolečko s číslem dílu**; po kliknutí se ukáže název série a ostatní díly, mezi kterými se dá proklikat.
+- **Kniha je součástí série** — zaškrtávátko pod názvem. Teprve po něm se odkryje **Která série** a **kolikátý díl** to je. Sérii tak nemusíte psát do názvu knihy, který by tím byl strašně dlouhý. V rozbalovátku jsou série, které u nás už máte — vyberte z nich, ať se díly drží pohromadě. Když jde o první díl nové série, zvolte **Jiná / nová série** a název napište. V přehledu projektů je pak u názvu **malé kolečko s číslem dílu**; po kliknutí se ukáže název série a ostatní díly, mezi kterými se dá proklikat.
 - **Počet normostran** — napište ho, když ho znáte, nebo si ho nechte spočítat z přílohy, viz níž.
 - **Cena bez DPH** — spočítá se sama z normostran a vaší sazby. Pokud si cenu navrhujete sami, je políčko k vyplnění a částka je vždycky bez DPH.
 - **Minimální cena** — audiokniha má spodní hranici **12 000 Kč bez DPH**. Pod ní se projekt nerozjede: režisér, studio, postprodukce a korektura se zaplatí i u tenké knížky. U krátkého textu proto v objednávce uvidíte těch 12 000 Kč místo částky z normostran — pod cenou je napísané, proč. Jestli si cenu navrhujete sami, formulář návrh pod hranicí nepustí dál; ozvěte se nám a domluvíme se.
@@ -35,6 +35,12 @@ Když u vás děláme obojí, jsou nahoře dvě tlačítka — **Audiokniha** a 
 Přetáhněte text do plochy s přílohou (nebo ho vyberte tlačítkem). Samo se pak nestane nic — kdo počet normostran zná, napíše ho rovnou do políčka. Kdo ne, klikne na **Spočítat normostrany**: portál text přečte **přímo u vás v prohlížeči** a napíše, kolik má normostran, znaků a slov. Pak stačí tlačítko **Doplnit do objednávky**. Jakmile si jednou necháte spočítat, přepočítá se to už samo pokaždé, když s přílohou pohnete.
 
 Umí Word (.docx), PDF, RTF, ODT, EPUB a TXT. U PDF je navíc tlačítko **Upravit text**: otevře náhled stránek, kde jde obálku nebo tiráž vyřadit a ležatou stránku otočit — pošle se nám přeskládané PDF, které už odpovídá tomu, co se má načíst. Zavřením náhledu se o úpravy nepřijde.
+
+# Příloh může být víc
+
+Souborů jde vybrat (nebo přetáhnout) několik najednou a další se dají přidávat tlačítkem **Přidat další**. **První soubor je ten hlavní** — ten se počítá na normostrany a ten jde upravit u PDF. Všechno ostatní (obálka, poznámky k výslovnosti, druhá část textu) se vypíše pod plochou a křížkem se dá zase odebrat. Vyměnit hlavní text jde tlačítkem **Odebrat** a novým výběrem.
+
+Všechny přílohy nám dorazí stejně — v mailu i ve složce projektu na Disku.
 
 # Úvod a závěr audioknihy
 

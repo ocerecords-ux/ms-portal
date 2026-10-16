@@ -257,6 +257,39 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  /**
+   * DALŠÍ PŘÍLOHY (zadání 16. 10. 2026: „klient u objednávky audioknihy
+   * nemůže vložit více příloh. To by mělo jít").
+   *
+   * Prohlížeč je posílá stejnou cestou jako hlavní přílohu - do úložiště
+   * rovnou a sem jen klíče. Každá se OVĚŘUJE zvlášť a ta, co v úložišti
+   * neleží, se do objednávky nedostane: radši o ni říct odesílateli, než
+   * mít v objednávce odkaz, za kterým nic není.
+   */
+  const dalsiPrilohy: { url: string; nazev: string }[] = [];
+  const dalsiSelhaly: string[] = [];
+  try {
+    const syrove = String(formData.get('dalsiPrilohy') ?? '').trim();
+    const seznam: unknown = syrove ? JSON.parse(syrove) : [];
+    if (Array.isArray(seznam)) {
+      for (const polozka of seznam.slice(0, 20)) {
+        const klic = String((polozka as { key?: unknown })?.key ?? '').trim();
+        const nazev = String((polozka as { name?: unknown })?.name ?? '').trim() || 'příloha';
+        if (!klic) continue;
+        const url = (await overPrilohu(klic)) ? adresaVUlozisti(klic) : null;
+        if (url) dalsiPrilohy.push({ url, nazev });
+        else {
+          console.error(
+            `Dalsi priloha objednavky nedorazila do uloziste (firma ${companyId}, klic "${klic}").`,
+          );
+          dalsiSelhaly.push(nazev);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Seznam dalsich priloh objednavky se nepodarilo precist:', err);
+  }
+
   // 1) Objednavka a navazany projekt se ulozi VZDY - tohle je zdroj pravdy,
   //    nezavisly na tom, jestli se pozdeji povede e-mail.
   const order = await prisma.order.create({
@@ -277,6 +310,7 @@ export async function POST(req: NextRequest) {
       vystupy: vystupyObjednavky.length > 0 ? vystupyObjednavky : undefined,
       attachmentUrl: attachment?.url ?? null,
       attachmentName: attachment?.name ?? null,
+      ...(dalsiPrilohy.length > 0 ? { dalsiPrilohy: { create: dalsiPrilohy } } : {}),
       ...knihaUdaje,
       project: {
         create: {
@@ -287,7 +321,10 @@ export async function POST(req: NextRequest) {
         },
       },
     },
+    // Id uložených příloh potřebujeme do odkazů v e-mailu.
+    include: { dalsiPrilohy: { select: { id: true, nazev: true } } },
   });
+  const ulozenePrilohy = order.dalsiPrilohy;
 
   // 2) Zalozeni projektu V PORTALU (zadani 9. 9. 2026: "Caflou casem nebudeme
   //    potrebovat a projekty budeme zakladat na MS portalu"; odpojeno
@@ -441,7 +478,7 @@ export async function POST(req: NextRequest) {
        * i složka existují; výsledek (nebo důvod selhání) se zapíše
        * k objednávce a je vidět v detailu projektu.
        */
-      if (attachment && driveUrl) {
+      if ((attachment || dalsiPrilohy.length > 0) && driveUrl) {
         await nahrajPrilohuObjednavkyNaDisk(order.id);
       }
 
@@ -564,6 +601,11 @@ export async function POST(req: NextRequest) {
       // odkaz končil „Access denied" (22. 9. 2026).
       attachmentUrl: attachment ? `${zakladPortalu()}/api/orders/${order.id}/priloha` : null,
       attachmentName: attachment?.name ?? null,
+      // Další přílohy jako další odkazy ve stejné kolonce (16. 10. 2026).
+      dalsiPrilohy: ulozenePrilohy.map((p) => ({
+        nazev: p.nazev,
+        url: `${zakladPortalu()}/api/orders/${order.id}/priloha?p=${p.id}`,
+      })),
       requestedByName: orderingUser?.name ?? null,
       requestedByEmail: session.user.email,
       // Tlacitko v mailu vede do projektu (23. 9. 2026); kdyz projekt
@@ -603,6 +645,7 @@ export async function POST(req: NextRequest) {
       preferredNarrator,
       note: note || null,
       attachmentName: attachment?.name ?? null,
+      dalsiPrilohy: ulozenePrilohy.map((p) => p.nazev),
     });
   } catch (err) {
     console.error('Odeslání potvrzení objednávky klientovi selhalo:', err);
@@ -629,13 +672,18 @@ export async function POST(req: NextRequest) {
     },
   ).catch(() => undefined);
 
+  // Co se do uloziste nedostalo - hlavni priloha i kterakoliv z dalsich.
+  const neulozene = [prilohaSelhala, ...dalsiSelhaly].filter(Boolean) as string[];
+
   return NextResponse.json(
     {
       id: order.id,
       // Formulare tuhle hlasku vypisou, at je jasne, ze soubor nedorazil a
       // ma se poslat jinak.
-      varovani: prilohaSelhala
-        ? `Objednávka je uložená, ale přílohu ${prilohaSelhala} se nepodařilo uložit. Pošlete ji prosím e-mailem.`
+      varovani: neulozene.length > 0
+        ? neulozene.length === 1
+          ? `Objednávka je uložená, ale přílohu ${neulozene[0]} se nepodařilo uložit. Pošlete ji prosím e-mailem.`
+          : `Objednávka je uložená, ale tyhle přílohy se nepodařilo uložit: ${neulozene.join(', ')}. Pošlete je prosím e-mailem.`
         : undefined,
     },
     { status: 201 },

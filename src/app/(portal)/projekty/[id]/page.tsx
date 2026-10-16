@@ -1391,6 +1391,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             />
           </div>
         )}
+        {/* Další přílohy objednávky (16. 10. 2026) - jen odkazy, stav na
+            Disku se hlídá u hlavní přílohy (viz lib/prilohaObjednavkyServer.ts). */}
+        {objednavkaZWebu && objednavkaZWebu.dalsiPrilohy.length > 0 && isInternalRole(session.user.role) && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {objednavkaZWebu.dalsiPrilohy.map((priloha) => (
+              <a
+                key={priloha.id}
+                href={`/api/orders/${objednavkaZWebu.id}/priloha?p=${priloha.id}`}
+                target="_blank"
+                rel="noopener"
+                className="text-sm font-body text-brand-purple hover:underline"
+              >
+                {priloha.nazev}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       <ProjectTabs tabs={tabs} />

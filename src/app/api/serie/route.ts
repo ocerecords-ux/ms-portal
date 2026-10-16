@@ -36,11 +36,38 @@ export async function GET(req: NextRequest) {
   if (!interni && !companyId) return NextResponse.json({ dily: [] });
 
   try {
+    /**
+     * I DÍLY, KTERÉ MAJÍ FIRMU JEN NÁZVEM (16. 10. 2026). Starší projekty
+     * přenesené z Caflou vazbu na firmu nemají, jen její jméno textem - bez
+     * téhle větve by klient u série viděl jen novější díly a série by mu
+     * vypadala kratší, než doopravdy je. Stejné pravidlo jako v přehledu
+     * projektů klienta.
+     */
+    const firma =
+      interni || !companyId
+        ? null
+        : await prisma.company.findUnique({ where: { id: companyId }, select: { name: true } });
+    const kdeFirma = interni
+      ? {}
+      : {
+          OR: [
+            { companyId },
+            ...(firma?.name
+              ? [
+                  {
+                    companyId: null,
+                    companyName: { equals: firma.name, mode: 'insensitive' as const },
+                  },
+                ]
+              : []),
+          ],
+        };
+
     const radky = await prisma.projectMeta.findMany({
       where: {
         serie: { not: null },
         name: { not: null },
-        ...(interni ? {} : { companyId }),
+        ...kdeFirma,
       },
       select: { caflouProjectId: true, name: true, serie: true, serieDil: true },
       take: 2000,

@@ -67,6 +67,8 @@ export async function objednavkaProjektu(caflouProjectId: string) {
         attachmentUrl: true,
         diskPrilohaId: true,
         diskPrilohaChyba: true,
+        // Další přílohy objednávky (16. 10. 2026) - odkazy v hlavičce projektu.
+        dalsiPrilohy: { select: { id: true, nazev: true }, orderBy: { createdAt: 'asc' } },
       },
     });
   } catch (err) {
