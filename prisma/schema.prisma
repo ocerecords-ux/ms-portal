@@ -704,6 +704,9 @@ model User {
   studioBlocks       StudioBlock[]      @relation("StudioBlockCreatedBy")
   notifications      Notification[]
   calendarFeeds      CalendarFeed[]
+  /// Hudba, kterou k projektum pridal (16. 10. 2026).
+  hudbaPridana       HudbaProjektu[]    @relation("HudbaPridal")
+
   /// Firmy, u kterych tenhle clovek chodi rezirovat misto nas (12. 10. 2026) -
   /// viz Company.rezieKlientaUserId.
   rezieUFirem        Company[]          @relation("RezieKlientaFirmy")
@@ -2784,6 +2787,35 @@ model HostNataceni {
   updatedAt   DateTime @updatedAt
 
   @@index([blockId])
+}
+
+/// HUDBA VYBRANA PRO PROJEKT (zadani 16. 10. 2026: „potrebuju u projektu mit
+/// kartu, kde budu vkladat hudbu, kterou vyberu pro dany projekt").
+///
+/// Samotny soubor lezi v DROPBOXU, tady je jen zaznam o nem - padesatimegove
+/// WAVy do databaze nepatri a pres Vercel by stejne neprosly (viz lib/dropbox.ts).
+model HudbaProjektu {
+  id              String  @id @default(cuid())
+  caflouProjectId String
+  /// Jak se skladba jmenuje. Predvyplni se z nazvu souboru, da se prepsat.
+  nazev           String
+  /// Odkud je - Artlist, Epidemic, vlastni. Kvuli licenci.
+  zdroj           String?
+  poznamka        String?
+
+  /// Cesta v Dropboxu; podle ni se vyraba odkaz na prehrani.
+  cesta           String
+  /// Id souboru v Dropboxu. Prezije prejmenovani i presun slozky, cesta ne -
+  /// proto se drzi obojí.
+  dropboxId       String?
+  velikost        Int     @default(0)
+
+  pridalId  String?
+  pridal    User?    @relation("HudbaPridal", fields: [pridalId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caflouProjectId])
 }
 
 /// SIGNALIZACE NASEHO NATACECIHO PULTU (zadani 11. 10. 2026).

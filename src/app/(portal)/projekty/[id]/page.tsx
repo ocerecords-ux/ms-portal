@@ -37,6 +37,9 @@ import { computeTotals } from '@/lib/doklady';
 import { nactiSerieFirmy } from '@/lib/serieServer';
 import { TagySekce } from './TagySekce';
 import { Tracklist } from './Tracklist';
+import { HudbaSekce } from './HudbaSekce';
+import { nactiHudbu } from '@/lib/hudbaProjektuServer';
+import { dropboxNastaven } from '@/lib/dropbox';
 import { nactiTracklist } from '@/lib/tracklistServer';
 import { jeReklamaProjekt } from '@/lib/reklamniProjektServer';
 import { nactiTagy, tagovaniPovoleno } from '@/lib/tagyServer';
@@ -1203,6 +1206,28 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           caflouProjectId={caflouProjectId}
           nazevProjektu={metaPoSync?.name || project?.name || ''}
           pocatecni={await nactiTracklist(caflouProjectId)}
+        />
+      ),
+    });
+  }
+
+  /**
+   * HUDBA (zadání 16. 10. 2026: „potřebuju u projektů mít kartu, kde budu
+   * vkládat hudbu, kterou vyberu pro daný projekt").
+   *
+   * JEN NÁŠ TÝM (rozhodnuto 16. 10. 2026) - klient o kartě neví, stejně jako
+   * o natáčecím plánu. Soubory leží v Dropboxu, ne v portálu: jeden WAV má
+   * kolem padesáti megabajtů a přes Vercel by neprošel (viz lib/dropbox.ts).
+   */
+  if (isInternalRole(session.user.role)) {
+    tabs.push({
+      key: 'hudba',
+      label: prelozit(jazyk, 'projekt.zalozka.hudba'),
+      content: (
+        <HudbaSekce
+          caflouProjectId={caflouProjectId}
+          pocatecni={await nactiHudbu(caflouProjectId)}
+          dropboxNastaven={dropboxNastaven()}
         />
       ),
     });

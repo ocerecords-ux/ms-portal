@@ -35,6 +35,10 @@ export async function GET(_req: Request) {
     NEXTAUTH_SECRET_nastaveno: Boolean(process.env.NEXTAUTH_SECRET),
     DATABASE_URL_nastaveno: Boolean(process.env.DATABASE_URL),
     SMTP_nastaveno: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD),
+    // Napojeni na Dropbox pro hudbu u projektu (16. 10. 2026).
+    DROPBOX_nastaveno: Boolean(
+      process.env.DROPBOX_APP_KEY && process.env.DROPBOX_APP_SECRET && process.env.DROPBOX_REFRESH_TOKEN,
+    ),
     GOOGLE_DISK_nastaveno: Boolean(
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
     ),

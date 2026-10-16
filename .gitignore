@@ -19,3 +19,7 @@ mobil/prazdno/
 # nepatri - ambientni `declare module '@prisma/client'` by prebilo skutecneho
 # vygenerovaneho klienta a build by spadl na chybejicich metodach.
 stubs/
+
+# Odkladiste souboru, ktere jdou pryc. Mazani v pripojene slozce nejde bez
+# svoleni, tak se sem presouvaji - do repa nepatri.
+_to_delete/
