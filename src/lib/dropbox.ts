@@ -34,7 +34,14 @@ export function dropboxNastaven(): boolean {
   );
 }
 
-/** Kořenová složka, pod kterou se zakládají složky projektů. */
+/**
+ * Kořenová složka, pod kterou se zakládají složky projektů.
+ *
+ * U TÝMOVÉHO DROPBOXU MUSÍ VÉST DOVNITŘ NĚJAKÉ TÝMOVÉ SLOŽKY (16. 10. 2026),
+ * třeba `/MEDIA SPACE/Hudba k projektům`. V kořeni týmu zakládat nejde -
+ * Dropbox to odmítne s `path/no_write_permission` a nepomůže ani to, že je
+ * přihlášený člověk správce. Nastavuje se přes DROPBOX_HUDBA_CESTA.
+ */
 export function korenHudby(): string {
   const cesta = process.env.DROPBOX_HUDBA_CESTA?.trim() || '/Hudba k projektům';
   return cesta.replace(/\/+$/, '');
