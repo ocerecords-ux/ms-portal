@@ -84,12 +84,15 @@ export async function nactiHudbu(caflouProjectId: string): Promise<SkladbaProjek
 export async function pripravNahrani(vstup: {
   nazevProjektu: string;
   nazevSouboru: string;
-}): Promise<{ odkaz: string; cesta: string } | null> {
+}): Promise<{ odkaz: string; cesta: string } | { chyba: string }> {
   const slozka = slozkaProjektu(vstup.nazevProjektu);
-  await zalozSlozku(slozka);
+  // Když složka nejde založit, nemá smysl vydávat adresu na nahrání - soubor
+  // by se poslal a Dropbox by ho stejně odmítl (16. 10. 2026).
+  const pripravena = await zalozSlozku(slozka);
+  if (!pripravena.ok) return { chyba: pripravena.duvod };
   const cesta = `${slozka}/${bezpecnyNazev(vstup.nazevSouboru)}`;
   const odkaz = await odkazNaNahrani(cesta);
-  return odkaz ? { odkaz, cesta } : null;
+  return odkaz ? { odkaz, cesta } : { chyba: 'Dropbox nevydal adresu na nahrání.' };
 }
 
 /**

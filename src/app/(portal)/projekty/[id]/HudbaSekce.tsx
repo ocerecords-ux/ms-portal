@@ -62,20 +62,10 @@ export function HudbaSekce({
     const chybaNahrani = await new Promise<string | null>((hotovo) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', odkaz);
-      /**
-       * ŽÁDNÁ HLAVIČKA CONTENT-TYPE (oprava 16. 10. 2026: „Temporary upload
-       * link led to invalid upload attempt").
-       *
-       * S `application/octet-stream` pošle prohlížeč kvůli pravidlům CORS
-       * nejdřív předběžný dotaz (OPTIONS). Dropbox si ho u jednorázové adresy
-       * započítá jako pokus o nahrání a adresu tím spotřebuje - skutečný POST
-       * pak dorazí na odkaz, který už neplatí, a vrátí se 409.
-       *
-       * Bez hlavičky je to z pohledu prohlížeče „jednoduchý" požadavek
-       * a odejde rovnou. Proto se posílá řez souboru s prázdným typem:
-       * `slice` nic nekopíruje, jen zahodí `audio/wav`, které by jinak
-       * prohlížeč do hlavičky doplnil sám.
-       */
+      // Dropbox u jednorázové adresy jiný typ obsahu nepřijme - bez téhle
+      // hlavičky vrací 400 „The only allowed Content-Type is
+      // application/octet-stream".
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) uprav({ procenta: Math.round((e.loaded / e.total) * 100) });
       };
@@ -93,7 +83,7 @@ export function HudbaSekce({
         hotovo(`${t('hudba.chybaNahrani')} (${xhr.status}) ${duvod}`);
       };
       xhr.onerror = () => hotovo(t('hudba.chybaNahrani'));
-      xhr.send(soubor.slice(0, soubor.size, ''));
+      xhr.send(soubor);
     });
     if (chybaNahrani) {
       uprav({ chyba: chybaNahrani });

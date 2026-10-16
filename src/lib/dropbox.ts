@@ -184,8 +184,42 @@ export async function metadataSouboru(cesta: string): Promise<SouborVDropboxu | 
  * Založí složku, když ještě není. Existující složka vrací chybu `conflict`,
  * což tady není chyba - proto se výsledek nezkoumá.
  */
-export async function zalozSlozku(cesta: string): Promise<void> {
-  await volej('/files/create_folder_v2', { path: cesta, autorename: false });
+export async function zalozSlozku(cesta: string): Promise<{ ok: true } | { ok: false; duvod: string }> {
+  /**
+   * ZALOŽENÍ SLOŽKY MUSÍ UMĚT ŘÍCT NE (oprava 16. 10. 2026). Dřív se výsledek
+   * zahazoval, takže když Dropbox odpověděl `path/no_write_permission`,
+   * portál o tom nevěděl a vydal adresu na nahrání do místa, kam stejně
+   * nesmí - prohlížeč pak soubor poslal a Dropbox ho odmítl hláškou
+   * „Temporary upload link led to invalid upload attempt", ze které se
+   * skutečný důvod nedal poznat.
+   */
+  const token = await accessToken();
+  if (!token) return { ok: false, duvod: 'Dropbox nevydal přístupový token.' };
+  try {
+    const res = await fetch(`${API}/files/create_folder_v2`, {
+      method: 'POST',
+      headers: { ...(await hlavicky(token)), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: cesta, autorename: false }),
+    });
+    if (res.ok) return { ok: true };
+    const telo = await res.text();
+    // Složka už existuje - to je v pořádku, zakládá se při každém nahrání.
+    if (telo.includes('path/conflict')) return { ok: true };
+    console.error('Dropbox /files/create_folder_v2:', res.status, telo);
+    if (telo.includes('no_write_permission')) {
+      return {
+        ok: false,
+        duvod: `Do složky „${cesta}" portál nesmí zapisovat. Nastavte DROPBOX_HUDBA_CESTA na složku uvnitř týmového Dropboxu, kam aplikace smí - do kořene týmu zakládat nejde.`,
+      };
+    }
+    if (telo.includes('insufficient_space')) {
+      return { ok: false, duvod: 'V Dropboxu došlo místo.' };
+    }
+    return { ok: false, duvod: `Složku se nepodařilo založit (${res.status}).` };
+  } catch (err) {
+    console.error('Dropbox /files/create_folder_v2:', err);
+    return { ok: false, duvod: 'Spojení s Dropboxem selhalo.' };
+  }
 }
 
 /** Spojení stojí? Na diagnostiku v /api/health - nic nemění. */

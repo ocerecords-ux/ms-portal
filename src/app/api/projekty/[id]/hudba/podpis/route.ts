@@ -61,8 +61,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     nazevSouboru: parsed.data.nazev,
   });
 
-  if (!pripraveno) {
-    return NextResponse.json({ error: 'Dropbox adresu nevydal.' }, { status: 502 });
+  if ('chyba' in pripraveno) {
+    // Důvod jde rovnou do karty - „Dropbox adresu nevydal" nikomu nepomohlo.
+    return NextResponse.json({ error: pripraveno.chyba }, { status: 502 });
   }
   return NextResponse.json(pripraveno);
 }
