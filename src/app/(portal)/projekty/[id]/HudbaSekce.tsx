@@ -34,7 +34,6 @@ export function HudbaSekce({
   vyzvaPujdeSama?: boolean;
   vyzva?: StavVyzvy | null;
 }) {
-  const t = usePreklad();
   const zaklad = `/api/projekty/${caflouProjectId}/hudba`;
   const api: HudbaApi = {
     podpis: `${zaklad}/podpis`,
@@ -46,10 +45,14 @@ export function HudbaSekce({
     doctiMetadata: (id) => `${zaklad}/${id}/metadata`,
   };
 
+  /**
+   * ÚVODNÍ VĚTA JE PRYČ (17. 10. 2026: „a tuto hlasku pryc"). Kam soubory
+   * jdou, ví tým z návodu; nad seznamem jen ubírala místo. Klíč
+   * `hudba.popis` zůstává ve slovníku v obou jazycích - kdyby se věta měla
+   * někdy vrátit, ať se nepřekládá znovu.
+   */
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm font-body text-muted m-0">{t('hudba.popis')}</p>
-
       {hudbuDodavaKlient && (
         <VyzvaKlientovi
           caflouProjectId={caflouProjectId}

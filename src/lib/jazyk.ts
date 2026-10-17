@@ -71,6 +71,9 @@ const ODKAZY_EN: Record<string, string> = {
   '/hudba-audioknihy': 'Music',
   '/tabule/moje': 'Studio display',
   '/studio': 'Studio',
+  // Novinky portálu (17. 10. 2026) - sedmý řádek, který dávka 7n předpovídala:
+  // sekce vznikla až po ní a do lišty přidává vlastní odkaz.
+  '/novinky': 'Portal news',
 };
 
 export function nazevOdkazu(jazyk: Jazyk, href: string, zaloha: string): string {

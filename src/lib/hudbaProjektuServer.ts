@@ -129,10 +129,17 @@ export async function nactiHudbu(caflouProjectId: string): Promise<SkladbaProjek
  * hudba někde použita u jiného projektu, tak by to mělo zařvat. Pokud to teda
  * není série.")
  *
- * Shoda se hledá podle NÁZVU A AUTORA, ne podle cesty k souboru: tatáž
- * skladba nahraná ke dvěma projektům leží v Dropboxu dvakrát, každá ve své
- * složce. Cesta se porovnává taky, protože hudba zkopírovaná ze série míří
- * na jeden a týž soubor.
+ * SHODA JE JEN PODLE SOUBORU V DROPBOXU (oprava 17. 10. 2026: „ty nazvy
+ * muzou byt stejne, je to jiny projekt"). Nejdřív se porovnával i název
+ * s autorem, jenže názvy jako „HUDBA KONEC KAPITOL" bez autora má kdekdo -
+ * a hláška pak vyjmenovala patnáct knih, které s tímhle projektem nemají nic
+ * společného. Dvě různé skladby stejného jména nejsou tatáž hudba; tatáž
+ * hudba je jeden a týž soubor.
+ *
+ * Prakticky to zařve tam, kde to má smysl: u hudby zkopírované ze série a
+ * u skladby vybrané z knihovny (Databáze), protože obojí míří na jeden
+ * soubor. Zvlášť nahraná kopie leží ve složce svého projektu a je to pro
+ * portál jiný soubor - na tu se neupozorňuje, a je to tak správně.
  *
  * DÍLY JEDNÉ SÉRIE SE NEHLÁSÍ. Tam je opakování záměr - série má svou hudbu
  * a každý další díl ji dostane; upozorňovat na to by znamenalo varování
@@ -146,7 +153,6 @@ async function doplnPouzitiJinde(
   if (skladby.length === 0) return skladby;
 
   try {
-    const nazvy = [...new Set(radky.map((r) => r.nazev))];
     const cesty = [...new Set(radky.map((r) => r.cesta))];
 
     const [muj, jinde] = await Promise.all([
@@ -157,19 +163,14 @@ async function doplnPouzitiJinde(
         .findMany({
           where: {
             caflouProjectId: { not: caflouProjectId },
-            OR: [{ nazev: { in: nazvy } }, { cesta: { in: cesty } }],
+            cesta: { in: cesty },
           },
-          select: { caflouProjectId: true, nazev: true, autor: true, cesta: true },
+          select: { caflouProjectId: true, cesta: true },
         })
         .catch(() => []),
     ]);
 
-    const nalezene = jinde as {
-      caflouProjectId: string;
-      nazev: string;
-      autor: string | null;
-      cesta: string;
-    }[];
+    const nalezene = jinde as { caflouProjectId: string; cesta: string }[];
     if (nalezene.length === 0) return skladby;
 
     // Názvy a série protějšků jedním dotazem.
@@ -186,14 +187,10 @@ async function doplnPouzitiJinde(
 
     return skladby.map((s, i) => {
       const radek = radky[i];
-      const klic = `${radek.nazev.toLowerCase()}|${(radek.autor ?? '').toLowerCase()}`;
 
       const kde: PouzitiJinde[] = [];
       for (const r of nalezene) {
-        const shoda =
-          r.cesta === radek.cesta ||
-          `${r.nazev.toLowerCase()}|${(r.autor ?? '').toLowerCase()}` === klic;
-        if (!shoda) continue;
+        if (r.cesta !== radek.cesta) continue;
 
         const meta = popisProjektu.get(r.caflouProjectId);
         const jehoSerie = (meta?.serie ?? '').trim().toLowerCase();
