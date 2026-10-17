@@ -17,12 +17,8 @@ import { HudbaOdKlienta } from './HudbaOdKlienta';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function HudbaOdKlientaPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
-  const { token } = await params;
+export default async function HudbaOdKlientaPage({ params }: { params: { token: string } }) {
+  const token = params.token;
   const jazyk = nactiJazyk();
   const projekt = await projektPodleTokenu(token);
   if (!projekt) notFound();
