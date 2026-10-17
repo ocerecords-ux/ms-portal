@@ -3,7 +3,12 @@
 import { useRef, useState } from 'react';
 
 import { prelozit, type Jazyk } from '@/lib/jazyk';
-import { prectiMetadata, zmensiObal, zmerDelku } from '@/lib/metadataHudby';
+import {
+  prectiMetadata,
+  zmensiObal,
+  zmerDelku,
+  type ObalZMetadat,
+} from '@/lib/metadataHudby';
 
 /**
  * VKLÁDÁNÍ HUDBY KLIENTEM (zadání 17. 10. 2026: „klient pro vkládání u hudby
@@ -45,7 +50,7 @@ export function HudbaOdKlienta({
   const vstup = useRef<HTMLInputElement | null>(null);
   const zaklad = `/api/hudba-od-klienta/${encodeURIComponent(token)}`;
 
-  async function nahrajObal(obal: Blob): Promise<string | null> {
+  async function nahrajObal(obal: ObalZMetadat): Promise<string | null> {
     try {
       const zmenseny = await zmensiObal(obal);
       if (!zmenseny) return null;

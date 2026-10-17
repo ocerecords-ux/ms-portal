@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { WaveformPlayer, type UsekSkladby } from '@/app/(portal)/components/WaveformPlayer';
-import { delkaTextem, prectiMetadata, zmensiObal, zmerDelku } from '@/lib/metadataHudby';
+import {
+  delkaTextem,
+  prectiMetadata,
+  zmensiObal,
+  zmerDelku,
+  type ObalZMetadat,
+} from '@/lib/metadataHudby';
 
 /**
  * SEZNAM SKLADEB S VKLÁDÁNÍM - SPOLEČNÁ ČÁST (17. 10. 2026).
@@ -97,7 +103,7 @@ export function HudbaSeznam({
    * obrázku v metadatech zbyde pár desítek kilobajtů. Když se to nepovede,
    * skladba se uloží bez obalu - kvůli obrázku se nahrávání nezahazuje.
    */
-  async function nahrajObal(obal: Blob): Promise<string | null> {
+  async function nahrajObal(obal: ObalZMetadat): Promise<string | null> {
     try {
       const zmenseny = await zmensiObal(obal);
       if (!zmenseny) return null;
