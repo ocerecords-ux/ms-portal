@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { WaveformPlayer } from '@/app/(portal)/components/WaveformPlayer';
@@ -351,19 +351,41 @@ function Skladba({
 }) {
   const t = usePreklad();
   const [odkaz, setOdkaz] = useState<string | null>(null);
-  const [nacita, setNacita] = useState(false);
+  const [nepovedloSe, setNepovedloSe] = useState(false);
   const [ptaSe, setPtaSe] = useState(false);
 
   /**
-   * Adresa z Dropboxu se vyrábí AŽ PŘI KLIKNUTÍ a platí čtyři hodiny.
-   * Kdyby se dělala při vykreslení karty, volal by se Dropbox pokaždé tolikrát,
-   * kolik je tam skladeb - i když si nikdo nic nepustí.
+   * PŘEHRÁVAČ JE ROZBALENÝ HNED (zadání 17. 10. 2026: „takhle by měl už být
+   * rozbalený ten přehrávač ve chvíli, kdy otevřu kartu. Žádné rozbalování").
+   *
+   * Adresa z Dropboxu platí čtyři hodiny a vyrábí se při otevření karty -
+   * u každé skladby jednou a všechny naráz, takže se na sebe nečekají.
+   * Přehrávání se samo nespustí; waveforma je tu od toho, aby šlo klepnout
+   * rovnou doprostřed skladby.
    */
+  useEffect(() => {
+    let zahozeno = false;
+    (async () => {
+      const res = await fetch(api.polozka(skladba.id)).catch(() => null);
+      if (zahozeno) return;
+      if (!res?.ok) {
+        setNepovedloSe(true);
+        return;
+      }
+      const data = (await res.json()) as { odkaz: string };
+      if (!zahozeno) setOdkaz(data.odkaz);
+    })();
+    return () => {
+      zahozeno = true;
+    };
+    // Adresa patří k jedné skladbě; `api` je jen sada cest a nemění se.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skladba.id]);
+
+  /** Tatáž adresa slouží i stahování - podruhé už se o ni nežádá. */
   async function ziskejOdkaz(): Promise<string | null> {
     if (odkaz) return odkaz;
-    setNacita(true);
     const res = await fetch(api.polozka(skladba.id)).catch(() => null);
-    setNacita(false);
     if (!res?.ok) {
       naChybu(t('hudba.chybaPrehrani'));
       return null;
@@ -421,37 +443,34 @@ function Skladba({
 
         <div className="mt-1.5">
           {odkaz ? (
-            <WaveformPlayer src={odkaz} autoPlay />
+            <WaveformPlayer src={odkaz} />
+          ) : nepovedloSe ? (
+            <span className="text-xs font-body text-danger">{t('hudba.chybaPrehrani')}</span>
           ) : (
-            <button
-              type="button"
-              onClick={() => void ziskejOdkaz()}
-              disabled={nacita}
-              className="inline-flex items-center gap-2 rounded-pill border-0 bg-brand-green text-onAccent px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer hover:brightness-95 transition-[filter] disabled:opacity-60"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-                <path d="M7 5v14l11-7z" />
-              </svg>
-              {t('hudba.prehrat')}
-            </button>
+            /* Místo si drží i dokud se adresa nenačte, ať řádek nepodskočí. */
+            <span className="flex items-center gap-3 py-1 h-[56px]">
+              <span className="w-9 h-9 shrink-0 rounded-full bg-line/60" />
+              <span className="flex-1 h-2 rounded-full bg-line/60" />
+            </span>
           )}
         </div>
       </div>
 
-      {/* POZNÁMKA VPRAVO OD SKLADBY - jediné pole, které jde přepsat. */}
-      <div className="w-full sm:w-[220px] shrink-0">
+      {/* POZNÁMKA VPRAVO, A S MÍSTEM (17. 10. 2026: „ta poznámka musí mít více
+          místa") - vejde se do ní věta, ne dvě slova. */}
+      <div className="w-full sm:w-[300px] lg:w-[360px] shrink-0">
         <span className="block text-[10px] font-heading uppercase tracking-wide text-muted mb-1">
           {t('hudba.poznamka')}
         </span>
         {jenCteni ? (
-          <p className="m-0 rounded-lg border border-line bg-field px-2.5 py-1.5 text-xs font-body text-ink min-h-[2.4rem]">
+          <p className="m-0 rounded-lg border border-line bg-field px-2.5 py-1.5 text-xs font-body text-ink min-h-[4.6rem] whitespace-pre-wrap">
             {skladba.poznamka || '—'}
           </p>
         ) : (
           <textarea
             defaultValue={skladba.poznamka ?? ''}
             placeholder={t('hudba.poznamkaMisto')}
-            rows={2}
+            rows={4}
             onBlur={(e) => naPoznamku(e.target.value)}
             className="w-full resize-y rounded-lg border border-line bg-field px-2.5 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple"
           />
