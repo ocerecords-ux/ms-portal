@@ -40,6 +40,7 @@ import { Tracklist } from './Tracklist';
 import { HudbaSekce } from './HudbaSekce';
 import { nactiHudbu } from '@/lib/hudbaProjektuServer';
 import { stavVyzvy } from '@/lib/vyzvaHudbaServer';
+import { srovnejSerii } from '@/lib/hudbaSerieServer';
 import { firmaDodavaHudbu, vyzvaPujdeSama } from '@/lib/hudbaOdKlienta';
 import { dropboxNastaven } from '@/lib/dropbox';
 import { nactiTracklist } from '@/lib/tracklistServer';
@@ -1228,6 +1229,21 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    * kolem padesáti megabajtů a přes Vercel by neprošel (viz lib/dropbox.ts).
    */
   if (isInternalRole(session.user.role)) {
+    /**
+     * SÉRIE SE SROVNÁ SAMA (17. 10. 2026: „doplň to do těch sérií automaticky,
+     * když vložím hudbu k jednomu dílu"). Nové vložení se rozešle hned; tohle
+     * dožene, co vzniklo dřív nebo než se série k projektu dopsala. Bez
+     * čekání - kartu to nesmí zdržet.
+     */
+    if (meta?.serie) {
+      void srovnejSerii({
+        caflouProjectId,
+        serie: meta.serie,
+        companyId: meta.companyId ?? null,
+        pridalId: session.user.id,
+      }).catch(() => undefined);
+    }
+
     tabs.push({
       key: 'hudba',
       label: prelozit(jazyk, 'projekt.zalozka.hudba'),
@@ -1238,7 +1254,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           dropboxNastaven={dropboxNastaven()}
           /* Hudbu u téhle firmy vybírá klient (17. 10. 2026) - karta pak
              místo vkládání ukazuje, jak je na tom výzva. */
-          serie={meta?.serie ?? null}
           hudbuDodavaKlient={firmaDodavaHudbu(company)}
           vyzvaPujdeSama={vyzvaPujdeSama(company, meta?.createdAt)}
           vyzva={firmaDodavaHudbu(company) ? await stavVyzvy(caflouProjectId) : null}

@@ -463,3 +463,62 @@ export async function rozsirDoSerie(vstup: {
     return { serie: null, dilu: 0 };
   }
 }
+
+/**
+ * SROVNÁNÍ SÉRIE PŘI OTEVŘENÍ KARTY (17. 10. 2026: „doplň to do těch sérií
+ * automaticky, když vložím hudbu k jednomu dílu").
+ *
+ * Vložení hudby u dílu se do série rozešle hned, samo. Tohle je na případy,
+ * kdy se to stát nemohlo: hudba se vložila dřív, než to portál uměl, nebo se
+ * série k projektu dopsala až potom. Místo tlačítka, o kterém musí někdo
+ * vědět, se to srovná samo při otevření karty.
+ *
+ * JE TO LEVNÉ, DOKUD JE VŠECHNO V POŘÁDKU: jeden dotaz porovná cesty souborů
+ * u projektu s předlohou série, a když nic nechybí, hotovo. Teprve když se
+ * něco rozešlo, udělá se skutečná práce.
+ *
+ * Volá se BEZ ČEKÁNÍ - kartu to nesmí zdržet a vykreslí se tak jako tak;
+ * případný rozdíl se projeví při dalším otevření.
+ */
+export async function srovnejSerii(vstup: {
+  caflouProjectId: string;
+  serie: string | null | undefined;
+  companyId: string | null;
+  pridalId: string | null;
+}): Promise<number> {
+  const serie = vstup.serie?.trim();
+  if (!serie) return 0;
+
+  try {
+    const [uProjektu, vPredloze] = await Promise.all([
+      prisma.hudbaProjektu.findMany({
+        where: { caflouProjectId: vstup.caflouProjectId },
+        select: { id: true, cesta: true },
+      }),
+      prisma.hudbaSerie.findMany({
+        where: kdeSerie(serie, vstup.companyId),
+        select: { cesta: true },
+      }),
+    ]);
+
+    const zname = new Set((vPredloze as { cesta: string }[]).map((r) => r.cesta));
+    const chybejici = (uProjektu as { id: string; cesta: string }[]).filter(
+      (r) => !zname.has(r.cesta),
+    );
+    if (chybejici.length === 0) return 0;
+
+    let dilu = 0;
+    for (const r of chybejici) {
+      const vysledek = await rozsirDoSerie({
+        caflouProjectId: vstup.caflouProjectId,
+        hudbaId: r.id,
+        pridalId: vstup.pridalId,
+      });
+      dilu = Math.max(dilu, vysledek.dilu);
+    }
+    return dilu;
+  } catch (err) {
+    console.error('Sérii se nepodařilo srovnat:', err);
+    return 0;
+  }
+}

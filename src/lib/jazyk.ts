@@ -421,22 +421,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Hudbu jsme od vás už dostali. Pokud chcete přidat další skladbu, klidně ji sem vložte.',
     en: 'We have already received your music. If you want to add another track, go ahead.',
   },
-  'hudbaSerie.nadpis': { cs: 'Díl série', en: 'Part of the series' },
-  'hudbaSerie.popis': {
-    cs: 'Nově vložená hudba se do série rozejde sama. Tohle doplní i to, co tu bylo dřív.',
-    en: 'Newly added music spreads through the series by itself. This also fills in what was here before.',
-  },
-  'hudbaSerie.tlacitko': { cs: 'Doplnit do celé série', en: 'Add to the whole series' },
-  'hudbaSerie.pracuji': { cs: 'Doplňuji…', en: 'Adding…' },
-  'hudbaSerie.hotovo': {
-    cs: 'Hotovo — hudbu dostaly i ostatní rozdělané díly ({pocet}) a vezme si ji i každý další.',
-    en: 'Done — the other parts in progress got the music too ({pocet}), and every future part will take it.',
-  },
-  'hudbaSerie.uzTamJe': {
-    cs: 'Všechny rozdělané díly už tuhle hudbu měly. Vezme si ji i každý další.',
-    en: 'Every part in progress already had this music. Every future part will take it too.',
-  },
-  'hudbaSerie.chyba': { cs: 'Doplnit se to nepodařilo.', en: 'It could not be added.' },
   'hudbaVyzva.nadpis': { cs: 'Hudbu dodává klient', en: 'The client supplies the music' },
   'hudbaVyzva.hotovo': { cs: 'Hudbu dodal klient', en: 'The client has supplied the music' },
   'hudbaVyzva.komu': { cs: 'Výzva jde na', en: 'The invitation goes to' },

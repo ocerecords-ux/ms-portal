@@ -20,15 +20,12 @@ export function HudbaSekce({
   caflouProjectId,
   pocatecni,
   dropboxNastaven,
-  serie = null,
   hudbuDodavaKlient = false,
   vyzvaPujdeSama = false,
   vyzva = null,
 }: {
   caflouProjectId: string;
   pocatecni: SkladbaProjektu[];
-  /** Série projektu - podle ní se nabízí doplnění hudby do ostatních dílů. */
-  serie?: string | null;
   /** Když chybí klíče, karta to řekne rovnou místo tichého selhání. */
   dropboxNastaven: boolean;
   hudbuDodavaKlient?: boolean;
@@ -52,10 +49,6 @@ export function HudbaSekce({
     <div className="flex flex-col gap-4">
       <p className="text-sm font-body text-muted m-0">{t('hudba.popis')}</p>
 
-      {serie && pocatecni.length > 0 && (
-        <DoSerie caflouProjectId={caflouProjectId} serie={serie} />
-      )}
-
       {hudbuDodavaKlient && (
         <VyzvaKlientovi
           caflouProjectId={caflouProjectId}
@@ -66,59 +59,6 @@ export function HudbaSekce({
       )}
 
       <HudbaSeznam api={api} pocatecni={pocatecni} pripraveno={dropboxNastaven} />
-    </div>
-  );
-}
-
-/**
- * DOPLNĚNÍ HUDBY DO CELÉ SÉRIE.
- *
- * Nově vložená hudba se do série rozejde sama. Tohle je na to, co se vložilo
- * dřív, než to portál uměl, a na případy, kdy se série k projektu dopsala až
- * potom. Pustit to podruhé nic nezkazí - co už někde leží, se nepřidá znovu.
- */
-function DoSerie({ caflouProjectId, serie }: { caflouProjectId: string; serie: string }) {
-  const t = usePreklad();
-  const [bezi, setBezi] = useState(false);
-  const [hotovo, setHotovo] = useState<string | null>(null);
-
-  async function posli() {
-    setBezi(true);
-    setHotovo(null);
-    const res = await fetch(`/api/projekty/${caflouProjectId}/hudba/do-serie`, {
-      method: 'POST',
-    }).catch(() => null);
-    setBezi(false);
-    if (!res?.ok) {
-      setHotovo(t('hudbaSerie.chyba'));
-      return;
-    }
-    const data = (await res.json()) as { dilu: number; skladeb: number };
-    setHotovo(
-      data.dilu > 0
-        ? t('hudbaSerie.hotovo', { pocet: data.dilu })
-        : t('hudbaSerie.uzTamJe'),
-    );
-  }
-
-  return (
-    <div className="rounded-card border border-line bg-surface px-4 py-3 flex flex-wrap items-center gap-3">
-      <span className="flex-1 min-w-[220px]">
-        <span className="block font-heading font-semibold text-sm text-ink">
-          {t('hudbaSerie.nadpis')} {serie}
-        </span>
-        <span className="block text-xs font-body text-muted mt-0.5">
-          {hotovo ?? t('hudbaSerie.popis')}
-        </span>
-      </span>
-      <button
-        type="button"
-        onClick={posli}
-        disabled={bezi}
-        className="rounded-pill border border-brand-purple bg-brand-purple/15 px-4 py-1.5 text-xs font-heading font-semibold text-brand-purpleLight cursor-pointer hover:bg-brand-purple hover:text-white transition-colors disabled:opacity-60"
-      >
-        {bezi ? t('hudbaSerie.pracuji') : t('hudbaSerie.tlacitko')}
-      </button>
     </div>
   );
 }
