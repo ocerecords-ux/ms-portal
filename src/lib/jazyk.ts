@@ -2425,14 +2425,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'prehravac.prehrat': { cs: 'Přehrát', en: 'Play' },
   'prehravac.pozastavit': { cs: 'Pozastavit', en: 'Pause' },
   'prehravac.nacitamPrubeh': {
+    cs: 'Načítám průběh nahrávky…',
+    en: 'Loading the waveform of the recording…',
+  },
   'prehravac.oznacitUsek': { cs: 'Označit úsek', en: 'Mark a section' },
   'prehravac.tahneteProUsek': { cs: 'Táhněte přes křivku', en: 'Drag across the waveform' },
   'prehravac.oznacitUsekPopis': {
     cs: 'Zapne označování: tažením přes křivku vyberete část, která se má použít.',
     en: 'Turns on marking: drag across the waveform to pick the part to use.',
-  },
-    cs: 'Načítám průběh nahrávky…',
-    en: 'Loading the waveform of the recording…',
   },
 
   // --- výběr projektu psaním (dávka 3) ---
