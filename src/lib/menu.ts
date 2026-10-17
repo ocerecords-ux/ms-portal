@@ -211,6 +211,10 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/doklady', label: 'Doklady' },
   // Hudba k audioknihám (17. 10. 2026) - odkaz si do lišty přidá, kdo ji řeší.
   { href: '/hudba-audioknihy', label: 'Hudba' },
+  // Novinky portálu (17. 10. 2026: „a ty novinky nemuzu pridat na hlavni
+  // panel") - sekce v PAGE_ACCESS byla, ale v nabídce pod „+ Přidat stránku"
+  // chyběla, takže si ji nikdo do lišty dostat nemohl.
+  { href: '/novinky', label: 'Novinky' },
 ];
 
 /** Vychozi (napevno zadana) navigace pro danou roli. */
