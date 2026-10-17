@@ -8,8 +8,9 @@
  * knihám, které mají za pár dní první frekvenci - klient by nechápal, proč po
  * něm najednou chceme hudbu k něčemu, co se už natáčí.
  *
- * Rozhoduje proto OKAMŽIK ZAPNUTÍ: výzva chodí jen k projektům, které vznikly
- * potom. Starší zakázky dobíhají po staru a hudbu k nim vybereme my.
+ * Rozhoduje proto OKAMŽIK ZAPNUTÍ: výzva SAMA chodí jen k projektům, které
+ * vznikly potom. U starších zakázek té firmy se ozve zvoneček nám - ne proto,
+ * že bychom hudbu vybírali, ale aby někdo klientovi napsal ručně.
  *
  * Ručnímu tlačítku „Poslat výzvu hned" tohle nebrání - to je vědomé
  * rozhodnutí člověka u konkrétního projektu.
@@ -23,12 +24,28 @@ export type FirmaHudba = {
   hudbaKlientOd?: Date | string | null;
 };
 
-export function hudbuDodavaKlient(
+/**
+ * DODÁVÁ HUDBU TAHLE FIRMA? Prostá pravda o firmě, bez ohledu na datum.
+ *
+ * Tohle se píše do obrazovek (oprava 17. 10. 2026: „tady to není propojené.
+ * Hudbu pro Audiolibrix nevybíráme my."). U staršího projektu klientské firmy
+ * sice výzva sama neodejde, ale napsat k němu „hudbu vybíráme my" je lež -
+ * nevybíráme, jen po klientovi musíme sáhnout ručně.
+ */
+export function firmaDodavaHudbu(firma: FirmaHudba | null | undefined): boolean {
+  return firma?.hudbuDodavaKlient === true;
+}
+
+/**
+ * PŮJDE VÝZVA SAMA? Tohle je to přísnější pravidlo - jen u projektů, které
+ * vznikly po zapnutí zaškrtávátka. Podle něj se rozhoduje úloha na pozadí.
+ */
+export function vyzvaPujdeSama(
   firma: FirmaHudba | null | undefined,
   projektVznikl: Date | string | null | undefined,
 ): boolean {
-  if (!firma?.hudbuDodavaKlient) return false;
-  if (!firma.hudbaKlientOd) return true; // zapnuto dřív, než se tohle hlídalo
+  if (!firmaDodavaHudbu(firma)) return false;
+  if (!firma?.hudbaKlientOd) return true; // zapnuto dřív, než se tohle hlídalo
 
   const odKdy = new Date(firma.hudbaKlientOd).getTime();
   if (!Number.isFinite(odKdy)) return true;

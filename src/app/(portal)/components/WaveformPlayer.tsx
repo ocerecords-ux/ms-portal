@@ -74,7 +74,10 @@ export function WaveformPlayer({
   const [duration, setDuration] = useState(0);
   /** Rozdělaný výběr během tažení - uloží se až po puštění myši. */
   const [tazeny, setTazeny] = useState<UsekSkladby | null>(null);
+  /** Zapnutý režim označování (tlačítkem) - viz komentář u obsluhy níž. */
+  const [znacim, setZnacim] = useState(false);
   const zacatekTazeni = useRef<{ x: number; cas: number } | null>(null);
+  const delkaRef = useRef(0);
 
   useEffect(() => {
     let destroyed = false;
@@ -176,58 +179,57 @@ export function WaveformPlayer({
   }
 
   /**
-   * OZNAČENÍ ÚSEKU TAŽENÍM PŘES KŘIVKU.
+   * OZNAČENÍ ÚSEKU SE ZAPÍNÁ TLAČÍTKEM (oprava 17. 10. 2026: „to označování
+   * tracku nefunguje. Zkusme tam dát nějaké tlačítko a tím se změní mód pro
+   * označení").
    *
-   * Vrstva nad křivkou si bere obojí - krátké klepnutí přesune přehrávání,
-   * tažení označí úsek. Kdyby se o kliknutí starala křivka sama a tažení
-   * tahle vrstva, musel by se mezi tím přepínat nějaký režim; takhle se
-   * člověk nemusí rozhodovat dopředu.
+   * Do té doby si jedna vrstva nad křivkou brala obojí - krátké klepnutí
+   * přesouvalo přehrávání, tažení označovalo úsek - a rozeznat jedno od
+   * druhého se ukázalo jako nespolehlivé. Teď je to jednoznačné: dokud se
+   * označování nezapne, křivka funguje jako dřív a vrstva tam vůbec není.
+   *
+   * Tažení hlídá DOKUMENT, ne ta vrstva: jakmile myš vyjede z křivky ven
+   * (a u krátkého úseku to je snadné), element už o ní nic neví a výběr by se
+   * zasekl na půl cesty.
    */
-  function casZBodu(e: React.PointerEvent<HTMLDivElement>): number {
-    const prvek = krivkaRef.current ?? (e.currentTarget as HTMLDivElement);
+  const delka = duration;
+  delkaRef.current = delka;
+
+  function casZBodu(clientX: number): number {
+    const prvek = krivkaRef.current;
+    if (!prvek) return 0;
     const r = prvek.getBoundingClientRect();
-    const pomer = Math.min(1, Math.max(0, (e.clientX - r.left) / Math.max(1, r.width)));
-    return pomer * duration;
+    const pomer = Math.min(1, Math.max(0, (clientX - r.left) / Math.max(1, r.width)));
+    return pomer * delkaRef.current;
   }
 
-  function zacniTazeni(e: React.PointerEvent<HTMLDivElement>) {
-    if (!naUsek || duration <= 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    zacatekTazeni.current = { x: e.clientX, cas: casZBodu(e) };
-  }
+  function zacniZnaceni(e: React.MouseEvent<HTMLDivElement>) {
+    if (!naUsek || delkaRef.current <= 0) return;
+    e.preventDefault();
+    const zacatek = { x: e.clientX, cas: casZBodu(e.clientX) };
+    zacatekTazeni.current = zacatek;
+    setTazeny({ od: zacatek.cas, do: zacatek.cas });
 
-  function tahni(e: React.PointerEvent<HTMLDivElement>) {
-    const zacatek = zacatekTazeni.current;
-    if (!zacatek || !naUsek) return;
-    // Pár pixelů posunu je ještě klepnutí, ne tažení - jinak by se úsek
-    // označoval i při obyčejném přesunu přehrávání.
-    if (Math.abs(e.clientX - zacatek.x) < 5) return;
-    const ted = casZBodu(e);
-    setTazeny({ od: Math.min(zacatek.cas, ted), do: Math.max(zacatek.cas, ted) });
-  }
-
-  function pustTazeni(e: React.PointerEvent<HTMLDivElement>) {
-    const zacatek = zacatekTazeni.current;
-    zacatekTazeni.current = null;
-    if (!zacatek || !naUsek) return;
-
-    if (Math.abs(e.clientX - zacatek.x) < 5) {
-      // Klepnutí - jen přesun přehrávání.
+    const pohyb = (ev: MouseEvent) => {
+      const ted = casZBodu(ev.clientX);
+      setTazeny({ od: Math.min(zacatek.cas, ted), do: Math.max(zacatek.cas, ted) });
+    };
+    const konec = (ev: MouseEvent) => {
+      document.removeEventListener('mousemove', pohyb);
+      document.removeEventListener('mouseup', konec);
+      zacatekTazeni.current = null;
       setTazeny(null);
-      const audio = audioRef.current;
-      if (audio && duration > 0) {
-        audio.currentTime = casZBodu(e);
-        setCurrentTime(audio.currentTime);
-      }
-      return;
-    }
+      setZnacim(false);
 
-    const ted = casZBodu(e);
-    const od = Math.round(Math.min(zacatek.cas, ted));
-    const doKdy = Math.round(Math.max(zacatek.cas, ted));
-    setTazeny(null);
-    // Úsek kratší než vteřina je skoro jistě omyl.
-    naUsek(doKdy - od >= 1 ? { od, do: doKdy } : null);
+      const ted = casZBodu(ev.clientX);
+      const od = Math.round(Math.min(zacatek.cas, ted));
+      const doKdy = Math.round(Math.max(zacatek.cas, ted));
+      // Úsek kratší než vteřina je skoro jistě omyl - a samotné klepnutí
+      // v režimu označování nemá co znamenat.
+      if (doKdy - od >= 1) naUsek({ od, do: doKdy });
+    };
+    document.addEventListener('mousemove', pohyb);
+    document.addEventListener('mouseup', konec);
   }
 
   const vyber = tazeny ?? usek;
@@ -280,17 +282,11 @@ export function WaveformPlayer({
               />
             )}
 
-            {naUsek && (
+            {naUsek && znacim && (
               <div
                 role="presentation"
-                onPointerDown={zacniTazeni}
-                onPointerMove={tahni}
-                onPointerUp={pustTazeni}
-                onPointerCancel={() => {
-                  zacatekTazeni.current = null;
-                  setTazeny(null);
-                }}
-                className="absolute inset-0 cursor-crosshair touch-none"
+                onMouseDown={zacniZnaceni}
+                className="absolute -inset-y-1 inset-x-0 z-10 cursor-crosshair rounded-md bg-brand-green/10 ring-1 ring-brand-green/60"
               />
             )}
           </div>
@@ -300,6 +296,34 @@ export function WaveformPlayer({
       <span className="text-xs font-heading text-muted tabular-nums w-12 shrink-0">
         −{formatTime(remaining)}
       </span>
+
+      {naUsek && (
+        <button
+          type="button"
+          onClick={() => setZnacim((z) => !z)}
+          title={t('prehravac.oznacitUsekPopis')}
+          className={`shrink-0 inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer transition-colors ${
+            znacim
+              ? 'border-0 bg-brand-green text-onAccent'
+              : 'border border-line bg-transparent text-muted hover:text-ink hover:border-brand-purpleLight'
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className="w-3.5 h-3.5"
+            aria-hidden="true"
+          >
+            <path d="M7 5v14" />
+            <path d="M17 5v14" />
+            <path d="M7 12h10" />
+          </svg>
+          {znacim ? t('prehravac.tahneteProUsek') : t('prehravac.oznacitUsek')}
+        </button>
+      )}
 
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio ref={audioRef} src={src} autoPlay={autoPlay} preload="metadata" className="hidden" />

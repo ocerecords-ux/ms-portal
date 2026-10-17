@@ -40,7 +40,7 @@ import { Tracklist } from './Tracklist';
 import { HudbaSekce } from './HudbaSekce';
 import { nactiHudbu } from '@/lib/hudbaProjektuServer';
 import { stavVyzvy } from '@/lib/vyzvaHudbaServer';
-import { hudbuDodavaKlient } from '@/lib/hudbaOdKlienta';
+import { firmaDodavaHudbu, vyzvaPujdeSama } from '@/lib/hudbaOdKlienta';
 import { dropboxNastaven } from '@/lib/dropbox';
 import { nactiTracklist } from '@/lib/tracklistServer';
 import { jeReklamaProjekt } from '@/lib/reklamniProjektServer';
@@ -1238,12 +1238,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           dropboxNastaven={dropboxNastaven()}
           /* Hudbu u téhle firmy vybírá klient (17. 10. 2026) - karta pak
              místo vkládání ukazuje, jak je na tom výzva. */
-          hudbuDodavaKlient={hudbuDodavaKlient(company, meta?.createdAt)}
-          vyzva={
-            hudbuDodavaKlient(company, meta?.createdAt)
-              ? await stavVyzvy(caflouProjectId)
-              : null
-          }
+          hudbuDodavaKlient={firmaDodavaHudbu(company)}
+          vyzvaPujdeSama={vyzvaPujdeSama(company, meta?.createdAt)}
+          vyzva={firmaDodavaHudbu(company) ? await stavVyzvy(caflouProjectId) : null}
         />
       ),
     });

@@ -21,6 +21,9 @@ import {
  * („ten název autor by neměl jít měnit").
  */
 
+/** Projekt, u kterého tatáž hudba hraje taky. */
+export type PouzitiJinde = { projektId: string; nazev: string };
+
 export type SkladbaProjektu = {
   id: string;
   nazev: string;
@@ -40,6 +43,12 @@ export type SkladbaProjektu = {
   velikost: number;
   pridal: string | null;
   kdy: string;
+  /**
+   * KDE JEŠTĚ TAHLE HUDBA HRAJE (zadání 17. 10. 2026: „v případě, že už bude
+   * hudba někde použita u jiného projektu, tak by to mělo zařvat. Pokud to
+   * teda není série"). Prázdné = nikde jinde.
+   */
+  pouzitoJinde: PouzitiJinde[];
 };
 
 const VYBER = {
@@ -95,6 +104,7 @@ function naSkladbu(r: RadekZDatabaze): SkladbaProjektu {
     velikost: r.velikost,
     pridal: r.pridal ? r.pridal.name || r.pridal.email : null,
     kdy: r.createdAt.toISOString(),
+    pouzitoJinde: [],
   };
 }
 
@@ -110,7 +120,98 @@ export async function nactiHudbu(caflouProjectId: string): Promise<SkladbaProjek
       console.error('Hudbu projektu se nepodařilo načíst:', err);
       return [];
     });
-  return (radky as RadekZDatabaze[]).map(naSkladbu);
+  const skladby = (radky as RadekZDatabaze[]).map(naSkladbu);
+  return doplnPouzitiJinde(caflouProjectId, skladby, radky as RadekZDatabaze[]);
+}
+
+/**
+ * HRAJE TAHLE HUDBA JEŠTĚ NĚKDE? (zadání 17. 10. 2026: „v případě, že už bude
+ * hudba někde použita u jiného projektu, tak by to mělo zařvat. Pokud to teda
+ * není série.")
+ *
+ * Shoda se hledá podle NÁZVU A AUTORA, ne podle cesty k souboru: tatáž
+ * skladba nahraná ke dvěma projektům leží v Dropboxu dvakrát, každá ve své
+ * složce. Cesta se porovnává taky, protože hudba zkopírovaná ze série míří
+ * na jeden a týž soubor.
+ *
+ * DÍLY JEDNÉ SÉRIE SE NEHLÁSÍ. Tam je opakování záměr - série má svou hudbu
+ * a každý další díl ji dostane; upozorňovat na to by znamenalo varování
+ * u každé knihy, která vyjde.
+ */
+async function doplnPouzitiJinde(
+  caflouProjectId: string,
+  skladby: SkladbaProjektu[],
+  radky: RadekZDatabaze[],
+): Promise<SkladbaProjektu[]> {
+  if (skladby.length === 0) return skladby;
+
+  try {
+    const nazvy = [...new Set(radky.map((r) => r.nazev))];
+    const cesty = [...new Set(radky.map((r) => r.cesta))];
+
+    const [muj, jinde] = await Promise.all([
+      prisma.projectMeta
+        .findUnique({ where: { caflouProjectId }, select: { serie: true } })
+        .catch(() => null),
+      prisma.hudbaProjektu
+        .findMany({
+          where: {
+            caflouProjectId: { not: caflouProjectId },
+            OR: [{ nazev: { in: nazvy } }, { cesta: { in: cesty } }],
+          },
+          select: { caflouProjectId: true, nazev: true, autor: true, cesta: true },
+        })
+        .catch(() => []),
+    ]);
+
+    const nalezene = jinde as {
+      caflouProjectId: string;
+      nazev: string;
+      autor: string | null;
+      cesta: string;
+    }[];
+    if (nalezene.length === 0) return skladby;
+
+    // Názvy a série protějšků jedním dotazem.
+    const idJinych = [...new Set(nalezene.map((r) => r.caflouProjectId))];
+    const metaJinych = (await prisma.projectMeta
+      .findMany({
+        where: { caflouProjectId: { in: idJinych } },
+        select: { caflouProjectId: true, name: true, serie: true },
+      })
+      .catch(() => [])) as { caflouProjectId: string; name: string | null; serie: string | null }[];
+    const popisProjektu = new Map(metaJinych.map((m) => [m.caflouProjectId, m]));
+
+    const mojeSerie = ((muj as { serie: string | null } | null)?.serie ?? '').trim().toLowerCase();
+
+    return skladby.map((s, i) => {
+      const radek = radky[i];
+      const klic = `${radek.nazev.toLowerCase()}|${(radek.autor ?? '').toLowerCase()}`;
+
+      const kde: PouzitiJinde[] = [];
+      for (const r of nalezene) {
+        const shoda =
+          r.cesta === radek.cesta ||
+          `${r.nazev.toLowerCase()}|${(r.autor ?? '').toLowerCase()}` === klic;
+        if (!shoda) continue;
+
+        const meta = popisProjektu.get(r.caflouProjectId);
+        const jehoSerie = (meta?.serie ?? '').trim().toLowerCase();
+        // Stejná série = opakování je záměr, nehlásí se.
+        if (mojeSerie && jehoSerie && mojeSerie === jehoSerie) continue;
+        if (kde.some((p) => p.projektId === r.caflouProjectId)) continue;
+
+        kde.push({
+          projektId: r.caflouProjectId,
+          nazev: meta?.name || r.caflouProjectId,
+        });
+      }
+      return kde.length > 0 ? { ...s, pouzitoJinde: kde } : s;
+    });
+  } catch (err) {
+    console.error('Použití hudby u jiných projektů se nepodařilo zjistit:', err);
+    return skladby;
+  }
 }
 
 /**

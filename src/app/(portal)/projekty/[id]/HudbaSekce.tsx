@@ -21,6 +21,7 @@ export function HudbaSekce({
   pocatecni,
   dropboxNastaven,
   hudbuDodavaKlient = false,
+  vyzvaPujdeSama = false,
   vyzva = null,
 }: {
   caflouProjectId: string;
@@ -28,6 +29,8 @@ export function HudbaSekce({
   /** Když chybí klíče, karta to řekne rovnou místo tichého selhání. */
   dropboxNastaven: boolean;
   hudbuDodavaKlient?: boolean;
+  /** U projektů starších než zaškrtnutí u firmy výzva sama neodejde. */
+  vyzvaPujdeSama?: boolean;
   vyzva?: StavVyzvy | null;
 }) {
   const t = usePreklad();
@@ -47,7 +50,12 @@ export function HudbaSekce({
       <p className="text-sm font-body text-muted m-0">{t('hudba.popis')}</p>
 
       {hudbuDodavaKlient && (
-        <VyzvaKlientovi caflouProjectId={caflouProjectId} vyzva={vyzva} maHudbu={pocatecni.length > 0} />
+        <VyzvaKlientovi
+          caflouProjectId={caflouProjectId}
+          vyzva={vyzva}
+          pujdeSama={vyzvaPujdeSama}
+          maHudbu={pocatecni.length > 0}
+        />
       )}
 
       <HudbaSeznam api={api} pocatecni={pocatecni} pripraveno={dropboxNastaven} />
@@ -63,10 +71,12 @@ export function HudbaSekce({
 function VyzvaKlientovi({
   caflouProjectId,
   vyzva,
+  pujdeSama,
   maHudbu,
 }: {
   caflouProjectId: string;
   vyzva: StavVyzvy | null;
+  pujdeSama: boolean;
   maHudbu: boolean;
 }) {
   const t = usePreklad();
@@ -111,12 +121,14 @@ function VyzvaKlientovi({
           </b>
           {stav?.jmeno ? ` (${stav.jmeno})` : ''}
         </li>
-        <li>
+        <li className={!stav?.odeslanoAt && !pujdeSama ? 'text-status-progress' : undefined}>
           {stav?.odeslanoAt
             ? `${t('hudbaVyzva.odeslanaKdy')} ${datumCas(stav.odeslanoAt)}`
-            : stav?.odejdeAt
-              ? `${t('hudbaVyzva.odejde')} ${datum(stav.odejdeAt)}`
-              : t('hudbaVyzva.jesteNesla')}
+            : !pujdeSama
+              ? t('hudbaVyzva.samaNepujde')
+              : stav?.odejdeAt
+                ? `${t('hudbaVyzva.odejde')} ${datum(stav.odejdeAt)}`
+                : t('hudbaVyzva.jesteNesla')}
         </li>
         {stav?.vlozenoAt && (
           <li className="text-ink">

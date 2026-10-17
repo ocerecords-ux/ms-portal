@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { hudbuDodavaKlient } from '@/lib/hudbaOdKlienta';
+import { firmaDodavaHudbu, vyzvaPujdeSama } from '@/lib/hudbaOdKlienta';
 import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 import { stavJeDokonceny } from '@/lib/stavyProjektu';
 
@@ -170,6 +170,11 @@ export type ProjektBezHudby = {
   zaDni: number | null;
   /** Hudbu u téhle firmy dodává klient. */
   hudbuDodavaKlient: boolean;
+  /**
+   * Odejde výzva sama? U projektů starších než zaškrtnutí u firmy ne - tam
+   * se musí poslat ručně (17. 10. 2026).
+   */
+  vyzvaPujdeSama: boolean;
   /** Stav výzvy klientovi, když nějaká je. */
   vyzva: { odeslanoAt: string | null; vlozenoAt: string | null } | null;
 };
@@ -307,7 +312,8 @@ export async function projektyBezHudby(): Promise<ProjektBezHudby[]> {
         serie: m.serie,
         prvniFrekvence: kdy ? kdy.toISOString() : null,
         zaDni: kdy ? dniDo(dnesek, kdy) : null,
-        hudbuDodavaKlient: hudbuDodavaKlient(m.company, m.createdAt),
+        hudbuDodavaKlient: firmaDodavaHudbu(m.company),
+        vyzvaPujdeSama: vyzvaPujdeSama(m.company, m.createdAt),
         vyzva: vyzva
           ? {
               odeslanoAt: vyzva.odeslanoAt ? vyzva.odeslanoAt.toISOString() : null,

@@ -42,6 +42,8 @@ export type SkladbaVSeznamu = {
   usekDo?: number | null;
   /** Už se do souboru koukalo na štítky? Starší skladby mají prázdno. */
   metadataCtena?: boolean;
+  /** Projekty, u kterých tatáž hudba hraje taky. Prázdné = nikde jinde. */
+  pouzitoJinde?: { projektId: string; nazev: string }[];
   puvod?: 'my' | 'klient' | 'serie';
   vlozilKlient?: string | null;
   velikost: number;
@@ -510,9 +512,15 @@ function Skladba({
       )}
 
       <div className="flex-1 min-w-[220px]">
-        <span className="block font-heading font-semibold text-sm text-ink">{skladba.nazev}</span>
+        {/* POPISKY U NÁZVU A AUTORA (zadání 17. 10. 2026: „tady by mělo být
+            uvedeno Název skladby: a Autor:"). Bez nich se u neznámé skladby
+            nedalo poznat, který řádek je co. */}
+        <span className="block font-heading font-semibold text-sm text-ink">
+          <span className="font-body font-normal text-muted">{t('hudba.nazevSkladby')} </span>
+          {skladba.nazev}
+        </span>
         <span className="block text-xs font-body text-muted">
-          {skladba.autor || t('hudba.autorNeznamy')}
+          {t('hudba.autorSkladby')} <span className="text-ink">{skladba.autor || t('hudba.autorNeznamy')}</span>
         </span>
         <span className="block text-[11px] font-body text-muted/80 mt-0.5">
           {popisky.join(' · ')}
@@ -535,6 +543,41 @@ function Skladba({
             </span>
           )}
         </div>
+
+        {/* UŽ TO NĚKDE HRAJE (zadání 17. 10. 2026: „v případě, že už bude hudba
+            někde použita u jiného projektu, tak by to mělo zařvat"). Díly jedné
+            série se nehlásí - tam je opakování záměr. */}
+        {(skladba.pouzitoJinde?.length ?? 0) > 0 && (
+          <p className="flex items-start gap-2 rounded-lg border border-status-progress/40 bg-status-progress/10 px-2.5 py-1.5 text-[11px] font-body text-ink m-0 mt-1.5">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="w-3.5 h-3.5 shrink-0 mt-px text-status-progress"
+              aria-hidden="true"
+            >
+              <path d="M12 8v5" />
+              <path d="M12 17h.01" />
+              <path d="M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+            </svg>
+            <span>
+              <b>{t('hudba.uzHrajeJinde')}</b>{' '}
+              {skladba.pouzitoJinde?.map((p, i) => (
+                <span key={p.projektId}>
+                  {i > 0 && ', '}
+                  <a
+                    href={`/projekty/${p.projektId}`}
+                    className="text-brand-purpleLight no-underline hover:text-ink"
+                  >
+                    {p.nazev}
+                  </a>
+                </span>
+              ))}
+            </span>
+          </p>
+        )}
 
         {/* OZNAČENÝ ÚSEK pod křivkou - ať je vidět i bez tažení myší. */}
         {!jenCteni && (

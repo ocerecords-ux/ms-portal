@@ -317,6 +317,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hudba.chybaZapisu': { cs: 'Skladbu se nepodařilo zapsat.', en: 'The track could not be saved.' },
   'hudba.chybaPrehrani': { cs: 'Soubor se nepodařilo otevřít.', en: 'The file could not be opened.' },
   'hudba.autorNeznamy': { cs: 'Autor neuvedený', en: 'Artist not listed' },
+  'hudba.nazevSkladby': { cs: 'Název skladby:', en: 'Track:' },
+  'hudba.autorSkladby': { cs: 'Autor:', en: 'Artist:' },
   'hudba.ctuMetadata': { cs: 'Čtu údaje ze souboru…', en: 'Reading file details…' },
   'hudba.stahnout': { cs: 'Stáhnout', en: 'Download' },
   'hudba.odebrat': { cs: 'Odebrat', en: 'Remove' },
@@ -327,6 +329,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hudba.odKlienta': { cs: 'vložil klient', en: 'added by the client' },
   'hudba.zeSerie': { cs: 'ze série', en: 'from the series' },
   'hudba.obalPopis': { cs: 'Obal skladby', en: 'Track artwork' },
+  'hudba.uzHrajeJinde': {
+    cs: 'Tahle hudba už hraje u:',
+    en: 'This music is already used in:',
+  },
   'hudba.usek': { cs: 'Použít jen', en: 'Use only' },
   'hudba.celaSkladba': { cs: 'použít celou skladbu', en: 'use the whole track' },
   'hudba.oznacitUsek': {
@@ -355,6 +361,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hudbaKnihovna.vyzvaCeka': { cs: 'výzva zatím nešla', en: 'invitation not sent yet' },
   'hudbaKnihovna.vybiramMy': { cs: 'Hudbu vybíráme my', en: 'We choose the music' },
   'hudbaKnihovna.vlozitHudbu': { cs: 'Vložit hudbu', en: 'Add music' },
+  'hudbaKnihovna.otevritKartu': { cs: 'Otevřít kartu', en: 'Open the card' },
+  'hudbaKnihovna.vyzvaRucne': {
+    cs: 'výzvu je potřeba poslat ručně',
+    en: 'the invitation has to be sent by hand',
+  },
   'hudbaKnihovna.novaSerie': { cs: 'Další série', en: 'Another series' },
   'hudbaKnihovna.nazevSerie': { cs: 'Název série', en: 'Series name' },
   'hudbaKnihovna.vsechnyFirmy': { cs: 'Pro všechny firmy', en: 'For every company' },
@@ -410,6 +421,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'It will go out by itself three days before the first session, which is not scheduled yet.',
   },
   'hudbaVyzva.odejde': { cs: 'Odejde sama', en: 'It goes out by itself on' },
+  'hudbaVyzva.samaNepujde': {
+    cs: 'Sama neodejde — projekt vznikl dřív, než jsme to u firmy zapnuli. Pošlete ji tlačítkem.',
+    en: 'It will not go out by itself — the project is older than the setting on the company. Send it with the button.',
+  },
   'hudbaVyzva.vlozilKdy': { cs: 'Klient hudbu vložil', en: 'The client added the music' },
   'hudbaVyzva.poslatHned': { cs: 'Poslat výzvu hned', en: 'Send the invitation now' },
   'hudbaVyzva.poslatZnovu': { cs: 'Poslat znovu', en: 'Send again' },
@@ -2410,6 +2425,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'prehravac.prehrat': { cs: 'Přehrát', en: 'Play' },
   'prehravac.pozastavit': { cs: 'Pozastavit', en: 'Pause' },
   'prehravac.nacitamPrubeh': {
+  'prehravac.oznacitUsek': { cs: 'Označit úsek', en: 'Mark a section' },
+  'prehravac.tahneteProUsek': { cs: 'Táhněte přes křivku', en: 'Drag across the waveform' },
+  'prehravac.oznacitUsekPopis': {
+    cs: 'Zapne označování: tažením přes křivku vyberete část, která se má použít.',
+    en: 'Turns on marking: drag across the waveform to pick the part to use.',
+  },
     cs: 'Načítám průběh nahrávky…',
     en: 'Loading the waveform of the recording…',
   },

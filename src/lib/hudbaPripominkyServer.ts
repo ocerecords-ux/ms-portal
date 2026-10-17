@@ -60,18 +60,27 @@ export async function pripomenChybejiciHudbu(): Promise<{
       continue;
     }
 
-    if (projekt.hudbuDodavaKlient) {
+    if (projekt.vyzvaPujdeSama) {
       // Výzva se posílá jen jednou sama; posliVyzvu si odeslané pohlídá.
       const vysledek = await posliVyzvu(projekt.id);
       if (vysledek.ok) vyzev += 1;
       else preskoceno += 1;
     } else {
+      /**
+       * Zvoneček nám. U firmy, která si hudbu dodává sama, to ale NENÍ výzva
+       * k výběru hudby - projekt je jen starší než to zaškrtávátko, takže
+       * výzva sama neodejde a někdo ji musí poslat ručně (17. 10. 2026).
+       */
       await notifyMany(
         tym.map((u) => u.id),
         {
           kind: 'hudba-chybi',
-          title: `K audioknize ${projekt.nazev} chybí hudba`,
-          body: `První frekvence je ${popisDne(projekt.zaDni ?? 0)}. Vyberte hudbu a vložte ji do karty projektu.`,
+          title: projekt.hudbuDodavaKlient
+            ? `K audioknize ${projekt.nazev} nedorazila hudba od klienta`
+            : `K audioknize ${projekt.nazev} chybí hudba`,
+          body: projekt.hudbuDodavaKlient
+            ? `První frekvence je ${popisDne(projekt.zaDni ?? 0)}. Hudbu dodává klient — pošlete mu výzvu z karty projektu.`
+            : `První frekvence je ${popisDne(projekt.zaDni ?? 0)}. Vyberte hudbu a vložte ji do karty projektu.`,
           url: `/projekty/${projekt.id}`,
         },
       );
@@ -117,7 +126,7 @@ export async function chybejiciHudbaDoPrehledu(userId: string): Promise<string[]
       .slice(0, 5)
       .map((p) =>
         p.hudbuDodavaKlient
-          ? `${p.nazev} — hudbu dodává klient a zatím nedorazila (první frekvence ${popisDne(p.zaDni ?? 0)})`
+          ? `${p.nazev} — hudbu dodává klient a zatím nedorazila${p.vyzvaPujdeSama ? '' : ', výzvu je potřeba poslat ručně'} (první frekvence ${popisDne(p.zaDni ?? 0)})`
           : `${p.nazev} — chybí hudba, první frekvence ${popisDne(p.zaDni ?? 0)}`,
       );
   } catch (err) {

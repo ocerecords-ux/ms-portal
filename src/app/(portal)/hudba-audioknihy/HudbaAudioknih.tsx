@@ -111,14 +111,18 @@ function Chybi({ radky }: { radky: ProjektBezHudby[] }) {
             )}
           </span>
 
-          <span className="text-xs font-body min-w-[170px]">
+          <span className="text-xs font-body min-w-[190px]">
             {r.hudbuDodavaKlient ? (
               <span className="text-brand-purpleLight">
                 {t('hudbaKnihovna.dodavaKlient')}
-                <span className="block text-muted">
+                <span
+                  className={`block ${r.vyzvaPujdeSama || r.vyzva?.odeslanoAt ? 'text-muted' : 'text-status-progress'}`}
+                >
                   {r.vyzva?.odeslanoAt
                     ? `${t('hudbaKnihovna.vyzvaOdeslana')} ${datum(r.vyzva.odeslanoAt)}`
-                    : t('hudbaKnihovna.vyzvaCeka')}
+                    : r.vyzvaPujdeSama
+                      ? t('hudbaKnihovna.vyzvaCeka')
+                      : t('hudbaKnihovna.vyzvaRucne')}
                 </span>
               </span>
             ) : (
@@ -130,7 +134,7 @@ function Chybi({ radky }: { radky: ProjektBezHudby[] }) {
             href={`/projekty/${r.id}`}
             className="rounded-pill bg-brand-purple text-white px-4 py-1.5 text-xs font-heading font-semibold no-underline hover:bg-brand-purpleDark transition-colors"
           >
-            {t('hudbaKnihovna.vlozitHudbu')}
+            {r.hudbuDodavaKlient ? t('hudbaKnihovna.otevritKartu') : t('hudbaKnihovna.vlozitHudbu')}
           </Link>
         </li>
       ))}

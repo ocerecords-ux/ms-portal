@@ -79,5 +79,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { status: 502 },
     );
   }
-  return NextResponse.json({ skladba }, { status: 201 });
+
+  // Načte se znovu celá karta, aby se k nové skladbě rovnou vrátilo i to,
+  // jestli tatáž hudba nehraje u jiného projektu (17. 10. 2026).
+  const sKolizemi = (await nactiHudbu(id)).find((s) => s.id === skladba.id) ?? skladba;
+  return NextResponse.json({ skladba: sKolizemi }, { status: 201 });
 }
