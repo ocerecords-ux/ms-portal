@@ -16,15 +16,17 @@ import { zakladPortalu } from '@/lib/preposlechOdkaz';
  */
 
 export type StavVyzvy = {
-  token: string;
-  email: string;
+  /** Prázdné, dokud výzva nevznikla - založí se až při prvním odeslání. */
+  token: string | null;
+  /** Komu výzva půjde. Prázdné jen tehdy, když projekt nemá kam poslat. */
+  email: string | null;
   jmeno: string | null;
   odeslanoAt: string | null;
   vlozenoAt: string | null;
   vlozilJmeno: string | null;
   /** Kdy výzva odejde sama, když do té doby nic nepřijde. */
   odejdeAt: string | null;
-  odkaz: string;
+  odkaz: string | null;
 };
 
 export function odkazNaVyzvu(token: string): string {
@@ -143,11 +145,20 @@ export async function posliVyzvu(
   return { ok: true, email: vyzva.email };
 }
 
-/** Stav výzvy do karty projektu. */
-export async function stavVyzvy(
-  caflouProjectId: string,
-  odejdeAt: Date | null = null,
-): Promise<StavVyzvy | null> {
+/**
+ * STAV VÝZVY DO KARTY PROJEKTU.
+ *
+ * Vrací se i tehdy, KDYŽ VÝZVA JEŠTĚ NEVZNIKLA (oprava 17. 10. 2026: „jak to,
+ * že projekt nemá e-mail klienta, když ho má?"). Záznam se zakládá až při
+ * prvním odeslání, takže se do té doby karta ptala prázdného záznamu a psala,
+ * že projekt nemá e-mail - i u projektu, kde klient vyplněný byl. Adresáta si
+ * proto dohledá sama, stejně jako to pak udělá odesílání.
+ *
+ * Zároveň spočítá, KDY VÝZVA ODEJDE: tři dny před první frekvencí (u firmy se
+ * dá předstih změnit). Bez termínu natáčení se nedá říct kdy, a karta to pak
+ * napíše obecně.
+ */
+export async function stavVyzvy(caflouProjectId: string): Promise<StavVyzvy | null> {
   const vyzva = (await prisma.vyzvaHudba
     .findUnique({ where: { caflouProjectId } })
     .catch(() => null)) as {
@@ -158,18 +169,50 @@ export async function stavVyzvy(
     vlozenoAt: Date | null;
     vlozilJmeno: string | null;
   } | null;
-  if (!vyzva) return null;
+
+  // Adresát z výzvy, a dokud není, tak ten, komu by právě teď odešla.
+  const komu = vyzva
+    ? { email: vyzva.email, jmeno: vyzva.jmeno }
+    : await prijemce(caflouProjectId);
 
   return {
-    token: vyzva.token,
-    email: vyzva.email,
-    jmeno: vyzva.jmeno,
-    odeslanoAt: vyzva.odeslanoAt ? vyzva.odeslanoAt.toISOString() : null,
-    vlozenoAt: vyzva.vlozenoAt ? vyzva.vlozenoAt.toISOString() : null,
-    vlozilJmeno: vyzva.vlozilJmeno,
-    odejdeAt: odejdeAt ? odejdeAt.toISOString() : null,
-    odkaz: odkazNaVyzvu(vyzva.token),
+    token: vyzva?.token ?? null,
+    email: komu?.email ?? null,
+    jmeno: komu?.jmeno ?? null,
+    odeslanoAt: vyzva?.odeslanoAt ? vyzva.odeslanoAt.toISOString() : null,
+    vlozenoAt: vyzva?.vlozenoAt ? vyzva.vlozenoAt.toISOString() : null,
+    vlozilJmeno: vyzva?.vlozilJmeno ?? null,
+    odejdeAt: (await kdyVyzvaOdejde(caflouProjectId))?.toISOString() ?? null,
+    odkaz: vyzva ? odkazNaVyzvu(vyzva.token) : null,
   };
+}
+
+/** Tři dny před první frekvencí; u firmy se dá předstih nastavit. */
+async function kdyVyzvaOdejde(caflouProjectId: string): Promise<Date | null> {
+  const [meta, termin] = await Promise.all([
+    prisma.projectMeta
+      .findUnique({
+        where: { caflouProjectId },
+        select: { company: { select: { hudbaPredstihDni: true } } },
+      })
+      .catch(() => null),
+    prisma.studioBlock
+      .findMany({
+        where: { kind: 'NATACENI' as never, caflouProjectId },
+        orderBy: { start: 'asc' },
+        take: 1,
+        select: { start: true },
+      })
+      .catch(() => []),
+  ]);
+
+  const prvni = (termin as { start: Date }[])[0]?.start;
+  if (!prvni) return null;
+  const dni = (meta as { company: { hudbaPredstihDni: number } | null } | null)?.company
+    ?.hudbaPredstihDni;
+  const kdy = new Date(prvni);
+  kdy.setDate(kdy.getDate() - (dni && dni > 0 ? dni : 3));
+  return kdy;
 }
 
 export type ProjektKVyzve = {

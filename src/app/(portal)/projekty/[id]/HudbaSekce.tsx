@@ -103,13 +103,18 @@ function VyzvaKlientovi({
 
       <ul className="list-none p-0 m-0 flex flex-col gap-1 text-xs font-body text-muted">
         <li>
-          {t('hudbaVyzva.komu')}: <b className="text-ink">{stav?.email ?? t('hudbaVyzva.bezKontaktu')}</b>
+          {t('hudbaVyzva.komu')}:{' '}
+          <b className={stav?.email ? 'text-ink' : 'text-status-progress'}>
+            {stav?.email ?? t('hudbaVyzva.bezKontaktu')}
+          </b>
           {stav?.jmeno ? ` (${stav.jmeno})` : ''}
         </li>
         <li>
           {stav?.odeslanoAt
             ? `${t('hudbaVyzva.odeslanaKdy')} ${datumCas(stav.odeslanoAt)}`
-            : t('hudbaVyzva.jesteNesla')}
+            : stav?.odejdeAt
+              ? `${t('hudbaVyzva.odejde')} ${datum(stav.odejdeAt)}`
+              : t('hudbaVyzva.jesteNesla')}
         </li>
         {stav?.vlozenoAt && (
           <li className="text-ink">
@@ -124,7 +129,7 @@ function VyzvaKlientovi({
           <button
             type="button"
             onClick={posli}
-            disabled={posila}
+            disabled={posila || !stav?.email}
             className="rounded-pill border-0 bg-brand-purple px-4 py-1.5 text-xs font-heading font-semibold text-white cursor-pointer hover:bg-brand-purpleDark transition-colors disabled:opacity-60"
           >
             {stav?.odeslanoAt ? t('hudbaVyzva.poslatZnovu') : t('hudbaVyzva.poslatHned')}
@@ -146,6 +151,11 @@ function VyzvaKlientovi({
       <p className="text-[11px] font-body text-muted m-0">{t('hudbaVyzva.vysvetleni')}</p>
     </div>
   );
+}
+
+function datum(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
 }
 
 function datumCas(iso: string): string {
