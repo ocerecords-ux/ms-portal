@@ -1238,6 +1238,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           dropboxNastaven={dropboxNastaven()}
           /* Hudbu u téhle firmy vybírá klient (17. 10. 2026) - karta pak
              místo vkládání ukazuje, jak je na tom výzva. */
+          serie={meta?.serie ?? null}
           hudbuDodavaKlient={firmaDodavaHudbu(company)}
           vyzvaPujdeSama={vyzvaPujdeSama(company, meta?.createdAt)}
           vyzva={firmaDodavaHudbu(company) ? await stavVyzvy(caflouProjectId) : null}
