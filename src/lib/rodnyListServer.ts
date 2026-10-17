@@ -19,6 +19,7 @@ import {
   RL_TRIGGER_STATUS,
   type RodnyListFields,
 } from '@/lib/rodnyList';
+import { hudbaProRodnyList } from '@/lib/hudbaProjektuServer';
 
 /**
  * Běh Rodného listu - kdy vzniká, kam se ukládá, kdo se to dozví.
@@ -137,6 +138,32 @@ function fieldsZVystupu(
     productionDate: vystup.datumVyroby
       ? new Date(`${vystup.datumVyroby}T00:00:00.000Z`)
       : zProjektu.productionDate,
+  };
+}
+
+/**
+ * HUDBA Z KARTY, KDYŽ V LISTU ŽÁDNÁ NENÍ (17. 10. 2026: „a dokazeme
+ * u projektu reklam z tech udaju o hudbe udelat rovnou rodny list?").
+ *
+ * Karta Hudba má název i autora přečtené ze štítků souboru. Rodný list si je
+ * proto vezme sám - ale JEN KDYŽ V NĚM NEJSOU. Co někdo vyplnil rukou
+ * u výstupu nebo u projektu, má přednost; zaškrtnuté „Spot bez hudby" taky,
+ * tam se hudba do listu nepíše schválně.
+ */
+async function sHudbouZKarty(
+  fields: RodnyListFields,
+  caflouProjectId: string,
+): Promise<RodnyListFields> {
+  if (fields.noMusic) return fields;
+  if (fields.musicTitle.trim() && fields.musicAuthor.trim()) return fields;
+
+  const zKarty = await hudbaProRodnyList(caflouProjectId);
+  if (!zKarty) return fields;
+
+  return {
+    ...fields,
+    musicTitle: fields.musicTitle.trim() || zKarty.nazev,
+    musicAuthor: fields.musicAuthor.trim() || zKarty.autor,
   };
 }
 
@@ -373,9 +400,12 @@ async function vytvorRodnyList(
     if (!company) {
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
     }
-    const fields = opts.vystup
-      ? fieldsZVystupu(opts.vystup, meta as Record<string, unknown> | null, projectName)
-      : fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
+    const fields = await sHudbouZKarty(
+      opts.vystup
+        ? fieldsZVystupu(opts.vystup, meta as Record<string, unknown> | null, projectName)
+        : fieldsFromMeta(meta as Record<string, unknown> | null, projectName),
+      caflouProjectId,
+    );
     // Klient na dokumentu: co je vyplnene u vystupu, jinak u projektu, jinak
     // nazev firmy (zadani 10. 9. 2026). Na RL obcas patri neco jineho nez
     // firma, ktere se fakturuje - agentura, koncovy zadavatel.
@@ -691,7 +721,10 @@ export async function nahledRodnehoListu(
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
     }
 
-    const ulozene = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
+    const ulozene = await sHudbouZKarty(
+      fieldsFromMeta(meta as Record<string, unknown> | null, projectName),
+      caflouProjectId,
+    );
     // Rozepsane hodnoty prebijou ulozene. Jinak receno: co ve formulari
     // neni, zustava tak, jak je ulozene.
     const fields: RodnyListFields = {
@@ -805,9 +838,12 @@ export async function rodnyListKFakture(input: {
     const dokumenty: { nazev: string; pdf: Buffer; rodnyListId: string; version: number }[] = [];
 
     for (const vystup of jednotky) {
-      const fields = vystup
-        ? fieldsZVystupu(vystup, meta as Record<string, unknown> | null, projectName)
-        : fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
+      const fields = await sHudbouZKarty(
+        vystup
+          ? fieldsZVystupu(vystup, meta as Record<string, unknown> | null, projectName)
+          : fieldsFromMeta(meta as Record<string, unknown> | null, projectName),
+        caflouProjectId,
+      );
       const klientNaRL =
         (vystup?.klientNaRL || '').trim() ||
         ((meta?.rlClientName as string | null) || '').trim() ||

@@ -6465,6 +6465,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The copy on Drive will be moved to the bin.',
   },
   'rodnyList.hudbaNadpis': { cs: 'Hudba ve spotu', en: 'Music in the advert' },
+  // Hudba do rodného listu z karty Hudba (17. 10. 2026).
+  'rodnyList.vKarteHudba': { cs: 'V kartě Hudba je:', en: 'The Music tab has:' },
+  'rodnyList.prevzitZKarty': { cs: 'Převzít z karty Hudba', en: 'Take from the Music tab' },
   'rodnyList.bezHudby': { cs: 'Spot nemá hudbu', en: 'The advert has no music' },
   'rodnyList.bezHudbyVDokumentu': {
     cs: 'V Rodném listu bude u hudby uvedeno „Spot bez hudby“ — žádný vymyšlený údaj se tam nedostane.',

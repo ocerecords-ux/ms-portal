@@ -61,6 +61,7 @@ export function RodnyListSection({
   nazevFirmy,
   projectName,
   jeRadiovySpot,
+  hudbaZKarty,
   rlError,
   rodneListy,
   initial,
@@ -72,6 +73,12 @@ export function RodnyListSection({
   projectName: string;
   /** Rádiový spot = typ projektu má v ceníku zapnutý Rodný list. */
   jeRadiovySpot: boolean;
+  /**
+   * Název a autor z karty Hudba (17. 10. 2026). Políčka se z toho předvyplní,
+   * když v listu nic není; tlačítkem jde hodnoty převzít i později, když už
+   * někdo něco napsal a chce to srovnat s kartou.
+   */
+  hudbaZKarty: { nazev: string; autor: string } | null;
   /** Poslední zaznamenaná chyba generování (ProjectMeta.rlError). */
   rlError: string | null;
   rodneListy: RodnyListRow[];
@@ -310,6 +317,35 @@ export function RodnyListSection({
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4">
+          {/**
+           * CO JE V KARTĚ HUDBA (17. 10. 2026). Název a autor jsou tam
+           * přečtené ze štítků souboru, takže je nemá smysl přepisovat ručně.
+           * Políčka se z nich předvyplní při otevření; tohle tlačítko je pro
+           * případ, že se hudba vložila nebo vyměnila až potom.
+           */}
+          {hudbaZKarty &&
+            (hudbaZKarty.nazev !== values.musicTitle.trim() ||
+              hudbaZKarty.autor !== values.musicAuthor.trim()) && (
+              <div className="flex flex-wrap items-center gap-2 text-sm font-body text-muted">
+                <span>
+                  {t('rodnyList.vKarteHudba')}{' '}
+                  <strong className="text-ink">{hudbaZKarty.nazev}</strong>
+                  {hudbaZKarty.autor ? ` — ${hudbaZKarty.autor}` : ''}
+                </span>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      set('musicTitle', hudbaZKarty.nazev);
+                      set('musicAuthor', hudbaZKarty.autor);
+                    }}
+                    className="rounded-lg border border-line px-3 py-1 text-xs font-body text-muted"
+                  >
+                    {t('rodnyList.prevzitZKarty')}
+                  </button>
+                )}
+              </div>
+            )}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">{t('rodnyList.pole.nazevSkladby')}</span>
             <input

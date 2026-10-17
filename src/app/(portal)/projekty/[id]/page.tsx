@@ -80,6 +80,7 @@ import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/projektySeznamServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy } from '@/lib/rodnyListServer';
+import { hudbaProRodnyList } from '@/lib/hudbaProjektuServer';
 import { vystupyProProjekt } from '@/lib/vystupyServer';
 import { sDedenim } from '@/lib/vystupy';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
@@ -834,6 +835,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // v portalu zadne caflouCompanyId nema, takze klient zustaval prazdny - a
   // protoze je klient povinny udaj, neslo u nej RL vyrobit vubec (zadani
   // 10. 9. 2026). Caflou zustava jako zaloha pro projekty pred prenosem.
+  /**
+   * HUDBA DO RODNÉHO LISTU Z KARTY HUDBA (17. 10. 2026: „a dokazeme u projektu
+   * reklam z tech udaju o hudbe udelat rovnou rodny list?"). Karta má název
+   * i autora přečtené ze štítků souboru, takže se do listu předvyplní - ručně
+   * vyplněné hodnoty mají přednost a nikdy se nepřepíšou.
+   */
+  const hudbaZKarty = await hudbaProRodnyList(caflouProjectId);
+
   const rodnyList = (
     <RodnyListSection
       caflouProjectId={caflouProjectId}
@@ -845,6 +854,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         prelozitS(jazyk, 'projekt.zaloha.nazev', { id: caflouProjectId })
       }
       jeRadiovySpot={jeRadiovySpot}
+      hudbaZKarty={hudbaZKarty}
       rlError={metaPoSync?.rlError ?? null}
       rodneListy={rodneListy.map((rl) => ({
         id: rl.id,
@@ -864,8 +874,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         // Rezie se predvyplnuje (zadani 10. 9. 2026) - jen kdyz u projektu
         // jeste zadna neni, at se rucne zadana nikdy neprepise.
         directorName: metaPoSync?.directorName || VYCHOZI_REZIE,
-        musicTitle: metaPoSync?.musicTitle ?? '',
-        musicAuthor: metaPoSync?.musicAuthor ?? '',
+        musicTitle: (metaPoSync?.musicTitle || '').trim() || hudbaZKarty?.nazev || '',
+        musicAuthor: (metaPoSync?.musicAuthor || '').trim() || hudbaZKarty?.autor || '',
         noMusic: metaPoSync?.noMusic ?? false,
         // Datum vyroby se predvyplnuje na dnesek (zadani 10. 9. 2026) -
         // prazdne bylo nejcastejsi duvod, proc RL neslo vyrobit.

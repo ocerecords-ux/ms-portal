@@ -343,6 +343,43 @@ export async function odpojSkladbu(id: string): Promise<boolean> {
 }
 
 /**
+ * HUDBA PRO RODNÝ LIST (zadání 17. 10. 2026: „a dokazeme u projektu reklam
+ * z tech udaju o hudbe udelat rovnou rodny list?").
+ *
+ * Karta Hudba čte název a autora rovnou ze štítků souboru, takže totéž
+ * nemusí nikdo přepisovat do Rodného listu ručně. Vrací se to, co má stát
+ * v dokumentu - jedna řádka pro název, jedna pro autora.
+ *
+ * VÍC SKLADEB SE SPOJÍ. U spotu bývá jedna, ale když jich je víc, patří do
+ * listu všechny; spojují se " + ", protože dokument má na hudbu dva řádky,
+ * ne tabulku. Skladba bez autora autora do výčtu nepřidá - ať v listu
+ * nestojí „Autor neuvedený + Jan Novák".
+ *
+ * Nepřepisuje nic: volající to bere jen tam, kde není vyplněno ručně.
+ */
+export async function hudbaProRodnyList(
+  caflouProjectId: string,
+): Promise<{ nazev: string; autor: string } | null> {
+  try {
+    const radky = (await prisma.hudbaProjektu.findMany({
+      where: { caflouProjectId },
+      orderBy: { createdAt: 'asc' },
+      select: { nazev: true, autor: true },
+    })) as { nazev: string; autor: string | null }[];
+    if (radky.length === 0) return null;
+
+    const nazvy = [...new Set(radky.map((r) => r.nazev.trim()).filter(Boolean))];
+    const autori = [...new Set(radky.map((r) => (r.autor ?? '').trim()).filter(Boolean))];
+    if (nazvy.length === 0) return null;
+
+    return { nazev: nazvy.join(' + '), autor: autori.join(' + ') };
+  } catch (err) {
+    console.error('Hudbu pro rodný list se nepodařilo načíst:', err);
+    return null;
+  }
+}
+
+/**
  * Kde skladba leží - projekt a cesta souboru v Dropboxu. Čte se těsně PŘED
  * odpojením: po smazání řádku už není odkud vzít, co se má odebrat i ostatním
  * dílům série (17. 10. 2026).
