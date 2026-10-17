@@ -34,6 +34,8 @@ export type SkladbaVSeznamu = {
   /** Která část nahrávky se má použít; vteřiny od začátku, prázdné = celá. */
   usekOd?: number | null;
   usekDo?: number | null;
+  /** Už se do souboru koukalo na štítky? Starší skladby mají prázdno. */
+  metadataCtena?: boolean;
   puvod?: 'my' | 'klient' | 'serie';
   vlozilKlient?: string | null;
   velikost: number;
@@ -53,6 +55,11 @@ export type HudbaApi = {
   polozka: (id: string) => string;
   /** Adresa obrázku obalu. */
   obal: (id: string) => string;
+  /**
+   * Dočtení štítků ze souboru u skladeb vložených dřív, než to portál uměl.
+   * Prázdné tam, kde to nedává smysl (hudba série se vkládala až potom).
+   */
+  doctiMetadata?: (id: string) => string;
   /**
    * Co se přibalí do každého požadavku navíc. U série je to její název
    * a firma - bez nich by skladba nevěděla, kam patří. U projektu je to
@@ -251,6 +258,25 @@ export function HudbaSeznam({
     await fetch(api.polozka(id), { method: 'DELETE' }).catch(() => null);
   }
 
+  /**
+   * DOČTENÍ ŠTÍTKŮ U STARŠÍCH SKLADEB (17. 10. 2026: „tady se nepropisují
+   * autor a název skladby. v metadatech přitom jsou. taky i obrázek").
+   *
+   * Skladby vložené dřív, než portál uměl metadata číst, mají jen název
+   * odvozený ze jména souboru. Portál si proto z Dropboxu stáhne začátek
+   * souboru a štítky přečte sám - znovu je nahrávat kvůli tomu nemá smysl.
+   * Děje se to JEDNOU: server si zapíše, že se do souboru koukal.
+   */
+  async function doctiMetadata(id: string) {
+    if (!api.doctiMetadata) return;
+    const res = await fetch(api.doctiMetadata(id), { method: 'POST' }).catch(() => null);
+    if (!res?.ok) return;
+    const data = (await res.json()) as { skladba: SkladbaVSeznamu | null };
+    if (data.skladba) {
+      setSkladby((p) => p.map((s) => (s.id === id ? { ...s, ...data.skladba } : s)));
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {!pripraveno && (
@@ -271,6 +297,7 @@ export function HudbaSeznam({
               jenCteni={jenCteni}
               naPoznamku={(text) => ulozPoznamku(s.id, text)}
               naUsek={(usek) => ulozUsek(s.id, usek)}
+              naDocteni={() => doctiMetadata(s.id)}
               naOdebrani={() => odpoj(s.id)}
               naChybu={setChyba}
             />
@@ -362,6 +389,7 @@ function Skladba({
   jenCteni,
   naPoznamku,
   naUsek,
+  naDocteni,
   naOdebrani,
   naChybu,
 }: {
@@ -370,6 +398,7 @@ function Skladba({
   jenCteni: boolean;
   naPoznamku: (text: string) => void;
   naUsek: (usek: UsekSkladby | null) => void;
+  naDocteni: () => void;
   naOdebrani: () => void;
   naChybu: (text: string | null) => void;
 }) {
@@ -387,6 +416,19 @@ function Skladba({
    * Přehrávání se samo nespustí; waveforma je tu od toho, aby šlo klepnout
    * rovnou doprostřed skladby.
    */
+  /**
+   * Skladba vložená dřív, než portál uměl číst štítky, si je dotáhne sama -
+   * jednou, při prvním otevření karty. Server si zapíše, že se do souboru
+   * koukal, takže se to u skladby bez štítků neopakuje donekonečna.
+   */
+  useEffect(() => {
+    if (skladba.metadataCtena !== false) return;
+    if (skladba.autor && skladba.maObal) return;
+    void naDocteni();
+    // Jednou na skladbu; `naDocteni` je obsluha z nadřazené komponenty.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skladba.id]);
+
   useEffect(() => {
     let zahozeno = false;
     (async () => {
@@ -532,26 +574,30 @@ function Skladba({
         )}
       </div>
 
-      <div className="flex flex-col items-end gap-1.5 shrink-0 ml-auto">
+      {/* TLAČÍTKA JSOU VIDĚT (17. 10. 2026: „ta tlačítka stáhnout a odebrat by
+          měla být výraznější, třeba s nějakými ikonami"). Dřív to byly dva
+          drobné odkazy pod sebou a v kartě plné křivek zanikaly. */}
+      <div className="flex flex-col items-stretch gap-1.5 shrink-0 ml-auto">
         {ptaSe ? (
           <>
-            <span className="text-[11px] font-heading text-muted">{t('hudba.opravduOdebrat')}</span>
-            <span className="flex gap-3">
-              <button
-                type="button"
-                onClick={naOdebrani}
-                className="border-0 bg-transparent p-0 text-xs font-heading font-semibold text-danger cursor-pointer"
-              >
-                {t('hudba.ano')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPtaSe(false)}
-                className="border-0 bg-transparent p-0 text-xs font-heading text-muted cursor-pointer"
-              >
-                {t('hudba.zpet')}
-              </button>
+            <span className="text-[11px] font-heading text-muted text-right">
+              {t('hudba.opravduOdebrat')}
             </span>
+            <button
+              type="button"
+              onClick={naOdebrani}
+              className="inline-flex items-center justify-center gap-1.5 rounded-pill border-0 bg-danger px-3 py-1.5 text-xs font-heading font-semibold text-white cursor-pointer hover:brightness-110 transition-[filter]"
+            >
+              <IkonaKose />
+              {t('hudba.ano')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPtaSe(false)}
+              className="rounded-pill border border-line bg-transparent px-3 py-1.5 text-xs font-heading text-muted cursor-pointer hover:text-ink transition-colors"
+            >
+              {t('hudba.zpet')}
+            </button>
           </>
         ) : (
           <>
@@ -561,8 +607,9 @@ function Skladba({
                 const adresa = await ziskejOdkaz();
                 if (adresa) window.open(adresa, '_blank', 'noopener,noreferrer');
               }}
-              className="border-0 bg-transparent p-0 text-xs font-heading font-semibold text-brand-purpleLight cursor-pointer hover:text-ink transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 rounded-pill border border-brand-purple bg-brand-purple/15 px-3 py-1.5 text-xs font-heading font-semibold text-brand-purpleLight cursor-pointer hover:bg-brand-purple hover:text-white transition-colors"
             >
+              <IkonaStazeni />
               {t('hudba.stahnout')}
             </button>
             {!jenCteni && (
@@ -570,8 +617,9 @@ function Skladba({
                 type="button"
                 onClick={() => setPtaSe(true)}
                 title={t('hudba.odpojitPopis')}
-                className="border-0 bg-transparent p-0 text-xs font-heading text-muted cursor-pointer hover:text-danger transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 rounded-pill border border-line bg-transparent px-3 py-1.5 text-xs font-heading text-muted cursor-pointer hover:border-danger hover:text-danger transition-colors"
               >
+                <IkonaKose />
                 {t('hudba.odebrat')}
               </button>
             )}
@@ -579,6 +627,44 @@ function Skladba({
         )}
       </div>
     </li>
+  );
+}
+
+function IkonaStazeni() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-3.5 h-3.5"
+      aria-hidden="true"
+    >
+      <path d="M12 3v12" />
+      <path d="M7 11l5 5 5-5" />
+      <path d="M4 20h16" />
+    </svg>
+  );
+}
+
+function IkonaKose() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-3.5 h-3.5"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16" />
+      <path d="M9 7V5h6v2" />
+      <path d="M6 7l1 13h10l1-13" />
+    </svg>
   );
 }
 

@@ -532,6 +532,34 @@ export async function podepsanyUploadObaluHudby(
 }
 
 /**
+ * OBAL SKLADBY ROVNOU Z BAJTU (17. 10. 2026).
+ *
+ * Používá to doplňování údajů u skladeb vložených dřív, než se metadata
+ * četla: obrázek se vyřízne ze štítku na serveru, takže tudy neprochází
+ * žádný prohlížeč a podepsaná adresa by neměla komu sloužit.
+ */
+export async function uploadObalHudbyBuffer(
+  bajty: Buffer,
+  mime: string,
+): Promise<string | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const pripona = mime === 'image/png' ? 'png' : 'jpg';
+  const key = `hudba-obaly/${randomUUID()}.${pripona}`;
+  try {
+    await client.send(
+      new PutObjectCommand({ Bucket: bucket, Key: key, Body: bajty, ContentType: mime }),
+    );
+    return key;
+  } catch (err) {
+    console.error('Obal skladby se nepodařilo uložit:', err);
+    return null;
+  }
+}
+
+/**
  * Podepsaná adresa na nahrání SMLOUVY OD KLIENTA (21. 9. 2026) - stejně jako
  * přílohy v chatu jde soubor rovnou z prohlížeče do úložiště, protože
  * naskenovaná smlouva snadno přeroste limit Vercelu (4,5 MB).

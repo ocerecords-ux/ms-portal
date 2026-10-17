@@ -28,6 +28,8 @@ export type SkladbaProjektu = {
   delkaS: number;
   /** Má obal z metadat? Samotný obrázek se stahuje podepsanou adresou. */
   maObal: boolean;
+  /** Už se do souboru koukalo na štítky? Starší skladby mají prázdno. */
+  metadataCtena: boolean;
   poznamka: string | null;
   /** Která část nahrávky se má použít; vteřiny od začátku. */
   usekOd: number | null;
@@ -46,6 +48,7 @@ const VYBER = {
   autor: true,
   delkaS: true,
   obalKlic: true,
+  metadataCtenaAt: true,
   poznamka: true,
   usekOd: true,
   usekDo: true,
@@ -63,6 +66,7 @@ type RadekZDatabaze = {
   autor: string | null;
   delkaS: number;
   obalKlic: string | null;
+  metadataCtenaAt: Date | null;
   poznamka: string | null;
   usekOd: number | null;
   usekDo: number | null;
@@ -81,6 +85,7 @@ function naSkladbu(r: RadekZDatabaze): SkladbaProjektu {
     autor: r.autor,
     delkaS: r.delkaS,
     maObal: Boolean(r.obalKlic),
+    metadataCtena: Boolean(r.metadataCtenaAt),
     poznamka: r.poznamka,
     usekOd: r.usekOd,
     usekDo: r.usekDo,
@@ -160,6 +165,8 @@ export async function zapisSkladbu(vstup: {
         autor: vstup.autor?.trim() || null,
         delkaS: Math.max(0, Math.round(vstup.delkaS ?? 0)),
         obalKlic: vstup.obalKlic || null,
+        // Prohlížeč štítky přečetl při vkládání - znovu se do souboru nekouká.
+        metadataCtenaAt: new Date(),
         poznamka: vstup.poznamka?.trim() || null,
         usekOd: vstup.usekOd ?? null,
         usekDo: vstup.usekDo ?? null,

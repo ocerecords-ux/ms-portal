@@ -20,12 +20,35 @@
  * SOUBOR JE BEZ PRISMY A BEZ SERVERU - běží v prohlížeči.
  */
 
+export type ObalZMetadat = { bajty: Uint8Array; mime: string };
+
 export type MetadataHudby = {
   nazev: string;
   autor: string | null;
   /** Obal z metadat, ještě v původní velikosti. */
-  obal: Blob | null;
+  obal: ObalZMetadat | null;
 };
+
+/**
+ * ODKUD SE ČTE. V prohlížeči je to vybraný soubor, na serveru kousky
+ * stažené z Dropboxu (hlavička `Range`). Čte se vždycky jen pár set kilobajtů
+ * ze začátku, takže je jedno, jestli má soubor pět megabajtů nebo padesát.
+ */
+export type Ctecka = {
+  size: number;
+  cti(od: number, do_: number): Promise<Uint8Array>;
+};
+
+export function ctenizBlobu(blob: Blob): Ctecka {
+  return {
+    size: blob.size,
+    async cti(od, do_) {
+      const konec = Math.min(do_, blob.size);
+      if (od >= konec) return new Uint8Array(0);
+      return new Uint8Array(await blob.slice(od, konec).arrayBuffer());
+    },
+  };
+}
 
 /** Kolik bajtů si smíme z jednoho souboru přečíst, než to vzdáme. */
 const STROP_CTENI = 8 * 1024 * 1024;
@@ -35,10 +58,8 @@ const STROP_OBALU = 12 * 1024 * 1024;
 
 // ---------------------------------------------------------------- pomocné
 
-async function kus(soubor: Blob, od: number, do_: number): Promise<Uint8Array> {
-  const konec = Math.min(do_, soubor.size);
-  if (od >= konec) return new Uint8Array(0);
-  return new Uint8Array(await soubor.slice(od, konec).arrayBuffer());
+async function kus(soubor: Ctecka, od: number, do_: number): Promise<Uint8Array> {
+  return soubor.cti(od, Math.min(do_, soubor.size));
 }
 
 function znacka(b: Uint8Array, od: number, delka: number): string {
@@ -69,15 +90,13 @@ function synchsafe(b: Uint8Array, od: number): number {
 
 /**
  * Obrázek z výřezu štítku. Bajty se KOPÍRUJÍ do vlastní paměti - výřez
- * (`subarray`) ukazuje do celého načteného štítku a Blob by si ho držel celý,
- * i kdyby z něj potřeboval jen obálku.
+ * (`subarray`) ukazuje do celého načteného štítku a držel by si ho celý,
+ * i když je z něj potřeba jen obálka.
  */
-function naBlob(bajty: Uint8Array, mime: string): Blob {
+function naObal(bajty: Uint8Array, mime: string): ObalZMetadat {
   const kopie = new Uint8Array(bajty.length);
   kopie.set(bajty);
-  return new Blob([kopie.buffer as ArrayBuffer], {
-    type: mime.startsWith('image/') ? mime : 'image/jpeg',
-  });
+  return { bajty: kopie, mime: mime.startsWith('image/') ? mime : 'image/jpeg' };
 }
 
 function dekoduj(bajty: Uint8Array, kodovani: string): string {
@@ -115,7 +134,7 @@ function textLatin(data: Uint8Array): string {
   return ocisti(dekoduj(data, 'windows-1250'));
 }
 
-type NalezenyStitek = { nazev: string | null; autor: string | null; obal: Blob | null };
+type NalezenyStitek = { nazev: string | null; autor: string | null; obal: ObalZMetadat | null };
 
 function prectiId3(tag: Uint8Array): NalezenyStitek {
   const vysledek: NalezenyStitek = { nazev: null, autor: null, obal: null };
@@ -152,7 +171,7 @@ function prectiId3(tag: Uint8Array): NalezenyStitek {
 }
 
 /** Obrázek z rámce APIC: kódování, typ obrázku, popis, a teprve pak data. */
-function obrazekZApic(data: Uint8Array, stara: boolean): Blob | null {
+function obrazekZApic(data: Uint8Array, stara: boolean): ObalZMetadat | null {
   if (data.length < 5) return null;
   const kod = data[0];
   let i = 1;
@@ -180,7 +199,7 @@ function obrazekZApic(data: Uint8Array, stara: boolean): Blob | null {
   if (i >= data.length) return null;
   const obrazek = data.subarray(i);
   if (obrazek.length < 100 || obrazek.length > STROP_OBALU) return null;
-  return naBlob(obrazek, mime);
+  return naObal(obrazek, mime);
 }
 
 // ------------------------------------------------------------------- WAV
@@ -189,7 +208,7 @@ function obrazekZApic(data: Uint8Array, stara: boolean): Blob | null {
  * WAV je posloupnost bloků. Projdou se JEN JEJICH HLAVIČKY - blok „data" se
  * přeskočí podle jeho délky, takže se padesát megabajtů zvuku nikam nenačítá.
  */
-async function prectiWav(soubor: Blob): Promise<NalezenyStitek> {
+async function prectiWav(soubor: Ctecka): Promise<NalezenyStitek> {
   const vysledek: NalezenyStitek = { nazev: null, autor: null, obal: null };
   let pozice = 12; // RIFF(4) + velikost(4) + WAVE(4)
   let kroku = 0;
@@ -230,7 +249,7 @@ async function prectiWav(soubor: Blob): Promise<NalezenyStitek> {
 
 // ------------------------------------------------------------------ FLAC
 
-async function prectiFlac(soubor: Blob): Promise<NalezenyStitek> {
+async function prectiFlac(soubor: Ctecka): Promise<NalezenyStitek> {
   const vysledek: NalezenyStitek = { nazev: null, autor: null, obal: null };
   let pozice = 4;
   for (let i = 0; i < 64; i++) {
@@ -272,7 +291,7 @@ async function prectiFlac(soubor: Blob): Promise<NalezenyStitek> {
       const dataD = cisloBE(blok, i2, 4);
       i2 += 4;
       if (dataD > 100 && i2 + dataD <= blok.length) {
-        vysledek.obal = naBlob(blok.subarray(i2, i2 + dataD), mime);
+        vysledek.obal = naObal(blok.subarray(i2, i2 + dataD), mime);
       }
     }
 
@@ -302,7 +321,19 @@ export function zJmenaSouboru(jmeno: string): { nazev: string; autor: string | n
 
 /** Co o skladbě víme z jejího souboru. Nikdy nespadne - nanejvýš nic nenajde. */
 export async function prectiMetadata(soubor: File): Promise<MetadataHudby> {
-  const zalozni = zJmenaSouboru(soubor.name);
+  return prectiMetadataZeCtecky(ctenizBlobu(soubor), soubor.name);
+}
+
+/**
+ * Totéž, ale nad libovolnou čtečkou - používá to doplňování údajů u skladeb,
+ * které se vložily dřív, než se metadata četla (17. 10. 2026). Tam se kousky
+ * souboru tahají z Dropboxu, ne z disku.
+ */
+export async function prectiMetadataZeCtecky(
+  soubor: Ctecka,
+  jmenoSouboru: string,
+): Promise<MetadataHudby> {
+  const zalozni = zJmenaSouboru(jmenoSouboru);
   try {
     const zacatek = await kus(soubor, 0, 16);
     let nalez: NalezenyStitek = { nazev: null, autor: null, obal: null };
@@ -359,9 +390,13 @@ export async function zmerDelku(soubor: File): Promise<number> {
  * přes dva megabajty, zatímco v kartě z něj svítí čtverec padesát pixelů.
  * Zmenší se na hranu 500 px a uloží jako JPEG.
  */
-export async function zmensiObal(obal: Blob, hrana = 500): Promise<Blob | null> {
+export async function zmensiObal(obal: ObalZMetadat, hrana = 500): Promise<Blob | null> {
   try {
-    const obrazek = await vytvorObrazek(obal);
+    const kopie = new Uint8Array(obal.bajty.length);
+    kopie.set(obal.bajty);
+    const obrazek = await vytvorObrazek(
+      new Blob([kopie.buffer as ArrayBuffer], { type: obal.mime }),
+    );
     if (!obrazek) return null;
     const merilo = Math.min(1, hrana / Math.max(obrazek.width, obrazek.height));
     const s = Math.max(1, Math.round(obrazek.width * merilo));

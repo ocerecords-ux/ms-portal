@@ -2853,6 +2853,12 @@ model HudbaProjektu {
   /// a odkaz se podepisuje az pri zobrazeni.
   obalKlic        String?
 
+  /// KDY SE DO SOUBORU NAPOSLED KOUKALO (17. 10. 2026). Skladby vlozene drive,
+  /// nez se metadata cetla, si je doplni samy - portal si z Dropboxu stahne
+  /// zacatek souboru a stitky precte. Bez teto znacky by to u skladby, ktera
+  /// zadne stitky nema, zkousel pri kazdem otevreni karty znovu.
+  metadataCtenaAt DateTime?
+
   /// JEDINE POLE, KTERE JDE PREPSAT (zadani 17. 10. 2026: „polozku zdroj
   /// nechme jako obecnou poznamku, kdybychom potrebovali neco k tomu tracku
   /// upresnit"). Drive se tu vedl „zdroj" (Artlist, Epidemic) - splynul

@@ -38,6 +38,8 @@ export function HudbaSekce({
     zapis: zaklad,
     polozka: (id) => `${zaklad}/${id}`,
     obal: (id) => `${zaklad}/${id}/obal`,
+    // Skladby vložené dřív, než portál uměl číst štítky, si je dotáhnou samy.
+    doctiMetadata: (id) => `${zaklad}/${id}/metadata`,
   };
 
   return (
