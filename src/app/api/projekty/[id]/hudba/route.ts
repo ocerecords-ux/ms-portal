@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
 import { nactiHudbu, zapisSkladbu } from '@/lib/hudbaProjektuServer';
+import { rozsirDoSerie } from '@/lib/hudbaSerieServer';
 import { overPrilohu } from '@/lib/storage';
 
 /**
@@ -80,8 +81,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
+  /**
+   * U SÉRIE SE HUDBA ROVNOU ROZŠÍŘÍ DO VŠECH DÍLŮ (zadání 17. 10. 2026:
+   * „vložil jsem hudbu do jednoho dílu. Ale potřebuju, když je to série, ať se
+   * to automaticky pak vloží do všech"). Zapíše se i do předlohy série, takže
+   * ji dostane i každý budoucí díl.
+   */
+  const serie = await rozsirDoSerie({
+    caflouProjectId: id,
+    hudbaId: skladba.id,
+    pridalId: session.user.id,
+  });
+
   // Načte se znovu celá karta, aby se k nové skladbě rovnou vrátilo i to,
   // jestli tatáž hudba nehraje u jiného projektu (17. 10. 2026).
   const sKolizemi = (await nactiHudbu(id)).find((s) => s.id === skladba.id) ?? skladba;
-  return NextResponse.json({ skladba: sKolizemi }, { status: 201 });
+  return NextResponse.json({ skladba: sKolizemi, serie }, { status: 201 });
 }

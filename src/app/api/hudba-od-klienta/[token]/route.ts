@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { prisma } from '@/lib/db';
 import { zapisSkladbu } from '@/lib/hudbaProjektuServer';
+import { rozsirDoSerie } from '@/lib/hudbaSerieServer';
 import { overPrilohu } from '@/lib/storage';
 import { oznacVlozeni } from '@/lib/vyzvaHudbaServer';
 
@@ -71,5 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   }
 
   await oznacVlozeni(token, parsed.data.jmeno ?? null);
+  // U série platí totéž, co když hudbu vkládáme my - dostanou ji všechny díly.
+  await rozsirDoSerie({ caflouProjectId, hudbaId: skladba.id, pridalId: null });
   return NextResponse.json({ skladba }, { status: 201 });
 }

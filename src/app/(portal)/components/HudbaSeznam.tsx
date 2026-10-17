@@ -97,6 +97,8 @@ export function HudbaSeznam({
   const [skladby, setSkladby] = useState<SkladbaVSeznamu[]>(pocatecni);
   const [nahrava, setNahrava] = useState<Stav[]>([]);
   const [chyba, setChyba] = useState<string | null>(null);
+  /** Co se povedlo navíc - třeba že hudba šla rovnou do celé série. */
+  const [zprava, setZprava] = useState<string | null>(null);
   const [pretahuje, setPretahuje] = useState(false);
   const vstup = useRef<HTMLInputElement | null>(null);
 
@@ -203,15 +205,29 @@ export function HudbaSeznam({
       uprav({ chyba: data?.error || t('hudba.chybaZapisu') });
       return;
     }
-    const { skladba } = (await zapis.json()) as { skladba: SkladbaVSeznamu };
+    const { skladba, serie } = (await zapis.json()) as {
+      skladba: SkladbaVSeznamu;
+      serie?: { serie: string | null; dilu: number };
+    };
     setSkladby((p) => [...p, skladba]);
     setNahrava((p) => p.filter((s) => s.klic !== klic));
+
+    // U série se hudba rozšíří do všech dílů - ať je to vidět, ne jen tiše
+    // provedené (17. 10. 2026).
+    if (serie?.serie) {
+      setZprava(
+        serie.dilu > 0
+          ? t('hudba.doSerie', { serie: serie.serie, pocet: serie.dilu })
+          : t('hudba.doSerieBezDilu', { serie: serie.serie }),
+      );
+    }
   }
 
   async function vyber(soubory: FileList | File[] | null) {
     const seznam = soubory ? Array.from(soubory) : [];
     if (seznam.length === 0) return;
     setChyba(null);
+    setZprava(null);
     /**
      * KLÍČ SE SPOČÍTÁ JEDNOU (oprava 16. 10. 2026: „nic se neděje"). Do té
      * doby se zakládal `Date.now()` při vykreslení řádku a podruhé při
@@ -337,6 +353,24 @@ export function HudbaSeznam({
       )}
 
       {chyba && <p className="text-sm font-heading text-danger m-0">{chyba}</p>}
+
+      {zprava && (
+        <p className="flex items-start gap-2 rounded-lg border border-brand-green/40 bg-brand-green/10 px-3 py-2 text-sm font-body text-ink m-0">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4 shrink-0 mt-0.5 text-brand-green"
+            aria-hidden="true"
+          >
+            <path d="m20 6-11 11-5-5" />
+          </svg>
+          {zprava}
+        </p>
+      )}
 
       {/* PŘETAŽENÍM I TLAČÍTKEM (zadání 16. 10. 2026: „taky by tam mělo být
           drag and drop"). Hudbu člověk tahá z Finderu, ne vybírá v dialogu. */}

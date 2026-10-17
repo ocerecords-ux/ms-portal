@@ -333,6 +333,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Tahle hudba už hraje u:',
     en: 'This music is already used in:',
   },
+  'hudba.doSerie': {
+    cs: 'Je to díl série {serie} — hudbu dostaly i ostatní rozdělané díly ({pocet}) a vezme si ji i každý další.',
+    en: 'This is part of the series {serie} — the other parts in progress got the music too ({pocet}), and every future part will take it as well.',
+  },
+  'hudba.doSerieBezDilu': {
+    cs: 'Je to díl série {serie} — hudbu si od teď vezme i každý další díl.',
+    en: 'This is part of the series {serie} — every future part will take this music as well.',
+  },
   'hudba.usek': { cs: 'Použít jen', en: 'Use only' },
   'hudba.celaSkladba': { cs: 'použít celou skladbu', en: 'use the whole track' },
   'hudba.oznacitUsek': {

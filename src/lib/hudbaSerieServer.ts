@@ -320,3 +320,146 @@ export async function prehledSerii(): Promise<
   }
   return [...mapa.values()].sort((a, b) => a.serie.localeCompare(b.serie, 'cs'));
 }
+
+/**
+ * VLOŽENÍ DO JEDNOHO DÍLU SE ROZŠÍŘÍ DO CELÉ SÉRIE (zadání 17. 10. 2026:
+ * „vložil jsem hudbu do jednoho dílu. Ale potřebuju, když je to série, ať se
+ * to automaticky pak vloží do všech").
+ *
+ * Do teď to fungovalo jen jedním směrem - série měla svou hudbu a nový díl si
+ * ji vzal. Jenže v praxi se hudba vybírá u prvního dílu, který se zrovna točí,
+ * a teprve z něj se stává hudba celé série. Tahle funkce proto dělá obojí:
+ * zapíše skladbu do PŘEDLOHY SÉRIE (takže ji dostane i každý budoucí díl)
+ * a nakopíruje ji do všech rozdělaných dílů, které ji ještě nemají.
+ *
+ * HOTOVÝCH DÍLŮ SE NEDOTKNE. Do knihy, která je dotočená a odevzdaná, nemá
+ * smysl dodatečně přidávat hudbu - jen by tam přibyl řádek, který nikdo
+ * nepoužije.
+ *
+ * Co už někde leží, se nepřidává znovu - rozhoduje cesta souboru v Dropboxu,
+ * takže opakované volání nic nezdvojí.
+ */
+export async function rozsirDoSerie(vstup: {
+  caflouProjectId: string;
+  hudbaId: string;
+  pridalId: string | null;
+}): Promise<{ serie: string | null; dilu: number }> {
+  try {
+    const [skladba, meta] = await Promise.all([
+      prisma.hudbaProjektu.findUnique({
+        where: { id: vstup.hudbaId },
+        select: {
+          nazev: true,
+          autor: true,
+          delkaS: true,
+          obalKlic: true,
+          poznamka: true,
+          usekOd: true,
+          usekDo: true,
+          cesta: true,
+          dropboxId: true,
+          velikost: true,
+        },
+      }),
+      prisma.projectMeta.findUnique({
+        where: { caflouProjectId: vstup.caflouProjectId },
+        select: { serie: true, companyId: true },
+      }),
+    ]);
+
+    const r = skladba as {
+      nazev: string;
+      autor: string | null;
+      delkaS: number;
+      obalKlic: string | null;
+      poznamka: string | null;
+      usekOd: number | null;
+      usekDo: number | null;
+      cesta: string;
+      dropboxId: string | null;
+      velikost: number;
+    } | null;
+    const projekt = meta as { serie: string | null; companyId: string | null } | null;
+
+    const serie = projekt?.serie?.trim();
+    if (!r || !serie) return { serie: null, dilu: 0 };
+
+    // 1) do předlohy série, aby ji dostal i každý budoucí díl
+    const uzVPredloze = await prisma.hudbaSerie.findFirst({
+      where: { ...kdeSerie(serie, projekt?.companyId ?? null), cesta: r.cesta },
+      select: { id: true },
+    });
+    if (!uzVPredloze) {
+      await prisma.hudbaSerie.create({
+        data: {
+          serie,
+          companyId: projekt?.companyId ?? null,
+          nazev: r.nazev,
+          autor: r.autor,
+          delkaS: r.delkaS,
+          obalKlic: r.obalKlic,
+          poznamka: r.poznamka,
+          usekOd: r.usekOd,
+          usekDo: r.usekDo,
+          cesta: r.cesta,
+          dropboxId: r.dropboxId,
+          velikost: r.velikost,
+          pridalId: vstup.pridalId,
+        },
+      });
+    }
+
+    // 2) do ostatních rozdělaných dílů téže série
+    const sourozenci = (await prisma.projectMeta.findMany({
+      where: {
+        caflouProjectId: { not: vstup.caflouProjectId },
+        serie: { equals: serie, mode: 'insensitive' },
+        finished: false,
+        ...(projekt?.companyId ? { companyId: projekt.companyId } : {}),
+      },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string }[];
+    if (sourozenci.length === 0) return { serie, dilu: 0 };
+
+    const ids = sourozenci.map((p) => p.caflouProjectId);
+    const uzMaji = (await prisma.hudbaProjektu.findMany({
+      where: { caflouProjectId: { in: ids }, cesta: r.cesta },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string }[];
+    const vynechat = new Set(uzMaji.map((x) => x.caflouProjectId));
+    const kPridani = ids.filter((id) => !vynechat.has(id));
+    if (kPridani.length === 0) return { serie, dilu: 0 };
+
+    await prisma.hudbaProjektu.createMany({
+      data: kPridani.map((id) => ({
+        caflouProjectId: id,
+        nazev: r.nazev,
+        autor: r.autor,
+        delkaS: r.delkaS,
+        obalKlic: r.obalKlic,
+        poznamka: r.poznamka,
+        usekOd: r.usekOd,
+        usekDo: r.usekDo,
+        puvod: 'serie',
+        cesta: r.cesta,
+        dropboxId: r.dropboxId,
+        velikost: r.velikost,
+        pridalId: vstup.pridalId,
+        metadataCtenaAt: new Date(),
+      })),
+    });
+
+    // Díly hudbu mají - upozornění „chybí hudba" nemá o čem zvonit.
+    await prisma.projectMeta
+      .updateMany({
+        where: { caflouProjectId: { in: kPridani } },
+        data: { hudbaUpozornenoAt: null },
+      })
+      .catch(() => undefined);
+
+    return { serie, dilu: kPridani.length };
+  } catch (err) {
+    console.error('Hudbu se nepodařilo rozšířit do série:', err);
+    return { serie: null, dilu: 0 };
+  }
+}
