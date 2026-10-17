@@ -345,6 +345,20 @@ export async function odpojSkladbu(id: string): Promise<boolean> {
   }
 }
 
+/**
+ * Kde skladba leží - projekt a cesta souboru v Dropboxu. Čte se těsně PŘED
+ * odpojením: po smazání řádku už není odkud vzít, co se má odebrat i ostatním
+ * dílům série (17. 10. 2026).
+ */
+export async function kdeSkladbaLezi(
+  id: string,
+): Promise<{ caflouProjectId: string; cesta: string } | null> {
+  const zaznam = await prisma.hudbaProjektu
+    .findUnique({ where: { id }, select: { caflouProjectId: true, cesta: true } })
+    .catch(() => null);
+  return (zaznam as { caflouProjectId: string; cesta: string } | null) ?? null;
+}
+
 /** Adresa na přehrání jedné skladby; platí čtyři hodiny. */
 export async function odkazNaSkladbu(id: string): Promise<string | null> {
   const zaznam = await prisma.hudbaProjektu

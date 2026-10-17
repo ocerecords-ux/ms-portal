@@ -4,7 +4,13 @@ import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
-import { odkazNaSkladbu, odpojSkladbu, upravSkladbu } from '@/lib/hudbaProjektuServer';
+import {
+  kdeSkladbaLezi,
+  odkazNaSkladbu,
+  odpojSkladbu,
+  upravSkladbu,
+} from '@/lib/hudbaProjektuServer';
+import { odeberZeSerie, rozesliUpravuDoSerie } from '@/lib/hudbaSerieServer';
 
 /**
  * JEDNA SKLADBA (zadání 16. 10. 2026).
@@ -46,12 +52,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ hu
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
   const { hudbaId } = await params;
   const ok = await upravSkladbu(hudbaId, parsed.data);
-  return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
+  /**
+   * ÚPRAVA PLATÍ PRO CELOU SÉRII (17. 10. 2026: „I upravy"). Poznámka a úsek
+   * patří ke skladbě, ne k jednomu dílu - u sérií se proto přepíšou všude.
+   */
+  const vSerii = ok ? await rozesliUpravuDoSerie({ hudbaId }) : 0;
+  return NextResponse.json({ ok, vSerii }, { status: ok ? 200 : 500 });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ hudbaId: string }> }) {
   if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   const { hudbaId } = await params;
+  /**
+   * ODEBRÁNÍ PLATÍ PRO CELOU SÉRII (17. 10. 2026). Kde se skladba nachází se
+   * musí přečíst DŘÍV, než řádek zmizí - potom už není odkud vzít cestu
+   * souboru. Maže se jen záznam, soubor v Dropboxu zůstává.
+   */
+  const kde = await kdeSkladbaLezi(hudbaId);
   const ok = await odpojSkladbu(hudbaId);
-  return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
+  const vSerii = ok && kde ? await odeberZeSerie(kde) : 0;
+  return NextResponse.json({ ok, vSerii }, { status: ok ? 200 : 500 });
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { prisma } from '@/lib/db';
 import { upravPoznamku } from '@/lib/hudbaProjektuServer';
+import { rozesliUpravuDoSerie } from '@/lib/hudbaSerieServer';
 
 /**
  * POZNÁMKA KE SKLADBĚ OD KLIENTA (zadání 17. 10. 2026: „klient pro vkládání
@@ -36,5 +37,7 @@ export async function PATCH(
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 
   const ok = await upravPoznamku(hudbaId, parsed.data.poznamka);
+  // Poznámka klienta platí pro celou sérii stejně jako naše (17. 10. 2026).
+  if (ok) await rozesliUpravuDoSerie({ hudbaId });
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }

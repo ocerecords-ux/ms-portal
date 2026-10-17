@@ -1230,18 +1230,22 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    */
   if (isInternalRole(session.user.role)) {
     /**
-     * SÉRIE SE SROVNÁ SAMA (17. 10. 2026: „doplň to do těch sérií automaticky,
-     * když vložím hudbu k jednomu dílu"). Nové vložení se rozešle hned; tohle
-     * dožene, co vzniklo dřív nebo než se série k projektu dopsala. Bez
-     * čekání - kartu to nesmí zdržet.
+     * SÉRIE SE SROVNÁ SAMA (17. 10. 2026: „melo by to fungovat tak, ze kdyz to
+     * vlozim k jedne knize a je soucasti, tak se to ukaze u knih v cele
+     * serii"). Srovnává se to na obě strany - co má díl navíc, jde do série,
+     * co má série navíc, se doplní dílu.
+     *
+     * ČEKÁ SE NA TO. Dřív to běželo na pozadí a hudba se objevila až při
+     * druhém otevření karty, což vypadalo, že to nefunguje. Když je všechno
+     * v pořádku, jsou to dva rychlé dotazy.
      */
     if (meta?.serie) {
-      void srovnejSerii({
+      await srovnejSerii({
         caflouProjectId,
         serie: meta.serie,
         companyId: meta.companyId ?? null,
         pridalId: session.user.id,
-      }).catch(() => undefined);
+      }).catch(() => 0);
     }
 
     tabs.push({

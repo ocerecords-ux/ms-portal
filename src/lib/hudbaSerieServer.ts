@@ -332,9 +332,12 @@ export async function prehledSerii(): Promise<
  * zapíše skladbu do PŘEDLOHY SÉRIE (takže ji dostane i každý budoucí díl)
  * a nakopíruje ji do všech rozdělaných dílů, které ji ještě nemají.
  *
- * HOTOVÝCH DÍLŮ SE NEDOTKNE. Do knihy, která je dotočená a odevzdaná, nemá
- * smysl dodatečně přidávat hudbu - jen by tam přibyl řádek, který nikdo
- * nepoužije.
+ * DOTKNE SE VŠECH DÍLŮ, I HOTOVÝCH (17. 10. 2026: „melo by to fungovat tak,
+ * ze kdyz to vlozim k jedne knize a je soucasti, tak se to ukaze u knih
+ * v cele serii"). Původně se hotové díly přeskakovaly - do odevzdané knihy
+ * přece nemá smysl hudbu dodávat. Jenže pak se člověk podívá na díl, který
+ * se zrovna fakturuje, a hudba série tam není; série má být jedna věc,
+ * ne seznam výjimek.
  *
  * Co už někde leží, se nepřidává znovu - rozhoduje cesta souboru v Dropboxu,
  * takže opakované volání nic nezdvojí.
@@ -414,7 +417,6 @@ export async function rozsirDoSerie(vstup: {
       where: {
         caflouProjectId: { not: vstup.caflouProjectId },
         serie: { equals: serie, mode: 'insensitive' },
-        finished: false,
         ...(projekt?.companyId ? { companyId: projekt.companyId } : {}),
       },
       select: { caflouProjectId: true },
@@ -465,20 +467,25 @@ export async function rozsirDoSerie(vstup: {
 }
 
 /**
- * SROVNÁNÍ SÉRIE PŘI OTEVŘENÍ KARTY (17. 10. 2026: „doplň to do těch sérií
- * automaticky, když vložím hudbu k jednomu dílu").
+ * SROVNÁNÍ SÉRIE PŘI OTEVŘENÍ KARTY (17. 10. 2026: „melo by to fungovat tak,
+ * ze kdyz to vlozim k jedne knize a je soucasti, tak se to ukaze u knih
+ * v cele serii. I upravy").
  *
- * Vložení hudby u dílu se do série rozešle hned, samo. Tohle je na případy,
- * kdy se to stát nemohlo: hudba se vložila dřív, než to portál uměl, nebo se
- * série k projektu dopsala až potom. Místo tlačítka, o kterém musí někdo
- * vědět, se to srovná samo při otevření karty.
+ * SROVNÁVÁ SE TO NA OBĚ STRANY:
+ *  - co má projekt navíc, se zapíše do PŘEDLOHY SÉRIE a rozešle do ostatních
+ *    dílů (viz rozsirDoSerie),
+ *  - co má předloha navíc, se DOPLNÍ TOMUHLE PROJEKTU.
  *
- * JE TO LEVNÉ, DOKUD JE VŠECHNO V POŘÁDKU: jeden dotaz porovná cesty souborů
- * u projektu s předlohou série, a když nic nechybí, hotovo. Teprve když se
- * něco rozešlo, udělá se skutečná práce.
+ * Bez toho druhého směru nestačilo vložit hudbu u jednoho dílu: ostatní díly
+ * ji dostaly jen ty, které v tu chvíli existovaly a byly rozdělané. Teď se
+ * každý díl při otevření karty dorovná sám, ať vznikl kdykoliv a je v jakémkoliv
+ * stavu.
  *
- * Volá se BEZ ČEKÁNÍ - kartu to nesmí zdržet a vykreslí se tak jako tak;
- * případný rozdíl se projeví při dalším otevření.
+ * JE TO LEVNÉ, DOKUD JE VŠECHNO V POŘÁDKU: dva dotazy porovnají cesty souborů
+ * u projektu s předlohou série, a když se seznamy shodují, hotovo. Teprve když
+ * se něco rozešlo, udělá se skutečná práce.
+ *
+ * Vrací, kolik řádků se doplnilo (u tohohle projektu i u sourozenců).
  */
 export async function srovnejSerii(vstup: {
   caflouProjectId: string;
@@ -497,28 +504,194 @@ export async function srovnejSerii(vstup: {
       }),
       prisma.hudbaSerie.findMany({
         where: kdeSerie(serie, vstup.companyId),
-        select: { cesta: true },
+        select: {
+          nazev: true,
+          autor: true,
+          delkaS: true,
+          obalKlic: true,
+          poznamka: true,
+          usekOd: true,
+          usekDo: true,
+          cesta: true,
+          dropboxId: true,
+          velikost: true,
+        },
       }),
     ]);
 
-    const zname = new Set((vPredloze as { cesta: string }[]).map((r) => r.cesta));
-    const chybejici = (uProjektu as { id: string; cesta: string }[]).filter(
-      (r) => !zname.has(r.cesta),
-    );
-    if (chybejici.length === 0) return 0;
+    const projektove = uProjektu as { id: string; cesta: string }[];
+    const predloha = vPredloze as {
+      nazev: string;
+      autor: string | null;
+      delkaS: number;
+      obalKlic: string | null;
+      poznamka: string | null;
+      usekOd: number | null;
+      usekDo: number | null;
+      cesta: string;
+      dropboxId: string | null;
+      velikost: number;
+    }[];
 
-    let dilu = 0;
-    for (const r of chybejici) {
+    const vPredlozeCesty = new Set(predloha.map((r) => r.cesta));
+    const uProjektuCesty = new Set(projektove.map((r) => r.cesta));
+
+    let doplneno = 0;
+
+    // 1) co má projekt navíc -> do předlohy a do ostatních dílů
+    for (const r of projektove.filter((x) => !vPredlozeCesty.has(x.cesta))) {
       const vysledek = await rozsirDoSerie({
         caflouProjectId: vstup.caflouProjectId,
         hudbaId: r.id,
         pridalId: vstup.pridalId,
       });
-      dilu = Math.max(dilu, vysledek.dilu);
+      doplneno = Math.max(doplneno, vysledek.dilu);
     }
-    return dilu;
+
+    // 2) co má předloha navíc -> tomuhle projektu
+    const chybi = predloha.filter((r) => !uProjektuCesty.has(r.cesta));
+    if (chybi.length) {
+      await prisma.hudbaProjektu.createMany({
+        data: chybi.map((r) => ({
+          caflouProjectId: vstup.caflouProjectId,
+          nazev: r.nazev,
+          autor: r.autor,
+          delkaS: r.delkaS,
+          obalKlic: r.obalKlic,
+          poznamka: r.poznamka,
+          usekOd: r.usekOd,
+          usekDo: r.usekDo,
+          puvod: 'serie',
+          cesta: r.cesta,
+          dropboxId: r.dropboxId,
+          velikost: r.velikost,
+          pridalId: vstup.pridalId,
+          metadataCtenaAt: new Date(),
+        })),
+      });
+      // Díl hudbu má - upozornění „chybí hudba" nemá o čem zvonit.
+      await prisma.projectMeta
+        .updateMany({
+          where: { caflouProjectId: vstup.caflouProjectId },
+          data: { hudbaUpozornenoAt: null },
+        })
+        .catch(() => undefined);
+      doplneno += chybi.length;
+    }
+
+    return doplneno;
   } catch (err) {
     console.error('Sérii se nepodařilo srovnat:', err);
+    return 0;
+  }
+}
+
+/**
+ * ÚPRAVA SE ROZEŠLE DO CELÉ SÉRIE (17. 10. 2026: „I upravy").
+ *
+ * Poznámka a označený úsek patří ke skladbě, ne k jednomu dílu - když se
+ * u jedné knihy přepíše „pouštět jen pod závěr", má to platit pro celou sérii.
+ * Rozhoduje CESTA SOUBORU v Dropboxu: tatáž skladba je tatáž skladba.
+ *
+ * Mění se předloha série i všechny ostatní díly. Vrací, kolika dílů se to
+ * dotklo.
+ */
+export async function rozesliUpravuDoSerie(vstup: { hudbaId: string }): Promise<number> {
+  try {
+    const skladba = (await prisma.hudbaProjektu.findUnique({
+      where: { id: vstup.hudbaId },
+      select: { caflouProjectId: true, cesta: true, poznamka: true, usekOd: true, usekDo: true },
+    })) as {
+      caflouProjectId: string;
+      cesta: string;
+      poznamka: string | null;
+      usekOd: number | null;
+      usekDo: number | null;
+    } | null;
+    if (!skladba) return 0;
+
+    const meta = (await prisma.projectMeta.findUnique({
+      where: { caflouProjectId: skladba.caflouProjectId },
+      select: { serie: true, companyId: true },
+    })) as { serie: string | null; companyId: string | null } | null;
+
+    const r = skladba;
+    const projekt = meta;
+    const serie = projekt?.serie?.trim();
+    if (!serie) return 0;
+
+    const zmena = { poznamka: r.poznamka, usekOd: r.usekOd, usekDo: r.usekDo };
+
+    await prisma.hudbaSerie
+      .updateMany({
+        where: { ...kdeSerie(serie, projekt?.companyId ?? null), cesta: r.cesta },
+        data: zmena,
+      })
+      .catch(() => undefined);
+
+    const sourozenci = (await prisma.projectMeta.findMany({
+      where: {
+        caflouProjectId: { not: r.caflouProjectId },
+        serie: { equals: serie, mode: 'insensitive' },
+        ...(projekt?.companyId ? { companyId: projekt.companyId } : {}),
+      },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string }[];
+    if (!sourozenci.length) return 0;
+
+    const vysledek = await prisma.hudbaProjektu.updateMany({
+      where: { caflouProjectId: { in: sourozenci.map((p) => p.caflouProjectId) }, cesta: r.cesta },
+      data: zmena,
+    });
+    return (vysledek as { count: number }).count;
+  } catch (err) {
+    console.error('Úpravu se nepodařilo rozeslat do série:', err);
+    return 0;
+  }
+}
+
+/**
+ * ODEBRÁNÍ SE ROZEŠLE DO CELÉ SÉRIE (17. 10. 2026).
+ *
+ * Protikus k rozsirDoSerie: když skladba patří sérii a někdo ji u jedné knihy
+ * odebere, nemá zůstat u ostatních - jinak by se stejná věc musela odklikávat
+ * u každého dílu zvlášť. Maže se jen ZÁZNAM, soubor v Dropboxu zůstává.
+ *
+ * Volá se PŘED smazáním řádku u projektu - potřebuje z něj cestu souboru.
+ */
+export async function odeberZeSerie(vstup: {
+  caflouProjectId: string;
+  cesta: string;
+}): Promise<number> {
+  try {
+    const meta = (await prisma.projectMeta.findUnique({
+      where: { caflouProjectId: vstup.caflouProjectId },
+      select: { serie: true, companyId: true },
+    })) as { serie: string | null; companyId: string | null } | null;
+
+    const serie = meta?.serie?.trim();
+    if (!serie) return 0;
+
+    await prisma.hudbaSerie
+      .deleteMany({ where: { ...kdeSerie(serie, meta?.companyId ?? null), cesta: vstup.cesta } })
+      .catch(() => undefined);
+
+    const sourozenci = (await prisma.projectMeta.findMany({
+      where: {
+        caflouProjectId: { not: vstup.caflouProjectId },
+        serie: { equals: serie, mode: 'insensitive' },
+        ...(meta?.companyId ? { companyId: meta.companyId } : {}),
+      },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string }[];
+    if (!sourozenci.length) return 0;
+
+    const vysledek = await prisma.hudbaProjektu.deleteMany({
+      where: { caflouProjectId: { in: sourozenci.map((p) => p.caflouProjectId) }, cesta: vstup.cesta },
+    });
+    return (vysledek as { count: number }).count;
+  } catch (err) {
+    console.error('Odebrání se nepodařilo rozeslat do série:', err);
     return 0;
   }
 }
