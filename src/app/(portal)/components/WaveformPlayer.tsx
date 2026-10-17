@@ -203,33 +203,60 @@ export function WaveformPlayer({
     return pomer * delkaRef.current;
   }
 
-  function zacniZnaceni(e: React.MouseEvent<HTMLDivElement>) {
-    if (!naUsek || delkaRef.current <= 0) return;
-    e.preventDefault();
-    const zacatek = { x: e.clientX, cas: casZBodu(e.clientX) };
-    zacatekTazeni.current = zacatek;
-    setTazeny({ od: zacatek.cas, do: zacatek.cas });
-
-    const pohyb = (ev: MouseEvent) => {
-      const ted = casZBodu(ev.clientX);
-      setTazeny({ od: Math.min(zacatek.cas, ted), do: Math.max(zacatek.cas, ted) });
-    };
-    const konec = (ev: MouseEvent) => {
-      document.removeEventListener('mousemove', pohyb);
-      document.removeEventListener('mouseup', konec);
+  /**
+   * Tažení hlídá DOKUMENT, ne ta vrstva: jakmile myš vyjede z křivky ven
+   * (a u krátkého úseku to je snadné), element už o ní nic neví a výběr by se
+   * zasekl na půl cesty. `pointer` události pokrývají myš i dotyk naráz.
+   */
+  function tahniOd(
+    start: { cas: number },
+    spocti: (cas: number) => UsekSkladby,
+    poSkonceni?: () => void,
+  ) {
+    const pohyb = (ev: PointerEvent) => setTazeny(spocti(casZBodu(ev.clientX)));
+    const konec = (ev: PointerEvent) => {
+      document.removeEventListener('pointermove', pohyb);
+      document.removeEventListener('pointerup', konec);
+      document.removeEventListener('pointercancel', konec);
       zacatekTazeni.current = null;
       setTazeny(null);
-      setZnacim(false);
+      poSkonceni?.();
 
-      const ted = casZBodu(ev.clientX);
-      const od = Math.round(Math.min(zacatek.cas, ted));
-      const doKdy = Math.round(Math.max(zacatek.cas, ted));
-      // Úsek kratší než vteřina je skoro jistě omyl - a samotné klepnutí
-      // v režimu označování nemá co znamenat.
-      if (doKdy - od >= 1) naUsek({ od, do: doKdy });
+      const vysledek = spocti(casZBodu(ev.clientX));
+      const od = Math.round(vysledek.od);
+      const doKdy = Math.round(vysledek.do);
+      // Úsek kratší než vteřina je skoro jistě omyl.
+      if (naUsek) naUsek(doKdy - od >= 1 ? { od, do: doKdy } : null);
     };
-    document.addEventListener('mousemove', pohyb);
-    document.addEventListener('mouseup', konec);
+    zacatekTazeni.current = { x: 0, cas: start.cas };
+    document.addEventListener('pointermove', pohyb);
+    document.addEventListener('pointerup', konec);
+    document.addEventListener('pointercancel', konec);
+  }
+
+  function zacniZnaceni(e: React.PointerEvent<HTMLDivElement>) {
+    if (!naUsek || delkaRef.current <= 0) return;
+    e.preventDefault();
+    const zacatek = casZBodu(e.clientX);
+    setTazeny({ od: zacatek, do: zacatek });
+    tahniOd(
+      { cas: zacatek },
+      (cas) => ({ od: Math.min(zacatek, cas), do: Math.max(zacatek, cas) }),
+      () => setZnacim(false),
+    );
+  }
+
+  /** Dotažení hotového výběru za jeho kraj - jako v každém střihovém programu. */
+  function posunKraj(e: React.PointerEvent<HTMLSpanElement>, kraj: 'od' | 'do') {
+    if (!naUsek || !usek || delkaRef.current <= 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pevny = kraj === 'od' ? usek.do : usek.od;
+    setTazeny(usek);
+    tahniOd({ cas: pevny }, (cas) => ({
+      od: Math.min(pevny, cas),
+      do: Math.max(pevny, cas),
+    }));
   }
 
   const vyber = tazeny ?? usek;
@@ -262,31 +289,68 @@ export function WaveformPlayer({
             <div className="h-full bg-brand-purple" style={{ width: `${progress}%` }} />
           </div>
         ) : (
-          <div className="relative" ref={krivkaRef}>
-            <div ref={containerRef} className="w-full" />
+          /* VÝŠKA JE ZADANÁ NAPEVNO (oprava 17. 10. 2026: „to označení úseku
+             ještě nefunguje dobře"). Křivku si do sebe vykresluje wavesurfer
+             a obal se podle ní sám neroztáhl, takže vrstva na označování měla
+             nulovou výšku - myš do ní nemohla trefit a tažení se nikdy
+             nezačalo. 56 px je výška, se kterou se křivka zakládá. */
+          <div className="relative h-14" ref={krivkaRef}>
+            <div ref={containerRef} className="w-full h-full" />
             {loading && (
               <span className="absolute inset-0 flex items-center justify-center text-xs text-muted font-body">
                 {t('prehravac.nacitamPrubeh')}
               </span>
             )}
 
-            {/* Označený úsek - zelený, stejně jako kurzor přehrávání. */}
+            {/* OZNAČENÝ ÚSEK JAKO ZVÝRAZŇOVAČ (zadání 17. 10. 2026: „něco jako
+                selektor pro výběr, jak v Cubase. Něco jako když označíš
+                zvýrazňovačem"). Pruh přes celou výšku křivky, po krajích
+                úchyty, kterými se dá výběr dotáhnout. */}
             {naUsek && duration > 0 && vyber && (
-              <span
-                aria-hidden="true"
-                className="absolute inset-y-0 bg-brand-green/20 border-x-2 border-brand-green pointer-events-none"
+              <div
+                className="absolute inset-y-0 bg-brand-green/25 border-x-2 border-brand-green"
                 style={{
                   left: `${(vyber.od / duration) * 100}%`,
                   width: `${Math.max(0.5, ((vyber.do - vyber.od) / duration) * 100)}%`,
+                  zIndex: 20,
+                  pointerEvents: 'none',
                 }}
-              />
+              >
+                {!znacim && (
+                  <>
+                    <span
+                      role="presentation"
+                      onPointerDown={(e) => posunKraj(e, 'od')}
+                      title={t('prehravac.posunoutZacatek')}
+                      className="absolute inset-y-0 -left-2 w-4 cursor-ew-resize"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      <span className="absolute inset-y-1 left-1.5 w-1 rounded-full bg-brand-green" />
+                    </span>
+                    <span
+                      role="presentation"
+                      onPointerDown={(e) => posunKraj(e, 'do')}
+                      title={t('prehravac.posunoutKonec')}
+                      className="absolute inset-y-0 -right-2 w-4 cursor-ew-resize"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      <span className="absolute inset-y-1 right-1.5 w-1 rounded-full bg-brand-green" />
+                    </span>
+                  </>
+                )}
+              </div>
             )}
 
-            {naUsek && znacim && (
+            {/* Vrstva na označování. Je tu POŘÁD, jen propouští myš dál, dokud
+                se označování nezapne - tak si nemůže nic stoupnout nad ni. */}
+            {naUsek && (
               <div
                 role="presentation"
-                onMouseDown={zacniZnaceni}
-                className="absolute -inset-y-1 inset-x-0 z-10 cursor-crosshair rounded-md bg-brand-green/10 ring-1 ring-brand-green/60"
+                onPointerDown={zacniZnaceni}
+                className={`absolute -inset-y-1 inset-x-0 rounded-md transition-colors ${
+                  znacim ? 'cursor-crosshair bg-brand-green/10 ring-1 ring-brand-green/60' : ''
+                }`}
+                style={{ zIndex: 30, pointerEvents: znacim ? 'auto' : 'none' }}
               />
             )}
           </div>

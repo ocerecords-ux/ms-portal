@@ -22,6 +22,10 @@ export type RadekKnihovny = {
   velikost: number;
   /** Id jednoho ze záznamů - podle něj se skladba přehraje a vezme obal. */
   ukazkaId: string;
+  /** Adresa, na které se dá ta ukázka přehrát (liší se u projektu a u série). */
+  odkazPolozky: string;
+  /** Adresa obalu. */
+  odkazObalu: string;
   maObal: boolean;
   /** Kde všude se používá. */
   projekty: { id: string; nazev: string }[];
@@ -106,15 +110,18 @@ export async function nactiKnihovnu(): Promise<RadekKnihovny[]> {
   }
 
   const mapa = new Map<string, RadekKnihovny>();
-  function zalozNeboVrat(zdroj: {
-    id: string;
-    nazev: string;
-    autor: string | null;
-    delkaS: number;
-    velikost: number;
-    cesta: string;
-    obalKlic: string | null;
-  }): RadekKnihovny {
+  function zalozNeboVrat(
+    zdroj: {
+      id: string;
+      nazev: string;
+      autor: string | null;
+      delkaS: number;
+      velikost: number;
+      cesta: string;
+      obalKlic: string | null;
+    },
+    odkazy: { polozka: string; obal: string },
+  ): RadekKnihovny {
     const uz = mapa.get(zdroj.cesta);
     if (uz) {
       // Obal i délka se berou z prvního záznamu, který je má - starší řádky
@@ -122,6 +129,8 @@ export async function nactiKnihovnu(): Promise<RadekKnihovny[]> {
       if (!uz.maObal && zdroj.obalKlic) {
         uz.maObal = true;
         uz.ukazkaId = zdroj.id;
+        uz.odkazPolozky = odkazy.polozka;
+        uz.odkazObalu = odkazy.obal;
       }
       if (!uz.delkaS && zdroj.delkaS) uz.delkaS = zdroj.delkaS;
       if (!uz.autor && zdroj.autor) uz.autor = zdroj.autor;
@@ -134,6 +143,8 @@ export async function nactiKnihovnu(): Promise<RadekKnihovny[]> {
       delkaS: zdroj.delkaS,
       velikost: zdroj.velikost,
       ukazkaId: zdroj.id,
+      odkazPolozky: odkazy.polozka,
+      odkazObalu: odkazy.obal,
       maObal: Boolean(zdroj.obalKlic),
       projekty: [],
       serie: [],
@@ -143,7 +154,10 @@ export async function nactiKnihovnu(): Promise<RadekKnihovny[]> {
   }
 
   for (const r of projekty) {
-    const radek = zalozNeboVrat(r);
+    const radek = zalozNeboVrat(r, {
+      polozka: `/api/projekty/${encodeURIComponent(r.caflouProjectId)}/hudba/${r.id}`,
+      obal: `/api/projekty/${encodeURIComponent(r.caflouProjectId)}/hudba/${r.id}/obal`,
+    });
     if (!radek.projekty.some((p) => p.id === r.caflouProjectId)) {
       radek.projekty.push({
         id: r.caflouProjectId,
@@ -152,7 +166,10 @@ export async function nactiKnihovnu(): Promise<RadekKnihovny[]> {
     }
   }
   for (const r of serie) {
-    const radek = zalozNeboVrat(r);
+    const radek = zalozNeboVrat(r, {
+      polozka: `/api/hudba-serie/${r.id}`,
+      obal: `/api/hudba-serie/${r.id}/obal`,
+    });
     if (!radek.serie.includes(r.serie)) radek.serie.push(r.serie);
   }
 

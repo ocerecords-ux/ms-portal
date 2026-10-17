@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { HudbaSeznam, type HudbaApi, type SkladbaVSeznamu } from '@/app/(portal)/components/HudbaSeznam';
+import { WaveformPlayer } from '@/app/(portal)/components/WaveformPlayer';
 import type { ProjektBezHudby, RadekKnihovny } from '@/lib/hudbaKnihovnaServer';
 import { delkaTextem } from '@/lib/metadataHudby';
 
@@ -90,8 +91,30 @@ function Chybi({ radky }: { radky: ProjektBezHudby[] }) {
             >
               {r.nazev}
             </Link>
-            <span className="block text-xs font-body text-muted">
-              {[r.firma, r.serie].filter(Boolean).join(' · ') || '—'}
+            {/* SÉRIE JE VIDĚT NA PRVNÍ POHLED (zadání 17. 10. 2026: „tady by
+                mělo být jasně vidět, když je to série"). Dřív splývala
+                s názvem firmy na jednom řádku oddělená tečkou. */}
+            <span className="flex items-center gap-2 flex-wrap mt-0.5">
+              <span className="text-xs font-body text-muted">{r.firma || '—'}</span>
+              {r.serie && (
+                <span className="inline-flex items-center gap-1 rounded-pill border border-brand-purple/50 bg-brand-purple/15 px-2 py-0.5 text-[10px] font-heading font-semibold uppercase tracking-wide text-brand-purpleLight">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-3 h-3"
+                    aria-hidden="true"
+                  >
+                    <path d="M4 7h10" />
+                    <path d="M4 12h10" />
+                    <path d="M4 17h16" />
+                    <path d="M18 5v9" />
+                  </svg>
+                  {t('hudbaKnihovna.serieStitek')} {r.serie}
+                </span>
+              )}
             </span>
           </span>
 
@@ -293,6 +316,8 @@ function Serie({
 function Databaze({ radky }: { radky: RadekKnihovny[] }) {
   const t = usePreklad();
   const [hledani, setHledani] = useState('');
+  /** Otevřená skladba. Detail je okno nad seznamem, ne skok do projektu. */
+  const [detail, setDetail] = useState<RadekKnihovny | null>(null);
 
   const hledane = hledani.trim().toLowerCase();
   const videt = hledane
@@ -319,49 +344,212 @@ function Databaze({ radky }: { radky: RadekKnihovny[] }) {
       ) : (
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
           {videt.map((r) => (
-            <li
-              key={r.cesta}
-              className="rounded-card border border-line bg-surface px-4 py-3 flex flex-wrap items-center gap-3"
-            >
-              <span className="flex-1 min-w-[220px]">
-                <span className="block font-heading font-semibold text-sm text-ink">{r.nazev}</span>
-                <span className="block text-xs font-body text-muted">
-                  {[r.autor || t('hudba.autorNeznamy'), delkaTextem(r.delkaS)]
-                    .filter(Boolean)
-                    .join(' · ')}
+            <li key={r.cesta}>
+              {/* KLIKNUTÍ OTEVŘE DETAIL SKLADBY, ne projekt (zadání
+                  17. 10. 2026) - odsud se člověk dívá na hudbu, ne na knihy. */}
+              <button
+                type="button"
+                onClick={() => setDetail(r)}
+                className="w-full text-left rounded-card border border-line bg-surface px-4 py-3 flex flex-wrap items-center gap-3 cursor-pointer hover:border-brand-purpleLight transition-colors"
+              >
+                <Obal radek={r} maly />
+                <span className="flex-1 min-w-[220px]">
+                  <span className="block font-heading font-semibold text-sm text-ink">
+                    {r.nazev}
+                  </span>
+                  <span className="block text-xs font-body text-muted">
+                    {[r.autor || t('hudba.autorNeznamy'), delkaTextem(r.delkaS)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
                 </span>
-              </span>
 
-              <span className="text-xs font-body text-muted flex-1 min-w-[220px]">
-                {r.serie.length > 0 && (
-                  <span className="block">
-                    {t('hudbaKnihovna.vSeriich')} {r.serie.join(', ')}
-                  </span>
-                )}
-                {r.projekty.length > 0 && (
-                  <span className="block">
-                    {t('hudbaKnihovna.vProjektech')}{' '}
-                    {r.projekty.slice(0, 3).map((p, i) => (
-                      <span key={p.id}>
-                        {i > 0 && ', '}
-                        <Link
-                          href={`/projekty/${p.id}`}
-                          className="text-brand-purpleLight no-underline hover:text-ink"
-                        >
-                          {p.nazev}
-                        </Link>
-                      </span>
-                    ))}
-                    {r.projekty.length > 3 && ` +${r.projekty.length - 3}`}
-                  </span>
-                )}
-              </span>
+                <span className="text-xs font-body text-muted flex-1 min-w-[200px]">
+                  {r.serie.length > 0 && (
+                    <span className="block">
+                      {t('hudbaKnihovna.vSeriich')} {r.serie.join(', ')}
+                    </span>
+                  )}
+                  {r.projekty.length > 0 && (
+                    <span className="block">
+                      {t('hudbaKnihovna.vProjektech')}{' '}
+                      {r.projekty
+                        .slice(0, 3)
+                        .map((p) => p.nazev)
+                        .join(', ')}
+                      {r.projekty.length > 3 && ` +${r.projekty.length - 3}`}
+                    </span>
+                  )}
+                </span>
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      {detail && <DetailSkladby radek={detail} zavri={() => setDetail(null)} />}
     </div>
   );
+}
+
+function Obal({ radek, maly = false }: { radek: RadekKnihovny; maly?: boolean }) {
+  const t = usePreklad();
+  const velikost = maly ? 'w-10 h-10' : 'w-20 h-20';
+  if (radek.maObal) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={radek.odkazObalu}
+        alt={t('hudba.obalPopis')}
+        className={`${velikost} rounded-lg object-cover shrink-0 bg-field`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`${velikost} rounded-lg shrink-0 grid place-items-center bg-brand-purple/15 text-brand-purpleLight`}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        className={maly ? 'w-4 h-4' : 'w-7 h-7'}
+        aria-hidden="true"
+      >
+        <path d="M9 18V5l10-2v13" />
+        <circle cx="6.5" cy="18" r="2.5" />
+        <circle cx="16.5" cy="16" r="2.5" />
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * DETAIL JEDNÉ SKLADBY (zadání 17. 10. 2026: „nemělo by se po kliknutí
+ * přepnout na projekt, ale na detail toho songu zvlášť v databázi").
+ *
+ * Okno nad seznamem, ne vlastní stránka: člověk si v databázi prochází
+ * skladby jednu po druhé a po zavření chce být tam, kde byl, ne o krok zpátky
+ * v historii prohlížeče.
+ */
+function DetailSkladby({ radek, zavri }: { radek: RadekKnihovny; zavri: () => void }) {
+  const t = usePreklad();
+  const [odkaz, setOdkaz] = useState<string | null>(null);
+
+  useEffect(() => {
+    let zahozeno = false;
+    fetch(radek.odkazPolozky)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { odkaz: string } | null) => {
+        if (!zahozeno && d?.odkaz) setOdkaz(d.odkaz);
+      })
+      .catch(() => undefined);
+    return () => {
+      zahozeno = true;
+    };
+  }, [radek.odkazPolozky]);
+
+  useEffect(() => {
+    function klavesa(e: KeyboardEvent) {
+      if (e.key === 'Escape') zavri();
+    }
+    document.addEventListener('keydown', klavesa);
+    return () => document.removeEventListener('keydown', klavesa);
+  }, [zavri]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('hudbaKnihovna.detailSkladby')}
+      onClick={zavri}
+      className="fixed inset-0 z-50 bg-ink/70 flex items-center justify-center p-3 sm:p-6"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-surface border border-line rounded-card shadow-lg w-full max-w-2xl max-h-full overflow-auto p-5 flex flex-col gap-4 text-left"
+      >
+        <div className="flex items-start gap-4">
+          <Obal radek={radek} />
+          <div className="flex-1 min-w-0">
+            <span className="block font-display text-2xl text-ink">{radek.nazev}</span>
+            <span className="block text-sm font-body text-muted mt-0.5">
+              {t('hudba.autorSkladby')} {radek.autor || t('hudba.autorNeznamy')}
+            </span>
+            <span className="block text-xs font-body text-muted/80 mt-1">
+              {[delkaTextem(radek.delkaS), velikostTextem(radek.velikost)]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={zavri}
+            aria-label={t('obecne.zavrit')}
+            className="border-0 bg-transparent text-muted hover:text-ink cursor-pointer text-lg leading-none px-1"
+          >
+            ✕
+          </button>
+        </div>
+
+        {odkaz ? (
+          <WaveformPlayer src={odkaz} />
+        ) : (
+          <p className="text-sm font-body text-muted m-0">{t('obecne.nacitam')}</p>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <span className="block text-[10px] font-heading uppercase tracking-wide text-muted mb-1">
+              {t('hudbaKnihovna.hrajeV')}
+            </span>
+            {radek.projekty.length === 0 ? (
+              <span className="text-xs font-body text-muted">{t('hudbaKnihovna.nikdeJinde')}</span>
+            ) : (
+              <ul className="list-none p-0 m-0 flex flex-col gap-1">
+                {radek.projekty.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/projekty/${p.id}`}
+                      className="text-sm font-body text-brand-purpleLight no-underline hover:text-ink"
+                    >
+                      {p.nazev}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <span className="block text-[10px] font-heading uppercase tracking-wide text-muted mb-1">
+              {t('hudbaKnihovna.jeVSeriich')}
+            </span>
+            {radek.serie.length === 0 ? (
+              <span className="text-xs font-body text-muted">—</span>
+            ) : (
+              <ul className="list-none p-0 m-0 flex flex-col gap-1">
+                {radek.serie.map((x) => (
+                  <li key={x} className="text-sm font-body text-ink">
+                    {x}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function velikostTextem(bytes: number): string {
+  if (bytes <= 0) return '';
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1) return `${Math.round(bytes / 1024)} kB`;
+  return `${mb.toFixed(1).replace('.', ',')} MB`;
 }
 
 /* -------------------------------------------------------------- pomocné */

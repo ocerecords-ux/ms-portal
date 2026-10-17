@@ -346,6 +346,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'hudbaKnihovna.databaze': { cs: 'Databáze', en: 'Library' },
   'hudbaKnihovna.serie': { cs: 'Série', en: 'Series' },
+  'hudbaKnihovna.serieStitek': { cs: 'Série:', en: 'Series:' },
+  'hudbaKnihovna.detailSkladby': { cs: 'Detail skladby', en: 'Track detail' },
+  'hudbaKnihovna.hrajeV': { cs: 'Hraje v knihách', en: 'Used in books' },
+  'hudbaKnihovna.jeVSeriich': { cs: 'Patří k sériím', en: 'Belongs to series' },
+  'hudbaKnihovna.nikdeJinde': { cs: 'Zatím nikde jinde.', en: 'Nowhere else yet.' },
   'hudbaKnihovna.chybi': { cs: 'Chybí hudba', en: 'Music missing' },
   'hudbaKnihovna.chybiZadne': {
     cs: 'Všechny rozpracované audioknihy hudbu mají.',
@@ -2429,6 +2434,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Loading the waveform of the recording…',
   },
   'prehravac.oznacitUsek': { cs: 'Označit úsek', en: 'Mark a section' },
+  'prehravac.posunoutZacatek': { cs: 'Posunout začátek úseku', en: 'Move the start of the section' },
+  'prehravac.posunoutKonec': { cs: 'Posunout konec úseku', en: 'Move the end of the section' },
   'prehravac.tahneteProUsek': { cs: 'Táhněte přes křivku', en: 'Drag across the waveform' },
   'prehravac.oznacitUsekPopis': {
     cs: 'Zapne označování: tažením přes křivku vyberete část, která se má použít.',
