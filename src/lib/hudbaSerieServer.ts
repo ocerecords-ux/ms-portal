@@ -467,25 +467,27 @@ export async function rozsirDoSerie(vstup: {
 }
 
 /**
- * SROVNÁNÍ SÉRIE PŘI OTEVŘENÍ KARTY (17. 10. 2026: „melo by to fungovat tak,
- * ze kdyz to vlozim k jedne knize a je soucasti, tak se to ukaze u knih
+ * SROVNÁNÍ CELÉ SÉRIE PŘI OTEVŘENÍ KARTY (17. 10. 2026: „melo by to fungovat
+ * tak, ze kdyz to vlozim k jedne knize a je soucasti, tak se to ukaze u knih
  * v cele serii. I upravy").
  *
- * SROVNÁVÁ SE TO NA OBĚ STRANY:
- *  - co má projekt navíc, se zapíše do PŘEDLOHY SÉRIE a rozešle do ostatních
- *    dílů (viz rozsirDoSerie),
- *  - co má předloha navíc, se DOPLNÍ TOMUHLE PROJEKTU.
+ * SÉRIE JE JEDNA VĚC. Hudba, která je u kteréhokoliv dílu, patří všem dílům -
+ * hotovým i rozdělaným - a taky předloze série, ze které si ji vezme každý
+ * budoucí díl. Tahle funkce proto nesrovnává jen projekt proti předloze, ale
+ * SJEDNOTÍ VŠECHNO: co má kterýkoliv díl nebo předloha, dostanou všichni.
  *
- * Bez toho druhého směru nestačilo vložit hudbu u jednoho dílu: ostatní díly
- * ji dostaly jen ty, které v tu chvíli existovaly a byly rozdělané. Teď se
- * každý díl při otevření karty dorovná sám, ať vznikl kdykoliv a je v jakémkoliv
- * stavu.
+ * PROČ NE JEN PROTI PŘEDLOZE: hudba se u prvních sérií vkládala dřív, než
+ * předloha vůbec existovala. Takový díl ji má, předloha je prázdná - a díl,
+ * který se na ni ptá, nemá co dostat. Dokud se neotevřela zrovna ta jedna
+ * karta, kde hudba leží, nedělo se nic. Proto se čte rovnou od sourozenců.
  *
- * JE TO LEVNÉ, DOKUD JE VŠECHNO V POŘÁDKU: dva dotazy porovnají cesty souborů
- * u projektu s předlohou série, a když se seznamy shodují, hotovo. Teprve když
- * se něco rozešlo, udělá se skutečná práce.
+ * JE TO LEVNÉ, DOKUD JE VŠECHNO V POŘÁDKU: tři dotazy (díly série, jejich
+ * skladby, předloha) a porovnání cest souborů. Když se seznamy shodují, hotovo
+ * a nic se nezapisuje. Teprve když někde něco chybí, se opravdu píše.
  *
- * Vrací, kolik řádků se doplnilo (u tohohle projektu i u sourozenců).
+ * Rozhoduje CESTA SOUBORU v Dropboxu - tatáž skladba je tatáž skladba.
+ *
+ * Vrací, kolik řádků se celkem doplnilo.
  */
 export async function srovnejSerii(vstup: {
   caflouProjectId: string;
@@ -497,13 +499,39 @@ export async function srovnejSerii(vstup: {
   if (!serie) return 0;
 
   try {
-    const [uProjektu, vPredloze] = await Promise.all([
+    // 1) Všechny díly série, tenhle projekt v tom. Hotové se NEVYNECHÁVAJÍ.
+    const dily = (await prisma.projectMeta.findMany({
+      where: {
+        serie: { equals: serie, mode: 'insensitive' },
+        ...(vstup.companyId ? { companyId: vstup.companyId } : {}),
+      },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string }[];
+
+    const idDilu = [...new Set([...dily.map((d) => d.caflouProjectId), vstup.caflouProjectId])];
+
+    // 2) Skladby všech dílů a předloha série.
+    const [uDilu, vPredloze] = await Promise.all([
       prisma.hudbaProjektu.findMany({
-        where: { caflouProjectId: vstup.caflouProjectId },
-        select: { id: true, cesta: true },
+        where: { caflouProjectId: { in: idDilu } },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          caflouProjectId: true,
+          nazev: true,
+          autor: true,
+          delkaS: true,
+          obalKlic: true,
+          poznamka: true,
+          usekOd: true,
+          usekDo: true,
+          cesta: true,
+          dropboxId: true,
+          velikost: true,
+        },
       }),
       prisma.hudbaSerie.findMany({
         where: kdeSerie(serie, vstup.companyId),
+        orderBy: { createdAt: 'asc' },
         select: {
           nazev: true,
           autor: true,
@@ -519,8 +547,7 @@ export async function srovnejSerii(vstup: {
       }),
     ]);
 
-    const projektove = uProjektu as { id: string; cesta: string }[];
-    const predloha = vPredloze as {
+    type Skladba = {
       nazev: string;
       autor: string | null;
       delkaS: number;
@@ -531,29 +558,81 @@ export async function srovnejSerii(vstup: {
       cesta: string;
       dropboxId: string | null;
       velikost: number;
-    }[];
+    };
+
+    const projektove = uDilu as (Skladba & { caflouProjectId: string })[];
+    const predloha = vPredloze as Skladba[];
+
+    /**
+     * SJEDNOCENÍ PODLE CESTY. První nalezený výskyt vyhrává - předloha má
+     * přednost, protože do ní se zapisují i úpravy; pak se berou skladby dílů
+     * v pořadí, v jakém vznikly.
+     */
+    const vsechny = new Map<string, Skladba>();
+    for (const r of predloha) if (!vsechny.has(r.cesta)) vsechny.set(r.cesta, r);
+    for (const r of projektove) if (!vsechny.has(r.cesta)) vsechny.set(r.cesta, r);
+
+    if (vsechny.size === 0) return 0;
+
+    // Co má který díl.
+    const maDil = new Map<string, Set<string>>();
+    for (const id of idDilu) maDil.set(id, new Set());
+    for (const r of projektove) maDil.get(r.caflouProjectId)?.add(r.cesta);
 
     const vPredlozeCesty = new Set(predloha.map((r) => r.cesta));
-    const uProjektuCesty = new Set(projektove.map((r) => r.cesta));
 
     let doplneno = 0;
 
-    // 1) co má projekt navíc -> do předlohy a do ostatních dílů
-    for (const r of projektove.filter((x) => !vPredlozeCesty.has(x.cesta))) {
-      const vysledek = await rozsirDoSerie({
-        caflouProjectId: vstup.caflouProjectId,
-        hudbaId: r.id,
-        pridalId: vstup.pridalId,
+    // 3) Do předlohy, co v ní není - ať to dostane i každý budoucí díl.
+    const doPredlohy = [...vsechny.values()].filter((r) => !vPredlozeCesty.has(r.cesta));
+    if (doPredlohy.length) {
+      await prisma.hudbaSerie.createMany({
+        data: doPredlohy.map((r) => ({
+          serie,
+          companyId: vstup.companyId,
+          nazev: r.nazev,
+          autor: r.autor,
+          delkaS: r.delkaS,
+          obalKlic: r.obalKlic,
+          poznamka: r.poznamka,
+          usekOd: r.usekOd,
+          usekDo: r.usekDo,
+          cesta: r.cesta,
+          dropboxId: r.dropboxId,
+          velikost: r.velikost,
+          pridalId: vstup.pridalId,
+        })),
       });
-      doplneno = Math.max(doplneno, vysledek.dilu);
+      doplneno += doPredlohy.length;
     }
 
-    // 2) co má předloha navíc -> tomuhle projektu
-    const chybi = predloha.filter((r) => !uProjektuCesty.has(r.cesta));
-    if (chybi.length) {
-      await prisma.hudbaProjektu.createMany({
-        data: chybi.map((r) => ({
-          caflouProjectId: vstup.caflouProjectId,
+    // 4) Do každého dílu, co mu chybí.
+    const chybejici: {
+      caflouProjectId: string;
+      nazev: string;
+      autor: string | null;
+      delkaS: number;
+      obalKlic: string | null;
+      poznamka: string | null;
+      usekOd: number | null;
+      usekDo: number | null;
+      puvod: string;
+      cesta: string;
+      dropboxId: string | null;
+      velikost: number;
+      pridalId: string | null;
+      metadataCtenaAt: Date;
+    }[] = [];
+
+    const bezHudby: string[] = [];
+    for (const id of idDilu) {
+      const ma = maDil.get(id) ?? new Set<string>();
+      let pribylo = false;
+      for (const r of vsechny.values()) {
+        if (ma.has(r.cesta)) continue;
+        pribylo = true;
+        chybejici.push({
+          caflouProjectId: id,
           nazev: r.nazev,
           autor: r.autor,
           delkaS: r.delkaS,
@@ -567,16 +646,21 @@ export async function srovnejSerii(vstup: {
           velikost: r.velikost,
           pridalId: vstup.pridalId,
           metadataCtenaAt: new Date(),
-        })),
-      });
-      // Díl hudbu má - upozornění „chybí hudba" nemá o čem zvonit.
+        });
+      }
+      if (pribylo) bezHudby.push(id);
+    }
+
+    if (chybejici.length) {
+      await prisma.hudbaProjektu.createMany({ data: chybejici });
+      doplneno += chybejici.length;
+      // Díly hudbu mají - upozornění „chybí hudba" nemá o čem zvonit.
       await prisma.projectMeta
         .updateMany({
-          where: { caflouProjectId: vstup.caflouProjectId },
+          where: { caflouProjectId: { in: bezHudby } },
           data: { hudbaUpozornenoAt: null },
         })
         .catch(() => undefined);
-      doplneno += chybi.length;
     }
 
     return doplneno;
