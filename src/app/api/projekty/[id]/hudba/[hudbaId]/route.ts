@@ -4,15 +4,16 @@ import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
-import { odkazNaSkladbu, odpojSkladbu, upravPoznamku } from '@/lib/hudbaProjektuServer';
+import { odkazNaSkladbu, odpojSkladbu, upravSkladbu } from '@/lib/hudbaProjektuServer';
 
 /**
  * JEDNA SKLADBA (zadání 16. 10. 2026).
  *
  * GET    - adresa na přehrání, platí čtyři hodiny (vyrábí se až při kliknutí)
- * PATCH  - JEN POZNÁMKA. Název a autor se čtou z metadat souboru a přepsat
- *          je by znamenalo, že v kartě svítí něco jiného než v souboru
- *          (zadání 17. 10. 2026: „ten název autor by neměl jít měnit").
+ * PATCH  - POZNÁMKA A OZNAČENÝ ÚSEK. Název a autor se čtou z metadat souboru
+ *          a přepsat je by znamenalo, že v kartě svítí něco jiného než
+ *          v souboru (zadání 17. 10. 2026: „ten název autor by neměl jít
+ *          měnit"). Úsek je poznámka pro střih, soubor zůstává celý.
  * DELETE - ODPOJÍ skladbu od projektu. Soubor v Dropboxu zůstává; hudební
  *          knihovna je společná a jedno kliknutí nesmí vzít soubor projektům,
  *          které ho používají taky.
@@ -20,7 +21,9 @@ import { odkazNaSkladbu, odpojSkladbu, upravPoznamku } from '@/lib/hudbaProjektu
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  poznamka: z.string().trim().max(500).nullable(),
+  poznamka: z.string().trim().max(500).nullable().optional(),
+  usekOd: z.number().int().min(0).max(24 * 3600).nullable().optional(),
+  usekDo: z.number().int().min(0).max(24 * 3600).nullable().optional(),
 });
 
 async function straz() {
@@ -42,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ hu
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
   const { hudbaId } = await params;
-  const ok = await upravPoznamku(hudbaId, parsed.data.poznamka);
+  const ok = await upravSkladbu(hudbaId, parsed.data);
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }
 

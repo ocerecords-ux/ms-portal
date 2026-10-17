@@ -158,6 +158,17 @@ model Company {
   /// posunout, kdyz se ukaze, ze jim to nestaci.
   hudbaPredstihDni  Int     @default(3)
 
+  /// OD KDY TO PLATI (zadani 17. 10. 2026: „kdyz ted zaskrtnu u firmy, ze
+  /// klient dodava hudbu, tak aby nesly zpetne na klienta nejake notifikace.
+  /// At to plati az od ted").
+  ///
+  /// Zapise se ve chvili, kdy se zaskrtavatko zapne. Vyzva pak chodi jen
+  /// k projektum, ktere vznikly POTOM - rozdelane zakazky dobehnou po staru
+  /// a hudbu k nim vybereme my. Bez tohohle by se hned rano rozeslaly maily
+  /// ke vsemu, co ma za par dni prvni frekvenci, a klient by nechapal, proc
+  /// po nem najednou chceme hudbu k rozdelane knize.
+  hudbaKlientOd     DateTime?
+
   /// Hudba, kterou maji vsechny dily jedne serie teto firmy (17. 10. 2026).
   hudbaSerii        HudbaSerie[] @relation("HudbaSerieFirma")
 
@@ -2848,6 +2859,16 @@ model HudbaProjektu {
   /// s poznamkou, protoze dve volna textova pole vedle sebe nikdo nevyplnoval.
   poznamka        String?
 
+  /// KTERA CAST NAHRAVKY SE MA POUZIT (zadani 17. 10. 2026: „jeste by se mi
+  /// libilo, kdybych mohl oznacit ve stope nejak, kterou cast nahravky
+  /// pouzit"). Vteriny od zacatku skladby; prazdne = cela skladba.
+  ///
+  /// Je to POZNAMKA PRO STRIH, ne orez souboru - v Dropboxu zustava cela
+  /// skladba. Orezany soubor by sel vratit zpatky uz jen tak, ze by ho nekdo
+  /// nahral znovu.
+  usekOd          Int?
+  usekDo          Int?
+
   /// Odkud se skladba u projektu vzala: „my" = vybrali jsme ji, „klient" =
   /// dodal ji klient svym odkazem, „serie" = zkopirovala se z hudby serie.
   puvod           String  @default("my")
@@ -2891,6 +2912,9 @@ model HudbaSerie {
   delkaS    Int      @default(0)
   obalKlic  String?
   poznamka  String?
+  /// Ktera cast nahravky se ma pouzit (17. 10. 2026) - viz HudbaProjektu.
+  usekOd    Int?
+  usekDo    Int?
 
   cesta     String
   dropboxId String?

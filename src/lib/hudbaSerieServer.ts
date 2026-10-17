@@ -30,6 +30,8 @@ export type SkladbaSerie = {
   delkaS: number;
   maObal: boolean;
   poznamka: string | null;
+  usekOd: number | null;
+  usekDo: number | null;
   cesta: string;
   velikost: number;
   pridal: string | null;
@@ -43,6 +45,8 @@ const VYBER = {
   delkaS: true,
   obalKlic: true,
   poznamka: true,
+  usekOd: true,
+  usekDo: true,
   cesta: true,
   velikost: true,
   createdAt: true,
@@ -56,6 +60,8 @@ type RadekSerie = {
   delkaS: number;
   obalKlic: string | null;
   poznamka: string | null;
+  usekOd: number | null;
+  usekDo: number | null;
   cesta: string;
   velikost: number;
   createdAt: Date;
@@ -70,6 +76,8 @@ function naSkladbu(r: RadekSerie): SkladbaSerie {
     delkaS: r.delkaS,
     maObal: Boolean(r.obalKlic),
     poznamka: r.poznamka,
+    usekOd: r.usekOd,
+    usekDo: r.usekDo,
     cesta: r.cesta,
     velikost: r.velikost,
     pridal: r.pridal ? r.pridal.name || r.pridal.email : null,
@@ -158,12 +166,22 @@ export async function zapisSkladbuSerie(vstup: {
   return zaznam ? naSkladbu(zaznam as RadekSerie) : null;
 }
 
-export async function upravPoznamkuSerie(id: string, poznamka: string | null): Promise<boolean> {
+export async function upravSkladbuSerie(
+  id: string,
+  zmena: { poznamka?: string | null; usekOd?: number | null; usekDo?: number | null },
+): Promise<boolean> {
   try {
-    await prisma.hudbaSerie.update({ where: { id }, data: { poznamka: poznamka?.trim() || null } });
+    await prisma.hudbaSerie.update({
+      where: { id },
+      data: {
+        ...(zmena.poznamka !== undefined ? { poznamka: zmena.poznamka?.trim() || null } : {}),
+        ...(zmena.usekOd !== undefined ? { usekOd: zmena.usekOd } : {}),
+        ...(zmena.usekDo !== undefined ? { usekDo: zmena.usekDo } : {}),
+      },
+    });
     return true;
   } catch (err) {
-    console.error('Poznámku u hudby série se nepodařilo uložit:', err);
+    console.error('Hudbu série se nepodařilo upravit:', err);
     return false;
   }
 }
@@ -237,6 +255,8 @@ export async function zkopirujHudbuSerie(vstup: {
       delkaS: number;
       obalKlic: string | null;
       poznamka: string | null;
+      usekOd: number | null;
+      usekDo: number | null;
       cesta: string;
       dropboxId: string | null;
       velikost: number;
@@ -251,6 +271,8 @@ export async function zkopirujHudbuSerie(vstup: {
         delkaS: r.delkaS,
         obalKlic: r.obalKlic,
         poznamka: r.poznamka,
+        usekOd: r.usekOd,
+        usekDo: r.usekDo,
         puvod: 'serie',
         cesta: r.cesta,
         dropboxId: r.dropboxId,

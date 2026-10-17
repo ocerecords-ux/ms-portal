@@ -72,6 +72,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     const data = parsed.data;
 
+    /**
+     * „HUDBU DODÁVÁ KLIENT" PLATÍ AŽ OD ZAPNUTÍ (zadání 17. 10. 2026: „když
+     * teď zaškrtnu u firmy, že klient dodává hudbu, tak aby nešly zpětně na
+     * klienta nějaké notifikace. Ať to platí až od teď").
+     *
+     * Okamžik zapnutí se zapíše a úloha na pozadí pak posílá výzvy jen
+     * k projektům, které vznikly potom - rozdělané zakázky dobíhají po staru.
+     * Bez toho by se hned druhé ráno rozeslaly maily ke všemu, co má za pár
+     * dní první frekvenci. Viz lib/hudbaOdKlienta.ts.
+     */
+    let hudbaKlientOd: Date | null | undefined;
+    if (data.hudbuDodavaKlient !== undefined) {
+      const pred = (await prisma.company
+        .findUnique({ where: { id: params.id }, select: { hudbuDodavaKlient: true } })
+        .catch(() => null)) as { hudbuDodavaKlient: boolean } | null;
+      if (data.hudbuDodavaKlient && !pred?.hudbuDodavaKlient) hudbaKlientOd = new Date();
+      // Vypnutím značka mizí - při dalším zapnutí se počítá znovu od té chvíle.
+      if (!data.hudbuDodavaKlient) hudbaKlientOd = null;
+    }
+
     const company = await prisma.company.update({
       where: { id: params.id },
       data: {
@@ -102,6 +122,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               ...(data.cenuUrcujeKlient !== undefined ? { cenuUrcujeKlient: data.cenuUrcujeKlient } : {}),
               ...(data.fakturujeNaCasti !== undefined ? { fakturujeNaCasti: data.fakturujeNaCasti } : {}),
               ...(data.hudbuDodavaKlient !== undefined ? { hudbuDodavaKlient: data.hudbuDodavaKlient } : {}),
+              ...(hudbaKlientOd !== undefined ? { hudbaKlientOd } : {}),
               ...(data.rezieKlientaUserId !== undefined
                 ? { rezieKlientaUserId: data.rezieKlientaUserId || null }
                 : {}),

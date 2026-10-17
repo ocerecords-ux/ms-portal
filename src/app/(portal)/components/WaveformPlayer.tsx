@@ -44,15 +44,37 @@ function PauseIcon() {
   );
 }
 
-export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: boolean }) {
+export type UsekSkladby = { od: number; do: number };
+
+export function WaveformPlayer({
+  src,
+  autoPlay,
+  usek = null,
+  naUsek,
+}: {
+  src: string;
+  autoPlay?: boolean;
+  /**
+   * OZNAČENÁ ČÁST NAHRÁVKY (zadání 17. 10. 2026: „ještě by se mi líbilo,
+   * kdybych mohl označit ve stopě nějak, kterou část nahrávky použít").
+   * Vteřiny od začátku skladby; prázdné = použije se celá.
+   */
+  usek?: UsekSkladby | null;
+  /** Když je vyplněné, jde úsek křivkou označit. Jinak se jen přehrává. */
+  naUsek?: (u: UsekSkladby | null) => void;
+}) {
   const t = usePreklad();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const krivkaRef = useRef<HTMLDivElement | null>(null);
   const [waveformFailed, setWaveformFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  /** Rozdělaný výběr během tažení - uloží se až po puštění myši. */
+  const [tazeny, setTazeny] = useState<UsekSkladby | null>(null);
+  const zacatekTazeni = useRef<{ x: number; cas: number } | null>(null);
 
   useEffect(() => {
     let destroyed = false;
@@ -153,6 +175,62 @@ export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: bool
     setCurrentTime(audio.currentTime);
   }
 
+  /**
+   * OZNAČENÍ ÚSEKU TAŽENÍM PŘES KŘIVKU.
+   *
+   * Vrstva nad křivkou si bere obojí - krátké klepnutí přesune přehrávání,
+   * tažení označí úsek. Kdyby se o kliknutí starala křivka sama a tažení
+   * tahle vrstva, musel by se mezi tím přepínat nějaký režim; takhle se
+   * člověk nemusí rozhodovat dopředu.
+   */
+  function casZBodu(e: React.PointerEvent<HTMLDivElement>): number {
+    const prvek = krivkaRef.current ?? (e.currentTarget as HTMLDivElement);
+    const r = prvek.getBoundingClientRect();
+    const pomer = Math.min(1, Math.max(0, (e.clientX - r.left) / Math.max(1, r.width)));
+    return pomer * duration;
+  }
+
+  function zacniTazeni(e: React.PointerEvent<HTMLDivElement>) {
+    if (!naUsek || duration <= 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    zacatekTazeni.current = { x: e.clientX, cas: casZBodu(e) };
+  }
+
+  function tahni(e: React.PointerEvent<HTMLDivElement>) {
+    const zacatek = zacatekTazeni.current;
+    if (!zacatek || !naUsek) return;
+    // Pár pixelů posunu je ještě klepnutí, ne tažení - jinak by se úsek
+    // označoval i při obyčejném přesunu přehrávání.
+    if (Math.abs(e.clientX - zacatek.x) < 5) return;
+    const ted = casZBodu(e);
+    setTazeny({ od: Math.min(zacatek.cas, ted), do: Math.max(zacatek.cas, ted) });
+  }
+
+  function pustTazeni(e: React.PointerEvent<HTMLDivElement>) {
+    const zacatek = zacatekTazeni.current;
+    zacatekTazeni.current = null;
+    if (!zacatek || !naUsek) return;
+
+    if (Math.abs(e.clientX - zacatek.x) < 5) {
+      // Klepnutí - jen přesun přehrávání.
+      setTazeny(null);
+      const audio = audioRef.current;
+      if (audio && duration > 0) {
+        audio.currentTime = casZBodu(e);
+        setCurrentTime(audio.currentTime);
+      }
+      return;
+    }
+
+    const ted = casZBodu(e);
+    const od = Math.round(Math.min(zacatek.cas, ted));
+    const doKdy = Math.round(Math.max(zacatek.cas, ted));
+    setTazeny(null);
+    // Úsek kratší než vteřina je skoro jistě omyl.
+    naUsek(doKdy - od >= 1 ? { od, do: doKdy } : null);
+  }
+
+  const vyber = tazeny ?? usek;
   const remaining = duration > 0 ? Math.max(0, duration - currentTime) : 0;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -182,12 +260,38 @@ export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: bool
             <div className="h-full bg-brand-purple" style={{ width: `${progress}%` }} />
           </div>
         ) : (
-          <div className="relative">
+          <div className="relative" ref={krivkaRef}>
             <div ref={containerRef} className="w-full" />
             {loading && (
               <span className="absolute inset-0 flex items-center justify-center text-xs text-muted font-body">
                 {t('prehravac.nacitamPrubeh')}
               </span>
+            )}
+
+            {/* Označený úsek - zelený, stejně jako kurzor přehrávání. */}
+            {naUsek && duration > 0 && vyber && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-y-0 bg-brand-green/20 border-x-2 border-brand-green pointer-events-none"
+                style={{
+                  left: `${(vyber.od / duration) * 100}%`,
+                  width: `${Math.max(0.5, ((vyber.do - vyber.od) / duration) * 100)}%`,
+                }}
+              />
+            )}
+
+            {naUsek && (
+              <div
+                role="presentation"
+                onPointerDown={zacniTazeni}
+                onPointerMove={tahni}
+                onPointerUp={pustTazeni}
+                onPointerCancel={() => {
+                  zacatekTazeni.current = null;
+                  setTazeny(null);
+                }}
+                className="absolute inset-0 cursor-crosshair touch-none"
+              />
             )}
           </div>
         )}

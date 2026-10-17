@@ -327,6 +327,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hudba.odKlienta': { cs: 'vložil klient', en: 'added by the client' },
   'hudba.zeSerie': { cs: 'ze série', en: 'from the series' },
   'hudba.obalPopis': { cs: 'Obal skladby', en: 'Track artwork' },
+  'hudba.usek': { cs: 'Použít jen', en: 'Use only' },
+  'hudba.celaSkladba': { cs: 'použít celou skladbu', en: 'use the whole track' },
+  'hudba.oznacitUsek': {
+    cs: 'Tažením přes křivku označíte, která část se má použít.',
+    en: 'Drag across the waveform to mark the part to use.',
+  },
   'hudbaKnihovna.nadpis': { cs: 'Hudba k audioknihám', en: 'Audiobook music' },
   'hudbaKnihovna.uvod': {
     cs: 'Co všechno jsme kdy použili, hudba celých sérií a knihy, kde hudba zatím chybí.',
@@ -7020,8 +7026,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'firma.naCastiVolba': { cs: 'Zakázka se fakturuje nadvakrát', en: 'The order is invoiced in two goes' },
   'firma.hudbaKlient': { cs: 'Hudba k audioknihám', en: 'Audiobook music' },
   'firma.hudbaKlientHint': {
-    cs: 'Tři dny před první frekvencí pošle portál klientovi odkaz, kterým hudbu vloží sám. Nám zvoneček nezvoní.',
-    en: 'Three days before the first session the portal sends the client a link to add the music themselves. We get no reminder.',
+    cs: 'Tři dny před první frekvencí pošle portál klientovi odkaz, kterým hudbu vloží sám. Nám zvoneček nezvoní. Platí to až od zaškrtnutí — k rozdělaným zakázkám výzva zpětně neodejde a hudbu k nim vybereme my.',
+    en: 'Three days before the first session the portal sends the client a link to add the music themselves, and we get no reminder. It only applies from the moment you tick it — no invitations go out for books already in progress; we pick the music for those.',
   },
   'firma.hudbaKlientVolba': { cs: 'Hudbu dodává klient', en: 'The client supplies the music' },
   'firma.sazba': {

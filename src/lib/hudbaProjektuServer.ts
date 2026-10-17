@@ -29,6 +29,9 @@ export type SkladbaProjektu = {
   /** Má obal z metadat? Samotný obrázek se stahuje podepsanou adresou. */
   maObal: boolean;
   poznamka: string | null;
+  /** Která část nahrávky se má použít; vteřiny od začátku. */
+  usekOd: number | null;
+  usekDo: number | null;
   puvod: 'my' | 'klient' | 'serie';
   vlozilKlient: string | null;
   cesta: string;
@@ -44,6 +47,8 @@ const VYBER = {
   delkaS: true,
   obalKlic: true,
   poznamka: true,
+  usekOd: true,
+  usekDo: true,
   puvod: true,
   vlozilKlient: true,
   cesta: true,
@@ -59,6 +64,8 @@ type RadekZDatabaze = {
   delkaS: number;
   obalKlic: string | null;
   poznamka: string | null;
+  usekOd: number | null;
+  usekDo: number | null;
   puvod: string;
   vlozilKlient: string | null;
   cesta: string;
@@ -75,6 +82,8 @@ function naSkladbu(r: RadekZDatabaze): SkladbaProjektu {
     delkaS: r.delkaS,
     maObal: Boolean(r.obalKlic),
     poznamka: r.poznamka,
+    usekOd: r.usekOd,
+    usekDo: r.usekDo,
     puvod: r.puvod === 'klient' || r.puvod === 'serie' ? r.puvod : 'my',
     vlozilKlient: r.vlozilKlient,
     cesta: r.cesta,
@@ -134,6 +143,8 @@ export async function zapisSkladbu(vstup: {
   delkaS?: number;
   obalKlic?: string | null;
   poznamka?: string | null;
+  usekOd?: number | null;
+  usekDo?: number | null;
   puvod?: 'my' | 'klient' | 'serie';
   vlozilKlient?: string | null;
   pridalId: string | null;
@@ -150,6 +161,8 @@ export async function zapisSkladbu(vstup: {
         delkaS: Math.max(0, Math.round(vstup.delkaS ?? 0)),
         obalKlic: vstup.obalKlic || null,
         poznamka: vstup.poznamka?.trim() || null,
+        usekOd: vstup.usekOd ?? null,
+        usekDo: vstup.usekDo ?? null,
         puvod: vstup.puvod ?? 'my',
         vlozilKlient: vstup.vlozilKlient?.trim() || null,
         cesta: soubor.cesta,
@@ -172,21 +185,36 @@ export async function zapisSkladbu(vstup: {
 }
 
 /**
- * ÚPRAVA SE TÝKÁ JEN POZNÁMKY (zadání 17. 10. 2026). Název a autor pocházejí
- * z metadat souboru a přepsat je by znamenalo, že v kartě svítí něco jiného
- * než v souboru, který se pustí do knihy.
+ * PŘEPSAT JDE JEN POZNÁMKA A OZNAČENÝ ÚSEK (zadání 17. 10. 2026). Název
+ * a autor pocházejí z metadat souboru a přepsat je by znamenalo, že v kartě
+ * svítí něco jiného než v souboru, který se pustí do knihy.
+ *
+ * Úsek je POZNÁMKA PRO STŘIH, ne ořez souboru - v Dropboxu zůstává celá
+ * skladba. Prázdný úsek znamená „použít celou".
  */
-export async function upravPoznamku(id: string, poznamka: string | null): Promise<boolean> {
+export async function upravSkladbu(
+  id: string,
+  zmena: { poznamka?: string | null; usekOd?: number | null; usekDo?: number | null },
+): Promise<boolean> {
   try {
     await prisma.hudbaProjektu.update({
       where: { id },
-      data: { poznamka: poznamka?.trim() || null },
+      data: {
+        ...(zmena.poznamka !== undefined ? { poznamka: zmena.poznamka?.trim() || null } : {}),
+        ...(zmena.usekOd !== undefined ? { usekOd: zmena.usekOd } : {}),
+        ...(zmena.usekDo !== undefined ? { usekDo: zmena.usekDo } : {}),
+      },
     });
     return true;
   } catch (err) {
-    console.error('Poznámku ke skladbě se nepodařilo uložit:', err);
+    console.error('Skladbu se nepodařilo upravit:', err);
     return false;
   }
+}
+
+/** Stará cesta, kterou používá veřejná stránka klienta - jen poznámka. */
+export async function upravPoznamku(id: string, poznamka: string | null): Promise<boolean> {
+  return upravSkladbu(id, { poznamka });
 }
 
 /**

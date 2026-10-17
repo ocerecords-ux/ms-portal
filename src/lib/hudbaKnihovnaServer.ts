@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { hudbuDodavaKlient } from '@/lib/hudbaOdKlienta';
 import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 import { stavJeDokonceny } from '@/lib/stavyProjektu';
 
@@ -234,8 +235,17 @@ export async function projektyBezHudby(): Promise<ProjektBezHudby[]> {
         statusName: true,
         projectType: true,
         companyName: true,
+        createdAt: true,
         company: {
-          select: { name: true, dealsAds: true, dealsAudiobooks: true, hudbuDodavaKlient: true },
+          select: {
+            name: true,
+            dealsAds: true,
+            dealsAudiobooks: true,
+            hudbuDodavaKlient: true,
+            // Od kdy to u firmy platí - zpětně se výzvy neposílají
+            // (17. 10. 2026), viz lib/hudbaOdKlienta.ts.
+            hudbaKlientOd: true,
+          },
         },
       },
     })
@@ -246,11 +256,13 @@ export async function projektyBezHudby(): Promise<ProjektBezHudby[]> {
     statusName: string | null;
     projectType: string | null;
     companyName: string | null;
+    createdAt: Date;
     company: {
       name: string;
       dealsAds: boolean;
       dealsAudiobooks: boolean;
       hudbuDodavaKlient: boolean;
+      hudbaKlientOd: Date | null;
     } | null;
   }[];
 
@@ -295,7 +307,7 @@ export async function projektyBezHudby(): Promise<ProjektBezHudby[]> {
         serie: m.serie,
         prvniFrekvence: kdy ? kdy.toISOString() : null,
         zaDni: kdy ? dniDo(dnesek, kdy) : null,
-        hudbuDodavaKlient: m.company?.hudbuDodavaKlient === true,
+        hudbuDodavaKlient: hudbuDodavaKlient(m.company, m.createdAt),
         vyzva: vyzva
           ? {
               odeslanoAt: vyzva.odeslanoAt ? vyzva.odeslanoAt.toISOString() : null,

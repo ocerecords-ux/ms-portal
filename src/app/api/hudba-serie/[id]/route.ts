@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 import {
   odkazNaSkladbuSerie,
   odpojSkladbuSerie,
-  upravPoznamkuSerie,
+  upravSkladbuSerie,
 } from '@/lib/hudbaSerieServer';
 import { isInternalRole } from '@/lib/roles';
 
@@ -14,13 +14,17 @@ import { isInternalRole } from '@/lib/roles';
  * JEDNA SKLADBA SÉRIE (17. 10. 2026).
  *
  * GET    - adresa na přehrání, platí čtyři hodiny
- * PATCH  - jen poznámka; název a autor jsou z metadat souboru
+ * PATCH  - poznámka a označený úsek; název a autor jsou z metadat souboru
  * DELETE - odebere skladbu z PŘEDLOHY série. Dílům, které ji už dostaly,
  *          nic nebere - mají vlastní záznamy.
  */
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({ poznamka: z.string().trim().max(500).nullable() });
+const schema = z.object({
+  poznamka: z.string().trim().max(500).nullable().optional(),
+  usekOd: z.number().int().min(0).max(24 * 3600).nullable().optional(),
+  usekDo: z.number().int().min(0).max(24 * 3600).nullable().optional(),
+});
 
 async function straz() {
   const session = await getServerSession(authOptions);
@@ -41,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
   const { id } = await params;
-  const ok = await upravPoznamkuSerie(id, parsed.data.poznamka);
+  const ok = await upravSkladbuSerie(id, parsed.data);
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
-import { WaveformPlayer } from '@/app/(portal)/components/WaveformPlayer';
+import { WaveformPlayer, type UsekSkladby } from '@/app/(portal)/components/WaveformPlayer';
 import { delkaTextem, prectiMetadata, zmensiObal, zmerDelku } from '@/lib/metadataHudby';
 
 /**
@@ -31,6 +31,9 @@ export type SkladbaVSeznamu = {
   delkaS: number;
   maObal: boolean;
   poznamka: string | null;
+  /** Která část nahrávky se má použít; vteřiny od začátku, prázdné = celá. */
+  usekOd?: number | null;
+  usekDo?: number | null;
   puvod?: 'my' | 'klient' | 'serie';
   vlozilKlient?: string | null;
   velikost: number;
@@ -225,6 +228,24 @@ export function HudbaSeznam({
     }).catch(() => null);
   }
 
+  /**
+   * OZNAČENÝ ÚSEK (zadání 17. 10. 2026: „ještě by se mi líbilo, kdybych mohl
+   * označit ve stopě nějak, kterou část nahrávky použít").
+   *
+   * Je to poznámka pro střih, ne ořez souboru - v Dropboxu zůstává celá
+   * skladba. Prázdný úsek znamená „použít celou".
+   */
+  async function ulozUsek(id: string, usek: UsekSkladby | null) {
+    const usekOd = usek ? usek.od : null;
+    const usekDo = usek ? usek.do : null;
+    setSkladby((p) => p.map((s) => (s.id === id ? { ...s, usekOd, usekDo } : s)));
+    await fetch(api.polozka(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usekOd, usekDo }),
+    }).catch(() => null);
+  }
+
   async function odpoj(id: string) {
     setSkladby((p) => p.filter((s) => s.id !== id));
     await fetch(api.polozka(id), { method: 'DELETE' }).catch(() => null);
@@ -249,6 +270,7 @@ export function HudbaSeznam({
               api={api}
               jenCteni={jenCteni}
               naPoznamku={(text) => ulozPoznamku(s.id, text)}
+              naUsek={(usek) => ulozUsek(s.id, usek)}
               naOdebrani={() => odpoj(s.id)}
               naChybu={setChyba}
             />
@@ -339,6 +361,7 @@ function Skladba({
   api,
   jenCteni,
   naPoznamku,
+  naUsek,
   naOdebrani,
   naChybu,
 }: {
@@ -346,6 +369,7 @@ function Skladba({
   api: HudbaApi;
   jenCteni: boolean;
   naPoznamku: (text: string) => void;
+  naUsek: (usek: UsekSkladby | null) => void;
   naOdebrani: () => void;
   naChybu: (text: string | null) => void;
 }) {
@@ -395,6 +419,11 @@ function Skladba({
     return data.odkaz;
   }
 
+  const usek: UsekSkladby | null =
+    skladba.usekOd != null && skladba.usekDo != null
+      ? { od: skladba.usekOd, do: skladba.usekDo }
+      : null;
+
   const popisky = [
     velikost(skladba.velikost),
     delkaTextem(skladba.delkaS),
@@ -443,7 +472,11 @@ function Skladba({
 
         <div className="mt-1.5">
           {odkaz ? (
-            <WaveformPlayer src={odkaz} />
+            <WaveformPlayer
+              src={odkaz}
+              usek={usek}
+              naUsek={jenCteni ? undefined : naUsek}
+            />
           ) : nepovedloSe ? (
             <span className="text-xs font-body text-danger">{t('hudba.chybaPrehrani')}</span>
           ) : (
@@ -454,6 +487,28 @@ function Skladba({
             </span>
           )}
         </div>
+
+        {/* OZNAČENÝ ÚSEK pod křivkou - ať je vidět i bez tažení myší. */}
+        {!jenCteni && (
+          <p className="text-[11px] font-body text-muted m-0 mt-1">
+            {usek ? (
+              <>
+                <b className="text-ink">
+                  {t('hudba.usek')} {delkaTextem(usek.od)} – {delkaTextem(usek.do)}
+                </b>
+                <button
+                  type="button"
+                  onClick={() => naUsek(null)}
+                  className="ml-3 border-0 bg-transparent p-0 text-[11px] font-heading text-brand-purpleLight cursor-pointer hover:text-ink"
+                >
+                  {t('hudba.celaSkladba')}
+                </button>
+              </>
+            ) : (
+              t('hudba.oznacitUsek')
+            )}
+          </p>
+        )}
       </div>
 
       {/* POZNÁMKA VPRAVO, A S MÍSTEM (17. 10. 2026: „ta poznámka musí mít více
