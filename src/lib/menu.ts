@@ -106,6 +106,12 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
    * Vybira ji Zuzo-labuzo s produkci, stejne jako planuje nataceni.
    */
   '/hudba-audioknihy': ['ADMIN', 'PRODUKCE'],
+  /**
+   * NOVINKY PORTÁLU (zadání 17. 10. 2026: „potrebuju nekde mit historii
+   * jednotlivych modulu a vychytavek a vylepseni"). Čte je celý tým - je to
+   * jeho přehled o tom, co v portálu přibylo. Píše je Žůžo-labůžo.
+   */
+  '/novinky': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
   // Palubovka - budiky, podle kterych Ondrej ridi firmu (zadani 27. 9. 2026:
   // „vidim jen ja"). Role je jen prvni zamek; druhy je priznak vidiPalubovku
   // na karte uzivatele, ktery kontroluje sama stranka.

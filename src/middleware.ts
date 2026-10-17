@@ -119,6 +119,8 @@ export const config = {
     '/palubovka',
     // Hudba k audioknihám (17. 10. 2026).
     '/hudba-audioknihy/:path*',
+    // Novinky portálu - historie modulů a vychytávek (17. 10. 2026).
+    '/novinky/:path*',
     // Kalendář rezervací studia (25. 9. 2026) - vlastní sekce mimo portál.
     '/studio/:path*',
     '/doplnit-udaje/:path*',

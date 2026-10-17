@@ -5344,3 +5344,55 @@ model DalsiPrilohaObjednavky {
 
   @@index([orderId])
 }
+
+// ===========================================================================
+// NOVINKY PORTÁLU (zadání 17. 10. 2026: „potrebuju nekde mit historii
+// jednotlivych modulu a vychytavek a vylepseni, ktera jsme na portal
+// implementovali. Bude to pak i slouzit k ziskani prehledu na newslettery,
+// ktere chci pak rozesilat jednou za mesic... A melo by to byt i trizeno
+// podle toho, koho se to tyka. Tym, klienti (audioknihy a reklamy zvlast),
+// herci").
+//
+// PROČ VLASTNÍ TABULKA A NE GIT: v historii commitů je 1 100 řádků o tom, co
+// se v kódu pohnulo - ne o tom, co z toho má člověk. Tady je jeden řádek =
+// jedna věc, které si uživatel všimne, napsaná jeho jazykem a opatřená
+// štítkem, koho se týká.
+// ===========================================================================
+
+/// Jedna novinka portálu - modul, vychytávka nebo oprava.
+model NovinkaPortalu {
+  id    String @id @default(cuid())
+  /// STÁLÝ KLÍČ. Podle něj se pozná, že položka v databázi už je: zpětně
+  /// doplněná historie se při nasazení zakládá jen jednou, takže co v ní
+  /// Žůžo-labůžo přepíše rukou, žádný další build nepřepíše. Novinky psané
+  /// v portálu mají klíč vygenerovaný z data a názvu.
+  klic  String @unique
+  /// Den, kdy to šlo na portál.
+  datum DateTime
+  nazev String
+  /// Co se změnilo - pro nás, klidně i s technickou poznámkou.
+  popis String @db.Text
+  /// TEXT DO NEWSLETTERU. Totéž řečené pro klienta nebo herce, bez naší
+  /// vnitřní kuchyně. Když chybí, do newsletteru se vezme popis.
+  proNewsletter String? @db.Text
+  /// Část portálu: „Hudba", „Kalendáře", „Doklady"… Volný text, ať se dá
+  /// přidat modul, který ještě neexistuje.
+  modul String @default("Ostatní")
+  /// MODUL (nová část portálu) | VYLEPSENI | OPRAVA
+  typ   String @default("VYLEPSENI")
+  /// KOHO SE TO TÝKÁ. Hodnoty: TYM, KLIENT_AUDIOKNIHY, KLIENT_REKLAMY,
+  /// HERCI. Může jich být víc najednou; prázdné = zatím neroztříděno.
+  publikum String[] @default([])
+  /// Rozepsanou novinku vidí jen ten, kdo ji píše.
+  zverejneno Boolean @default(true)
+  /// KDY TO ŠLO V NEWSLETTERU VEN. Drží se kvůli tomu, aby se jedna věc
+  /// neposlala dvakrát - generátor měsíčního přehledu odeslané přeskakuje,
+  /// dokud si je člověk vědomě nevyžádá.
+  odeslanoAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([datum])
+  @@index([zverejneno])
+}

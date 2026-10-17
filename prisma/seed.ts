@@ -9,6 +9,7 @@ import { bezTitulu } from '../src/lib/jmena';
 import { STARY_VZOR_NATACENI, VYCHOZI_VZOR_NATACENI } from '../src/lib/nataceniText';
 import { PODPIS_ONDREJ } from './podpisOndrej';
 import { VYCHOZI_SADY } from './technickeParametryVychozi';
+import { HISTORIE_PORTALU } from './novinkyHistorie';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -201,6 +202,7 @@ async function main() {
   await siteJenOndrejovi();
   await zalozTechnickeParametry();
   await palubovkaJenOndrejovi();
+  await zalozHistoriiPortalu();
   await parametrySpravujiOndrejAPeter();
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
@@ -2848,5 +2850,50 @@ async function palubovkaJenOndrejovi() {
     console.log(`  palubovka: zapnuta jen u ${ondrej.email}`);
   } catch (err) {
     console.warn('  palubovku se nepodarilo zapnout:', err);
+  }
+}
+
+
+/**
+ * HISTORIE PORTÁLU DO NOVINEK (17. 10. 2026).
+ *
+ * Zpětně poskládaný seznam modulů a vychytávek z prisma/novinkyHistorie.ts.
+ * ZAKLÁDÁ SE JEN TO, CO V DATABÁZI NENÍ - podle klíče z data a názvu. Co
+ * Žůžo-labůžo v portálu přepíše nebo smaže, žádné další nasazení nevrátí.
+ */
+async function zalozHistoriiPortalu() {
+  try {
+    const stavajici = await prisma.novinkaPortalu.findMany({ select: { klic: true } });
+    const uz = new Set(stavajici.map((n) => n.klic));
+
+    const kZalozeni = HISTORIE_PORTALU.map((n) => {
+      const jmeno = n.nazev
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60);
+      return {
+        klic: `${n.datum}-${jmeno || 'novinka'}`,
+        datum: new Date(`${n.datum}T12:00:00.000Z`),
+        nazev: n.nazev,
+        popis: n.popis,
+        proNewsletter: n.proNewsletter ?? null,
+        modul: n.modul,
+        typ: n.typ,
+        publikum: n.publikum,
+        zverejneno: true,
+      };
+    }).filter((n) => !uz.has(n.klic));
+
+    if (kZalozeni.length === 0) {
+      console.log('  novinky portalu: nic noveho');
+      return;
+    }
+    await prisma.novinkaPortalu.createMany({ data: kZalozeni, skipDuplicates: true });
+    console.log(`  novinky portalu: zalozeno ${kZalozeni.length}`);
+  } catch (err) {
+    console.warn('  historii portalu se nepodarilo zalozit:', err);
   }
 }
