@@ -27,8 +27,14 @@ const schema = z.object({
   jmeno: z.string().trim().max(120).nullable().optional(),
 });
 
-/** Projekt, na který token vede. Nic jiného z tokenu nevyčteme. */
-export async function projektZTokenu(token: string): Promise<string | null> {
+/**
+ * Projekt, na který token vede. Nic jiného z tokenu nevyčteme.
+ *
+ * SCHVÁLNĚ BEZ `export`: ze souboru routy smí Next vyvážet jen metody (GET,
+ * POST…) a pár nastavení - cokoliv dalšího shodí překlad hláškou „is not
+ * a valid Route export field".
+ */
+async function projektZTokenu(token: string): Promise<string | null> {
   const vyzva = (await prisma.vyzvaHudba
     .findUnique({ where: { token }, select: { caflouProjectId: true } })
     .catch(() => null)) as { caflouProjectId: string } | null;
