@@ -4,13 +4,15 @@ import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
-import { odkazNaSkladbu, odpojSkladbu, upravSkladbu } from '@/lib/hudbaProjektuServer';
+import { odkazNaSkladbu, odpojSkladbu, upravPoznamku } from '@/lib/hudbaProjektuServer';
 
 /**
  * JEDNA SKLADBA (zadání 16. 10. 2026).
  *
  * GET    - adresa na přehrání, platí čtyři hodiny (vyrábí se až při kliknutí)
- * PATCH  - název, zdroj, poznámka
+ * PATCH  - JEN POZNÁMKA. Název a autor se čtou z metadat souboru a přepsat
+ *          je by znamenalo, že v kartě svítí něco jiného než v souboru
+ *          (zadání 17. 10. 2026: „ten název autor by neměl jít měnit").
  * DELETE - ODPOJÍ skladbu od projektu. Soubor v Dropboxu zůstává; hudební
  *          knihovna je společná a jedno kliknutí nesmí vzít soubor projektům,
  *          které ho používají taky.
@@ -18,9 +20,7 @@ import { odkazNaSkladbu, odpojSkladbu, upravSkladbu } from '@/lib/hudbaProjektuS
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  nazev: z.string().trim().max(200).optional(),
-  zdroj: z.string().trim().max(120).nullable().optional(),
-  poznamka: z.string().trim().max(500).nullable().optional(),
+  poznamka: z.string().trim().max(500).nullable(),
 });
 
 async function straz() {
@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ hu
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
   const { hudbaId } = await params;
-  const ok = await upravSkladbu(hudbaId, parsed.data);
+  const ok = await upravPoznamku(hudbaId, parsed.data.poznamka);
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }
 

@@ -9,23 +9,80 @@ import {
 } from '@/lib/dropbox';
 
 /**
- * HUDBA VYBRANÁ PRO PROJEKT (zadání 16. 10. 2026).
+ * HUDBA VYBRANÁ PRO PROJEKT (zadání 16. 10. 2026, rozšířeno 17. 10. 2026).
  *
  * Soubor leží v Dropboxu, databáze drží jen záznam o něm. Portál se souboru
  * nikdy nedotkne - jen vyrobí adresu, na kterou ho prohlížeč pošle, a potom
  * ověří, že tam opravdu je.
+ *
+ * NÁZEV A AUTOR SE SEM POSÍLAJÍ Z PROHLÍŽEČE, kde se přečetly z metadat
+ * souboru (lib/metadataHudby.ts). Jinak to nejde: server ten soubor nikdy
+ * nevidí. Zapisují se JEDNOU a dál se nemění - měnit se smí jen poznámka
+ * („ten název autor by neměl jít měnit").
  */
 
 export type SkladbaProjektu = {
   id: string;
   nazev: string;
-  zdroj: string | null;
+  autor: string | null;
+  delkaS: number;
+  /** Má obal z metadat? Samotný obrázek se stahuje podepsanou adresou. */
+  maObal: boolean;
   poznamka: string | null;
+  puvod: 'my' | 'klient' | 'serie';
+  vlozilKlient: string | null;
   cesta: string;
   velikost: number;
   pridal: string | null;
   kdy: string;
 };
+
+const VYBER = {
+  id: true,
+  nazev: true,
+  autor: true,
+  delkaS: true,
+  obalKlic: true,
+  poznamka: true,
+  puvod: true,
+  vlozilKlient: true,
+  cesta: true,
+  velikost: true,
+  createdAt: true,
+  pridal: { select: { name: true, email: true } },
+} as const;
+
+type RadekZDatabaze = {
+  id: string;
+  nazev: string;
+  autor: string | null;
+  delkaS: number;
+  obalKlic: string | null;
+  poznamka: string | null;
+  puvod: string;
+  vlozilKlient: string | null;
+  cesta: string;
+  velikost: number;
+  createdAt: Date;
+  pridal: { name: string | null; email: string } | null;
+};
+
+function naSkladbu(r: RadekZDatabaze): SkladbaProjektu {
+  return {
+    id: r.id,
+    nazev: r.nazev,
+    autor: r.autor,
+    delkaS: r.delkaS,
+    maObal: Boolean(r.obalKlic),
+    poznamka: r.poznamka,
+    puvod: r.puvod === 'klient' || r.puvod === 'serie' ? r.puvod : 'my',
+    vlozilKlient: r.vlozilKlient,
+    cesta: r.cesta,
+    velikost: r.velikost,
+    pridal: r.pridal ? r.pridal.name || r.pridal.email : null,
+    kdy: r.createdAt.toISOString(),
+  };
+}
 
 /** Složka projektu: `<kořen>/<rok>/<název projektu>`. */
 export function slozkaProjektu(nazevProjektu: string, kdy: Date = new Date()): string {
@@ -34,44 +91,12 @@ export function slozkaProjektu(nazevProjektu: string, kdy: Date = new Date()): s
 
 export async function nactiHudbu(caflouProjectId: string): Promise<SkladbaProjektu[]> {
   const radky = await prisma.hudbaProjektu
-    .findMany({
-      where: { caflouProjectId },
-      orderBy: { createdAt: 'asc' },
-      select: {
-        id: true,
-        nazev: true,
-        zdroj: true,
-        poznamka: true,
-        cesta: true,
-        velikost: true,
-        createdAt: true,
-        pridal: { select: { name: true, email: true } },
-      },
-    })
+    .findMany({ where: { caflouProjectId }, orderBy: { createdAt: 'asc' }, select: VYBER })
     .catch((err) => {
       console.error('Hudbu projektu se nepodařilo načíst:', err);
       return [];
     });
-
-  return (radky as {
-    id: string;
-    nazev: string;
-    zdroj: string | null;
-    poznamka: string | null;
-    cesta: string;
-    velikost: number;
-    createdAt: Date;
-    pridal: { name: string | null; email: string } | null;
-  }[]).map((r) => ({
-    id: r.id,
-    nazev: r.nazev,
-    zdroj: r.zdroj,
-    poznamka: r.poznamka,
-    cesta: r.cesta,
-    velikost: r.velikost,
-    pridal: r.pridal ? r.pridal.name || r.pridal.email : null,
-    kdy: r.createdAt.toISOString(),
-  }));
+  return (radky as RadekZDatabaze[]).map(naSkladbu);
 }
 
 /**
@@ -105,8 +130,12 @@ export async function zapisSkladbu(vstup: {
   caflouProjectId: string;
   cesta: string;
   nazev: string;
-  zdroj?: string | null;
+  autor?: string | null;
+  delkaS?: number;
+  obalKlic?: string | null;
   poznamka?: string | null;
+  puvod?: 'my' | 'klient' | 'serie';
+  vlozilKlient?: string | null;
   pridalId: string | null;
 }): Promise<SkladbaProjektu | null> {
   const soubor = await metadataSouboru(vstup.cesta);
@@ -117,23 +146,18 @@ export async function zapisSkladbu(vstup: {
       data: {
         caflouProjectId: vstup.caflouProjectId,
         nazev: vstup.nazev.trim() || soubor.nazev,
-        zdroj: vstup.zdroj?.trim() || null,
+        autor: vstup.autor?.trim() || null,
+        delkaS: Math.max(0, Math.round(vstup.delkaS ?? 0)),
+        obalKlic: vstup.obalKlic || null,
         poznamka: vstup.poznamka?.trim() || null,
+        puvod: vstup.puvod ?? 'my',
+        vlozilKlient: vstup.vlozilKlient?.trim() || null,
         cesta: soubor.cesta,
         dropboxId: soubor.id,
         velikost: soubor.velikost,
         pridalId: vstup.pridalId,
       },
-      select: {
-        id: true,
-        nazev: true,
-        zdroj: true,
-        poznamka: true,
-        cesta: true,
-        velikost: true,
-        createdAt: true,
-        pridal: { select: { name: true, email: true } },
-      },
+      select: VYBER,
     })
     .catch((err) => {
       console.error('Skladbu se nepodařilo zapsat:', err);
@@ -141,44 +165,26 @@ export async function zapisSkladbu(vstup: {
     });
   if (!zaznam) return null;
 
-  const r = zaznam as {
-    id: string;
-    nazev: string;
-    zdroj: string | null;
-    poznamka: string | null;
-    cesta: string;
-    velikost: number;
-    createdAt: Date;
-    pridal: { name: string | null; email: string } | null;
-  };
-  return {
-    id: r.id,
-    nazev: r.nazev,
-    zdroj: r.zdroj,
-    poznamka: r.poznamka,
-    cesta: r.cesta,
-    velikost: r.velikost,
-    pridal: r.pridal ? r.pridal.name || r.pridal.email : null,
-    kdy: r.createdAt.toISOString(),
-  };
+  // Jakmile projekt hudbu má, upozornění „chybí hudba" nemá o čem zvonit -
+  // a kdyby se hudba zase odebrala, značka se vyprázdní a zvonek se vrátí.
+  await oznacUpozorneni(vstup.caflouProjectId, null);
+  return naSkladbu(zaznam as RadekZDatabaze);
 }
 
-export async function upravSkladbu(
-  id: string,
-  zmena: { nazev?: string; zdroj?: string | null; poznamka?: string | null },
-): Promise<boolean> {
+/**
+ * ÚPRAVA SE TÝKÁ JEN POZNÁMKY (zadání 17. 10. 2026). Název a autor pocházejí
+ * z metadat souboru a přepsat je by znamenalo, že v kartě svítí něco jiného
+ * než v souboru, který se pustí do knihy.
+ */
+export async function upravPoznamku(id: string, poznamka: string | null): Promise<boolean> {
   try {
     await prisma.hudbaProjektu.update({
       where: { id },
-      data: {
-        ...(zmena.nazev !== undefined ? { nazev: zmena.nazev.trim() || 'Bez názvu' } : {}),
-        ...(zmena.zdroj !== undefined ? { zdroj: zmena.zdroj?.trim() || null } : {}),
-        ...(zmena.poznamka !== undefined ? { poznamka: zmena.poznamka?.trim() || null } : {}),
-      },
+      data: { poznamka: poznamka?.trim() || null },
     });
     return true;
   } catch (err) {
-    console.error('Skladbu se nepodařilo upravit:', err);
+    console.error('Poznámku ke skladbě se nepodařilo uložit:', err);
     return false;
   }
 }
@@ -190,7 +196,12 @@ export async function upravSkladbu(
  */
 export async function odpojSkladbu(id: string): Promise<boolean> {
   try {
-    await prisma.hudbaProjektu.delete({ where: { id } });
+    const zaznam = (await prisma.hudbaProjektu.delete({
+      where: { id },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string };
+    // Projekt může zůstat bez hudby - ať se o tom zase ozve upozornění.
+    await oznacUpozorneni(zaznam.caflouProjectId, null);
     return true;
   } catch (err) {
     console.error('Skladbu se nepodařilo odpojit:', err);
@@ -205,4 +216,26 @@ export async function odkazNaSkladbu(id: string): Promise<string | null> {
     .catch(() => null);
   if (!zaznam) return null;
   return odkazNaPrehrani((zaznam as { cesta: string }).cesta);
+}
+
+/** Klíč obalu v úložišti - podle něj se podepíše adresa na obrázek. */
+export async function obalSkladby(id: string): Promise<string | null> {
+  const zaznam = await prisma.hudbaProjektu
+    .findUnique({ where: { id }, select: { obalKlic: true } })
+    .catch(() => null);
+  return (zaznam as { obalKlic: string | null } | null)?.obalKlic ?? null;
+}
+
+/** Značka „už jsme upozornili, že chybí hudba" - viz cron hudba-pripominky. */
+export async function oznacUpozorneni(caflouProjectId: string, kdy: Date | null): Promise<void> {
+  try {
+    await prisma.projectMeta.update({
+      where: { caflouProjectId },
+      data: { hudbaUpozornenoAt: kdy },
+    });
+  } catch {
+    // Projekt bez vlastního řádku v ProjectMeta nebo závod dvou zápisů -
+    // značka je jen prevence opakovaného zvonění, ne nic, kvůli čemu by
+    // měla spadnout celá akce.
+  }
 }

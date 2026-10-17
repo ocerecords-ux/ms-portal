@@ -144,6 +144,23 @@ model Company {
   /// ma; u ostatnich se pole ani nenabizi.
   fakturujeNaCasti Boolean @default(false)
 
+  /// HUDBU K AUDIOKNIHAM DODAVA KLIENT (zadani 17. 10. 2026: „hudbu nevybiram
+  /// u firem Jan Melvil, Audiolibrix a Cti mi").
+  ///
+  /// Je to PRIZNAK U FIRMY, ne seznam jmen v kodu: firem pribyva a napevno
+  /// zapsana trojice by po prvnim novem klientovi prestala platit. Kdyz je
+  /// zaskrtnuty, portal u audioknih teto firmy neupozornuje nas, ale posle
+  /// klientovi vyzvu s odkazem, kterym hudbu vlozi sam - viz model VyzvaHudba.
+  hudbuDodavaKlient Boolean @default(false)
+
+  /// O KOLIK DNI PRED PRVNI FREKVENCI vyzva klientovi odejde. Tri dny jsou
+  /// stejny predstih, jaky mame na upozorneni my; u konkretni firmy se da
+  /// posunout, kdyz se ukaze, ze jim to nestaci.
+  hudbaPredstihDni  Int     @default(3)
+
+  /// Hudba, kterou maji vsechny dily jedne serie teto firmy (17. 10. 2026).
+  hudbaSerii        HudbaSerie[] @relation("HudbaSerieFirma")
+
   // --- Dodavatel (type = DODAVATEL) - fakturacni/kontaktni udaje, zadani 5. 9. 2026 ---
   contactName    String?   // kontaktni osoba
   /// Posílat faktury i klientovi projektu (zadání 13. 9. 2026). Na kontaktní
@@ -706,6 +723,8 @@ model User {
   calendarFeeds      CalendarFeed[]
   /// Hudba, kterou k projektum pridal (16. 10. 2026).
   hudbaPridana       HudbaProjektu[]    @relation("HudbaPridal")
+  /// Hudba serii, kterou zalozil (17. 10. 2026).
+  hudbaSeriiPridana  HudbaSerie[]       @relation("HudbaSeriePridal")
 
   /// Firmy, u kterych tenhle clovek chodi rezirovat misto nas (12. 10. 2026) -
   /// viz Company.rezieKlientaUserId.
@@ -995,6 +1014,12 @@ model ProjectMeta {
   tagVydavatel  String?   /// ID3 publisher - u Albatrosu „Voxi"
   /// Kdy se tagy naposledy zapsaly do souborů na Disku.
   tagyZapsanoAt DateTime?
+
+  /// KDY JSME UPOZORNILI, ŽE K AUDIOKNIZE CHYBÍ HUDBA (17. 10. 2026).
+  /// Bez téhle značky by zvoneček zvonil každé ráno znovu, dokud by se
+  /// hudba nevložila. Vyprázdní se, jakmile projekt hudbu dostane - kdyby
+  /// se mu zase odebrala, upozornění přijde znovu.
+  hudbaUpozornenoAt DateTime?
 
   companyId       String?
   company         Company?         @relation("ProjektFirma", fields: [companyId], references: [id])
@@ -2804,11 +2829,30 @@ model HostNataceni {
 model HudbaProjektu {
   id              String  @id @default(cuid())
   caflouProjectId String
-  /// Jak se skladba jmenuje. Predvyplni se z nazvu souboru, da se prepsat.
+
+  /// NAZEV A AUTOR SE CTOU Z METADAT SOUBORU a nejdou prepsat (zadani
+  /// 17. 10. 2026: „ten nazev autor by nemel jit menit"). Kdyz metadata
+  /// chybi, zkusi se jmeno souboru ve tvaru „Autor - Nazev"; viz
+  /// lib/metadataHudby.ts.
   nazev           String
-  /// Odkud je - Artlist, Epidemic, vlastni. Kvuli licenci.
-  zdroj           String?
+  autor           String?
+  /// Delka v sekundach, zmerena v prohlizeci pri vkladani. 0 = neznama.
+  delkaS          Int     @default(0)
+  /// Obal z metadat - klic v ulozisti, ne adresa: bucket je soukromy
+  /// a odkaz se podepisuje az pri zobrazeni.
+  obalKlic        String?
+
+  /// JEDINE POLE, KTERE JDE PREPSAT (zadani 17. 10. 2026: „polozku zdroj
+  /// nechme jako obecnou poznamku, kdybychom potrebovali neco k tomu tracku
+  /// upresnit"). Drive se tu vedl „zdroj" (Artlist, Epidemic) - splynul
+  /// s poznamkou, protoze dve volna textova pole vedle sebe nikdo nevyplnoval.
   poznamka        String?
+
+  /// Odkud se skladba u projektu vzala: „my" = vybrali jsme ji, „klient" =
+  /// dodal ji klient svym odkazem, „serie" = zkopirovala se z hudby serie.
+  puvod           String  @default("my")
+  /// Jmeno cloveka na strane klienta - na verejne strance se nikdo neprihlasuje.
+  vlozilKlient    String?
 
   /// Cesta v Dropboxu; podle ni se vyraba odkaz na prehrani.
   cesta           String
@@ -2823,6 +2867,68 @@ model HudbaProjektu {
   updatedAt DateTime @updatedAt
 
   @@index([caflouProjectId])
+}
+
+/// HUDBA CELE SERIE (zadani 17. 10. 2026: „v pripade, ze je to serie, tak se
+/// tam automaticky nakopiruje hudba, ktera se pouziva celou serii. nekdy je to
+/// i vice skladeb").
+///
+/// Je to PREDLOHA, ne sdileny zaznam: pri zalozeni dalsiho dilu se z techto
+/// radku vyrobi radky HudbaProjektu. Diky tomu jde u jednoho dilu skladbu
+/// odebrat, aniz by zmizela ostatnim - a soubor v Dropboxu zustava jeden,
+/// kopiruje se jen zaznam o nem.
+model HudbaSerie {
+  id        String   @id @default(cuid())
+  /// Nazev serie presne tak, jak je u projektu (ProjectMeta.serie).
+  serie     String
+  /// Firma, ktere serie patri. Dve firmy mohou mit serii stejneho jmena,
+  /// takze se paruje podle obojiho; prazdne = plati pro kazdou firmu.
+  companyId String?
+  company   Company? @relation("HudbaSerieFirma", fields: [companyId], references: [id], onDelete: SetNull)
+
+  nazev     String
+  autor     String?
+  delkaS    Int      @default(0)
+  obalKlic  String?
+  poznamka  String?
+
+  cesta     String
+  dropboxId String?
+  velikost  Int      @default(0)
+
+  pridalId  String?
+  pridal    User?    @relation("HudbaSeriePridal", fields: [pridalId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serie])
+  @@index([companyId])
+}
+
+/// VYZVA KLIENTOVI, ABY DODAL HUDBU (zadani 17. 10. 2026: „v takovych
+/// pripadech by mela jit notifikace emailem na klienta s moznosti vlozit
+/// hudbu a ta by se propsala primo do karty").
+///
+/// Odkaz je JEDNORAZOVY A BEZ PRIHLASENI, stejne jako u podpisu smlouvy:
+/// hudbu u klienta casto resi nekdo, kdo v portalu ucet nema. Token vede
+/// vzdycky jen na tenhle jeden projekt.
+model VyzvaHudba {
+  id              String    @id @default(cuid())
+  caflouProjectId String    @unique
+  token           String    @unique
+
+  /// Komu vyzva odesla. Bere se z kontaktu projektu, da se prepsat.
+  email           String
+  jmeno           String?
+
+  /// Kdy odesla. Prazdne = ceka na svuj termin (tri dny pred prvni frekvenci).
+  odeslanoAt      DateTime?
+  /// Kdy klient vlozil prvni skladbu, a kdo to byl.
+  vlozenoAt       DateTime?
+  vlozilJmeno     String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 /// SIGNALIZACE NASEHO NATACECIHO PULTU (zadani 11. 10. 2026).

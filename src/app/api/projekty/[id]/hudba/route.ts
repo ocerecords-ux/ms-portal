@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
 import { nactiHudbu, zapisSkladbu } from '@/lib/hudbaProjektuServer';
+import { overPrilohu } from '@/lib/storage';
 
 /**
  * HUDBA U PROJEKTU (zadání 16. 10. 2026).
@@ -18,10 +19,18 @@ import { nactiHudbu, zapisSkladbu } from '@/lib/hudbaProjektuServer';
  */
 export const dynamic = 'force-dynamic';
 
+/**
+ * NAZEV, AUTOR, DELKA I OBAL PRICHAZEJI Z PROHLIZECE (17. 10. 2026).
+ * Precetl je z metadat souboru (lib/metadataHudby.ts) - server ten soubor
+ * nikdy nevidi, takze jinam nez sem se dostat nemuzou. Obal uz v ulozisti
+ * lezi, posila se jen jeho klic a overi se, ze tam opravdu je.
+ */
 const schema = z.object({
   cesta: z.string().trim().min(1),
   nazev: z.string().trim().max(200),
-  zdroj: z.string().trim().max(120).optional(),
+  autor: z.string().trim().max(200).nullable().optional(),
+  delkaS: z.number().int().min(0).max(24 * 3600).optional(),
+  obalKlic: z.string().trim().max(300).nullable().optional(),
   poznamka: z.string().trim().max(500).optional(),
 });
 
@@ -44,12 +53,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 
   const { id } = await params;
+
+  // Klic obalu prisel z prohlizece - bez overeni by v karte visel odkaz na
+  // obrazek, ktery v ulozisti neni (stejny duvod jako u priloh objednavky).
+  const obalKlic = parsed.data.obalKlic?.trim() || null;
+  const obalOvereny = obalKlic && (await overPrilohu(obalKlic)) ? obalKlic : null;
+
   const skladba = await zapisSkladbu({
     caflouProjectId: id,
     cesta: parsed.data.cesta,
     nazev: parsed.data.nazev,
-    zdroj: parsed.data.zdroj ?? null,
+    autor: parsed.data.autor ?? null,
+    delkaS: parsed.data.delkaS ?? 0,
+    obalKlic: obalOvereny,
     poznamka: parsed.data.poznamka ?? null,
+    puvod: 'my',
     pridalId: session.user.id,
   });
 
