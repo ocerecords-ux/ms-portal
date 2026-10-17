@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { blizkost, popisTerminu, type BlizkostTerminu } from '@/lib/frekvenceProjektu';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import type { RozpisHerce } from '@/lib/frekvenceProjektuServer';
 
 /**
@@ -45,6 +46,7 @@ export function OdznakFrekvenci({
   velky?: boolean;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [otevreno, setOtevreno] = useState(false);
   const [rozpis, setRozpis] = useState<RozpisHerce[]>([]);
   const [nacitam, setNacitam] = useState(false);
@@ -94,8 +96,8 @@ export function OdznakFrekvenci({
   const jak = blizkost(termin) ?? 'klid';
   const popis =
     jak === 'minulost'
-      ? t('frekvence.zacaloSe', { kdy: popisTerminu(termin, t) })
-      : t('frekvence.prvniFrekvence', { kdy: popisTerminu(termin, t) });
+      ? t('frekvence.zacaloSe', { kdy: popisTerminu(termin, t, jazyk) })
+      : t('frekvence.prvniFrekvence', { kdy: popisTerminu(termin, t, jazyk) });
 
   /** Nejbližší termín napříč všemi herci - ten se v rozpisu podbarví. */
   const nejblizsi = rozpis
@@ -178,9 +180,9 @@ export function OdznakFrekvenci({
                                   : 'text-ink font-semibold'
                             }`}
                           >
-                            {denAMesic(start)}
+                            {denAMesic(jazyk, start)}
                           </span>
-                          <span className="text-[11px] text-muted whitespace-nowrap">{hodina(start)}</span>
+                          <span className="text-[11px] text-muted whitespace-nowrap">{hodina(jazyk, start)}</span>
                           <span className="text-[11px] text-muted whitespace-nowrap ml-auto truncate">
                             {f.studio}
                           </span>
@@ -201,12 +203,23 @@ export function OdznakFrekvenci({
   );
 }
 
-/** „po 19. 10." - den v týdnu je to, podle čeho se produkce orientuje. */
-function denAMesic(d: Date): string {
-  const den = new Intl.DateTimeFormat('cs-CZ', { weekday: 'short' }).format(d).replace('.', '');
-  return `${den} ${d.getDate()}. ${d.getMonth() + 1}.`;
+/**
+ * „po 19. 10." / „Mon 19/10" - den v týdnu je to, podle čeho se produkce
+ * orientuje. Jazyk chodí PARAMETREM (modulová funkce, hook v ní být nemůže);
+ * do dávky 7n tu byl `cs-CZ` natvrdo, takže rozpis frekvencí byl v anglickém
+ * portálu jediné české místo u názvu projektu.
+ */
+function denAMesic(jazyk: Jazyk, d: Date): string {
+  const kod = kodJazyka(jazyk);
+  const den = new Intl.DateTimeFormat(kod, { weekday: 'short' }).format(d).replace('.', '');
+  const datum = new Intl.DateTimeFormat(kod, { day: 'numeric', month: 'numeric' }).format(d);
+  return `${den} ${datum}`;
 }
 
-function hodina(d: Date): string {
-  return new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+function hodina(jazyk: Jazyk, d: Date): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
 }

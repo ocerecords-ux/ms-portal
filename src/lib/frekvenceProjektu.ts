@@ -7,6 +7,8 @@
  * Bez Prismy, ať to může použít i prohlížeč (odznak u názvu projektu).
  */
 
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
 /** Jak daleko je termín - podle toho se barví ikona kalendáře u názvu. */
 export type BlizkostTerminu = 'dnes' | 'brzy' | 'klid' | 'minulost';
 
@@ -40,18 +42,23 @@ export function blizkost(termin: Date | null, ted: Date = new Date()): BlizkostT
 export function popisTerminu(
   termin: Date,
   t: (klic: string, data?: Record<string, string | number>) => string,
+  jazyk: Jazyk = 'cs',
   ted: Date = new Date(),
 ): string {
   const dni = dniDo(termin, ted);
-  if (dni < 0) return datumKratce(termin);
+  if (dni < 0) return datumKratce(termin, jazyk);
   if (dni === 0) return t('frekvence.dnes');
   if (dni === 1) return t('frekvence.zitra');
   // Čeština počítá jinak do čtyř a jinak od pěti: „za 3 dny", ale „za 5 dnů".
   if (dni <= 7) return t(dni <= 4 ? 'frekvence.zaDny' : 'frekvence.zaDnu', { pocet: dni });
-  return datumKratce(termin);
+  return datumKratce(termin, jazyk);
 }
 
-/** „28. 10." - bez roku, v přehledu by jen zabíral. */
-export function datumKratce(d: Date): string {
-  return `${d.getDate()}. ${d.getMonth() + 1}.`;
+/**
+ * „28. 10." / „28/10" - bez roku, v přehledu by jen zabíral. Jazyk je
+ * nepovinný a výchozí je čeština (dávka 7n), aby se volající z `api/**`
+ * chovali přesně jako dřív - stejný vzor jako `terminUkolu.popisTerminu`.
+ */
+export function datumKratce(d: Date, jazyk: Jazyk = 'cs'): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), { day: 'numeric', month: 'numeric' }).format(d);
 }

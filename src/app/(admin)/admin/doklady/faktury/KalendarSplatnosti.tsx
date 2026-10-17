@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { formatMoney } from '@/lib/doklady';
 import { addDays, nazevDneKratce, startOfWeek } from '@/lib/calendar';
 import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
-import type { Jazyk } from '@/lib/jazyk';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import type { FakturaRadek } from './FakturyTabulka';
 
 /**
@@ -116,6 +116,9 @@ function Castka({
 export function KalendarSplatnosti({ radky }: { radky: FakturaRadek[] }) {
   const t = usePreklad();
   const jazyk = useJazyk();
+  /** „5. 10." / „05/10" - den a měsíc do rozsahu týdne (dávka 7n). */
+  const denMesic = (d: Date) =>
+    new Intl.DateTimeFormat(kodJazyka(jazyk), { day: 'numeric', month: 'numeric' }).format(d);
 
   const souhrn = (kus: FakturaRadek[]) =>
     souctyPoMenach(kus)
@@ -198,7 +201,9 @@ export function KalendarSplatnosti({ radky }: { radky: FakturaRadek[] }) {
         const dny = Array.from({ length: 7 }, (_, i) => addDays(pondeli, i));
         const vTydnu = dny.flatMap((d) => poDnech.get(klicDne(d)) ?? []);
         const nedele = addDays(pondeli, 6);
-        const rozsah = `${pondeli.getDate()}. ${pondeli.getMonth() + 1}. – ${nedele.getDate()}. ${nedele.getMonth() + 1}. ${nedele.getFullYear()}`;
+        // Rozsah týdne podle jazyka (dávka 7n): datum se skládalo natvrdo
+        // česky, takže nad anglickým kalendářem splatnosti stálo „5. 10. – 11. 10. 2026".
+        const rozsah = `${denMesic(pondeli)} – ${denMesic(nedele)} ${nedele.getFullYear()}`;
 
         return (
           <section

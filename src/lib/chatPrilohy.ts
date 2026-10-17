@@ -11,6 +11,8 @@
  * nahrávat hlas v portálu ne.
  */
 
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
 /** Kolik smí mít jedna příloha. Nad tím už patří soubor na Disk. */
 export const MAX_PRILOHA_BYTES = 25 * 1024 * 1024;
 
@@ -39,12 +41,20 @@ export function jeZvuk(mime: string): boolean {
   return mime.startsWith('audio/');
 }
 
-/** "1,4 MB" - velikost do karty přílohy. */
-export function formatVelikost(bytes: number): string {
+/**
+ * "1,4 MB" / "1.4 MB" - velikost do karty přílohy. Jazyk je nepovinný
+ * a výchozí je čeština (dávka 7n): desetinná čárka tu byla natvrdo, takže
+ * anglický chat ukazoval české číslo (pravidlo 3). Volající z `api/**` se
+ * tím nemění.
+ */
+export function formatVelikost(bytes: number, jazyk: Jazyk = 'cs'): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+  return `${new Intl.NumberFormat(kodJazyka(jazyk), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(bytes / (1024 * 1024))} MB`;
 }
 
 /**

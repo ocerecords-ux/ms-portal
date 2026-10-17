@@ -7,6 +7,8 @@
  * něj kontroluje typ a velikost souboru ještě před nahráním.
  */
 
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
 /**
  * Stavy. KONCEPT je rozdělaný příběh jen pro autora, VYVESENO je venku.
  * CEKA zůstává pro ten, který se vyvěsit nepodařilo a čeká na další pokus
@@ -46,9 +48,17 @@ export function maxProTyp(typSouboru: string): number {
   return jeVideo(typSouboru) ? MAX_VIDEO_BYTES : MAX_FOTKA_BYTES;
 }
 
-/** „12,4 MB" - do hlášky o moc velkém souboru. */
-export function velikostVMB(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+/**
+ * „12,4 MB" / „12.4 MB" - do hlášky o moc velkém souboru. Jazyk je nepovinný
+ * a výchozí je čeština (dávka 7n), aby se routy v `api/**` nezměnily;
+ * v editoru jde číslo do přeložené věty, takže tam musí být i desetinná
+ * tečka (pravidlo 3).
+ */
+export function velikostVMB(bytes: number, jazyk: Jazyk = 'cs'): string {
+  return `${new Intl.NumberFormat(kodJazyka(jazyk), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(bytes / (1024 * 1024))} MB`;
 }
 
 /** Delší popisek se do příběhu nevejde ani ručně. */

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import type { PribehRadek } from '@/lib/pribehyServer';
 import {
   MAX_POPISEK,
@@ -73,6 +73,7 @@ export function Editor({
   onZavri?: () => void;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
 
   const vstupSouboru = useRef<HTMLInputElement | null>(null);
@@ -277,7 +278,7 @@ export function Editor({
       return;
     }
     if (vybrany.size > maxProTyp(typ)) {
-      setChyba(t('pribehy.mocVelky', { kolik: velikostVMB(maxProTyp(typ)) }));
+      setChyba(t('pribehy.mocVelky', { kolik: velikostVMB(maxProTyp(typ), jazyk) }));
       return;
     }
     setSoubor(vybrany);

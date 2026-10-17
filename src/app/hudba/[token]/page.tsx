@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 
-import { prelozit, prelozitS } from '@/lib/jazyk';
+import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { projektPodleTokenu } from '@/lib/vyzvaHudbaServer';
 
@@ -48,8 +48,10 @@ export default async function HudbaOdKlientaPage({ params }: { params: { token: 
             {[
               projekt.firma,
               termin
-                ? prelozitS(jazyk, 'hudbaKlient.prvniDen', {
-                    datum: `${termin.getDate()}. ${termin.getMonth() + 1}. ${termin.getFullYear()}`,
+                ? // Datum podle jazyka (dávka 7n): skládalo se natvrdo česky, takže
+                  // anglická věta končila českým datem. Klient to vidí venku.
+                  prelozitS(jazyk, 'hudbaKlient.prvniDen', {
+                    datum: formatDatum(jazyk, termin),
                   })
                 : null,
             ]

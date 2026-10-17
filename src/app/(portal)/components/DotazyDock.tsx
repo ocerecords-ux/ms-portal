@@ -483,7 +483,7 @@ export function DotazyDock() {
                         {prilohy.map((p, i) => (
                           <span
                             key={`${p.soubor.name}-${i}`}
-                            title={p.chyba ?? formatVelikost(p.soubor.size)}
+                            title={p.chyba ?? formatVelikost(p.soubor.size, jazyk)}
                             className={`inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[11px] font-heading max-w-full ${
                               p.chyba
                                 ? 'border-status-error text-status-error bg-surface'
@@ -492,7 +492,7 @@ export function DotazyDock() {
                           >
                             <span className="truncate max-w-[160px]">{p.soubor.name}</span>
                             <span className="text-muted tabular-nums shrink-0">
-                              {p.chyba ? p.chyba : formatVelikost(p.soubor.size)}
+                              {p.chyba ? p.chyba : formatVelikost(p.soubor.size, jazyk)}
                             </span>
                             <button
                               type="button"
@@ -572,6 +572,7 @@ export function DotazyDock() {
  */
 function PrilohaVZprave({ priloha }: { priloha: ChatPriloha }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const docasna = priloha.id.startsWith('docasna-');
   const odkaz = `/api/chat/prilohy/${encodeURIComponent(priloha.id)}`;
 
@@ -602,7 +603,7 @@ function PrilohaVZprave({ priloha }: { priloha: ChatPriloha }) {
       </span>
       <span className="truncate">{priloha.name}</span>
       <span className="ml-auto shrink-0 text-[11px] text-muted tabular-nums">
-        {formatVelikost(priloha.size)}
+        {formatVelikost(priloha.size, jazyk)}
       </span>
     </>
   );

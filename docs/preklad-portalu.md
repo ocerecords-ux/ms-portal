@@ -88,6 +88,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7k | 13. 10. | Přístupy do sekcí a jednotlivá práva na kartě uživatele — `src/lib/pristupy.ts` (11 sekcí a 43 práv, názvy i popisy zaškrtávátek) | [x] |
 | 7l | 14. 10. | Důvody a hlášky, které server posílá na obrazovku hotové česky — Tagy finální nahrávky, veřejné připomínkování spotu, konflikty v kalendáři a dvě zapomenuté záložní hlášky | [x] |
 | 7m | 15. 10. | Co nejde přes slovník: datum a čas natvrdo `cs-CZ` (natáčecí plán klienta, hosté natáčení, Tagy, kurz ČNB u faktury i výdaje) a řetězce v bublinách, `aria-label` a záložních hláškách (hlavička přehledu projektů, zkušební pult, přihlašovací jméno bez e-mailu) | [x] |
+| 7n | 17. 10. | Formáty, na které se nikdo nezeptal: datum skládané ručně z `getDate()` (karta Hudba, knihovna hudby, veřejná stránka hudby, odznak frekvencí, rozsah týdne u splatností) a desetinná čárka natvrdo u velikostí souborů (hudba, přílohy chatu i dotazů, příběhy) + šest odkazů v liště, které slovník odkazů neznal | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1428,6 +1429,107 @@ krátší (28 řádků) a diff je prázdný.
 pozvánky hostům) přišlo s `t('…')` rovnou.** Večerní dávce z nich nezbylo nic
 než formáty — poučení z 7j a 7l se potvrdilo i ve dni, kdy se portál měnil
 nejvíc za celý týden.
+
+### Dávka 7n je HOTOVÁ (17. 10. 2026)
+
+**Dnešní nález není český text ani český `cs-CZ`, ale datum SKLÁDANÉ RUČNĚ** —
+`${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`. Takový řádek
+nenajde ani kontrola na diakritiku (není v něm ani háček), ani hledání
+`cs-CZ` (není v něm ani `Intl`), a přitom je výsledek český formát, který
+v anglickém portálu stojí uprostřed přeložené věty. Druhá polovina dávky je
+totéž u čísel: `toFixed(1).replace('.', ',')` u velikostí souborů, tedy
+„48,2 MB" tam, kde má britsky stát „48.2 MB" (pravidlo 3). Celkem **osm
+obrazovek, čtrnáct souborů, slovník beze změny (5 893 klíčů) a mapa odkazů
+v liště +6**.
+
+**Ručně skládané datum (nové klíče nepotřebuje, jen `jazyk`):**
+
+- `projekty/[id]/HudbaSekce.tsx` — **karta Hudba u projektu (dnešní ráno).**
+  `datum()` a `datumCas()` skládaly datum i české „v" („17. 10. 2026 v 14:32").
+  Teď `formatDatum` / `formatDatumCas`, takže platí i naše pásmo jako ve
+  zbytku portálu; jazyk chodí modulovým funkcím parametrem (hook v nich být
+  nemůže, pravidlo 8).
+- `hudba-audioknihy/HudbaAudioknih.tsx` — **Hudba k audioknihám**, datum první
+  frekvence a datum odeslané výzvy v sekci „Chybí hudba".
+- `hudba/[token]/page.tsx` — **veřejná stránka hudby od klienta.** Datum
+  první frekvence se dosazovalo značkou do přeložené věty, ale skládalo se
+  česky — tohle vidí klient venku.
+- `components/OdznakFrekvenci.tsx` + `lib/frekvenceProjektu.ts` — **rozpis
+  frekvencí u názvu projektu (15. 10., tedy až po dávce 7m).** `denAMesic()`
+  mělo `cs-CZ` natvrdo i u dne v týdnu, `hodina()` taky, a `datumKratce()`
+  v `lib` skládalo „28. 10." ručně. `popisTerminu` dostala nepovinný `jazyk`
+  s výchozí češtinou — stejný vzor jako `terminUkolu.popisTerminu`, takže
+  volající z `api/**` se nemění.
+- `admin/doklady/faktury/KalendarSplatnosti.tsx` — rozsah týdne nad
+  kalendářem splatností („5. 10. – 11. 10. 2026"). Jazyk tam byl už od dávky
+  7d, jen datum si ho nevzalo.
+
+**Desetinná čárka natvrdo u velikostí souborů:**
+
+- `components/HudbaSeznam.tsx`, `hudba-audioknihy/HudbaAudioknih.tsx`
+  a `hudba/[token]/HudbaOdKlienta.tsx` — u padesátimegových WAVů je velikost
+  to první, co člověk na kartě vidí. Čísla formátuje `Intl.NumberFormat`
+  podle `kodJazyka`, ne `replace`.
+- `lib/chatPrilohy.ts formatVelikost` → `ChatDock.tsx` a `DotazyDock.tsx` —
+  velikost přílohy v chatu i v dotazech (devět míst) a hláška „příloha je moc
+  velká". Funkce má `jazyk` nepovinný s výchozí češtinou, takže routy
+  v `api/**` dál posílají přesně to, co posílaly.
+- `lib/pribehy.ts velikostVMB` → `site/pribehy/Editor.tsx` — číslo jde do
+  přeložené věty „soubor je moc velký", takže v ní svítila česká čárka.
+
+**Šest odkazů v liště, o kterých slovník odkazů nevěděl.** `ODKAZY_EN`
+v `lib/jazyk.ts` je z dávky 0 a od té doby do lišty přibyly celé sekce:
+`/prehledy`, `/procesy`, `/site/pribehy`, `/hudba-audioknihy`, `/tabule/moje`
+a `/studio`. `nazevOdkazu` vrací při chybějícím záznamu český `label`, takže
+to nikdy nespadlo — jen v anglickém portálu stálo v liště „Přehledy"
+a „Příběhy". Názvy se drží už přeložených nadpisů (`prehledy.nadpis` →
+Reports, `procesy.nadpis` → Procedures, `role.TABULE` → Studio display).
+
+**Typová kontrola: dvě hlášky navíc nejsou z dávky.** HEAD hlásí TS2352
+v `lib/hudbaProjektuServer.ts` a `lib/hudbaSerieServer.ts` (přetypování
+`HudbaProjektu` na `RadekZDatabaze` a `HudbaSerie` na `RadekSerie`) —
+ověřeno na čisté kopii z `git archive` ještě před dávkou. Je to volnost
+stubů: `findMany` se `select`em vrací ve stubu volnější typ, se skutečně
+vygenerovaným klientem Prismy to platí. Dopsané do
+`docs/preklad-kontrola-zname-hlasky.txt` (30 řádků), ať je diff příští dávky
+zase prázdný.
+
+**Dnešních šestnáct commitů (Hudba u projektu, hudba série, hudba od klienta,
+knihovna, Dropbox, přehrávač s křivkou) přišlo s `t('…')` rovnou** — na
+obrazovkách zůstaly česky jen komentáře a `console.error`, tedy schválně.
+Potvrzuje se poučení z 7j a 7l: co se píše s překladem, to večerní dávce
+nezbyde. Zbyly jen formáty, protože na ně se žádná kontrola nikdy nezeptala.
+
+**Co se našlo a NEDĚLALO se to (schválně):**
+
+1. `lib/kapacitaAnalyzy.ts` — `toFixed(2).replace('.', ',')` v CSV kapacity.
+   Není to obrazovka, ale **soubor pro Excel**, a ten na českém systému čeká
+   čárku; řídí se tedy jazykem dokumentu (pravidlo 5), ne přepínačem.
+2. `admin/doklady/vydaje/NewExpenseForm.tsx` — česká čárka v částce. Je to
+   HODNOTA v políčku k přepsání, ne text ke čtení (stejná třída jako
+   `<input type="time">` v dávce 7m); změna by změnila i to, co se dá zadat.
+3. `lib/licencniListServer.ts` — datum v licenčním listu. Text, který se píše
+   DO DOKUMENTU (pravidlo 5).
+4. `lib/metadataHudby.ts` — „Bez názvu" u skladby bez štítků. Je to DATO,
+   které se ukládá k souboru a vidí ho celý tým (pravidlo 4).
+5. Routy v `api/**`, které vracejí text na obrazovku — dnes k nim přibyla celá
+   hudba (`api/projekty/[id]/hudba/*`, `api/hudba-serie/*`,
+   `api/hudba-od-klienta/*`: „Nemáte oprávnění.", „Soubor se v Dropboxu
+   nenašel. Zkuste nahrát znovu.") a s nimi `duvod` a `chyba`
+   z `vyzvaHudbaServer`, `hudbaProjektuServer`, `hudbaSerieServer`
+   a `doplnMetadataServer`. Pořád tatáž otevřená otázka z dávky 7l: brát
+   jazyk z cookie, nebo z uživatele v databázi? **Je to největší nepřeložený
+   kus portálu a patří to na denní světlo, ne na večer.**
+6. `lib/hudbaPripominkyServer.ts` — upozornění „chybí hudba" pod zvonkem
+   a v přehledu dne. Text se ukládá do databáze hotový, takže platí dávka 6:
+   `notify()` musí dostávat klíč, ne věty.
+7. Oznámení pod zvonkem a zapojení pošty — dávka 6, viz níž.
+8. **Rozdělaná práce se dávce do commitu nepletla.** Večer vznikala sekce
+   Novinky (`src/app/(portal)/novinky`, `lib/novinky*.ts`, `middleware.ts`,
+   `menu.ts`, `prisma/schema.prisma`) — necommitnuté soubory zůstaly
+   necommitnuté a dávka se jich nedotkla. **Novinky ale přidávají do lišty
+   odkaz `/novinky`, takže až se commitnou, patří do `ODKAZY_EN` sedmý
+   řádek.**
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

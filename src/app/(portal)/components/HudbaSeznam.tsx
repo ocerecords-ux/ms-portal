@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { WaveformPlayer, type UsekSkladby } from '@/app/(portal)/components/WaveformPlayer';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import {
   delkaTextem,
   prectiMetadata,
@@ -445,6 +446,7 @@ function Skladba({
   naChybu: (text: string | null) => void;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [odkaz, setOdkaz] = useState<string | null>(null);
   const [nepovedloSe, setNepovedloSe] = useState(false);
   const [ptaSe, setPtaSe] = useState(false);
@@ -509,7 +511,7 @@ function Skladba({
       : null;
 
   const popisky = [
-    velikost(skladba.velikost),
+    velikost(jazyk, skladba.velikost),
     delkaTextem(skladba.delkaS),
     skladba.puvod === 'klient'
       ? `${t('hudba.odKlienta')}${skladba.vlozilKlient ? ` · ${skladba.vlozilKlient}` : ''}`
@@ -751,10 +753,18 @@ function IkonaKose() {
   );
 }
 
-/** „48,2 MB" - u padesátimegových WAVů je velikost to první, co člověka zajímá. */
-function velikost(bytes: number): string {
+/**
+ * „48,2 MB" / „48.2 MB" - u padesátimegových WAVů je velikost to první, co
+ * člověka zajímá. Desetinná čárka byla do dávky 7n natvrdo, takže anglický
+ * portál ukazoval české číslo (pravidlo 3). Jazyk chodí parametrem - je to
+ * modulová funkce.
+ */
+function velikost(jazyk: Jazyk, bytes: number): string {
   if (bytes <= 0) return '';
   const mb = bytes / (1024 * 1024);
   if (mb < 1) return `${Math.round(bytes / 1024)} kB`;
-  return `${mb.toFixed(1).replace('.', ',')} MB`;
+  return `${new Intl.NumberFormat(kodJazyka(jazyk), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(mb)} MB`;
 }

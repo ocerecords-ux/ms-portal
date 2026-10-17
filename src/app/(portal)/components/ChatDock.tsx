@@ -1043,7 +1043,7 @@ function Psatko({
               className="inline-flex items-center gap-1.5 max-w-[220px] rounded-lg border border-line bg-field pl-2 pr-1 py-1"
             >
               <span className="text-[11px] font-heading text-ink truncate">{soubor.name}</span>
-              <span className="text-[11px] font-body text-muted shrink-0">{formatVelikost(soubor.size)}</span>
+              <span className="text-[11px] font-body text-muted shrink-0">{formatVelikost(soubor.size, jazyk)}</span>
               <button
                 type="button"
                 onClick={() => onOdeberPrilohu?.(index)}
@@ -1459,6 +1459,7 @@ function TlacitkoStahnout({ odkaz, nazev, tmave }: { odkaz: string; nazev: strin
 
 function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: string }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [spustit, setSpustit] = useState(false);
 
   return (
@@ -1479,7 +1480,7 @@ function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: strin
         )}
         <span className="min-w-0 flex-1">
           <span className="block text-[12px] font-heading font-semibold text-ink truncate">{priloha.name}</span>
-          <span className="block text-[11px] font-body text-muted">{formatVelikost(priloha.size)}</span>
+          <span className="block text-[11px] font-body text-muted">{formatVelikost(priloha.size, jazyk)}</span>
         </span>
         <TlacitkoStahnout odkaz={odkaz} nazev={priloha.name} />
       </span>
@@ -1509,6 +1510,7 @@ function Svetlo({
   zavri: () => void;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [kde, setKde] = useState(index);
 
   useEffect(() => setKde(index), [index]);
@@ -1619,7 +1621,7 @@ function Svetlo({
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-heading font-semibold truncate">{p.name}</span>
           <span className="block text-[11px] font-body text-white/70">
-            {formatVelikost(p.size)}
+            {formatVelikost(p.size, jazyk)}
             {obrazky.length > 1 ? ` · ${kde + 1}/${obrazky.length}` : ''}
           </span>
         </span>
@@ -1739,6 +1741,7 @@ function Svetlo({
 }
 
 function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
+  const jazyk = useJazyk();
   /** Který obrázek je otevřený přes celé okno; `null` = žádný. */
   const [otevreny, setOtevreny] = useState<string | null>(null);
   const obrazky = prilohy.filter((p) => jeObrazek(p.mime));
@@ -1758,7 +1761,7 @@ function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
               <button
                 type="button"
                 onClick={() => setOtevreny(p.id)}
-                title={`${p.name} (${formatVelikost(p.size)})`}
+                title={`${p.name} (${formatVelikost(p.size, jazyk)})`}
                 className="block w-full rounded-card overflow-hidden border border-line cursor-zoom-in"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1789,7 +1792,7 @@ function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
               </svg>
               <span className="min-w-0">
                 <span className="block text-[12px] font-heading font-semibold text-ink truncate">{p.name}</span>
-                <span className="block text-[11px] font-body text-muted">{formatVelikost(p.size)}</span>
+                <span className="block text-[11px] font-body text-muted">{formatVelikost(p.size, jazyk)}</span>
               </span>
             </a>
             <TlacitkoStahnout odkaz={odkaz} nazev={p.name} />
@@ -2830,7 +2833,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     for (const soubor of soubory) {
       if (soubor.size > MAX_PRILOHA_BYTES) {
         setError(
-          t('chat.prilohaVelka', { nazev: soubor.name, limit: formatVelikost(MAX_PRILOHA_BYTES) }),
+          t('chat.prilohaVelka', { nazev: soubor.name, limit: formatVelikost(MAX_PRILOHA_BYTES, jazyk) }),
         );
         return null;
       }

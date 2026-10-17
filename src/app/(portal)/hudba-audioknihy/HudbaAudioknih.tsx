@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { HudbaSeznam, type HudbaApi, type SkladbaVSeznamu } from '@/app/(portal)/components/HudbaSeznam';
 import { WaveformPlayer } from '@/app/(portal)/components/WaveformPlayer';
 import type { ProjektBezHudby, RadekKnihovny } from '@/lib/hudbaKnihovnaServer';
+import { formatDatum, kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { delkaTextem } from '@/lib/metadataHudby';
 
 /**
@@ -73,6 +74,7 @@ export function HudbaAudioknih({
 
 function Chybi({ radky }: { radky: ProjektBezHudby[] }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   if (radky.length === 0) {
     return <p className="text-sm font-body text-muted m-0">{t('hudbaKnihovna.chybiZadne')}</p>;
   }
@@ -123,7 +125,7 @@ function Chybi({ radky }: { radky: ProjektBezHudby[] }) {
               <>
                 {t('hudbaKnihovna.prvniFrekvence')}{' '}
                 <b className={naleha(r.zaDni) ? 'text-status-error' : 'text-ink'}>
-                  {datum(r.prvniFrekvence)}
+                  {datum(jazyk, r.prvniFrekvence)}
                 </b>
                 {r.zaDni !== null && (
                   <span className="block">{popisDnu(r.zaDni, t)}</span>
@@ -142,7 +144,7 @@ function Chybi({ radky }: { radky: ProjektBezHudby[] }) {
                   className={`block ${r.vyzvaPujdeSama || r.vyzva?.odeslanoAt ? 'text-muted' : 'text-status-progress'}`}
                 >
                   {r.vyzva?.odeslanoAt
-                    ? `${t('hudbaKnihovna.vyzvaOdeslana')} ${datum(r.vyzva.odeslanoAt)}`
+                    ? `${t('hudbaKnihovna.vyzvaOdeslana')} ${datum(jazyk, r.vyzva.odeslanoAt)}`
                     : r.vyzvaPujdeSama
                       ? t('hudbaKnihovna.vyzvaCeka')
                       : t('hudbaKnihovna.vyzvaRucne')}
@@ -436,6 +438,7 @@ function Obal({ radek, maly = false }: { radek: RadekKnihovny; maly?: boolean })
  */
 function DetailSkladby({ radek, zavri }: { radek: RadekKnihovny; zavri: () => void }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [odkaz, setOdkaz] = useState<string | null>(null);
 
   useEffect(() => {
@@ -479,7 +482,7 @@ function DetailSkladby({ radek, zavri }: { radek: RadekKnihovny; zavri: () => vo
               {t('hudba.autorSkladby')} {radek.autor || t('hudba.autorNeznamy')}
             </span>
             <span className="block text-xs font-body text-muted/80 mt-1">
-              {[delkaTextem(radek.delkaS), velikostTextem(radek.velikost)]
+              {[delkaTextem(radek.delkaS), velikostTextem(jazyk, radek.velikost)]
                 .filter(Boolean)
                 .join(' · ')}
             </span>
@@ -545,18 +548,26 @@ function DetailSkladby({ radek, zavri }: { radek: RadekKnihovny; zavri: () => vo
   );
 }
 
-function velikostTextem(bytes: number): string {
+/**
+ * Velikost souboru podle jazyka (dávka 7n). Desetinná čárka tu byla natvrdo,
+ * takže v anglickém portálu stálo „3,5 MB" - britsky je to „3.5 MB"
+ * (pravidlo 3, desetinná tečka). Čísla formátuje `Intl`, ne `replace`.
+ */
+function velikostTextem(jazyk: Jazyk, bytes: number): string {
   if (bytes <= 0) return '';
   const mb = bytes / (1024 * 1024);
   if (mb < 1) return `${Math.round(bytes / 1024)} kB`;
-  return `${mb.toFixed(1).replace('.', ',')} MB`;
+  return `${new Intl.NumberFormat(kodJazyka(jazyk), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(mb)} MB`;
 }
 
 /* -------------------------------------------------------------- pomocné */
 
-function datum(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+/** Datum podle jazyka (dávka 7n) - dřív se skládalo natvrdo česky. */
+function datum(jazyk: Jazyk, iso: string): string {
+  return formatDatum(jazyk, new Date(iso));
 }
 
 function popisDnu(zaDni: number, t: (k: string, p?: Record<string, string | number>) => string): string {

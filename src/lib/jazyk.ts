@@ -63,6 +63,14 @@ const ODKAZY_EN: Record<string, string> = {
   '/admin/vzory-zprav': 'Message templates',
   '/admin/zpravy-portalu': 'Portal messages',
   '/chat': 'Chat',
+  // Doplněno dávkou 7n (17. 10. 2026): sekce, které v liště přibyly po dávce 0
+  // a slovník odkazů o nich nevěděl, takže anglickému portálu svítily česky.
+  '/prehledy': 'Reports',
+  '/procesy': 'Procedures',
+  '/site/pribehy': 'Stories',
+  '/hudba-audioknihy': 'Music',
+  '/tabule/moje': 'Studio display',
+  '/studio': 'Studio',
 };
 
 export function nazevOdkazu(jazyk: Jazyk, href: string, zaloha: string): string {
@@ -348,6 +356,51 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Drag across the waveform to mark the part to use.',
   },
   'hudbaKnihovna.nadpis': { cs: 'Hudba k audioknihám', en: 'Audiobook music' },
+  // NOVINKY PORTÁLU (17. 10. 2026) - historie modulů a vychytávek, podklad
+  // k měsíčnímu newsletteru.
+  'novinky.nadpis': { cs: 'Novinky portálu', en: 'Portal news' },
+  'novinky.uvod': {
+    cs: 'Co v portálu přibylo – po měsících a podle toho, koho se to týká.',
+    en: 'What has been added to the portal – by month and by who it concerns.',
+  },
+  'novinky.historie': { cs: 'Historie', en: 'History' },
+  'novinky.newsletter': { cs: 'Newsletter', en: 'Newsletter' },
+  'novinky.vse': { cs: 'Vše', en: 'All' },
+  'novinky.vsechnyModuly': { cs: 'Všechny moduly', en: 'All modules' },
+  'novinky.hledat': { cs: 'Hledat…', en: 'Search…' },
+  'novinky.pridat': { cs: 'Přidat novinku', en: 'Add news item' },
+  'novinky.upravit': { cs: 'Upravit', en: 'Edit' },
+  'novinky.smazat': { cs: 'Smazat', en: 'Delete' },
+  'novinky.ulozit': { cs: 'Uložit', en: 'Save' },
+  'novinky.zrusit': { cs: 'Zrušit', en: 'Cancel' },
+  'novinky.datum': { cs: 'Datum', en: 'Date' },
+  'novinky.nazev': { cs: 'Název', en: 'Title' },
+  'novinky.modul': { cs: 'Modul', en: 'Module' },
+  'novinky.typ': { cs: 'Druh', en: 'Kind' },
+  'novinky.publikum': { cs: 'Koho se to týká', en: 'Who it concerns' },
+  'novinky.popis': { cs: 'Popis pro nás', en: 'Description for us' },
+  'novinky.proNewsletter': { cs: 'Text do newsletteru', en: 'Newsletter wording' },
+  'novinky.proNewsletterNapoveda': {
+    cs: 'Když zůstane prázdné, vezme se popis.',
+    en: 'Left empty, the description is used.',
+  },
+  'novinky.zverejneno': { cs: 'Hotové, ukázat týmu', en: 'Finished, show to the team' },
+  'novinky.rozepsana': { cs: 'Rozepsané', en: 'Draft' },
+  'novinky.odeslano': { cs: 'V newsletteru odesláno', en: 'Sent in a newsletter' },
+  'novinky.nicNenalezeno': { cs: 'Nic takového tu zatím není.', en: 'Nothing like that here yet.' },
+  'novinky.opravduSmazat': { cs: 'Opravdu novinku smazat?', en: 'Really delete this item?' },
+  'novinky.chyba': { cs: 'Nepovedlo se to, zkuste to prosím znovu.', en: 'That did not work, please try again.' },
+  'novinky.mesic': { cs: 'Měsíc', en: 'Month' },
+  'novinky.iOdeslane': { cs: 'I už odeslané', en: 'Include already sent' },
+  'novinky.sestavit': { cs: 'Sestavit přehled', en: 'Build the summary' },
+  'novinky.kopirovat': { cs: 'Zkopírovat', en: 'Copy' },
+  'novinky.zkopirovano': { cs: 'Zkopírováno.', en: 'Copied.' },
+  'novinky.oznacitOdeslane': { cs: 'Označit jako odeslané', en: 'Mark as sent' },
+  'novinky.oznaceno': { cs: 'Označeno jako odeslané.', en: 'Marked as sent.' },
+  'novinky.prazdnyNewsletter': {
+    cs: 'Za tenhle měsíc pro tohle publikum nic není.',
+    en: 'Nothing for this audience in that month.',
+  },
   'hudbaKnihovna.uvod': {
     cs: 'Co všechno jsme kdy použili, hudba celých sérií a knihy, kde hudba zatím chybí.',
     en: 'Everything we have ever used, music for whole series, and books still missing music.',

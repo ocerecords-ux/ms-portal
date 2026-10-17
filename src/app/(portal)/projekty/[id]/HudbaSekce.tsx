@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { HudbaSeznam, type HudbaApi } from '@/app/(portal)/components/HudbaSeznam';
 import type { SkladbaProjektu } from '@/lib/hudbaProjektuServer';
+import { formatDatum, formatDatumCas, type Jazyk } from '@/lib/jazyk';
 import type { StavVyzvy } from '@/lib/vyzvaHudbaServer';
 
 /**
@@ -80,6 +81,7 @@ function VyzvaKlientovi({
   maHudbu: boolean;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [stav, setStav] = useState<StavVyzvy | null>(vyzva);
   const [posila, setPosila] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
@@ -123,16 +125,16 @@ function VyzvaKlientovi({
         </li>
         <li className={!stav?.odeslanoAt && !pujdeSama ? 'text-status-progress' : undefined}>
           {stav?.odeslanoAt
-            ? `${t('hudbaVyzva.odeslanaKdy')} ${datumCas(stav.odeslanoAt)}`
+            ? `${t('hudbaVyzva.odeslanaKdy')} ${datumCas(jazyk, stav.odeslanoAt)}`
             : !pujdeSama
               ? t('hudbaVyzva.samaNepujde')
               : stav?.odejdeAt
-                ? `${t('hudbaVyzva.odejde')} ${datum(stav.odejdeAt)}`
+                ? `${t('hudbaVyzva.odejde')} ${datum(jazyk, stav.odejdeAt)}`
                 : t('hudbaVyzva.jesteNesla')}
         </li>
         {stav?.vlozenoAt && (
           <li className="text-ink">
-            {t('hudbaVyzva.vlozilKdy')} {datumCas(stav.vlozenoAt)}
+            {t('hudbaVyzva.vlozilKdy')} {datumCas(jazyk, stav.vlozenoAt)}
             {stav.vlozilJmeno ? ` · ${stav.vlozilJmeno}` : ''}
           </li>
         )}
@@ -167,14 +169,16 @@ function VyzvaKlientovi({
   );
 }
 
-function datum(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+/**
+ * Datum a čas podle jazyka (dávka 7n, 17. 10. 2026). Dřív se skládaly natvrdo
+ * česky („17. 10. 2026 v 14:32"), takže v anglickém portálu stála uprostřed
+ * anglické věty česká datumová značka i české „v". Jazyk chodí PARAMETREM -
+ * jsou to modulové funkce, hook v nich být nemůže (pravidlo 8).
+ */
+function datum(jazyk: Jazyk, iso: string): string {
+  return formatDatum(jazyk, new Date(iso));
 }
 
-function datumCas(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()} v ${d.getHours()}:${String(
-    d.getMinutes(),
-  ).padStart(2, '0')}`;
+function datumCas(jazyk: Jazyk, iso: string): string {
+  return formatDatumCas(jazyk, new Date(iso));
 }

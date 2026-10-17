@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 
-import { prelozit, type Jazyk } from '@/lib/jazyk';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 import {
   prectiMetadata,
   zmensiObal,
@@ -249,7 +249,7 @@ export function HudbaOdKlienta({
                 {s.nazev}
               </span>
               <span className="block text-xs font-body text-muted truncate">
-                {[s.autor, velikost(s.velikost)].filter(Boolean).join(' · ')}
+                {[s.autor, velikost(jazyk, s.velikost)].filter(Boolean).join(' · ')}
               </span>
             </span>
           </span>
@@ -271,9 +271,17 @@ export function HudbaOdKlienta({
   );
 }
 
-function velikost(bytes: number): string {
+/**
+ * Velikost podle jazyka (dávka 7n). Tuhle stránku vidí KLIENT, takže česká
+ * desetinná čárka v anglické verzi svítila venku (pravidlo 3). Jazyk sem
+ * chodí parametrem - stránka stojí mimo `JazykProvider`.
+ */
+function velikost(jazyk: Jazyk, bytes: number): string {
   if (bytes <= 0) return '';
   const mb = bytes / (1024 * 1024);
   if (mb < 1) return `${Math.round(bytes / 1024)} kB`;
-  return `${mb.toFixed(1).replace('.', ',')} MB`;
+  return `${new Intl.NumberFormat(kodJazyka(jazyk), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(mb)} MB`;
 }
