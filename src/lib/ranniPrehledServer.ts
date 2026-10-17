@@ -3,6 +3,7 @@ import { nactiPorady } from '@/lib/poradyServer';
 import { minutesInZone, minutesToTime, utcParts, zonedToUtc } from '@/lib/calendar';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import { najdiPrvniFrekvence, oznacRezii } from '@/lib/rezieOnlineServer';
+import { chybejiciHudbaDoPrehledu } from '@/lib/hudbaPripominkyServer';
 
 /**
  * PŘEHLED DNE (zadání 23. 9. 2026: „chtěl bych, aby mi Bruno
@@ -141,7 +142,7 @@ export async function prehledDneData(userId: string, kdy: Date): Promise<Prehled
   const od = zonedToUtc(p.year, p.month, p.day, 0, PASMO);
   const doKdy = zonedToUtc(p.year, p.month, p.day + 1, 0, PASMO);
 
-  const [udalosti, ukoly] = await Promise.all([
+  const [udalosti, ukoly, chybiHudba] = await Promise.all([
     udalostiCloveka(userId, od, doKdy),
     prisma.task
       .findMany({
@@ -150,6 +151,13 @@ export async function prehledDneData(userId: string, kdy: Date): Promise<Prehled
         take: 20,
       })
       .catch(() => []),
+    /**
+     * CHYBĚJÍCÍ HUDBA U AUDIOKNIH (zadání 17. 10. 2026: „zvoneček v portálu,
+     * ale i v přehledu mého dne"). Není to úkol, který by si někdo zapsal -
+     * je to stav, který portál vidí sám, takže se do seznamu úkolů jen
+     * přidá navrch.
+     */
+    chybejiciHudbaDoPrehledu(userId),
   ]);
 
   const datum = new Intl.DateTimeFormat('cs-CZ', {
@@ -173,7 +181,10 @@ export async function prehledDneData(userId: string, kdy: Date): Promise<Prehled
       projektId: u.druh === 'NATACENI' ? u.projektId : null,
       prvniFrekvence: u.druh === 'NATACENI' && u.prvniFrekvence,
     })),
-    ukoly: ukoly.map((u) => ({ text: u.title, cas: u.dueTime || null })),
+    ukoly: [
+      ...chybiHudba.map((text) => ({ text, cas: null })),
+      ...ukoly.map((u) => ({ text: u.title, cas: u.dueTime || null })),
+    ],
     vseZaSebou: jeste.length === 0 && udalosti.length > 0,
   };
 }

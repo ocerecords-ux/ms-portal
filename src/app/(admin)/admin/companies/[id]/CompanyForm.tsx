@@ -118,6 +118,17 @@ export function CompanyForm({
    */
   const [naCasti, setNaCasti] = useState(company.fakturujeNaCasti ?? false);
   /**
+   * HUDBU K AUDIOKNIHÁM DODÁVÁ KLIENT (zadání 17. 10. 2026: „hudbu nevybírám
+   * u firem Jan Melvil, Audiolibrix a Čti mi").
+   *
+   * Je to příznak u firmy, ne seznam jmen v kódu - firem přibývá. Když je
+   * zaškrtnutý, portál tři dny před první frekvencí neupozorní nás, ale pošle
+   * klientovi odkaz, kterým hudbu vloží sám.
+   */
+  const [hudbuDodavaKlient, setHudbuDodavaKlient] = useState(
+    company.hudbuDodavaKlient ?? false,
+  );
+  /**
    * REŽII SI DĚLÁ KLIENT (zadání 12. 10. 2026: „u klienta Jan Melvil si chodí
    * režírovat Veronika González první frekvence vždy sama. Takže já u režie
    * na dálku nejsem").
@@ -212,6 +223,7 @@ export function CompanyForm({
                 audioknihyNaKlic: dealsAudiobooks ? naKlic : false,
                 cenuUrcujeKlient: dealsAudiobooks ? cenuUrcujeKlient : false,
                 fakturujeNaCasti: naCasti,
+                hudbuDodavaKlient: dealsAudiobooks ? hudbuDodavaKlient : false,
                 rezieKlientaUserId: rezieKlientaUserId || null,
                 vydavatelId: vydavatelId || null,
                 mena,
@@ -500,6 +512,21 @@ export function CompanyForm({
               {t('firma.naCastiVolba')}
             </label>
           </AdminField>
+
+          {/* HUDBU DODÁVÁ KLIENT (17. 10. 2026) - jen u firmy, která u nás
+              dělá audioknihy; u reklamy se hudba vede v Rodném listu. */}
+          {dealsAudiobooks && (
+            <AdminField label={t('firma.hudbaKlient')} hint={t('firma.hudbaKlientHint')}>
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input
+                  type="checkbox"
+                  checked={hudbuDodavaKlient}
+                  onChange={(e) => setHudbuDodavaKlient(e.target.checked)}
+                />
+                {t('firma.hudbaKlientVolba')}
+              </label>
+            </AdminField>
+          )}
 
           {/* POD KTEROU NAŠI FIRMU KLIENT PATŘÍ (12. 10. 2026). Nabízí se jen
               tehdy, když máme firem víc - jinak není z čeho vybírat. */}

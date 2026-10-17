@@ -24,6 +24,7 @@ import { nahrajPrilohuObjednavkyNaDisk } from '@/lib/prilohaObjednavkyServer';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { bezTitulu } from '@/lib/jmena';
 import { notifyMany } from '@/lib/notifications';
+import { zkopirujHudbuSerie } from '@/lib/hudbaSerieServer';
 import { vidiCenuObjednavky } from '@/lib/roles';
 import type { Currency, Role } from '@prisma/client';
 
@@ -443,6 +444,21 @@ export async function POST(req: NextRequest) {
         },
       });
       idProjektu = caflouProjectId;
+
+      /**
+       * HUDBA SÉRIE SE NAKOPÍRUJE ROVNOU (zadání 17. 10. 2026: „v případě, že
+       * je to série, tak se tam automaticky nakopíruje hudba, která se
+       * používá celou sérií"). Když série žádnou hudbu nemá, neudělá to nic.
+       */
+      if (serie) {
+        void zkopirujHudbuSerie({
+          caflouProjectId,
+          serie,
+          companyId,
+          pridalId: null,
+        }).catch(() => undefined);
+      }
+
       await prisma.order.update({
         where: { id: order.id },
         data: { caflouProjectId, caflouSyncStatus: 'OK' },

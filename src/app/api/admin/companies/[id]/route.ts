@@ -38,6 +38,7 @@ const schema = z.object({
   audioknihyNaKlic: z.boolean().optional(),
   cenuUrcujeKlient: z.boolean().optional(),
   fakturujeNaCasti: z.boolean().optional(),
+  hudbuDodavaKlient: z.boolean().optional(),
   /** Kdo si u téhle firmy chodí režírovat (12. 10. 2026) - účet, nebo nic. */
   rezieKlientaUserId: z.string().trim().max(100).nullable().optional(),
   /** Pod kterou naši firmu klient patří (12. 10. 2026) - viz lib/naseFirmy.ts. */
@@ -100,6 +101,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               // nepocita ze sazby, klient ji vyplni sam.
               ...(data.cenuUrcujeKlient !== undefined ? { cenuUrcujeKlient: data.cenuUrcujeKlient } : {}),
               ...(data.fakturujeNaCasti !== undefined ? { fakturujeNaCasti: data.fakturujeNaCasti } : {}),
+              ...(data.hudbuDodavaKlient !== undefined ? { hudbuDodavaKlient: data.hudbuDodavaKlient } : {}),
               ...(data.rezieKlientaUserId !== undefined
                 ? { rezieKlientaUserId: data.rezieKlientaUserId || null }
                 : {}),

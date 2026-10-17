@@ -825,6 +825,35 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     en: 'The advert records ({pocet}) are attached as well.',
   },
 
+  // --- hudba od klienta (sendVyzvaHudbaEmail, 17. 10. 2026) ---
+  'mail.hudba.stitek': { cs: 'Hudba k audioknize', en: 'Audiobook music' },
+  'mail.hudba.preheader': {
+    cs: 'K audioknize {nazev} od vás potřebujeme hudbu.',
+    en: 'We need the music for the audiobook {nazev} from you.',
+  },
+  'mail.hudba.odznak': { cs: 'Hudba k audioknize', en: 'Audiobook music' },
+  'mail.hudba.veta': {
+    cs: 'chystáme se natáčet audioknihu {nazev} a potřebovali bychom od vás hudbu, která se k ní má použít.',
+    en: 'we are about to record the audiobook {nazev} and we need the music that should go with it.',
+  },
+  'mail.hudba.prvniFrekvence': { cs: 'První natáčecí den', en: 'First recording day' },
+  'mail.hudba.firma': { cs: 'Vydavatel', en: 'Publisher' },
+  'mail.hudba.tlacitko': { cs: 'Vložit hudbu', en: 'Add the music' },
+  'mail.hudba.jakNaTo': {
+    cs: 'Stačí soubory přetáhnout do stránky — WAV i MP3, klidně víc najednou. Přihlašovat se nikam nemusíte a u každé skladby si můžete připsat poznámku, kde a jak ji pustit.',
+    en: 'Just drag the files onto the page — WAV or MP3, several at once if you like. There is nothing to log in to, and you can add a note to each track saying where and how to use it.',
+  },
+  'mail.hudba.klic': {
+    cs: 'Odkaz je jen pro tenhle projekt a nikam jinam nevede. Pokud hudbu vybírat nebudete, dejte nám prosím vědět odpovědí na tenhle e-mail.',
+    en: 'The link is for this project only and leads nowhere else. If you are not going to choose any music, just reply to this email and let us know.',
+  },
+  'mail.hudba.predmet': { cs: 'Hudba k audioknize {nazev}', en: 'Music for the audiobook {nazev}' },
+  'mail.hudba.textVeta': {
+    cs: 'chystame se natacet audioknihu {nazev} a potrebovali bychom od vas hudbu, ktera se k ni ma pouzit.',
+    en: 'we are about to record the audiobook {nazev} and we need the music that should go with it.',
+  },
+  'mail.hudba.textOtevrit': { cs: 'Hudbu vlozite zde:', en: 'You can add the music here:' },
+
   // --- smlouva k podpisu (sendContractEmail) ---
   'mail.smlouva.stitek': { cs: 'Smlouva k podpisu', en: 'Contract to sign' },
   'mail.smlouva.preheader': {

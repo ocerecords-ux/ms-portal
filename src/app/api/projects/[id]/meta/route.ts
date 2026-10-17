@@ -11,6 +11,7 @@ import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { nazevProjektuVelky } from '@/lib/nazevProjektu';
 import { cisloDilu } from '@/lib/serie';
+import { zkopirujHudbuSerie } from '@/lib/hudbaSerieServer';
 import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
 import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
 
@@ -546,6 +547,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           caflouCompanyId: meta.company?.caflouCompanyId ?? null,
         },
       ]).catch(() => undefined);
+    }
+
+    /**
+     * SÉRIE PŘIŘAZENÁ AŽ DODATEČNĚ (zadání 17. 10. 2026). Díl se často zařadí
+     * do série až potom, co vznikl - tehdy se k němu hudba série nakopíruje
+     * stejně, jako by u ní byl od začátku. Co u projektu už leží, se nepřidá
+     * znovu, takže opakované uložení formuláře hudbu nezdvojí.
+     */
+    if (data.serie !== undefined && data.serie.trim()) {
+      void zkopirujHudbuSerie({
+        caflouProjectId: params.id,
+        serie: data.serie.trim(),
+        companyId: meta.companyId ?? null,
+        pridalId: session.user.id,
+      }).catch(() => undefined);
     }
 
     return NextResponse.json(meta);

@@ -1662,6 +1662,87 @@ export async function sendContractEmail(input: ContractEmailInput) {
 
 
 // ===========================================================================
+// HUDBA OD KLIENTA (zadani 17. 10. 2026: „hudbu nevybiram u firem Jan Melvil,
+// Audiolibrix a Cti mi. V takovych pripadech by mela jit notifikace emailem
+// na klienta s moznosti vlozit hudbu")
+//
+// Odchazi tri dny pred prvni frekvenci - stejny predstih, jaky mame my na
+// upozorneni, ze hudba chybi. Odkaz je bez prihlasovani: hudbu u klienta casto
+// resi nekdo, kdo v portalu ucet nema.
+// ===========================================================================
+
+export type VyzvaHudbaInput = {
+  to: string;
+  jmenoPrijemce: string | null;
+  nazevProjektu: string;
+  firma: string | null;
+  prvniFrekvence: Date | null;
+  odkaz: string;
+  jazyk?: Jazyk;
+};
+
+export function buildVyzvaHudbaHtml(input: VyzvaHudbaInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.hudba.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.hudba.preheader', { nazev: input.nazevProjektu }),
+    body: `
+    <span class="badge">${prelozitEmail(jazyk, 'mail.hudba.odznak')}</span>
+    <h2>${escapeHtml(input.nazevProjektu)}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.hudba.veta', {
+      nazev: `<strong>${escapeHtml(input.nazevProjektu)}</strong>`,
+    })}</p>
+
+    <table role="presentation" class="field-table">
+      ${
+        input.firma
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.hudba.firma')}</td><td class="value regular">${escapeHtml(input.firma)}</td></tr>`
+          : ''
+      }
+      ${
+        input.prvniFrekvence
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.hudba.prvniFrekvence')}</td><td class="value">${datumPosty(jazyk, input.prvniFrekvence)}</td></tr>`
+          : ''
+      }
+    </table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.hudba.tlacitko')}</a>
+    </div>
+
+    <p>${prelozitEmail(jazyk, 'mail.hudba.jakNaTo')}</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.hudba.klic')}</p>
+  `,
+  });
+}
+
+export async function sendVyzvaHudbaEmail(input: VyzvaHudbaInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: prelozitEmailS(jazyk, 'mail.hudba.predmet', { nazev: input.nazevProjektu }),
+    text: [
+      pozdravPosty(jazyk, input.jmenoPrijemce),
+      '',
+      prelozitEmailS(jazyk, 'mail.hudba.textVeta', { nazev: input.nazevProjektu }),
+      '',
+      prelozitEmail(jazyk, 'mail.hudba.textOtevrit'),
+      input.odkaz,
+    ].join('\n'),
+    html: buildVyzvaHudbaHtml(input),
+  });
+
+  return overOdeslani(vysledekPosty, 'sendVyzvaHudbaEmail');
+}
+
+
+// ===========================================================================
 // PODEPSANA SMLOUVA (zadani 14. 9. 2026: „u podepsanych smluv oboji. Odkaz
 // i pdf")
 //
