@@ -325,7 +325,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    * SÉRIE (14. 10. 2026) - díly téhož titulu do oknénka u kolečka
    * a návrhy do našeptávače v úpravě názvu. Viz lib/serieServer.ts.
    */
-  const serieFirmy = await nactiSerieFirmy(metaPoSync?.companyId, metaPoSync?.serie);
+  /**
+   * Našeptávač sérií bere celý portál (18. 10. 2026) - série zavedená kolegou
+   * u jiného vydavatele se musí nabídnout taky, jinak vznikne stejný název
+   * podruhé v jiné podobě. Klientská objednávka zůstává u sérií své firmy.
+   */
+  const serieFirmy = await nactiSerieFirmy(metaPoSync?.companyId, metaPoSync?.serie, {
+    vsechnySerie: true,
+  });
 
   /**
    * ZA KOLIK DNÍ SE STAV PŘEKLOPÍ SÁM (zadání 16. 9. 2026: „bylo by dobré tam
