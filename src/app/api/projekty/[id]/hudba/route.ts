@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { isInternalRole } from '@/lib/roles';
 import { nactiHudbu, zapisSkladbu } from '@/lib/hudbaProjektuServer';
 import { rozsirDoSerie } from '@/lib/hudbaSerieServer';
@@ -38,7 +39,7 @@ const schema = z.object({
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const { id } = await params;
   return NextResponse.json({ hudba: await nactiHudbu(id) });
@@ -47,11 +48,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const { id } = await params;
 
@@ -75,10 +76,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!skladba) {
     // Soubor na té cestě v Dropboxu není - radši nahlas než tiše zapsat
     // skladbu, která nikde neleží.
-    return NextResponse.json(
-      { error: 'Soubor se v Dropboxu nenašel. Zkuste nahrát znovu.' },
-      { status: 502 },
-    );
+    return odpovedChyby('chybaApi.souborNenalezenDropbox', 502);
   }
 
   /**

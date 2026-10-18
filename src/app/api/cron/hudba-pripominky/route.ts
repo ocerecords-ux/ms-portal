@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { odpovedChyby } from '@/lib/chybyApi';
 import { smiSpustitUlohu } from '@/lib/cronGuard';
 import { pripomenChybejiciHudbu } from '@/lib/hudbaPripominkyServer';
 
@@ -16,13 +17,13 @@ export const maxDuration = 120;
 
 async function spust(req: NextRequest) {
   if (!(await smiSpustitUlohu(req))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   try {
     return NextResponse.json({ ok: true, ...(await pripomenChybejiciHudbu()) });
   } catch (err) {
     console.error('Připomínka chybějící hudby selhala:', err);
-    return NextResponse.json({ error: 'Úloha se nepodařila.' }, { status: 500 });
+    return odpovedChyby('chybaApi.ulohaNepodarila', 500);
   }
 }
 

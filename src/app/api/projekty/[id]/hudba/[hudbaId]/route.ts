@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { isInternalRole } from '@/lib/roles';
 import {
   kdeSkladbaLezi,
@@ -39,17 +40,17 @@ async function straz() {
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ hudbaId: string }> }) {
-  if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await straz())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const { hudbaId } = await params;
   const odkaz = await odkazNaSkladbu(hudbaId);
-  if (!odkaz) return NextResponse.json({ error: 'Soubor se nepodařilo otevřít.' }, { status: 502 });
+  if (!odkaz) return odpovedChyby('chybaApi.souborNejdeOtevrit', 502);
   return NextResponse.json({ odkaz });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ hudbaId: string }> }) {
-  if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await straz())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
   const { hudbaId } = await params;
   const ok = await upravSkladbu(hudbaId, parsed.data);
   /**
@@ -61,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ hu
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ hudbaId: string }> }) {
-  if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await straz())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const { hudbaId } = await params;
   /**
    * ODEBRÁNÍ PLATÍ PRO CELOU SÉRII (17. 10. 2026). Kde se skladba nachází se

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { smiSchvalovatPribehy } from '@/lib/pribehyServer';
 import { smazSkladbu, upravSkladbu } from '@/lib/hudbaServer';
 
@@ -21,20 +22,20 @@ async function smi() {
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await smi())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await smi())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
   const skladba = await upravSkladbu(params.id, parsed.data);
-  if (!skladba) return NextResponse.json({ error: 'Není co měnit.' }, { status: 400 });
+  if (!skladba) return odpovedChyby('chybaApi.neniCoMenit', 400);
   return NextResponse.json({ skladba });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await smi())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await smi())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   if (!(await smazSkladbu(params.id))) {
-    return NextResponse.json({ error: 'Smazat se nepodařilo.' }, { status: 400 });
+    return odpovedChyby('chybaApi.smazatNepodarilo', 400);
   }
   return NextResponse.json({ ok: true });
 }

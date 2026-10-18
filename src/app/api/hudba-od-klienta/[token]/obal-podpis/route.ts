@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { odpovedChyby } from '@/lib/chybyApi';
 import { prisma } from '@/lib/db';
 import { podepsanyUploadObaluHudby } from '@/lib/storage';
 
@@ -11,9 +12,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ to
   const vyzva = await prisma.vyzvaHudba
     .findUnique({ where: { token }, select: { id: true } })
     .catch(() => null);
-  if (!vyzva) return NextResponse.json({ error: 'Odkaz neplatí.' }, { status: 404 });
+  if (!vyzva) return odpovedChyby('chybaApi.odkazNeplati', 404);
 
   const podpis = await podepsanyUploadObaluHudby('obal');
-  if (!podpis) return NextResponse.json({ error: 'Úložiště není nastavené.' }, { status: 503 });
+  if (!podpis) return odpovedChyby('chybaApi.uloznisteNeniNastavene', 503);
   return NextResponse.json(podpis);
 }

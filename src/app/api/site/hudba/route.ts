@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { smiPoslatPribeh, smiSchvalovatPribehy } from '@/lib/pribehyServer';
 import { nactiHudbu, zalozSkladbu } from '@/lib/hudbaServer';
 import { MAX_HUDBA_BYTES, TYPY_HUDBY } from '@/lib/hudba';
@@ -28,11 +29,11 @@ const schema = z.object({
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session?.user?.id) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const kdo = { id: session.user.id, role: session.user.role };
   const smiSpravovat = await smiSchvalovatPribehy(kdo);
   if (!smiSpravovat && !(await smiPoslatPribeh(kdo))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   // Správce vidí i vypnuté skladby, aby je mohl zase zapnout.
   return NextResponse.json({ skladby: await nactiHudbu(smiSpravovat), smiSpravovat });
@@ -40,9 +41,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session?.user?.id) return odpovedChyby('chybaApi.bezOpravneni', 403);
   if (!(await smiSchvalovatPribehy({ id: session.user.id, role: session.user.role }))) {
-    return NextResponse.json({ error: 'Skladby do knihovny přidává produkce.' }, { status: 403 });
+    return odpovedChyby('chybaApi.knihovnuPlniProdukce', 403);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -50,13 +51,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
   if (!TYPY_HUDBY.includes(parsed.data.typSouboru)) {
-    return NextResponse.json({ error: 'Tenhle typ souboru jako hudbu nebereme.' }, { status: 400 });
+    return odpovedChyby('chybaApi.spatnyTypHudby', 400);
   }
 
   // Klíč zná jen ten, komu ho server sám podepsal - adresa se z něj
   // poskládá tady, ať ji prohlížeč nemůže podstrčit.
   const url = adresaVUlozisti(parsed.data.klic);
-  if (!url) return NextResponse.json({ error: 'Úložiště souborů není dostupné.' }, { status: 503 });
+  if (!url) return odpovedChyby('chybaApi.uloznisteNedostupne', 503);
 
   const skladba = await zalozSkladbu(session.user.id, {
     nazev: parsed.data.nazev,

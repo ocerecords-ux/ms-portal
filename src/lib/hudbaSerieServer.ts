@@ -119,13 +119,21 @@ export async function nactiHudbuSerie(
 export async function pripravNahraniSerie(vstup: {
   serie: string;
   nazevSouboru: string;
-}): Promise<{ odkaz: string; cesta: string } | { chyba: string }> {
+}): Promise<
+  | { odkaz: string; cesta: string }
+  // `chybaKlic` je NEPOVINNÝ (dávka 7o): důvody, proč nejde založit složku,
+  // chodí z `lib/dropbox.ts` a ty zůstávají české - jsou to provozní hlášky
+  // o nastavení, ne věty pro klienta.
+  | { chyba: string; chybaKlic?: string }
+> {
   const slozka = slozkaSerie(vstup.serie);
   const pripravena = await zalozSlozku(slozka);
   if (!pripravena.ok) return { chyba: pripravena.duvod };
   const cesta = `${slozka}/${bezpecnyNazev(vstup.nazevSouboru)}`;
   const odkaz = await odkazNaNahrani(cesta);
-  return odkaz ? { odkaz, cesta } : { chyba: 'Dropbox nevydal adresu na nahrání.' };
+  return odkaz
+    ? { odkaz, cesta }
+    : { chyba: 'Dropbox nevydal adresu na nahrání.', chybaKlic: 'hudba.duvodBezAdresy' };
 }
 
 export async function zapisSkladbuSerie(vstup: {

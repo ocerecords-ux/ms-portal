@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { doplnMetadataSkladby } from '@/lib/doplnMetadataServer';
 import { nactiHudbu } from '@/lib/hudbaProjektuServer';
 import { isInternalRole } from '@/lib/roles';
@@ -23,7 +24,7 @@ export async function POST(
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const { id, hudbaId } = await params;

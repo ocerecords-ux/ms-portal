@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 import {
   prectiMetadata,
@@ -83,7 +84,7 @@ export function HudbaOdKlienta({
     });
     if (!podpis.ok) {
       const data = (await podpis.json().catch(() => null)) as { error?: string } | null;
-      uprav({ chyba: data?.error || t('hudbaKlient.chyba') });
+      uprav({ chyba: hlaskaChyby(data, t, t('hudbaKlient.chyba')) });
       return;
     }
     const { odkaz, cesta } = (await podpis.json()) as { odkaz: string; cesta: string };

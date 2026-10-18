@@ -221,7 +221,13 @@ async function doplnPouzitiJinde(
 export async function pripravNahrani(vstup: {
   nazevProjektu: string;
   nazevSouboru: string;
-}): Promise<{ odkaz: string; cesta: string } | { chyba: string }> {
+}): Promise<
+  | { odkaz: string; cesta: string }
+  // `chybaKlic` je NEPOVINNÝ (dávka 7o): důvody, proč nejde založit složku,
+  // chodí z `lib/dropbox.ts` a ty zůstávají české - jsou to provozní hlášky
+  // o nastavení, ne věty pro klienta.
+  | { chyba: string; chybaKlic?: string }
+> {
   const slozka = slozkaProjektu(vstup.nazevProjektu);
   // Když složka nejde založit, nemá smysl vydávat adresu na nahrání - soubor
   // by se poslal a Dropbox by ho stejně odmítl (16. 10. 2026).
@@ -229,7 +235,9 @@ export async function pripravNahrani(vstup: {
   if (!pripravena.ok) return { chyba: pripravena.duvod };
   const cesta = `${slozka}/${bezpecnyNazev(vstup.nazevSouboru)}`;
   const odkaz = await odkazNaNahrani(cesta);
-  return odkaz ? { odkaz, cesta } : { chyba: 'Dropbox nevydal adresu na nahrání.' };
+  return odkaz
+    ? { odkaz, cesta }
+    : { chyba: 'Dropbox nevydal adresu na nahrání.', chybaKlic: 'hudba.duvodBezAdresy' };
 }
 
 /**

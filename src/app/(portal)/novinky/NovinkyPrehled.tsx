@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import {
   PUBLIKA,
   TYPY,
@@ -72,6 +73,7 @@ export function NovinkyPrehled({
   pise: boolean;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
 
   const [zalozka, setZalozka] = useState<'historie' | 'newsletter'>('historie');
@@ -131,7 +133,7 @@ export function NovinkyPrehled({
     setUklada(false);
     if (!odpoved || !odpoved.ok) {
       const data = odpoved ? await odpoved.json().catch(() => null) : null;
-      setChyba((data as { error?: string } | null)?.error ?? t('novinky.chyba'));
+      setChyba(hlaskaChyby(data, t, t('novinky.chyba')));
       return;
     }
     setFormular(null);
@@ -186,7 +188,7 @@ export function NovinkyPrehled({
                     : 'bg-surface text-muted border border-line'
                 }`}
               >
-                {p.label}
+                {labelPublika(p.kod, jazyk)}
               </button>
             ))}
 
@@ -240,7 +242,7 @@ export function NovinkyPrehled({
 
           {skupiny.map(([mesic, polozky]) => (
             <div key={mesic} className="flex flex-col gap-2">
-              <h2 className="font-display text-lg text-ink m-0">{mesicTextem(mesic)}</h2>
+              <h2 className="font-display text-lg text-ink m-0">{mesicTextem(mesic, jazyk)}</h2>
               {polozky.map((n) => (
                 <article
                   key={n.id}
@@ -250,7 +252,7 @@ export function NovinkyPrehled({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-body ${barvaTypu(n.typ)}`}>
-                      {labelTypu(n.typ)}
+                      {labelTypu(n.typ, jazyk)}
                     </span>
                     <span className="text-xs font-body text-muted">{n.modul}</span>
                     <span className="text-xs font-body text-muted">{n.datum}</span>
@@ -304,7 +306,7 @@ export function NovinkyPrehled({
                           key={p}
                           className="rounded-full border border-line px-2 py-0.5 text-[11px] font-body text-muted"
                         >
-                          {labelPublika(p)}
+                          {labelPublika(p, jazyk)}
                         </span>
                       ))}
                     </div>
@@ -339,6 +341,7 @@ function FormularNovinky({
   zrus: () => void;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const pole = 'rounded-lg border border-line bg-bg px-3 py-2 text-sm font-body text-ink w-full';
 
   return (
@@ -370,7 +373,7 @@ function FormularNovinky({
           >
             {TYPY.map((typ) => (
               <option key={typ.kod} value={typ.kod}>
-                {typ.label}
+                {labelTypu(typ.kod, jazyk)}
               </option>
             ))}
           </select>
@@ -409,7 +412,7 @@ function FormularNovinky({
                   })
                 }
               />
-              {p.label}
+              {labelPublika(p.kod, jazyk)}
             </label>
           ))}
         </div>
@@ -470,6 +473,7 @@ function FormularNovinky({
 
 function NewsletterPanel({ mesice }: { mesice: string[] }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const nabidka = mesice.length ? mesice : [mesicKlice(new Date())];
 
   const [mesic, setMesic] = useState(nabidka[0]);
@@ -522,7 +526,7 @@ function NewsletterPanel({ mesice }: { mesice: string[] }) {
           <select value={mesic} onChange={(e) => setMesic(e.target.value)} className={pole}>
             {nabidka.map((m) => (
               <option key={m} value={m}>
-                {mesicTextem(m)}
+                {mesicTextem(m, jazyk)}
               </option>
             ))}
           </select>
@@ -533,7 +537,7 @@ function NewsletterPanel({ mesice }: { mesice: string[] }) {
           <select value={publikum} onChange={(e) => setPublikum(e.target.value)} className={pole}>
             {PUBLIKA.map((p) => (
               <option key={p.kod} value={p.kod}>
-                {p.label}
+                {labelPublika(p.kod, jazyk)}
               </option>
             ))}
           </select>

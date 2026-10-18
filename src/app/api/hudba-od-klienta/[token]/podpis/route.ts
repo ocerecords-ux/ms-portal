@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { odpovedChyby } from '@/lib/chybyApi';
 import { prisma } from '@/lib/db';
 import { dropboxNastaven } from '@/lib/dropbox';
 import { pripravNahrani } from '@/lib/hudbaProjektuServer';
@@ -27,10 +28,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const vyzva = (await prisma.vyzvaHudba
     .findUnique({ where: { token }, select: { caflouProjectId: true } })
     .catch(() => null)) as { caflouProjectId: string } | null;
-  if (!vyzva) return NextResponse.json({ error: 'Odkaz neplatí.' }, { status: 404 });
+  if (!vyzva) return odpovedChyby('chybaApi.odkazNeplati', 404);
 
   if (!dropboxNastaven()) {
-    return NextResponse.json({ error: 'Nahrávání zatím nejde.' }, { status: 503 });
+    return odpovedChyby('chybaApi.nahravaniNejde', 503);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     nazevSouboru: parsed.data.nazev,
   });
   if ('chyba' in pripraveno) {
-    return NextResponse.json({ error: pripraveno.chyba }, { status: 502 });
+    return NextResponse.json({ error: pripraveno.chyba, klic: pripraveno.chybaKlic }, { status: 502 });
   }
   return NextResponse.json(pripraveno);
 }

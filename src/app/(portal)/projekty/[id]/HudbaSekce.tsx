@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { HudbaSeznam, type HudbaApi } from '@/app/(portal)/components/HudbaSeznam';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import type { SkladbaProjektu } from '@/lib/hudbaProjektuServer';
 import { formatDatum, formatDatumCas, type Jazyk } from '@/lib/jazyk';
 import type { StavVyzvy } from '@/lib/vyzvaHudbaServer';
@@ -98,7 +99,7 @@ function VyzvaKlientovi({
     setPosila(false);
     if (!res?.ok) {
       const data = (await res?.json().catch(() => null)) as { error?: string } | null;
-      setHlaska(data?.error || t('hudbaVyzva.chyba'));
+      setHlaska(hlaskaChyby(data, t, t('hudbaVyzva.chyba')));
       return;
     }
     const data = (await res.json()) as { vyzva: StavVyzvy };

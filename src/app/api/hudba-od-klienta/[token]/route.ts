@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { odpovedChyby } from '@/lib/chybyApi';
 import { prisma } from '@/lib/db';
 import { zapisSkladbu } from '@/lib/hudbaProjektuServer';
 import { rozsirDoSerie } from '@/lib/hudbaSerieServer';
@@ -45,10 +46,10 @@ async function projektZTokenu(token: string): Promise<string | null> {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const caflouProjectId = await projektZTokenu(token);
-  if (!caflouProjectId) return NextResponse.json({ error: 'Odkaz neplatí.' }, { status: 404 });
+  if (!caflouProjectId) return odpovedChyby('chybaApi.odkazNeplati', 404);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const obalKlic = parsed.data.obalKlic?.trim() || null;
   const obalOvereny = obalKlic && (await overPrilohu(obalKlic)) ? obalKlic : null;
@@ -65,10 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     pridalId: null,
   });
   if (!skladba) {
-    return NextResponse.json(
-      { error: 'Soubor se nepodařilo uložit. Zkuste to prosím znovu.' },
-      { status: 502 },
-    );
+    return odpovedChyby('chybaApi.souborNejdeUlozit', 502);
   }
 
   await oznacVlozeni(token, parsed.data.jmeno ?? null);

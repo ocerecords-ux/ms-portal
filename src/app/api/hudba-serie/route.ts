@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { nactiHudbuSerie, zapisSkladbuSerie } from '@/lib/hudbaSerieServer';
 import { isInternalRole } from '@/lib/roles';
 import { overPrilohu } from '@/lib/storage';
@@ -34,7 +35,7 @@ async function straz() {
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await straz())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const serie = req.nextUrl.searchParams.get('serie') ?? '';
   const companyId = req.nextUrl.searchParams.get('companyId') || null;
   return NextResponse.json({ hudba: await nactiHudbuSerie(serie, companyId) });
@@ -42,10 +43,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await straz();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   // Klíč obalu přišel z prohlížeče - bez ověření by v kartě visel odkaz na
   // obrázek, který v úložišti není.
@@ -65,10 +66,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (!skladba) {
-    return NextResponse.json(
-      { error: 'Soubor se v Dropboxu nenašel. Zkuste nahrát znovu.' },
-      { status: 502 },
-    );
+    return odpovedChyby('chybaApi.souborNenalezenDropbox', 502);
   }
   return NextResponse.json({ skladba }, { status: 201 });
 }

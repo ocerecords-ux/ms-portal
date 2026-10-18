@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { dropboxNastaven } from '@/lib/dropbox';
 import { pripravNahraniSerie } from '@/lib/hudbaSerieServer';
 import { isInternalRole } from '@/lib/roles';
@@ -25,21 +26,21 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   if (!dropboxNastaven()) {
-    return NextResponse.json({ error: 'Dropbox není nastavený.' }, { status: 503 });
+    return odpovedChyby('chybaApi.dropboxNeniNastaveny', 503);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const pripraveno = await pripravNahraniSerie({
     serie: parsed.data.serie,
     nazevSouboru: parsed.data.nazev,
   });
   if ('chyba' in pripraveno) {
-    return NextResponse.json({ error: pripraveno.chyba }, { status: 502 });
+    return NextResponse.json({ error: pripraveno.chyba, klic: pripraveno.chybaKlic }, { status: 502 });
   }
   return NextResponse.json(pripraveno);
 }

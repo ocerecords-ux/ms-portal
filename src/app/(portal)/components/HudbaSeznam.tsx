@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { WaveformPlayer, type UsekSkladby } from '@/app/(portal)/components/WaveformPlayer';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import {
   delkaTextem,
@@ -144,7 +145,7 @@ export function HudbaSeznam({
     });
     if (!podpis.ok) {
       const data = (await podpis.json().catch(() => null)) as { error?: string } | null;
-      uprav({ chyba: data?.error || t('hudba.chybaAdresy') });
+      uprav({ chyba: hlaskaChyby(data, t, t('hudba.chybaAdresy')) });
       return;
     }
     const { odkaz, cesta } = (await podpis.json()) as { odkaz: string; cesta: string };
@@ -203,7 +204,7 @@ export function HudbaSeznam({
     });
     if (!zapis.ok) {
       const data = (await zapis.json().catch(() => null)) as { error?: string } | null;
-      uprav({ chyba: data?.error || t('hudba.chybaZapisu') });
+      uprav({ chyba: hlaskaChyby(data, t, t('hudba.chybaZapisu')) });
       return;
     }
     const { skladba, serie } = (await zapis.json()) as {

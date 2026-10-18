@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { dropboxNastaven } from '@/lib/dropbox';
@@ -32,15 +33,12 @@ const schema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   if (!dropboxNastaven()) {
     // Radši rovnou a nahlas, než aby soubor tiše zmizel.
-    return NextResponse.json(
-      { error: 'Hudba zatím nejde - portál nemá nastavené napojení na Dropbox.' },
-      { status: 503 },
-    );
+    return odpovedChyby('chybaApi.hudbaBezDropboxu', 503);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -63,7 +61,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if ('chyba' in pripraveno) {
     // Důvod jde rovnou do karty - „Dropbox adresu nevydal" nikomu nepomohlo.
-    return NextResponse.json({ error: pripraveno.chyba }, { status: 502 });
+    return NextResponse.json({ error: pripraveno.chyba, klic: pripraveno.chybaKlic }, { status: 502 });
   }
   return NextResponse.json(pripraveno);
 }

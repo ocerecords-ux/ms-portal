@@ -90,12 +90,16 @@ export async function zajistiVyzvu(caflouProjectId: string): Promise<string | nu
  * vyžádání (tlačítko „Poslat výzvu znovu") - sama se neopakuje, aby klientovi
  * nechodila každé ráno.
  */
+/**
+ * Vedle české věty chodí i KLÍČ do slovníku (dávka 7o): obrazovka si důvod
+ * přeloží sama, server jazyk příjemce nezná - vzor z dávky 7l.
+ */
 export async function posliVyzvu(
   caflouProjectId: string,
   znovu = false,
-): Promise<{ ok: true; email: string } | { ok: false; duvod: string }> {
+): Promise<{ ok: true; email: string } | { ok: false; duvod: string; duvodKlic: string }> {
   const token = await zajistiVyzvu(caflouProjectId);
-  if (!token) return { ok: false, duvod: 'Projekt nemá e-mail klienta ani kontakt firmy.' };
+  if (!token) return { ok: false, duvod: 'Projekt nemá e-mail klienta ani kontakt firmy.', duvodKlic: 'hudbaVyzva.duvodBezKontaktu' };
 
   const vyzva = (await prisma.vyzvaHudba
     .findUnique({ where: { caflouProjectId } })
@@ -105,9 +109,9 @@ export async function posliVyzvu(
     odeslanoAt: Date | null;
     vlozenoAt: Date | null;
   } | null;
-  if (!vyzva) return { ok: false, duvod: 'Výzva se nenašla.' };
-  if (vyzva.vlozenoAt) return { ok: false, duvod: 'Klient hudbu už vložil.' };
-  if (vyzva.odeslanoAt && !znovu) return { ok: false, duvod: 'Výzva už odešla.' };
+  if (!vyzva) return { ok: false, duvod: 'Výzva se nenašla.', duvodKlic: 'hudbaVyzva.duvodNenalezena' };
+  if (vyzva.vlozenoAt) return { ok: false, duvod: 'Klient hudbu už vložil.', duvodKlic: 'hudbaVyzva.duvodUzVlozil' };
+  if (vyzva.odeslanoAt && !znovu) return { ok: false, duvod: 'Výzva už odešla.', duvodKlic: 'hudbaVyzva.duvodUzOdesla' };
 
   const meta = (await prisma.projectMeta
     .findUnique({
@@ -137,7 +141,7 @@ export async function posliVyzvu(
     prvniFrekvence: (terminy as { start: Date }[])[0]?.start ?? null,
     odkaz: odkazNaVyzvu(token),
   });
-  if (!vysledek.sent) return { ok: false, duvod: 'E-mail se nepodařilo odeslat.' };
+  if (!vysledek.sent) return { ok: false, duvod: 'E-mail se nepodařilo odeslat.', duvodKlic: 'hudbaVyzva.duvodMailNeodesel' };
 
   await prisma.vyzvaHudba
     .update({ where: { caflouProjectId }, data: { odeslanoAt: new Date() } })

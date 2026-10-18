@@ -393,6 +393,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'novinky.nicNenalezeno': { cs: 'Nic takového tu zatím není.', en: 'Nothing like that here yet.' },
   'novinky.opravduSmazat': { cs: 'Opravdu novinku smazat?', en: 'Really delete this item?' },
   'novinky.chyba': { cs: 'Nepovedlo se to, zkuste to prosím znovu.', en: 'That did not work, please try again.' },
+  // Číselníky novinek (dávka 7o): překládá se podle KÓDU, čeština
+  // v `lib/novinky.ts` zůstává zdrojem pravdy - vzor `nazevMeny` z dávky 4.
+  'novinky.publikum.TYM': { cs: 'Tým', en: 'Team' },
+  'novinky.publikum.KLIENT_AUDIOKNIHY': { cs: 'Klienti – audioknihy', en: 'Clients – audiobooks' },
+  'novinky.publikum.KLIENT_REKLAMY': { cs: 'Klienti – reklamy', en: 'Clients – adverts' },
+  'novinky.publikum.HERCI': { cs: 'Herci', en: 'Narrators' },
+  'novinky.typ.MODUL': { cs: 'Nový modul', en: 'New module' },
+  'novinky.typ.VYLEPSENI': { cs: 'Vylepšení', en: 'Improvement' },
+  'novinky.typ.OPRAVA': { cs: 'Oprava', en: 'Fix' },
   'novinky.mesic': { cs: 'Měsíc', en: 'Month' },
   'novinky.iOdeslane': { cs: 'I už odeslané', en: 'Include already sent' },
   'novinky.sestavit': { cs: 'Sestavit přehled', en: 'Build the summary' },
@@ -11682,6 +11691,89 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.bezEmailu': {
     cs: 'Přihlašovací jméno bez e-mailu — pozvánka ani obnova hesla na něj neodejde, heslo mu nastavte níž.',
     en: 'A username without an email — no invitation or password reset can be sent to it, so set the password below.',
+  },
+  // CHYBY Z ROUT V `api/**` (dávka 7o, 18. 10. 2026). Routa pošle vedle české
+  // věty i KLÍČ (`lib/chybyApi.ts`) a obrazovka si ji přeloží. Čeština je tu
+  // zdrojem pravdy i pro routu: `odpovedChyby` si český text bere ze slovníku,
+  // takže se věta píše na jednom místě.
+  'chybaApi.bezOpravneni': { cs: 'Nemáte oprávnění.', en: 'You do not have permission.' },
+  'chybaApi.neplatnaData': { cs: 'Neplatná data.', en: 'Invalid data.' },
+  'chybaApi.odkazNeplati': { cs: 'Odkaz neplatí.', en: 'The link does not work.' },
+  'chybaApi.ulohaNepodarila': { cs: 'Úloha se nepodařila.', en: 'The job did not finish.' },
+  'chybaApi.uloznisteNeniNastavene': {
+    cs: 'Úložiště není nastavené.',
+    en: 'File storage is not set up.',
+  },
+  'chybaApi.uloznisteNedostupne': {
+    cs: 'Úložiště souborů není dostupné.',
+    en: 'File storage is not available.',
+  },
+  'chybaApi.dropboxNeniNastaveny': { cs: 'Dropbox není nastavený.', en: 'Dropbox is not set up.' },
+  'chybaApi.nahravaniNejde': { cs: 'Nahrávání zatím nejde.', en: 'Uploading is not available yet.' },
+  'chybaApi.hudbaBezDropboxu': {
+    cs: 'Hudba zatím nejde - portál nemá nastavené napojení na Dropbox.',
+    en: 'Music is not available yet — the portal has no Dropbox connection set up.',
+  },
+  'chybaApi.hudbaBezUloziste': {
+    cs: 'Hudba zatím nejde - portál nemá nastavené úložiště souborů.',
+    en: 'Music is not available yet — the portal has no file storage set up.',
+  },
+  'chybaApi.souborNenalezenDropbox': {
+    cs: 'Soubor se v Dropboxu nenašel. Zkuste nahrát znovu.',
+    en: 'The file was not found in Dropbox. Please upload it again.',
+  },
+  'chybaApi.souborNejdeOtevrit': {
+    cs: 'Soubor se nepodařilo otevřít.',
+    en: 'The file could not be opened.',
+  },
+  'chybaApi.souborNejdeUlozit': {
+    cs: 'Soubor se nepodařilo uložit. Zkuste to prosím znovu.',
+    en: 'The file could not be saved. Please try again.',
+  },
+  'chybaApi.souborNejdeNacist': {
+    cs: 'Soubor se nepodařilo načíst.',
+    en: 'The file could not be loaded.',
+  },
+  'chybaApi.souborNeniVUlozisti': {
+    cs: 'Soubor není v úložišti.',
+    en: 'The file is not in storage.',
+  },
+  'chybaApi.skladbaSemNepatri': {
+    cs: 'Skladba sem nepatří.',
+    en: 'That track does not belong here.',
+  },
+  'chybaApi.skladbaNenalezena': { cs: 'Skladba nenalezena.', en: 'Track not found.' },
+  'chybaApi.knihovnuPlniProdukce': {
+    cs: 'Skladby do knihovny přidává produkce.',
+    en: 'Tracks are added to the library by the production team.',
+  },
+  'chybaApi.spatnyTypHudby': {
+    cs: 'Tenhle typ souboru jako hudbu nebereme.',
+    en: 'We do not accept this file type as music.',
+  },
+  'chybaApi.neniCoMenit': { cs: 'Není co měnit.', en: 'There is nothing to change.' },
+  'chybaApi.smazatNepodarilo': { cs: 'Smazat se nepodařilo.', en: 'Deleting did not work.' },
+  // Důvody z `lib/vyzvaHudbaServer.ts` - výzva klientovi, aby dodal hudbu.
+  'hudbaVyzva.duvodBezKontaktu': {
+    cs: 'Projekt nemá e-mail klienta ani kontakt firmy.',
+    en: 'The project has no client e-mail and no company contact.',
+  },
+  'hudbaVyzva.duvodNenalezena': { cs: 'Výzva se nenašla.', en: 'The invitation was not found.' },
+  'hudbaVyzva.duvodUzVlozil': {
+    cs: 'Klient hudbu už vložil.',
+    en: 'The client has already added the music.',
+  },
+  'hudbaVyzva.duvodUzOdesla': {
+    cs: 'Výzva už odešla.',
+    en: 'The invitation has already been sent.',
+  },
+  'hudbaVyzva.duvodMailNeodesel': {
+    cs: 'E-mail se nepodařilo odeslat.',
+    en: 'The e-mail could not be sent.',
+  },
+  'hudba.duvodBezAdresy': {
+    cs: 'Dropbox nevydal adresu na nahrání.',
+    en: 'Dropbox did not give an upload address.',
   },
 };
 

@@ -8,6 +8,7 @@ import {
   odpojSkladbuSerie,
   upravSkladbuSerie,
 } from '@/lib/hudbaSerieServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { isInternalRole } from '@/lib/roles';
 
 /**
@@ -33,24 +34,24 @@ async function straz() {
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await straz())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const { id } = await params;
   const odkaz = await odkazNaSkladbuSerie(id);
-  if (!odkaz) return NextResponse.json({ error: 'Soubor se nepodařilo otevřít.' }, { status: 502 });
+  if (!odkaz) return odpovedChyby('chybaApi.souborNejdeOtevrit', 502);
   return NextResponse.json({ odkaz });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await straz())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
   const { id } = await params;
   const ok = await upravSkladbuSerie(id, parsed.data);
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await straz())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await straz())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const { id } = await params;
   const ok = await odpojSkladbuSerie(id);
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });

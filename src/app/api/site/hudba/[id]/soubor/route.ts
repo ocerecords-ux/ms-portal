@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { smiPoslatPribeh, smiSchvalovatPribehy } from '@/lib/pribehyServer';
 import { nactiSkladbu } from '@/lib/hudbaServer';
 import { klicZAdresyUloziste, stahniZUloziste } from '@/lib/storage';
@@ -22,20 +23,20 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session?.user?.id) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const kdo = { id: session.user.id, role: session.user.role };
   if (!(await smiPoslatPribeh(kdo)) && !(await smiSchvalovatPribehy(kdo))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const skladba = await nactiSkladbu(params.id);
-  if (!skladba) return NextResponse.json({ error: 'Skladba nenalezena.' }, { status: 404 });
+  if (!skladba) return odpovedChyby('chybaApi.skladbaNenalezena', 404);
 
   const klic = klicZAdresyUloziste(skladba.url);
-  if (!klic) return NextResponse.json({ error: 'Soubor není v úložišti.' }, { status: 404 });
+  if (!klic) return odpovedChyby('chybaApi.souborNeniVUlozisti', 404);
 
   const soubor = await stahniZUloziste(klic);
-  if (!soubor) return NextResponse.json({ error: 'Soubor se nepodařilo načíst.' }, { status: 500 });
+  if (!soubor) return odpovedChyby('chybaApi.souborNejdeNacist', 500);
 
   return new NextResponse(new Uint8Array(soubor.bytes), {
     headers: {

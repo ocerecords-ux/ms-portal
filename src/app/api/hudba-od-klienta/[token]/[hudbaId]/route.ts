@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { odpovedChyby } from '@/lib/chybyApi';
 import { prisma } from '@/lib/db';
 import { upravPoznamku } from '@/lib/hudbaProjektuServer';
 import { rozesliUpravuDoSerie } from '@/lib/hudbaSerieServer';
@@ -24,17 +25,17 @@ export async function PATCH(
   const vyzva = (await prisma.vyzvaHudba
     .findUnique({ where: { token }, select: { caflouProjectId: true } })
     .catch(() => null)) as { caflouProjectId: string } | null;
-  if (!vyzva) return NextResponse.json({ error: 'Odkaz neplatí.' }, { status: 404 });
+  if (!vyzva) return odpovedChyby('chybaApi.odkazNeplati', 404);
 
   const skladba = (await prisma.hudbaProjektu
     .findUnique({ where: { id: hudbaId }, select: { caflouProjectId: true } })
     .catch(() => null)) as { caflouProjectId: string } | null;
   if (!skladba || skladba.caflouProjectId !== vyzva.caflouProjectId) {
-    return NextResponse.json({ error: 'Skladba sem nepatří.' }, { status: 404 });
+    return odpovedChyby('chybaApi.skladbaSemNepatri', 404);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const ok = await upravPoznamku(hudbaId, parsed.data.poznamka);
   // Poznámka klienta platí pro celou sérii stejně jako naše (17. 10. 2026).

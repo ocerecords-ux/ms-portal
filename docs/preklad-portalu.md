@@ -89,6 +89,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7l | 14. 10. | Důvody a hlášky, které server posílá na obrazovku hotové česky — Tagy finální nahrávky, veřejné připomínkování spotu, konflikty v kalendáři a dvě zapomenuté záložní hlášky | [x] |
 | 7m | 15. 10. | Co nejde přes slovník: datum a čas natvrdo `cs-CZ` (natáčecí plán klienta, hosté natáčení, Tagy, kurz ČNB u faktury i výdaje) a řetězce v bublinách, `aria-label` a záložních hláškách (hlavička přehledu projektů, zkušební pult, přihlašovací jméno bez e-mailu) | [x] |
 | 7n | 17. 10. | Formáty, na které se nikdo nezeptal: datum skládané ručně z `getDate()` (karta Hudba, knihovna hudby, veřejná stránka hudby, odznak frekvencí, rozsah týdne u splatností) a desetinná čárka natvrdo u velikostí souborů (hudba, přílohy chatu i dotazů, příběhy) + šest odkazů v liště, které slovník odkazů neznal | [x] |
+| 7o | 18. 10. | **Routy v `api/**` — rozhodnuto**: hlášky z rout chodí s KLÍČEM vedle české věty a obrazovka si je přeloží (`lib/chybyApi.ts` + `lib/chybaZOdpovedi.ts`). Udělaná celá hudba (19 rout) a k tomu číselníky Novinek (publika, druhy, názvy měsíců) | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1530,6 +1531,70 @@ nezbyde. Zbyly jen formáty, protože na ně se žádná kontrola nikdy nezeptal
    necommitnuté a dávka se jich nedotkla. **Novinky ale přidávají do lišty
    odkaz `/novinky`, takže až se commitnou, patří do `ODKAZY_EN` sedmý
    řádek.**
+
+### Dávka 7o je HOTOVÁ (18. 10. 2026)
+
+**Otevřená otázka z dávky 7l je zodpovězená** (Ondřej, 18. 10.): routy v
+`api/**` **neberou jazyk odnikud** — posílají vedle české věty KLÍČ do
+slovníku a obrazovka si text přeloží sama. Cookie zná jen prohlížeč a z cronu
+ani z akce jménem někoho jiného se jazyk zjistit nedá; tohle je jediná cesta,
+která funguje pro všechny tři případy a nechává češtinu zdrojem pravdy
+(pravidlo 1). Dnešní dávka tím vzala **celou hudbu: 19 rout, tři moduly
+v `lib`, čtyři obrazovky a slovník +28 klíčů**; k tomu číselníky Novinek
+(+7 klíčů), dohromady **5 928 → 5 963**.
+
+**Jak to funguje (dva nové soubory, ať to příští routa jen zopakuje):**
+
+- `lib/chybyApi.ts` → `odpovedChyby('chybaApi.bezOpravneni', 403)`. Českou
+  větu si funkce vezme ZE SLOVNÍKU (`prelozit('cs', klic)`), takže se píše na
+  jednom místě, a do odpovědi přibude `klic`. Routa zůstává na jednom řádku.
+- `lib/chybaZOdpovedi.ts` → `hlaskaChyby(data, t, zaloha)`. Obrazovka zkusí
+  klíč, pak to, co přišlo v `error` (starší routa, cizí služba, výpadek),
+  a teprve nakonec vlastní záložní hlášku. Starých rout se to tedy nedotkne
+  a dají se překlápět po jedné.
+
+**Co se přeložilo:**
+
+- **19 rout hudby** — `api/projekty/[id]/hudba/*`, `api/hudba-serie/*`,
+  `api/hudba-od-klienta/*`, `api/site/hudba/*` a cron připomínek. 21 vět,
+  z toho „Nemáte oprávnění." a „Neplatná data." dohromady ve dvaceti místech;
+  anglickému klientovi na veřejné stránce hudby svítilo „Odkaz neplatí."
+- `lib/vyzvaHudbaServer.ts` — pět důvodů, proč výzva klientovi neodejde
+  („Výzva už odešla.", „Klient hudbu už vložil."), teď s `duvodKlic`
+  (vzor z dávky 7l).
+- `lib/hudbaProjektuServer.ts` a `lib/hudbaSerieServer.ts` — „Dropbox nevydal
+  adresu na nahrání." s `chybaKlic`. Ten je schválně **nepovinný**: druhý
+  důvod v téže funkci chodí z `lib/dropbox.ts` a ty hlášky zůstávají české —
+  jsou to provozní věty o nastavení (jedna z nich radí, co nastavit v
+  `DROPBOX_HUDBA_CESTA`), ne text pro klienta.
+- Obrazovky `HudbaSeznam`, `HudbaSekce`, `HudbaOdKlienta` a `NovinkyPrehled`
+  čtou chybu přes `hlaskaChyby`.
+- **Číselníky Novinek** (`lib/novinky.ts`, sekce z 17. 10. večer) — publika
+  („Tým", „Klienti – audioknihy") a druhy („Nový modul", „Vylepšení") se
+  překládají podle KÓDU, čeština v souboru zůstává zdrojem pravdy. Názvy
+  měsíců byly napsané v poli; teď je skládá `Intl` a čeština vychází stejně
+  jako dřív. **Newsletter si jazyk nebere** — ten se řídí jazykem příjemce
+  (pravidlo 5), takže `mesicTextem` bez jazyka dál vrací češtinu.
+
+**Odkaz `/novinky` v liště si doplnil Ondřej sám** podle poznámky z dávky 7n,
+takže `ODKAZY_EN` je kompletní.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (30 řádků beze změny).
+
+**Co se našlo a NEDĚLALO se to (schválně):**
+
+1. **Hlášky z `zod` schémat** (`parsed.error.issues[0]?.message`) — jsou to
+   české věty psané u schématu, ne u routy, a klíč by se k nim musel přivázat
+   jinudy. Vlastní úkol; zatím projdou česky jako dosud.
+2. **Zbytek `api/**`** — doklady, kalendář, přeposlech, chat, Disk. Vzor je
+   hotový a dá se jím jít routa po routě; dnešní dávka vzala hudbu, protože
+   je nejnovější a nejvíc vidět.
+3. `lib/dropbox.ts`, `lib/storage.ts` a spol. — provozní hlášky o nastavení
+   (viz výš).
+4. Datum u novinky se ukazuje jako `2026-10-17` (ISO ze serveru). Není to
+   český formát, takže to anglickou verzi nebolí; sjednotit se dá, až se bude
+   sahat do přehledu.
+5. Oznámení pod zvonkem a zapojení pošty — dávka 6, viz níž.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

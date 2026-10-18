@@ -6,6 +6,8 @@
  * v lib/novinkyServer.ts.
  */
 
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
+
 /** Koho se novinka týká. Pořadí je i pořadím v newsletteru. */
 export const PUBLIKA = [
   { kod: 'TYM', label: 'Tým' },
@@ -18,8 +20,17 @@ export type Publikum = (typeof PUBLIKA)[number]['kod'];
 
 export const KODY_PUBLIK: Publikum[] = PUBLIKA.map((p) => p.kod);
 
-export function labelPublika(kod: string): string {
-  return PUBLIKA.find((p) => p.kod === kod)?.label ?? kod;
+/**
+ * Název publika podle KÓDU (dávka 7o). Jazyk je nepovinný a bez něj zůstává
+ * čeština zdrojem pravdy - vzor `textSekce` z dávky 7d. Newsletter si ho tedy
+ * nebere: ten se řídí jazykem příjemce, ne přepínačem v liště (pravidlo 5).
+ */
+export function labelPublika(kod: string, jazyk?: Jazyk): string {
+  const zaloha = PUBLIKA.find((p) => p.kod === kod)?.label ?? kod;
+  if (!jazyk || jazyk === 'cs') return zaloha;
+  const klic = `novinky.publikum.${kod}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? zaloha : text;
 }
 
 /**
@@ -37,8 +48,13 @@ export type TypNovinky = (typeof TYPY)[number]['kod'];
 
 export const KODY_TYPU: TypNovinky[] = TYPY.map((t) => t.kod);
 
-export function labelTypu(kod: string): string {
-  return TYPY.find((t) => t.kod === kod)?.label ?? kod;
+/** Název druhu novinky podle KÓDU (dávka 7o), stejný vzor jako `labelPublika`. */
+export function labelTypu(kod: string, jazyk?: Jazyk): string {
+  const zaloha = TYPY.find((t) => t.kod === kod)?.label ?? kod;
+  if (!jazyk || jazyk === 'cs') return zaloha;
+  const klic = `novinky.typ.${kod}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? zaloha : text;
 }
 
 /**
@@ -73,15 +89,18 @@ export function mesicKlice(datum: Date): string {
   return `${datum.getFullYear()}-${String(datum.getMonth() + 1).padStart(2, '0')}`;
 }
 
-const MESICE = [
-  'leden', 'únor', 'březen', 'duben', 'květen', 'červen',
-  'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec',
-];
-
-/** „říjen 2026" - hlavička skupiny v přehledu i nadpis newsletteru. */
-export function mesicTextem(klic: string): string {
+/**
+ * „říjen 2026" / „October 2026" - hlavička skupiny v přehledu i nadpis
+ * newsletteru. Názvy měsíců byly do dávky 7o napsané česky v poli; teď je
+ * skládá `Intl` podle jazyka a čeština vychází stejně jako dřív. Bez jazyka
+ * zůstává čeština - newsletter se řídí jazykem příjemce (pravidlo 5).
+ */
+export function mesicTextem(klic: string, jazyk?: Jazyk): string {
   const [rok, mesic] = klic.split('-');
   const index = Number(mesic) - 1;
   if (!rok || index < 0 || index > 11) return klic;
-  return `${MESICE[index]} ${rok}`;
+  const nazev = new Intl.DateTimeFormat(kodJazyka(jazyk ?? 'cs'), { month: 'long' }).format(
+    new Date(Date.UTC(2000, index, 1)),
+  );
+  return `${nazev} ${rok}`;
 }
