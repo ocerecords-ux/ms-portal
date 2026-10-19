@@ -4436,6 +4436,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'a contract we send out already carries their signature',
   },
   /* Zpráva o schválení k fakturaci (12. 10. 2026). */
+  // Upozornění, která portál poslal do zvonku (19. 10. 2026) - karta uživatele.
+  'uzivatel.upozorneniNadpis': { cs: 'Upozornění v portálu', en: 'Portal notifications' },
+  'uzivatel.upozorneniPopis': {
+    cs: 'Co portál poslal tomuhle účtu do zvonečku a kdy si to rozklikl. Posledních padesát, jen ke čtení.',
+    en: 'What the portal sent to this account and when they opened it. The last fifty, read only.',
+  },
+  'uzivatel.upozorneniZadna': { cs: 'Zatím mu portál nic neposlal.', en: 'Nothing sent to them yet.' },
+  'uzivatel.upozorneniNeprecteno': { cs: 'zatím nepřečteno', en: 'not read yet' },
+  'uzivatel.upozorneniPrecteno': { cs: 'přečteno {datum}', en: 'read {datum}' },
   'uzivatel.fakturaceProjektu': { cs: 'Schváleno k fakturaci', en: 'Approved to invoice' },
   'uzivatel.fakturaceProjektuPopis': {
     cs: 'jakmile projekt přejde na „Schváleno - k fakturaci", přijde mu mail s proklikem na projekt a zvoneček v portálu',

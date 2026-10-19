@@ -7,12 +7,12 @@ import { isInternalRole } from '@/lib/roles';
 import { UserEditForm } from './UserEditForm';
 import { InviteButton } from '../InviteButton';
 import { nactiJazyk } from '@/lib/jazykServer';
-import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
+import { formatDatum, formatDatumCas, prelozit, prelozitS } from '@/lib/jazyk';
 
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
-  const [user, companies, studia, ja, slozkyDisku, naseFirmy] = await Promise.all([
+  const [user, companies, studia, ja, slozkyDisku, naseFirmy, upozorneni] = await Promise.all([
     prisma.user.findUnique({
       where: { id: params.id },
       // Firma-dodavatel zalozena z herce (zadani 16. 9. 2026) - podle ni se
@@ -60,6 +60,24 @@ export default async function UserEditPage({ params }: { params: { id: string } 
       orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
       select: { id: true, name: true },
     }) as Promise<{ id: string; name: string }[]>,
+    /**
+     * CO MU PORTÁL POSLAL DO ZVONKU (19. 10. 2026: „potrebuju vedet, jestli
+     * a kdy se Bare Siblive ukazaly notifikace o tom, ze muzeme fakturovat
+     * projekt Kuchari smrti").
+     *
+     * Upozornění se do té doby dala přečíst jen z účtu toho člověka, takže na
+     * otázku „dostal to a viděl to?" nebylo kde vzít odpověď. Tady je to
+     * k nahlédnutí: kdy upozornění vzniklo a kdy si ho adresát v portálu
+     * rozkliknul. Jen ke čtení - nic se odsud neposílá ani nemaže.
+     */
+    prisma.notification.findMany({
+      where: { userId: params.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, title: true, body: true, createdAt: true, readAt: true },
+    }) as Promise<
+      { id: string; title: string; body: string | null; createdAt: Date; readAt: Date | null }[]
+    >,
   ]);
   if (!user) notFound();
 
@@ -117,6 +135,43 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           invitedAtLabel={user.invitedAt ? formatDatum(jazyk, user.invitedAt) : null}
           variant="button"
         />
+      </div>
+
+      {/**
+        * UPOZORNĚNÍ V PORTÁLU (19. 10. 2026). Jen ke čtení - od toho, kdy se
+        * co komu ukázalo. „Přečteno" znamená, že adresát v portálu rozbalil
+        * zvoneček; dokud to neudělá, visí upozornění jako nepřečtené.
+        */}
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
+        <div>
+          <p className="font-heading font-semibold text-sm text-ink m-0">
+            {prelozit(jazyk, 'uzivatel.upozorneniNadpis')}
+          </p>
+          <p className="text-muted text-xs font-body m-0 mt-1">
+            {prelozit(jazyk, 'uzivatel.upozorneniPopis')}
+          </p>
+        </div>
+
+        {upozorneni.length === 0 ? (
+          <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'uzivatel.upozorneniZadna')}</p>
+        ) : (
+          <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
+            {upozorneni.map((u) => (
+              <li key={u.id} className="py-2 flex flex-col gap-0.5">
+                <span className="text-sm font-body text-ink">{u.title}</span>
+                {u.body && <span className="text-xs font-body text-muted">{u.body}</span>}
+                <span className="text-xs font-body text-muted">
+                  {formatDatumCas(jazyk, u.createdAt)} ·{' '}
+                  {u.readAt
+                    ? prelozitS(jazyk, 'uzivatel.upozorneniPrecteno', {
+                        datum: formatDatumCas(jazyk, u.readAt),
+                      })
+                    : prelozit(jazyk, 'uzivatel.upozorneniNeprecteno')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <UserEditForm
