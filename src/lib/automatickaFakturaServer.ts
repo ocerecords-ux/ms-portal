@@ -9,6 +9,10 @@ import { notifyMany } from '@/lib/notifications';
 import { brunoNapisSoukrome } from '@/lib/brunoOznameni';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
 import { INTERNAL_ROLES } from '@/lib/roles';
+import { zapisZmenyProjektu } from '@/lib/projektLogServer';
+import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
+import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
+import { uzavriKanalProjektu } from '@/lib/chatServer';
 
 /**
  * FAKTURA U REKLAM SE VYSTAVÍ A ODEŠLE SAMA (zadání 19. 10. 2026: „potrebuju
@@ -117,6 +121,60 @@ async function ozviSe(vstup: {
     }
   } catch (err) {
     console.error('Zprávu o automatické faktuře se nepodařilo poslat:', err);
+  }
+}
+
+/** Konec cesty projektu - posledni stav v seznamu, ne napsany retezec. */
+const STAV_PO_FAKTURE = STAVY_PROJEKTU[STAVY_PROJEKTU.length - 1].nazev;
+
+/**
+ * ODESLANÁ FAKTURA ZAVŘE ZAKÁZKU (zadání 19. 10. 2026: „po té automatické
+ * fakturaci a odeslání by se měl přehodit projekt Vyfakturováno a přesunout
+ * do dokončených").
+ *
+ * U ručního odeslání faktury se portál ptá („Ukončit projekt?", pojistka
+ * z 25. 9. 2026) - tam u toho člověk stojí a odklepne to. U automatu se nemá
+ * kdo ptát: faktura je u klienta, zakázka skončila, a otázka, na kterou se
+ * za hodinu nikdo nepodívá, by projekt nechala viset mezi aktivními.
+ *
+ * Dělá přesně totéž co ruční ukončení (/api/projekty/[id]/ukonceni): stav
+ * „Vyfakturováno", příznak hotovo, a zavřené kanály - kanál projektu i kanál
+ * dotazů klienta, ať v chatu nezůstávají hotové zakázky.
+ *
+ * ZAVÍRÁ SE JEN PO ÚSPĚŠNĚ ODESLANÉ FAKTUŘE. Vystavená, ale neodeslaná
+ * faktura zakázku nezavírá - pořád se čeká, až odejde.
+ *
+ * NIKDY NEVYHAZUJE. Faktura už je u klienta; kdyby se nepovedlo přehodit
+ * stav, je to řádek v logu, ne důvod hlásit, že fakturace selhala.
+ */
+async function zavriPoFakture(
+  caflouProjectId: string,
+  kdo: { id: string | null; jmeno: string | null },
+): Promise<void> {
+  try {
+    const pred = (await prisma.projectMeta.findUnique({
+      where: { caflouProjectId },
+      select: { statusName: true, finished: true },
+    })) as { statusName: string | null; finished: boolean } | null;
+    if (!pred) return;
+    if (pred.finished && pred.statusName === STAV_PO_FAKTURE) return;
+
+    await prisma.projectMeta.update({
+      where: { caflouProjectId },
+      data: { statusName: STAV_PO_FAKTURE, finished: true },
+    });
+
+    await zapisZmenyProjektu({
+      caflouProjectId,
+      pred: { statusName: pred.statusName, finished: pred.finished },
+      ulozeno: { statusName: STAV_PO_FAKTURE, finished: true },
+      puvodce: { id: kdo.id, jmeno: kdo.jmeno },
+    }).catch(() => undefined);
+
+    await uzavriDotazyProjektu(caflouProjectId).catch(() => undefined);
+    await uzavriKanalProjektu(caflouProjectId).catch(() => undefined);
+  } catch (err) {
+    console.error(`Projekt ${caflouProjectId} se po automatické faktuře nepodařilo zavřít:`, err);
   }
 }
 
@@ -303,8 +361,11 @@ export async function automatickaFakturaReklamy(vstup: {
       return { ok: false, zprava, cislo: created.number };
     }
 
+    // Faktura je u klienta - zakazka timhle konci (19. 10. 2026).
+    await zavriPoFakture(vstup.caflouProjectId, vstup.kdo);
+
     const komu = [odeslano.to, ...odeslano.kopie].join(', ');
-    const zprava = `${projekt}: faktura ${created.number} se vystavila z nabídky a odešla klientovi (${komu}).`;
+    const zprava = `${projekt}: faktura ${created.number} se vystavila z nabídky a odešla klientovi (${komu}). Projekt je vyfakturovaný a mezi dokončenými.`;
     await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
     return { ok: true, zprava, cislo: created.number };
   } catch (err) {
