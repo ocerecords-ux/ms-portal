@@ -237,6 +237,7 @@ async function main() {
   await pribehyCelymuTymu();
   await prispevkyNaSiteJenOndrejovi();
   await castiJenTamKdeSeNaCastiFakturuje();
+  await londynAnglickyALibry();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -438,6 +439,48 @@ async function siteJenOndrejovi() {
     console.log(`  site: modul zapnut jen u ${ondrej.email}`);
   } catch (err) {
     console.warn('  site se nepodarilo zapnout:', err);
+  }
+}
+
+/**
+ * LONDÝNSKÁ FIRMA FAKTURUJE ANGLICKY A V LIBRÁCH (zadání 19. 10. 2026:
+ * „potřebuju, aby všechny dokumenty, které se vystavují za MS studio London,
+ * byly v angličtině a primárně v librách" — a pak „však to rovnou nastav").
+ *
+ * Nastaví se to JEDNOU, ne při každém nasazení: od té chvíle to má v ruce
+ * Administrace (Doklady → Moje firmy), stejně jako u ostatních jednorázových
+ * srovnání. Kdyby to seed přepisoval pořád, nešlo by to v portálu změnit.
+ *
+ * Hledá se podle názvu, protože id naší firmy je v každé databázi jiné.
+ * Žádná londýnská firma = nic se nestane a seed jede dál; vymýšlet si, která
+ * z firem to asi je, by bylo horší než neudělat nic.
+ */
+async function londynAnglickyALibry() {
+  const ZNAMKA = 'london-en-gbp';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const firmy = (await prisma.issuerCompany.findMany({
+      where: { name: { contains: 'London', mode: 'insensitive' } },
+      select: { id: true, name: true },
+    })) as { id: string; name: string }[];
+
+    if (firmy.length === 0) {
+      console.warn('  London: nase firma s tim nazvem nenalezena, nic se nenastavuje');
+      return;
+    }
+
+    for (const f of firmy) {
+      await prisma.issuerCompany.update({
+        where: { id: f.id },
+        data: { defaultJazyk: 'EN', defaultCurrency: 'GBP' },
+      });
+      console.log(`  London: ${f.name} fakturuje anglicky a v GBP`);
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  London: nastaveni jazyka a meny se nepodarilo:', err);
   }
 }
 
