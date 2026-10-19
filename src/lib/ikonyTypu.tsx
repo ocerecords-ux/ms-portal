@@ -74,16 +74,22 @@ export const IKONY_TYPU: Ikona[] = [
     // Zadani 12. 9. 2026: „pro audioknihu bych udelal knihu ve spojeni
     // s mikrofonem". Kniha drzi levou polovinu, mikrofon stoji vpravo - dva
     // tvary vedle sebe se v 17 px prectou lip nez jeden slozity.
+    //
+    // PREKRESLENO 19. 10. 2026. Mikrofon byl skoro stejne velky jako kniha
+    // a pul kresby zabiral jeho oblouk, takze v 17 px to cetlo jako „kniha
+    // a neco". Ted je kniha cela (tyz tvar jako samotna „Kniha", jen uzsi)
+    // a mikrofon u ni stoji jako mala znacka - dvojice v nabidce tak vypada
+    // jako kniha a kniha se zvukem, ne jako dve ruzne veci.
     klic: 'kniha-mikrofon',
     barva: 'fialova',
     popisek: 'Audiokniha (kniha a mikrofon)',
     kresba: (
       <>
-        <path d="M2.5 6A2.5 2.5 0 0 1 5 3.5h5v13H5a2.5 2.5 0 0 0-2.5 2.5z" />
-        <path d="M2.5 19A2.5 2.5 0 0 0 5 21.5h5" />
-        <rect x="14.75" y="2.5" width="5.5" height="9" rx="2.75" />
-        <path d="M12.5 10a5 5 0 0 0 10 0" />
-        <path d="M17.5 15v4" />
+        <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H14v13.5H5.5A2.5 2.5 0 0 0 3 19z" />
+        <path d="M3 19a2.5 2.5 0 0 0 2.5 2.5H14" />
+        <rect x="16.5" y="6" width="4" height="6.6" rx="2" />
+        <path d="M15 11.6a3.5 3.5 0 0 0 7 0" />
+        <path d="M18.5 15.1v3" />
       </>
     ),
   },

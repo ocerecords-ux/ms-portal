@@ -96,7 +96,8 @@ export default async function NovaNabidkaPage({
         rejectedAt: null,
         caflouProjectId: projekt?.caflouProjectId ?? '',
         projectName: projekt?.nazev ?? null,
-        jazyk: 'CS',
+        // Jazyk podle nasi firmy (19. 10. 2026) - viz IssuerCompany.defaultJazyk.
+        jazyk: vydavatel.defaultJazyk,
         slevaProcent: 0,
         slevaMinor: 0,
         slevaPopis: null,

@@ -204,7 +204,8 @@ export async function POST(req: NextRequest) {
             caflouProjectId: projekt.caflouProjectId,
             projectName: projekt.projectName,
             rezimDph: input.rezimDph ?? 'STANDARD',
-            jazyk: input.jazyk ?? offer?.jazyk ?? 'CS',
+            // Bez vyberu plati jazyk nasi firmy (19. 10. 2026).
+            jazyk: input.jazyk ?? offer?.jazyk ?? issuer.defaultJazyk,
             // Pri prevodu nabidky na fakturu se sleva prenese s ni - klient
             // ji videl v nabidce a na fakture ji ceka taky.
             slevaProcent: input.slevaProcent ?? offer?.slevaProcent ?? 0,

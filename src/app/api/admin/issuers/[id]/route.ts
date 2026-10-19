@@ -24,6 +24,7 @@ const schema = z.object({
   contractNumberFormat: z.string().trim().min(1).max(60).optional(),
   contractNextNumber: z.union([z.string(), z.number()]).optional(),
   defaultCurrency: z.enum(CURRENCIES).optional(),
+  defaultJazyk: z.enum(['CS', 'EN']).optional(),
   isDefault: z.boolean().optional(),
   active: z.boolean().optional(),
   // PNG data URL podpisu, null = odebrat. Velikost hlídá i klient (zmenšuje).
@@ -73,6 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.invoiceNumberFormat !== undefined) data.invoiceNumberFormat = d.invoiceNumberFormat;
     if (d.offerNumberFormat !== undefined) data.offerNumberFormat = d.offerNumberFormat;
     if (d.defaultCurrency !== undefined) data.defaultCurrency = d.defaultCurrency;
+    if (d.defaultJazyk !== undefined) data.defaultJazyk = d.defaultJazyk;
     if (d.active !== undefined) data.active = d.active;
     if (d.podpis !== undefined) {
       if (d.podpis && !dekodujPng(d.podpis)) {

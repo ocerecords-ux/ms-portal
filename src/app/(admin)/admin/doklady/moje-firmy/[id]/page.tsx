@@ -45,6 +45,7 @@ export default async function IssuerDetailPage({ params }: { params: { id: strin
           contractNumberFormat: issuer.contractNumberFormat,
           contractNextNumber: issuer.contractNextNumber,
           defaultCurrency: issuer.defaultCurrency,
+          defaultJazyk: issuer.defaultJazyk,
           isDefault: issuer.isDefault,
           active: issuer.active,
         }}

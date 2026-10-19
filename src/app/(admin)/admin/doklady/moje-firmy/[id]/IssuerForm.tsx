@@ -29,6 +29,7 @@ type Issuer = {
   contractNumberFormat: string;
   contractNextNumber: number;
   defaultCurrency: Currency;
+  defaultJazyk: 'CS' | 'EN';
   isDefault: boolean;
   active: boolean;
 };
@@ -71,6 +72,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
     contractNumberFormat: issuer.contractNumberFormat,
     contractNextNumber: String(issuer.contractNextNumber),
     defaultCurrency: issuer.defaultCurrency,
+    defaultJazyk: issuer.defaultJazyk,
     isDefault: issuer.isDefault,
     active: issuer.active,
   });
@@ -276,6 +278,21 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
                     {nazevMeny(c, jazyk)}
                   </option>
                 ))}
+              </VyberPole>
+            </AdminField>
+          </div>
+          {/* JAZYK DOKLADŮ (19. 10. 2026) - vedle měny schválně: u firmy, která
+              fakturuje do zahraničí, se obojí nastavuje jednou a platí to pro
+              každý nový doklad. U konkrétního dokladu se dá přepnout. */}
+          <div className="flex-1 min-w-[200px]">
+            <AdminField label={t('faktura.poleJazykDokladu')}>
+              <VyberPole
+                value={form.defaultJazyk}
+                onChange={(e) => set('defaultJazyk', e.target.value as 'CS' | 'EN')}
+                className="admin-input"
+              >
+                <option value="CS">{t('faktura.jazykCestina')}</option>
+                <option value="EN">{t('faktura.jazykAnglictina')}</option>
               </VyberPole>
             </AdminField>
           </div>

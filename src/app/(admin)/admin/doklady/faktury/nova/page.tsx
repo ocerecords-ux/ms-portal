@@ -251,7 +251,8 @@ async function PrazdnaFaktura({
         caflouProjectId: projekt?.caflouProjectId ?? '',
         projectName: projekt?.nazev ?? null,
         rezimDph: 'STANDARD',
-        jazyk: 'CS',
+        // Jazyk podle nasi firmy (19. 10. 2026) - viz IssuerCompany.defaultJazyk.
+        jazyk: vydavatel.defaultJazyk,
         slevaProcent: 0,
         slevaMinor: 0,
         slevaPopis: null,

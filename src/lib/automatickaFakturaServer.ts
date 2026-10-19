@@ -259,7 +259,7 @@ export async function automatickaFakturaReklamy(vstup: {
             caflouProjectId: cilovyProjekt.caflouProjectId,
             projectName: cilovyProjekt.projectName,
             rezimDph: 'STANDARD',
-            jazyk: offer.jazyk ?? 'CS',
+            jazyk: offer.jazyk ?? issuer.defaultJazyk,
             // Sleva se prenese s nabidkou - klient ji v nabidce videl.
             slevaProcent: offer.slevaProcent ?? 0,
             slevaMinor: offer.slevaMinor ?? 0,

@@ -1825,6 +1825,15 @@ model IssuerCompany {
   contractNextNumber   Int    @default(1)
 
   defaultCurrency Currency @default(CZK)
+  /// JAZYK DOKLADU (zadani 19. 10. 2026: „potrebuju, aby vsechny dokumenty,
+  /// ktere se vystavuji za MS studio London, byly v anglictine a primarne
+  /// v librach").
+  ///
+  /// Mena uz se podle firmy brala (defaultCurrency vys), jazyk ne - novy
+  /// doklad zacinal cesky vzdycky a prepinalo se to rucne u kazdeho zvlast.
+  /// Plati pro nabidky i faktury; u konkretniho dokladu se da prebit, jako
+  /// doted.
+  defaultJazyk    JazykDokladu @default(CS)
   isDefault       Boolean  @default(false) // predvybrana firma u novych dokladu
   active          Boolean  @default(true)
 

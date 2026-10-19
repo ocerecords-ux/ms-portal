@@ -84,7 +84,8 @@ export async function POST(req: NextRequest) {
             currency: input.currency ?? issuer.defaultCurrency,
             subject: subject || null,
             note: input.note || null,
-            jazyk: input.jazyk ?? 'CS',
+            // Bez vyberu plati jazyk nasi firmy (19. 10. 2026).
+            jazyk: input.jazyk ?? issuer.defaultJazyk,
             slevaProcent: input.slevaProcent ?? 0,
             slevaMinor: input.slevaMinor ?? 0,
             slevaPopis: input.slevaPopis || null,
