@@ -94,6 +94,27 @@ export const IKONY_TYPU: Ikona[] = [
     ),
   },
   {
+    /**
+     * MIKROFON VE FIALOVÉ (zadání 19. 10. 2026: „potřebuju ještě tuhle
+     * fialovou ikonu mikrofonu u typu projektu" — „není tady ta ikona").
+     *
+     * Mikrofony v nabídce byly jen modré (rodina „nahrávání"). Jenže typ
+     * projektu, který patří ke knihám, má svítit fialově jako kniha
+     * a audiokniha vedle něj - jinak v seznamu vypadá jako něco jiného, než
+     * čím je. Tvar je týž jako u modrého mikrofonu, liší se jen rodina.
+     */
+    klic: 'mikrofon-fialovy',
+    barva: 'fialova',
+    popisek: 'Mikrofon (ke knihám)',
+    kresba: (
+      <>
+        <rect x="9" y="2.5" width="6" height="11" rx="3" />
+        <path d="M5.5 11a6.5 6.5 0 0 0 13 0" />
+        <path d="M12 17.5v4" />
+      </>
+    ),
+  },
+  {
     // Zadani 12. 9. 2026: „pro radiovy spot bych jeste vytvoril ikonku
     // radia". Prijimac s antenou, ladicim kolečkem a stupnici.
     klic: 'radio',
@@ -487,7 +508,15 @@ export function popisekIkony(klic: string | null | undefined, jazyk?: Jazyk): st
   const ikona = najdiIkonu(klic);
   if (!ikona) return null;
   if (!jazyk || jazyk === 'cs') return ikona.popisek;
-  return prelozit(jazyk, `ikona.${ikona.klic}`);
+  /**
+   * CO VE SLOVNÍKU NENÍ, PROJDE ČESKY (pravidlo 1 v docs/preklad-portalu.md),
+   * ne klíčem. Nová ikona se do nabídky přidá jedním řádkem tady - a bez
+   * tohohle by se do doby, než se dopíše překlad, v angličtině ukazovalo
+   * „ikona.mikrofon-fialovy".
+   */
+  const klicPrekladu = `ikona.${ikona.klic}`;
+  const prelozeny = prelozit(jazyk, klicPrekladu);
+  return prelozeny === klicPrekladu ? ikona.popisek : prelozeny;
 }
 
 /** Je tenhle klíč z naší nabídky? Cokoliv jiného se neuloží. */
