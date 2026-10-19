@@ -48,6 +48,23 @@ export async function GET(req: NextRequest) {
   };
   const exportMime = exportMimeByGoogleType[meta.mimeType];
 
+  /**
+   * STAŽENÝ GOOGLE DOKUMENT MUSÍ JÍT OTEVŘÍT (19. 10. 2026: „na našem
+   * obrandovaném disku, když je textový soubor, tak nejde otevřít, když ho
+   * stáhnout. Je to totiž nějaký Gdoc").
+   *
+   * Soubory vytvořené přímo na Disku nemají v názvu příponu - jmenují se
+   * prostě „Scénář". Stáhly se tedy jako „Scénář" bez přípony a počítač
+   * neměl podle čeho poznat, čím to otevřít; pro člověka to byl rozbitý
+   * soubor. Při exportu proto příponu dopisujeme podle toho, co z Disku
+   * opravdu leze.
+   */
+  const priponaExportu: Record<string, string> = {
+    'application/pdf': '.pdf',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+  };
+
   const driveUrl = exportMime
     ? `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportMime)}`
     : `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
@@ -82,7 +99,10 @@ export async function GET(req: NextRequest) {
   // jak "filename" (bezpecne ASCII, pro stare prohlizece), tak "filename*"
   // (spravne UTF-8 s diakritikou dle RFC 5987/6266) - tak se jmeno stazeneho
   // souboru zobrazi presne tak, jak je na Disku.
-  const safeName = meta.name.normalize('NFC');
+  const pripona = exportMime ? (priponaExportu[exportMime] ?? '') : '';
+  const safeName = (
+    pripona && !meta.name.toLowerCase().endsWith(pripona) ? `${meta.name}${pripona}` : meta.name
+  ).normalize('NFC');
   const asciiFallback = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
 
   const headers: Record<string, string> = {

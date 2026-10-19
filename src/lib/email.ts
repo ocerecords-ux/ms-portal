@@ -1104,13 +1104,17 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
 
   const jazyk = input.jazyk ?? 'cs';
 
+  // Predmet a telo ven - historie projektu si z toho dela otisk (19. 10. 2026).
+  const predmet = prelozitEmailS(jazyk, 'mail.dotocenoKlient.predmet', {
+    herec: input.jmenoHerce,
+    projekt: input.nazevProjektu,
+  });
+  const telo = buildHerecDotocenKlientoviHtml(input);
+
   const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: prelozitEmailS(jazyk, 'mail.dotocenoKlient.predmet', {
-      herec: input.jmenoHerce,
-      projekt: input.nazevProjektu,
-    }),
+    subject: predmet,
     text: [
       pozdravPosty(jazyk, input.jmenoKlienta),
       '',
@@ -1118,10 +1122,10 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
       '',
       input.odkazNaPortal,
     ].join('\n'),
-    html: buildHerecDotocenKlientoviHtml(input),
+    html: telo,
   });
 
-  return overOdeslani(vysledekPosty, 'sendHerecDotocenKlientoviEmail');
+  return { ...overOdeslani(vysledekPosty, 'sendHerecDotocenKlientoviEmail'), predmet, telo };
 }
 
 /**
@@ -2929,14 +2933,23 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
   const jazyk = input.jazyk ?? 'cs';
   const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
 
+  /**
+   * PŘEDMĚT A TĚLO SE VRACEJÍ VEN (19. 10. 2026: „když někomu pošle portál
+   * zprávu, tak se potřebuju prokliknout na to, co vidí klient"). Historie
+   * projektu si z toho udělá otisk - jinak se nedá zpětně zjistit, co přesně
+   * klientovi odešlo a kam ho ty odkazy pouštějí.
+   */
+  const predmet =
+    input.predmet?.trim() ||
+    prelozitEmailS(jazyk, 'mail.stav.predmet', { projekt: input.nazevProjektu, stav: input.stav });
+  const telo = buildStavProjektuHtml(input);
+
   const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     // Nase adresy jen ve skryte kopii - viz skrytaKopie v typu vys.
     bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
-    subject:
-      input.predmet?.trim() ||
-      prelozitEmailS(jazyk, 'mail.stav.predmet', { projekt: input.nazevProjektu, stav: input.stav }),
+    subject: predmet,
     text: [
       input.jenInterne ? prelozitEmail(jazyk, 'mail.stav.textInterni') : '',
       input.uvod?.trim() || '',
@@ -2957,10 +2970,10 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
     ]
       .filter(Boolean)
       .join('\n'),
-    html: buildStavProjektuHtml(input),
+    html: telo,
   });
 
-  return overOdeslani(vysledekPosty, 'sendStavProjektuEmail');
+  return { ...overOdeslani(vysledekPosty, 'sendStavProjektuEmail'), predmet, telo };
 }
 
 /* ==========================================================================

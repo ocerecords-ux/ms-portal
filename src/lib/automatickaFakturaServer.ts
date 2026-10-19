@@ -21,6 +21,14 @@ import { INTERNAL_ROLES } from '@/lib/roles';
  * k fakturaci" a pak už jen někdo ručně překlikal nabídku na fakturu a
  * poslal ji. Tenhle poslední krok dělá od teď portál sám.
  *
+ * SPOUŠTÍ SE ZE TŘÍ MÍST (doplněno 19. 10. 2026 po prvním ostrém pokusu):
+ *  1. přehození stavu ve formuláři projektu (/api/projects/[id]/meta),
+ *  2. tlačítko „Spot schvaluji" u klienta (lib/schvaleniKlientem.ts) - tudy
+ *     stav u reklam přeskočí nejčastěji a přes formulář vůbec nejde,
+ *  3. tlačítko u dokladů projektu (/api/projekty/[id]/automaticka-faktura),
+ *     protože projekt, který už ve stavu stojí, se sám nespustí znovu -
+ *     automat jede na PŘECHODU do stavu, ne na tom, že v něm projekt je.
+ *
  * JEN U REKLAM. Audiokniha se fakturuje po částech, s doplatky a smlouvami,
  * a tam o faktuře rozhoduje člověk - automat by tam způsobil víc škody než
  * práce. Rozhoduje `jeReklamaProjekt` (typ z ceníku, ne zaškrtávátko
@@ -28,8 +36,8 @@ import { INTERNAL_ROLES } from '@/lib/roles';
  *
  * KDYŽ SI NEJSME JISTÍ, NEFAKTURUJEME. Faktura je ostrý doklad, který odejde
  * klientovi a posune číselnou řadu - vymyslet si ji „podle nejlepšího
- * odhadu" by bylo horší než ji nevystavit. Automat proto mlčky odstoupí
- * a dá o sobě vědět (zvonek + Bruno těm, kdo mají na kartě účtu zaškrtnutou
+ * odhadu" by bylo horší než ji nevystavit. Automat proto odstoupí a dá
+ * o sobě vědět (zvonek + Bruno těm, kdo mají na kartě účtu zaškrtnutou
  * fakturaci projektů) v každém z těchhle případů:
  *
  *  - projekt nemá v portálu žádnou nabídku (reklamní nabídky často chodí
@@ -47,7 +55,8 @@ import { INTERNAL_ROLES } from '@/lib/roles';
  * i jazyk - a nic se v ní nemění („žádné nabídky neměň!!").
  *
  * POSÍLÁ TO ČLOVĚK, KTERÝ PŘEHODIL STAV. V záznamu o odeslání je jeho jméno,
- * ne „systém" - protože to byl jeho klik, který fakturu poslal.
+ * ne „systém" - protože to byl jeho klik, který fakturu poslal. U schválení
+ * klientem je to ten, komu faktura připadá: nikdo z nás u toho nebyl.
  *
  * NIKDY NEVYHAZUJE. Přehození stavu je to hlavní, co člověk dělá, a nesmí ho
  * shodit ani zdržet to, že se zrovna nepovedlo vystavit fakturu.
@@ -56,11 +65,22 @@ import { INTERNAL_ROLES } from '@/lib/roles';
 /** Vypínač celé automatiky - kdyby se ukázalo, že fakturuje, co nemá. */
 const AUTOMATICKA_FAKTURA_REKLAM = true;
 
+export type VysledekAutomatickeFaktury = {
+  /** Vystavila se a odešla? */
+  ok: boolean;
+  /** Věta pro člověka - do historie projektu, do zvonku i na tlačítko. */
+  zprava: string;
+  /** Číslo vystavené faktury, když nějaká vznikla. */
+  cislo?: string;
+};
+
 /** Zvonek, Bruno a záznam do historie projektu. Nikdy nevyhazuje. */
 async function ozviSe(vstup: {
   caflouProjectId: string;
   projekt: string;
   zprava: string;
+  /** Spuštěno ručně tlačítkem - člověk odpověď vidí rovnou, zvonek je navíc. */
+  rucne: boolean;
 }): Promise<void> {
   try {
     await zapisNotifikaci({
@@ -68,6 +88,8 @@ async function ozviSe(vstup: {
       stav: 'Schváleno - k fakturaci',
       popis: vstup.zprava,
     }).catch(() => undefined);
+
+    if (vstup.rucne) return;
 
     const prijemci = (await prisma.user
       .findMany({
@@ -102,21 +124,38 @@ export async function automatickaFakturaReklamy(vstup: {
   caflouProjectId: string;
   nazevProjektu: string | null;
   nazevFirmy: string | null;
-  kdo: { id: string; jmeno: string | null };
-}): Promise<void> {
-  if (!AUTOMATICKA_FAKTURA_REKLAM) return;
-
+  kdo: { id: string | null; jmeno: string | null };
+  /**
+   * Spuštěno ručně tlačítkem u dokladů. Mění dvě věci: nezvoní (člověk
+   * odpověď vidí rovnou na tlačítku) a odpovídá i tam, kde automat mlčí -
+   * „tohle není reklama", „faktura už tu je". Kdo se ptá, má dostat odpověď.
+   */
+  rucne?: boolean;
+}): Promise<VysledekAutomatickeFaktury> {
+  const rucne = vstup.rucne === true;
   const projekt = vstup.nazevProjektu || `Projekt ${vstup.caflouProjectId}`;
+
+  if (!AUTOMATICKA_FAKTURA_REKLAM) {
+    return { ok: false, zprava: 'Automatické fakturování je vypnuté.' };
+  }
 
   try {
     // 1) Jen reklama. Audioknihy si fakturu vystavují ručně.
-    if (!(await jeReklamaProjekt(vstup.caflouProjectId))) return;
+    if (!(await jeReklamaProjekt(vstup.caflouProjectId))) {
+      return {
+        ok: false,
+        zprava:
+          'Automatická faktura je zatím jen u reklam — tenhle projekt je vedený jako audiokniha.',
+      };
+    }
 
     // 2) Už vyfakturováno? Pak se nedubluje a ani se neozýváme.
     const uzJe = await prisma.invoice.count({
       where: { caflouProjectId: vstup.caflouProjectId, status: { not: 'CANCELLED' } },
     });
-    if (uzJe > 0) return;
+    if (uzJe > 0) {
+      return { ok: false, zprava: 'U projektu už faktura je — druhá se nevystavuje.' };
+    }
 
     // 3) Nabídka musí být právě jedna a s položkami.
     const nabidky = await prisma.offer.findMany({
@@ -126,34 +165,25 @@ export async function automatickaFakturaReklamy(vstup: {
     });
 
     if (nabidky.length === 0) {
-      await ozviSe({
-        caflouProjectId: vstup.caflouProjectId,
-        projekt,
-        zprava: `${projekt}: faktura se nevystavila automaticky — projekt nemá v portálu nabídku. Vystavte ji prosím ručně.`,
-      });
-      return;
+      const zprava = `${projekt}: faktura se nevystavila automaticky — projekt nemá v portálu nabídku. Vystavte ji prosím ručně.`;
+      await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
+      return { ok: false, zprava };
     }
     if (nabidky.length > 1) {
-      await ozviSe({
-        caflouProjectId: vstup.caflouProjectId,
-        projekt,
-        zprava: `${projekt}: faktura se nevystavila automaticky — u projektu visí ${nabidky.length} nabídky a není z čeho vybrat. Vystavte ji prosím ručně.`,
-      });
-      return;
+      const zprava = `${projekt}: faktura se nevystavila automaticky — u projektu visí ${nabidky.length} nabídky a není z čeho vybrat. Vystavte ji prosím ručně.`;
+      await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
+      return { ok: false, zprava };
     }
 
     const offer = nabidky[0];
     if (offer.items.length === 0) {
-      await ozviSe({
-        caflouProjectId: vstup.caflouProjectId,
-        projekt,
-        zprava: `${projekt}: faktura se nevystavila automaticky — nabídka nemá žádné položky.`,
-      });
-      return;
+      const zprava = `${projekt}: faktura se nevystavila automaticky — nabídka nemá žádné položky.`;
+      await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
+      return { ok: false, zprava };
     }
 
     /**
-     * 4) VYSTAVENÍ. Mířeně stejné jako POST /api/admin/invoices při převodu
+     * 4) VYSTAVENÍ. Míněně stejné jako POST /api/admin/invoices při převodu
      * nabídky na fakturu, jen bez ručních úprav z formuláře: všechno se bere
      * z nabídky a z karet firem.
      */
@@ -162,12 +192,9 @@ export async function automatickaFakturaReklamy(vstup: {
     });
     const company = await prisma.company.findUnique({ where: { id: offer.companyId } });
     if (!issuer || !company) {
-      await ozviSe({
-        caflouProjectId: vstup.caflouProjectId,
-        projekt,
-        zprava: `${projekt}: faktura se nevystavila automaticky — u nabídky chybí vystavovatel nebo odběratel.`,
-      });
-      return;
+      const zprava = `${projekt}: faktura se nevystavila automaticky — u nabídky chybí vystavovatel nebo odběratel.`;
+      await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
+      return { ok: false, zprava };
     }
 
     const currency = offer.currency ?? issuer.defaultCurrency;
@@ -258,12 +285,9 @@ export async function automatickaFakturaReklamy(vstup: {
     }
 
     if (!created) {
-      await ozviSe({
-        caflouProjectId: vstup.caflouProjectId,
-        projekt,
-        zprava: `${projekt}: faktura se nevystavila automaticky — nepodařilo se přidělit číslo faktury.`,
-      });
-      return;
+      const zprava = `${projekt}: faktura se nevystavila automaticky — nepodařilo se přidělit číslo faktury.`;
+      await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
+      return { ok: false, zprava };
     }
 
     // 5) ODESLÁNÍ. Stejnou cestou jako ruční tlačítko u dokladu - včetně PDF
@@ -274,26 +298,21 @@ export async function automatickaFakturaReklamy(vstup: {
     });
 
     if (!odeslano.ok) {
-      await ozviSe({
-        caflouProjectId: vstup.caflouProjectId,
-        projekt,
-        zprava: `${projekt}: faktura ${created.number} se vystavila, ale neodešla — ${odeslano.error} Je v portálu rozepsaná, dá se poslat ručně.`,
-      });
-      return;
+      const zprava = `${projekt}: faktura ${created.number} se vystavila, ale neodešla — ${odeslano.error} Je v portálu rozepsaná, dá se poslat ručně.`;
+      await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
+      return { ok: false, zprava, cislo: created.number };
     }
 
     const komu = [odeslano.to, ...odeslano.kopie].join(', ');
-    await ozviSe({
-      caflouProjectId: vstup.caflouProjectId,
-      projekt,
-      zprava: `${projekt}: faktura ${created.number} se vystavila z nabídky a odešla klientovi (${komu}).`,
-    });
+    const zprava = `${projekt}: faktura ${created.number} se vystavila z nabídky a odešla klientovi (${komu}).`;
+    await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne });
+    return { ok: true, zprava, cislo: created.number };
   } catch (err) {
     console.error(`Automatická faktura u projektu ${vstup.caflouProjectId} selhala:`, err);
-    await ozviSe({
-      caflouProjectId: vstup.caflouProjectId,
-      projekt,
-      zprava: `${projekt}: automatická faktura selhala — ${err instanceof Error ? err.message : 'neznámá chyba'}. Vystavte ji prosím ručně.`,
-    }).catch(() => undefined);
+    const zprava = `${projekt}: automatická faktura selhala — ${err instanceof Error ? err.message : 'neznámá chyba'}. Vystavte ji prosím ručně.`;
+    await ozviSe({ caflouProjectId: vstup.caflouProjectId, projekt, zprava, rucne }).catch(
+      () => undefined,
+    );
+    return { ok: false, zprava };
   }
 }

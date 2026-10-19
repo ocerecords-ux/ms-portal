@@ -290,6 +290,14 @@ export async function posliNotifikaciKeStavu(
           : `Zpráva ke stavu „${stav}" odešla klientovi, nám ve skryté kopii.`,
       // Do historie patri i skryta kopie - at je dohledatelne, kdo to dostal.
       prijemci: [...prijemci, ...skrytaKopie],
+      /**
+       * A S NÍ I SAMA ZPRÁVA (19. 10. 2026). Vzor se dá kdykoliv přepsat
+       * a odkaz pro klienta zrušit tlačítkem u projektu, takže dodatečně
+       * poskládaný náhled by ukazoval něco jiného, než co klient dostal.
+       * Otisk je to, co opravdu odešlo.
+       */
+      zpravaPredmet: vysledek.predmet,
+      zpravaHtml: vysledek.telo,
     });
 
     return { stav: 'odeslano', prijemci: [...prijemci, ...skrytaKopie] };

@@ -1,6 +1,7 @@
 import type { ProjektUdalost } from '@prisma/client';
 import { BARVY_DRUHU, formatujCas, nazevDruhuUdalosti } from '@/lib/projektLog';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
+import { NahledZpravy } from './NahledZpravy';
 
 /**
  * Historie projektu (zadání 10. 9. 2026: „něco jako LOG u každého projektu —
@@ -62,6 +63,18 @@ export function HistorieProjektu({
                   {/* U odeslane zpravy je podstatne, komu presne sla. */}
                   {u.druh === 'NOTIFIKACE' && u.nova && (
                     <span className="block text-xs font-body text-muted mt-0.5">{u.nova}</span>
+                  )}
+                  {/*
+                    A co v ní stálo (19. 10. 2026). Tlačítko je jen tam, kde
+                    je u záznamu otisk zprávy - u starších se zpětně vyrobit
+                    nedá, viz NahledZpravy.tsx.
+                  */}
+                  {u.zpravaHtml && (
+                    <NahledZpravy
+                      caflouProjectId={u.caflouProjectId}
+                      udalostId={u.id}
+                      predmet={u.zpravaPredmet}
+                    />
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm font-heading text-muted whitespace-nowrap">

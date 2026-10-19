@@ -95,21 +95,131 @@ function extensionBadge(item: DriveItem): string | null {
   return EXTENSION_BY_MIME[item.mimeType] ?? null;
 }
 
+/**
+ * DRUH SOUBORU NA PRVNÍ POHLED (zadání 19. 10. 2026: „a taky tam chybí ikona,
+ * aby bylo poznat typ souboru").
+ *
+ * Do teď byly ikony dvě: zelená u zvuku a šedá u všeho ostatního. Ve složce,
+ * kde vedle sebe leží scénář, faktura, obrázek obalu a video, to neříkalo nic
+ * - a u souborů vytvořených přímo na Disku, které nemají v názvu příponu,
+ * vůbec nic.
+ *
+ * Rozhoduje MIME typ z Disku, ne přípona v názvu: ta u Google Dokumentů
+ * chybí, kdežto typ Disk hlásí vždycky.
+ */
+type DruhSouboru =
+  | 'slozka'
+  | 'audio'
+  | 'video'
+  | 'obrazek'
+  | 'pdf'
+  | 'dokument'
+  | 'tabulka'
+  | 'prezentace'
+  | 'archiv'
+  | 'jiny';
+
+function druhSouboru(mimeType: string, isFolder: boolean): DruhSouboru {
+  if (isFolder) return 'slozka';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('image/')) return 'obrazek';
+  if (mimeType === 'application/pdf') return 'pdf';
+  if (mimeType === 'application/vnd.google-apps.spreadsheet') return 'tabulka';
+  if (mimeType === 'application/vnd.google-apps.presentation') return 'prezentace';
+  if (mimeType === 'application/vnd.google-apps.document') return 'dokument';
+  if (mimeType.startsWith('text/')) return 'dokument';
+  if (mimeType.includes('wordprocessingml') || mimeType === 'application/msword') return 'dokument';
+  if (mimeType.includes('spreadsheetml') || mimeType === 'application/vnd.ms-excel') return 'tabulka';
+  if (mimeType.includes('presentationml') || mimeType === 'application/vnd.ms-powerpoint') {
+    return 'prezentace';
+  }
+  if (/zip|rar|7z|tar|gzip|compressed/.test(mimeType)) return 'archiv';
+  return 'jiny';
+}
+
+/** Barva listu u každého druhu. Glyf je vždycky tmavý, ať je čitelný na všech. */
+const BARVA_DRUHU: Record<DruhSouboru, string> = {
+  slozka: '#7B55FF',
+  audio: '#1FDF67',
+  video: '#22B8FF',
+  obrazek: '#FF9F43',
+  pdf: '#FF7A7A',
+  dokument: '#9FC2FF',
+  tabulka: '#7FE0B0',
+  prezentace: '#FFCF6B',
+  archiv: '#C3BBD8',
+  jiny: '#D8D2F0',
+};
+
 function FileIcon({ mimeType, isFolder }: { mimeType: string; isFolder: boolean }) {
-  if (isFolder) {
+  const druh = druhSouboru(mimeType, isFolder);
+
+  if (druh === 'slozka') {
     return (
       <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 shrink-0">
-        <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z" fill="#7B55FF" />
+        <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z" fill={BARVA_DRUHU.slozka} />
       </svg>
     );
   }
-  const isAudio = mimeType.startsWith('audio/');
+
+  // Glyf uvnitř listu - podle druhu. Tmavý tah, ať je vidět na každé barvě.
+  const tah = { stroke: '#201A33', strokeWidth: 1.3, fill: 'none', strokeLinecap: 'round' } as const;
+  const glyf: Record<DruhSouboru, JSX.Element | null> = {
+    slozka: null,
+    audio: <path d="M9 16.5V9.8l6-1v6.7" {...tah} />,
+    video: <path d="M9.5 10.5v6l5.5-3z" fill="#201A33" stroke="none" />,
+    obrazek: (
+      <g>
+        <path d="M7.5 17l3-3.5 2 2 2-2.5 2.5 4z" fill="#201A33" stroke="none" />
+        <circle cx="9.5" cy="11" r="1.1" fill="#201A33" stroke="none" />
+      </g>
+    ),
+    pdf: (
+      <g>
+        <path d="M8.5 11.5h7M8.5 14h7M8.5 16.5h4.5" {...tah} />
+      </g>
+    ),
+    dokument: <path d="M8.5 11.5h7M8.5 14h7M8.5 16.5h4.5" {...tah} />,
+    tabulka: (
+      <g>
+        <path d="M8 11.5h8v6H8z" {...tah} />
+        <path d="M8 14.5h8M11.5 11.5v6" {...tah} />
+      </g>
+    ),
+    prezentace: (
+      <g>
+        <path d="M8 11.5h8v4.5H8z" {...tah} />
+        <path d="M12 16v2" {...tah} />
+      </g>
+    ),
+    archiv: <path d="M12 10v1.6M12 12.8v1.6M12 15.4V17" {...tah} />,
+    jiny: null,
+  };
+
   return (
     <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 shrink-0">
-      <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill={isAudio ? '#1FDF67' : '#D8D2F0'} />
+      <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill={BARVA_DRUHU[druh]} />
       <path d="M14 2v5h5" fill="none" stroke="#fff" strokeWidth="1.2" />
-      {isAudio && <path d="M9 16.5V9.8l6-1v6.7" stroke="#201A33" strokeWidth="1.3" fill="none" strokeLinecap="round" />}
+      {glyf[druh]}
     </svg>
+  );
+}
+
+/**
+ * CO SE DÁ ROVNOU UKÁZAT V PROHLÍŽEČI (19. 10. 2026). Tlačítko „Otevřít" má
+ * smysl jen tam, kde prohlížeč soubor opravdu vykreslí - PDF, obrázky, prostý
+ * text a Google Dokument (ten odsud leze jako PDF). Tabulka a prezentace se
+ * exportují do xlsx/pptx, které prohlížeč stejně jen stáhne, takže se u nich
+ * nabízí rovnou jen stažení.
+ */
+function lzeZobrazit(item: DriveItem): boolean {
+  if (item.isFolder) return false;
+  return (
+    item.mimeType === 'application/pdf' ||
+    item.mimeType === 'application/vnd.google-apps.document' ||
+    item.mimeType.startsWith('image/') ||
+    item.mimeType.startsWith('text/')
   );
 }
 
@@ -203,7 +313,7 @@ export function DriveBrowser({
     (token ? `&k=${encodeURIComponent(token)}` : '') +
     (slozkaId ? `&slozka=${encodeURIComponent(slozkaId)}` : '');
   // Sloupec akci je uzky; s tlacitkem „Pripominkovat" potrebuje vic mista.
-  const sirkaAkci = odkazPripominek ? 'w-[108px] sm:w-[190px]' : 'w-[108px]';
+  const sirkaAkci = odkazPripominek ? 'w-[146px] sm:w-[228px]' : 'w-[146px]';
   const [stack, setStack] = useState<{ id: string; name: string }[]>([{ id: initialFolderId, name: rootName }]);
   const [items, setItems] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -767,6 +877,23 @@ export function DriveBrowser({
                       >
                         {isPlaying ? <StopIcon /> : <PlayIcon />}
                       </button>
+                    )}
+                    {/* OTEVŘÍT (19. 10. 2026) - dvojklik to uměl, ale nikdo
+                        to na souboru nehledá. PDF, obrázek, text a Google
+                        Dokument se otevřou v novém panelu. */}
+                    {lzeZobrazit(item) && (
+                      <a
+                        href={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={t('disk.otevritSoubor')}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                          <circle cx="12" cy="12" r="2.5" />
+                        </svg>
+                      </a>
                     )}
                     {!item.isFolder && (
                       <a

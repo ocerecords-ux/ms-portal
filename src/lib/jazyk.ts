@@ -996,6 +996,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'disk.pripominkovat': { cs: 'Připomínkovat', en: 'Add comments' },
   'disk.zavritPrehravac': { cs: 'Zavřít přehrávač', en: 'Close the player' },
   'disk.prehrat': { cs: 'Přehrát', en: 'Play' },
+  'disk.otevritSoubor': { cs: 'Otevřít soubor', en: 'Open the file' },
   'disk.otevritNaDisku': {
     cs: 'Otevřít složku na Google Disku (odtud jde stáhnout celá)',
     en: 'Open the folder on Google Drive (you can download all of it from there)',
@@ -6258,6 +6259,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projektDoklady.nadpis': { cs: 'Doklady k projektu', en: 'Project documents' },
   'projektDoklady.prejit': { cs: 'Přejít do Dokladů →', en: 'Go to Invoicing →' },
   'projektDoklady.novaNabidka': { cs: 'Nová nabídka', en: 'New quote' },
+  'projektDoklady.fakturaZNabidky': {
+    cs: 'Vystavit fakturu z nabídky a odeslat',
+    en: 'Issue an invoice from the offer and send it',
+  },
+  'projektDoklady.fakturaZNabidkyBezi': { cs: 'Vystavuji a posílám…', en: 'Issuing and sending…' },
+  'projektDoklady.fakturaZNabidkyPotvrzeni': {
+    cs: 'Z nabídky se vystaví ostrá faktura a rovnou odejde klientovi. Pokračovat?',
+    en: 'A real invoice will be issued from the offer and sent to the client. Continue?',
+  },
+  'projektDoklady.fakturaZNabidkyChyba': {
+    cs: 'Fakturu se nepodařilo vystavit.',
+    en: 'The invoice could not be issued.',
+  },
   'projektDoklady.novaFaktura': { cs: 'Nová faktura', en: 'New invoice' },
   'projektDoklady.novaSmlouva': { cs: 'Nová smlouva', en: 'New contract' },
   'projektDoklady.novyVydaj': { cs: 'Nový výdaj', en: 'New expense' },
@@ -10110,6 +10124,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'historie.zmena': { cs: 'Změna', en: 'Change' },
   'historie.kdo': { cs: 'Kdo', en: 'Who' },
   'historie.portal': { cs: 'portál', en: 'the portal' },
+  'historie.coOdeslo': { cs: 'Co odešlo', en: 'What was sent' },
+  'historie.nahledZpravy': { cs: 'Odeslaná zpráva', en: 'Sent message' },
+  'historie.bezPredmetu': { cs: 'Bez předmětu', en: 'No subject' },
+  'historie.otevritVPanelu': { cs: 'Otevřít v novém panelu', en: 'Open in a new tab' },
   'projekt.zalohaHerce': { cs: 'Herec', en: 'Narrator' },
   /* Druhy událostí v historii (POPISKY_DRUHU v lib/projektLog.ts) - podle KÓDU. */
   'historie.druh.ZALOZENO': { cs: 'Založení', en: 'Created' },

@@ -24,6 +24,9 @@ async function zapis(data: {
   predchozi?: string | null;
   nova?: string | null;
   puvodce?: Puvodce;
+  /** Otisk odeslané zprávy - viz zapisNotifikaci. */
+  zpravaPredmet?: string | null;
+  zpravaHtml?: string | null;
 }) {
   try {
     await prisma.projektUdalost.create({
@@ -36,6 +39,8 @@ async function zapis(data: {
         nova: data.nova ?? null,
         uzivatelId: data.puvodce?.id ?? null,
         uzivatelJmeno: data.puvodce?.jmeno ?? null,
+        zpravaPredmet: data.zpravaPredmet ?? null,
+        zpravaHtml: data.zpravaHtml ?? null,
       },
     });
   } catch (err) {
@@ -202,6 +207,16 @@ export async function zapisNotifikaci(vstup: {
   stav: string;
   popis: string;
   prijemci?: string[];
+  /**
+   * OTISK ODESLANÉ ZPRÁVY (19. 10. 2026: „když někomu pošle portál zprávu,
+   * tak se potřebuju prokliknout na to, co vidí klient, co přesně na něj šlo
+   * a kam se může prokliknout. Pro kontrolu").
+   *
+   * Ukládá se HTML tak, jak odešlo poště. Kdo zprávu v historii rozklikne,
+   * vidí přesně ji - ne znovu poskládaný vzor, který se mezitím mohl přepsat.
+   */
+  zpravaPredmet?: string | null;
+  zpravaHtml?: string | null;
 }) {
   await zapis({
     caflouProjectId: vstup.caflouProjectId,
@@ -209,6 +224,8 @@ export async function zapisNotifikaci(vstup: {
     popis: vstup.popis,
     nova: vstup.prijemci?.length ? vstup.prijemci.join(', ') : null,
     predchozi: vstup.stav,
+    zpravaPredmet: vstup.zpravaPredmet ?? null,
+    zpravaHtml: vstup.zpravaHtml ?? null,
   });
 }
 

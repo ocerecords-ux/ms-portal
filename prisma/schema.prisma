@@ -1188,6 +1188,18 @@ model ProjektUdalost {
   predchozi       String?      @db.Text
   nova            String?      @db.Text
 
+  /// OTISK ODESLANE ZPRAVY (19. 10. 2026: „kdyz nekomu posle portal zpravu,
+  /// tak se potrebuju prokliknout na to, co vidi klient, co presne na nej slo
+  /// a kam se muze prokliknout. Pro kontrolu").
+  ///
+  /// Uklada se presne to HTML, ktere odeslo poste - ne sablona, ze ktere by se
+  /// nahled dodatecne skladal. Vzor se da kdykoliv prepsat a odkazy maji v sobe
+  /// token, ktery se da zrusit; dodatecne poskladany nahled by proto ukazoval
+  /// neco jineho, nez klient dostal. Prazdne u starsich zaznamu a u zprav,
+  /// ktere neodesly.
+  zpravaPredmet   String?
+  zpravaHtml      String?      @db.Text
+
   /// Kdo to udelal. Prazdne = portal sam (napr. odeslana notifikace).
   uzivatelId      String?
   /// Jmeno textem - zaznam zustane citelny, i kdyz ucet pozdeji zmizi.

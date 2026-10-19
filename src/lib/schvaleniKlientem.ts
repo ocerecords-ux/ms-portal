@@ -6,6 +6,7 @@ import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { stavJeDokonceny } from '@/lib/stavyProjektu';
 import { notifyMany } from '@/lib/notifications';
 import { INTERNAL_ROLES } from '@/lib/roles';
+import { automatickaFakturaReklamy } from '@/lib/automatickaFakturaServer';
 
 /**
  * KLIENT SPOT SCHVÁLÍ JEDNÍM TLAČÍTKEM (zadání 18. 9. 2026: „mohl by tam mít
@@ -158,6 +159,25 @@ async function schvalProjekt(caflouProjectId: string): Promise<VysledekSchvaleni
     // Zvonek nám (zadání 23. 9. 2026: „u reklam má jít notifikace zvonečkem
     // na mě a Petera Dratvu"). Komu se ozve, se zaškrtává na kartě uživatele.
     await zvonekOSchvaleni(caflouProjectId, meta.name, meta.company?.name ?? null).catch(() => undefined);
+
+    /**
+     * A ROVNOU FAKTURA (19. 10. 2026). Tahle cesta je u reklam ta hlavní -
+     * klient odklepne spot a stav se překlopí tady, ne ve formuláři projektu.
+     * Kdyby automatika visela jen na formuláři, u většiny reklam by se nikdy
+     * nespustila.
+     *
+     * Čeká se na to schválně: na Vercelu po odeslané odpovědi funkce končí
+     * a rozdělaná faktura by nedoběhla. Nikdy to neshodí schválení - klient
+     * dostal odpověď a ta nesmí záviset na tom, jestli jede pošta.
+     *
+     * Odesílatel je prázdný: tohle odklepl klient, nikdo od nás u toho nebyl.
+     */
+    await automatickaFakturaReklamy({
+      caflouProjectId,
+      nazevProjektu: meta.name,
+      nazevFirmy: meta.company?.name ?? null,
+      kdo: { id: null, jmeno: 'Klient (odkazem)' },
+    }).catch(() => undefined);
 
     return { ok: true, schvalenoAt: ted.toISOString(), stav: STAV_PO_SCHVALENI, jizDrive: false };
   } catch (err) {

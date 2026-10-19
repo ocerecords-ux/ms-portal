@@ -5,6 +5,7 @@ import { prelozit, type Jazyk } from '@/lib/jazyk';
 import type { NavrhNabidky } from '@/lib/nabidkaZObjednavky';
 import { PridatNabidku } from '@/components/PridatNabidku';
 import { SmlouvyKlienta } from './SmlouvyKlienta';
+import { FakturaZNabidky } from './FakturaZNabidky';
 
 /**
  * Doklady navázané na projekt (zadani 8. 9. 2026: "chtel bych mit Doklady
@@ -180,6 +181,14 @@ export function ProjectDocuments({
           </Link>
         ))}
       </div>
+
+      {/* VYSTAVIT FAKTURU Z NABÍDKY (19. 10. 2026). U reklam to portál dělá
+          sám při přeskočení do „Schváleno - k fakturaci"; tohle je ta ruční
+          cesta pro zakázku, která ve stavu už stojí. Jen když je nabídka
+          právě jedna a faktura zatím žádná - jinak není co převádět. */}
+      {offers.length === 1 && invoices.length === 0 && (
+        <FakturaZNabidky caflouProjectId={caflouProjectId} />
+      )}
 
       {/* Archiv podepsaných smluv od klienta (21. 9. 2026) - PDF, které
           přišlo zvenku; naše smlouvy k podpisu jsou níž ve „Smlouvy". */}

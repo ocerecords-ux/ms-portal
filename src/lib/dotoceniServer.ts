@@ -150,15 +150,11 @@ export async function oznacHerceDotoceno(
             : Promise.resolve(null),
         ]);
 
-        if (klient) {
-          // Presne totez, co dela tlacitko „Poslat klientovi znovu" - jedna
-          // funkce, aby se ta dve odeslani nerozesla (viz nize).
-          await posliKlientovi({
-            klient,
-            jmenoHerce,
-            nazevProjektu,
-          });
-        }
+        // Presne totez, co dela tlacitko „Poslat klientovi znovu" - jedna
+        // funkce, aby se ta dve odeslani nerozesla (viz nize).
+        const proKlienta = klient
+          ? await posliKlientovi({ klient, jmenoHerce, nazevProjektu })
+          : null;
 
         if (prijemci.length === 0) {
           console.warn(
@@ -183,6 +179,13 @@ export async function oznacHerceDotoceno(
             ? `${jmenoHerce} má dotočeno — zpráva odešla.`
             : `${jmenoHerce} má dotočeno — zprávu se nepodařilo odeslat (${vysledek.reason ?? 'neznámý důvod'}).`,
           prijemci: klient ? [...prijemci, klient.email] : prijemci,
+          /**
+           * DO HISTORIE SE UKLADA ZPRAVA KLIENTA (19. 10. 2026), ne ta nase
+           * interni - kontroluje se to, co vidi druha strana. Kdyz klient
+           * u projektu neni, nahled proste nebude.
+           */
+          zpravaPredmet: proKlienta?.predmet ?? null,
+          zpravaHtml: proKlienta?.telo ?? null,
         });
       } catch (err) {
         console.error('Zprava o dotocenem herci selhala:', err);
@@ -214,7 +217,7 @@ async function posliKlientovi(vstup: {
   klient: { id: string; name: string | null; email: string };
   jmenoHerce: string;
   nazevProjektu: string;
-}) {
+}): Promise<{ predmet: string; telo: string } | null> {
   // Zvonecek prvni: je to zapis do nasi databaze, ktery nemuze skoncit
   // u ciziho SMTP serveru.
   await notify({
@@ -226,15 +229,20 @@ async function posliKlientovi(vstup: {
   });
 
   try {
-    await sendHerecDotocenKlientoviEmail({
+    const vysledek = await sendHerecDotocenKlientoviEmail({
       to: vstup.klient.email,
       jmenoKlienta: vstup.klient.name,
       jmenoHerce: vstup.jmenoHerce,
       nazevProjektu: vstup.nazevProjektu,
       odkazNaPortal: `${zakladPortalu()}/projekty`,
     });
+    // Otisk pro historii projektu - jen kdyz zprava opravdu odesla.
+    return vysledek.sent && 'telo' in vysledek
+      ? { predmet: vysledek.predmet, telo: vysledek.telo }
+      : null;
   } catch (err) {
     console.error('Zprava klientovi o dotocenem herci selhala:', err);
+    return null;
   }
 }
 

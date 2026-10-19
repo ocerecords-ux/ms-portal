@@ -50,8 +50,12 @@ const STAV_PRED_FAKTUROU = 'Schváleno - k fakturaci';
 
 export type OdeslaniFakturyVstup = {
   invoiceId: string;
-  /** Kdo odeslání spustil - píše se do záznamu o odeslání. */
-  odeslal: { id: string; jmeno: string | null };
+  /**
+   * Kdo odeslání spustil - píše se do záznamu o odeslání. Prázdné id má
+   * jediný případ: fakturu spustilo schválení spotu klientem, kdy u toho
+   * nikdo od nás nebyl (19. 10. 2026).
+   */
+  odeslal: { id: string | null; jmeno: string | null };
   /** Firmě (účetní odběratele). Nevyplněno = ano. */
   firme?: boolean;
   /** Klientovi projektu. Nevyplněno = podle karty firmy. */
@@ -138,7 +142,7 @@ export async function odesliFakturu(
         caflouProjectId: invoice.caflouProjectId,
         projectName: invoice.projectName || invoice.subject || `Projekt ${invoice.caflouProjectId}`,
         portalCompanyId: invoice.companyId,
-        userId: vstup.odeslal.id,
+        userId: vstup.odeslal.id ?? undefined,
       })
     : ({ potreba: false } as const);
   if (rodnyList.potreba && !rodnyList.ok) {
