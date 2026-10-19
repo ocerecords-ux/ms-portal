@@ -9,6 +9,7 @@ import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
 import { jeZpusobSmazani } from '@/lib/archiv';
 import { odstranUzivatele } from '@/lib/archivServer';
 import { pouzeZnameSekce } from '@/lib/pristupy';
+import { srovnejJmenaVKalendari } from '@/lib/jmenaVKalendariServer';
 
 const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT', 'TABULE'] as const;
 const COMPANY_REQUIRED_ROLES: string[] = ['CLIENT'];
@@ -394,6 +395,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       createdAt: true,
     },
   });
+
+  /**
+   * PŘEJMENOVÁNÍ SE PROPÍŠE DO KALENDÁŘE (19. 10. 2026: „vzniklo to tim, ze
+   * jsme dodatecne prejmenovali na - Brno"). Natáčení i nabídky termínů si
+   * vedle id drží jméno jako otisk; bez tohohle by u starších událostí
+   * zůstalo staré jméno a rozpis by jednoho člověka ukazoval jako dva.
+   *
+   * Bez čekání - odpověď na uložení karty to nesmí zdržet.
+   */
+  if (data.name !== undefined) {
+    void srovnejJmenaVKalendari(params.id).catch(() => undefined);
+  }
 
   return NextResponse.json(user);
  } catch (err) {

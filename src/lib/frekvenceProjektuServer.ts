@@ -115,6 +115,14 @@ export type RozpisHerce = {
  *
  * Herec bez jména (starší ručně zapsaná událost) spadne do jednoho sloupce
  * bez hlavičky - radši bez jména než zahodit termín.
+ *
+ * ROZDĚLUJE ÚČET, NE JMÉNO (oprava 19. 10. 2026: „tady se to rozdelilo na dva
+ * herce, i kdyz to tak neni. Vzniklo to tim, ze jsme dodatecne prejmenovali
+ * na - Brno"). Natáčení si vedle id účtu drží jméno jako otisk; po
+ * přejmenování účtu měly starší události staré jméno a novější nové, takže
+ * jeden člověk vyšel jako dva sloupce. Když je u události účet, seskupuje se
+ * podle něj a v hlavičce stojí JMÉNO Z ÚČTU, tedy to dnešní. Ručně psané
+ * jméno bez účtu se dál řídí jménem - nic jiného u něj není.
  */
 export async function nactiRozpisProjektu(caflouProjectId: string): Promise<RozpisHerce[]> {
   const [sloty, bloky] = await Promise.all([
@@ -129,7 +137,13 @@ export async function nactiRozpisProjektu(caflouProjectId: string): Promise<Rozp
           start: true,
           end: true,
           studio: { select: { shortName: true, name: true } },
-          request: { select: { actorName: true, actor: { select: { name: true, email: true } } } },
+          request: {
+            select: {
+              actorName: true,
+              actorUserId: true,
+              actor: { select: { name: true, email: true } },
+            },
+          },
         },
       })
       .catch(() => []),
@@ -141,13 +155,22 @@ export async function nactiRozpisProjektu(caflouProjectId: string): Promise<Rozp
           start: true,
           end: true,
           actorName: true,
+          actorUserId: true,
           studio: { select: { shortName: true, name: true } },
         },
       })
       .catch(() => []),
   ]);
 
-  type Radek = { id: string; start: Date; end: Date; studio: string; herec: string };
+  type Radek = {
+    id: string;
+    start: Date;
+    end: Date;
+    studio: string;
+    herec: string;
+    /** Klíč sloupce: id účtu, a teprve když není, jméno. */
+    klic: string;
+  };
   const radky: Radek[] = [];
 
   for (const s of sloty as {
@@ -155,43 +178,71 @@ export async function nactiRozpisProjektu(caflouProjectId: string): Promise<Rozp
     start: Date;
     end: Date;
     studio: { shortName: string | null; name: string } | null;
-    request: { actorName: string | null; actor: { name: string | null; email: string } | null } | null;
+    request: {
+      actorName: string | null;
+      actorUserId: string | null;
+      actor: { name: string | null; email: string } | null;
+    } | null;
   }[]) {
+    const jmeno = (s.request?.actor?.name || s.request?.actor?.email || s.request?.actorName || '').trim();
     radky.push({
       id: s.id,
       start: s.start,
       end: s.end,
       studio: s.studio?.shortName || s.studio?.name || '',
-      herec: (s.request?.actor?.name || s.request?.actor?.email || s.request?.actorName || '').trim(),
+      herec: jmeno,
+      klic: s.request?.actorUserId ? `u:${s.request.actorUserId}` : `j:${jmeno.toLowerCase()}`,
     });
   }
-  for (const b of bloky as {
+  /**
+   * JMÉNA ÚČTŮ K BLOKŮM. StudioBlock schválně nemá vazbu na User (kalendář
+   * si z účtu nic nedotahuje, jen ukazuje, co se zapsalo), takže se jména
+   * doberou jedním dotazem navíc - a jen když je vůbec po čem sahat.
+   */
+  const typBloku = bloky as {
     id: string;
     start: Date;
     end: Date;
     actorName: string | null;
+    actorUserId: string | null;
     studio: { shortName: string | null; name: string } | null;
-  }[]) {
+  }[];
+  const idUctu = [...new Set(typBloku.map((b) => b.actorUserId).filter((x): x is string => Boolean(x)))];
+  const jmenaUctu = new Map<string, string>();
+  if (idUctu.length > 0) {
+    const ucty = (await prisma.user
+      .findMany({ where: { id: { in: idUctu } }, select: { id: true, name: true, email: true } })
+      .catch(() => [])) as { id: string; name: string | null; email: string }[];
+    for (const u of ucty) jmenaUctu.set(u.id, (u.name || u.email || '').trim());
+  }
+
+  for (const b of typBloku) {
+    // Jméno z účtu má přednost před otiskem - otisk může být z doby před
+    // přejmenováním (19. 10. 2026).
+    const jmeno = ((b.actorUserId ? jmenaUctu.get(b.actorUserId) : '') || b.actorName || '').trim();
     radky.push({
       id: b.id,
       start: b.start,
       end: b.end,
       studio: b.studio?.shortName || b.studio?.name || '',
-      herec: (b.actorName ?? '').trim(),
+      herec: jmeno,
+      klic: b.actorUserId ? `u:${b.actorUserId}` : `j:${jmeno.toLowerCase()}`,
     });
   }
 
   const podleHerce = new Map<string, Radek[]>();
   for (const r of radky) {
-    const seznam = podleHerce.get(r.herec);
+    const seznam = podleHerce.get(r.klic);
     if (seznam) seznam.push(r);
-    else podleHerce.set(r.herec, [r]);
+    else podleHerce.set(r.klic, [r]);
   }
 
-  const rozpisy: RozpisHerce[] = [...podleHerce.entries()].map(([herec, seznam]) => {
+  const rozpisy: RozpisHerce[] = [...podleHerce.values()].map((seznam) => {
     seznam.sort((a, b) => a.start.getTime() - b.start.getTime());
     return {
-      herec,
+      // V hlavičce stojí jméno z posledního záznamu - u účtu je to jméno
+      // z účtu, tedy to dnešní.
+      herec: seznam[seznam.length - 1].herec,
       frekvence: seznam.map((r) => ({
         id: r.id,
         start: r.start.toISOString(),

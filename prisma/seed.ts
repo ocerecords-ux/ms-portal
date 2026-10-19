@@ -10,6 +10,7 @@ import { STARY_VZOR_NATACENI, VYCHOZI_VZOR_NATACENI } from '../src/lib/nataceniT
 import { PODPIS_ONDREJ } from './podpisOndrej';
 import { VYCHOZI_SADY } from './technickeParametryVychozi';
 import { HISTORIE_PORTALU } from './novinkyHistorie';
+import { srovnejJmenaVKalendariVsem } from '../src/lib/jmenaVKalendariServer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -203,6 +204,7 @@ async function main() {
   await zalozTechnickeParametry();
   await palubovkaJenOndrejovi();
   await zalozHistoriiPortalu();
+  await srovnejJmenaHercuVKalendari();
   await parametrySpravujiOndrejAPeter();
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
@@ -2895,5 +2897,34 @@ async function zalozHistoriiPortalu() {
     console.log(`  novinky portalu: zalozeno ${kZalozeni.length}`);
   } catch (err) {
     console.warn('  historii portalu se nepodarilo zalozit:', err);
+  }
+}
+
+
+/**
+ * JMÉNA V KALENDÁŘI SROVNAT S ÚČTY (19. 10. 2026: „zmen vsechny minule
+ * zanamy, at to sedi").
+ *
+ * Jednorázově: natáčení a nabídky termínů si vedle id účtu drží jméno jako
+ * otisk, a ten u přejmenovaných účtů zůstal starý - rozpis projektu pak
+ * jednoho herce ukazoval jako dva. Od teď se otisk srovná sám při
+ * přejmenování na kartě uživatele (api/admin/users/[id]); tohle dožene, co
+ * v databázi zůstalo z dřívějška.
+ *
+ * Rozhoduje ID účtu, ne podobnost jmen - ručně psaná jména bez účtu (casting,
+ * host) zůstávají, jak jsou.
+ */
+async function srovnejJmenaHercuVKalendari() {
+  const ZNAMKA = 'jmena-v-kalendari-srovnana';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await srovnejJmenaVKalendariVsem();
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(
+      `  jmena v kalendari: nataceni ${vysledek.nataceni}, zvukari ${vysledek.strih}, nabidky ${vysledek.nabidky}`,
+    );
+  } catch (err) {
+    console.warn('  jmena v kalendari se nepodarilo srovnat:', err);
   }
 }
