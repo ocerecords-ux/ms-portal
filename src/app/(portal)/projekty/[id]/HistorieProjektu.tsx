@@ -44,7 +44,18 @@ export function HistorieProjektu({
             </tr>
           </thead>
           <tbody>
-            {udalosti.map((u) => (
+            {udalosti.map((u) => {
+              /**
+               * KDY SE DÁ PROKLIKNOUT NA ZPRÁVU (19. 10. 2026). U záznamu
+               * s otiskem vždycky; u staršího se zpráva složí ze vzoru
+               * (rekonstrukce, náhled to o sobě řekne). Nenabízí se tam, kde
+               * zpráva NEODEŠLA - nebylo by co ukazovat.
+               */
+              const stavZaznamu = (u.predchozi ?? '').trim();
+              const zpravaOdesla =
+                u.druh === 'NOTIFIKACE' && !/neodešla|nepodařilo/i.test(u.popis);
+              const lzeOtevrit = Boolean(u.zpravaHtml) || (zpravaOdesla && stavZaznamu.length > 0);
+              return (
               <tr key={u.id} className="border-t border-line align-top">
                 <td className="px-4 py-3 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatujCas(u.createdAt, jazyk)}
@@ -64,30 +75,22 @@ export function HistorieProjektu({
                   {u.druh === 'NOTIFIKACE' && u.nova && (
                     <span className="block text-xs font-body text-muted mt-0.5">{u.nova}</span>
                   )}
-                  {/*
-                    A co v ní stálo (19. 10. 2026). Tlačítko je jen tam, kde
-                    je u záznamu otisk zprávy - u starších se zpětně vyrobit
-                    nedá, viz NahledZpravy.tsx.
-                  */}
-                  {u.zpravaHtml ? (
+                  {/* A co v ní stálo (19. 10. 2026) - viz NahledZpravy.tsx. */}
+                  {lzeOtevrit && (
                     <NahledZpravy
                       caflouProjectId={u.caflouProjectId}
                       udalostId={u.id}
                       predmet={u.zpravaPredmet}
+                      rekonstrukce={!u.zpravaHtml}
                     />
-                  ) : (
-                    u.druh === 'NOTIFIKACE' && (
-                      <span className="block text-xs font-body text-muted mt-1 italic">
-                        {prelozit(jazyk, 'historie.bezNahledu')}
-                      </span>
-                    )
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm font-heading text-muted whitespace-nowrap">
                   {u.uzivatelJmeno || prelozit(jazyk, 'historie.portal')}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

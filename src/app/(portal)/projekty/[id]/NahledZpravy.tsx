@@ -25,10 +25,16 @@ export function NahledZpravy({
   caflouProjectId,
   udalostId,
   predmet,
+  rekonstrukce = false,
 }: {
   caflouProjectId: string;
   udalostId: string;
   predmet: string | null;
+  /**
+   * Zpráva se skládá ze vzoru, protože otisk u ní není (starší záznam).
+   * Tlačítko to řekne v bublině, náhled sám pruhem nad zprávou.
+   */
+  rekonstrukce?: boolean;
 }) {
   const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
@@ -50,6 +56,7 @@ export function NahledZpravy({
       <button
         type="button"
         onClick={() => setOtevreno(true)}
+        title={rekonstrukce ? t('historie.rekonstrukceTitulek') : undefined}
         className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-line px-2 py-1 text-xs font-heading font-semibold text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
       >
         <svg
@@ -79,7 +86,7 @@ export function NahledZpravy({
             <div className="flex items-center gap-3 border-b border-line px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="m-0 text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
-                  {t('historie.nahledZpravy')}
+                  {rekonstrukce ? t('historie.rekonstrukce') : t('historie.nahledZpravy')}
                 </p>
                 <p className="m-0 truncate text-sm font-heading text-ink">
                   {predmet || t('historie.bezPredmetu')}

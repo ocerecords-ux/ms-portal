@@ -9,7 +9,7 @@ import { dosadPromenne } from '@/lib/vzoryZprav';
 import { jeStavBezNotifikaci } from '@/lib/stavyProjektu';
 import { pozdrav } from '@/lib/osloveni';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
-import { sendStavProjektuEmail } from '@/lib/email';
+import { sendStavProjektuEmail, buildStavProjektuHtml } from '@/lib/email';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
 import { zajistiOdkaz, urlNahravek, urlPreposlechu } from '@/lib/preposlechOdkaz';
 import { nazevSeSerii } from '@/lib/serie';
@@ -304,5 +304,119 @@ export async function posliNotifikaciKeStavu(
   } catch (err) {
     console.error('posliNotifikaciKeStavu selhalo:', err);
     return { stav: 'chyba', zprava: err instanceof Error ? err.message : 'Neznámá chyba.' };
+  }
+}
+
+
+/**
+ * ZPĚTNÝ NÁHLED ZPRÁVY (zadání 19. 10. 2026: „já potřebuju, ať se prokliknu
+ * i zpětně u těch projektů, co šlo na klienta").
+ *
+ * Otisk odeslané zprávy se ukládá teprve od 19. 10. 2026. U starších
+ * záznamů v historii není co ukázat - a „tady nic není" je u zprávy, která
+ * klientovi prokazatelně odešla, špatná odpověď.
+ *
+ * Tahle funkce tedy zprávu SLOŽÍ ZNOVU: tentýž vzor, tatáž data projektu,
+ * tentýž kód, jaký ji tehdy poslal. U drtivé většiny zpráv to je přesně to,
+ * co klient dostal.
+ *
+ * JE TO REKONSTRUKCE, NE OTISK, a náhled to o sobě musí říct nahlas (pruh
+ * nad zprávou přidává /api/projekty/[id]/zprava/[udalostId]). Co se mezitím
+ * mohlo změnit: znění vzoru, název projektu nebo klienta, platnost odkazu
+ * pro klienta. Datum ve zprávě žádné není, takže to nesvádí k tomu číst
+ * rekonstrukci jako doklad.
+ *
+ * NIC NEMĚNÍ. Na rozdíl od odesílání se tu odkaz pro klienta NEVYRÁBÍ -
+ * jen čte. Kdyby ho náhled vyrobil, znamenalo by prohlédnutí staré zprávy
+ * nový živý odkaz do projektu, a to je přesně ta věc, kterou od náhledu
+ * nikdo nečeká.
+ *
+ * Vrací null, když zprávu složit nejde (projekt zmizel, stav nic neříká).
+ */
+export async function sestavNahledZpravy(
+  caflouProjectId: string,
+  stav: string,
+): Promise<{ predmet: string; html: string } | null> {
+  try {
+    const projekt = await prisma.projectMeta.findUnique({
+      where: { caflouProjectId },
+      select: {
+        name: true,
+        serie: true,
+        serieDil: true,
+        driveUrl: true,
+        companyId: true,
+        companyName: true,
+        company: {
+          select: { name: true, driveFolderUrl: true, dealsAudiobooks: true, dealsAds: true },
+        },
+        klient: { select: { name: true, email: true } },
+      },
+    });
+    if (!projekt) return null;
+
+    const druh = druhNotifikaceFirmy(projekt.company);
+
+    // Odkaz pro klienta se jen cte - viz komentar vys.
+    const ulozenyOdkaz = await prisma.preposlechOdkaz
+      .findUnique({
+        where: { caflouProjectId },
+        select: { token: true, zneplatnenoAt: true },
+      })
+      .catch(() => null);
+    const token =
+      ulozenyOdkaz && !ulozenyOdkaz.zneplatnenoAt ? ulozenyOdkaz.token : null;
+
+    const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+    const slozka = projekt.driveUrl || projekt.company?.driveFolderUrl || null;
+    const odkazNaDisk = token
+      ? urlNahravek(token)
+      : projekt.companyId && slozka
+        ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
+        : slozka;
+
+    const nazevProjektu =
+      nazevSeSerii(projekt.name, projekt.serie, projekt.serieDil) || `Projekt ${caflouProjectId}`;
+    const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
+    const vzor = await vzorProStav(stav, druh);
+
+    const odkazNaSchvaleni =
+      druh === 'REKLAMA' && token && stav === 'Dokončeno - ke schválení'
+        ? `${urlNahravek(token)}?schvalit=1`
+        : null;
+    const odkazNaPreposlech = vzor.audiotagger && token ? urlPreposlechu(token) : null;
+
+    const hodnoty = {
+      projekt: nazevProjektu,
+      firma: nazevFirmy,
+      klient: projekt.klient?.name ?? '',
+      stav,
+      osloveni: pozdrav(projekt.klient?.name ?? null),
+    };
+
+    const vstup = {
+      prijemci: [] as string[],
+      jenInterne: false,
+      uvod: null,
+      jmenoKlienta: projekt.klient?.name ?? null,
+      nazevProjektu,
+      nazevFirmy,
+      stav,
+      predmet: dosadPromenne(vzor.predmet, hodnoty),
+      nadpis: dosadPromenne(vzor.nadpis, hodnoty),
+      text: dosadPromenne(vzor.text, hodnoty),
+      odkazNaDisk,
+      odkazNaPreposlech,
+      odkazNaSchvaleni,
+      popisekOdkazu: druh === 'REKLAMA' ? 'Otevřít' : null,
+    };
+
+    return {
+      predmet: vstup.predmet || `${nazevProjektu} - ${stav}`,
+      html: buildStavProjektuHtml(vstup),
+    };
+  } catch (err) {
+    console.error('Náhled zprávy se nepodařilo složit:', err);
+    return null;
   }
 }
