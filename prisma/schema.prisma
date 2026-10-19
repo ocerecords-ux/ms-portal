@@ -3236,7 +3236,13 @@ model Notification {
   url   String?
 
   readAt    DateTime?
+  /// Kdy se k upozornění podařilo PŘEDAT POŠTĚ mail. Prázdno znamená buď
+  /// „mail k tomuhle druhu upozornění nechodí", nebo „nepovedlo se" - podle
+  /// emailChyba (19. 10. 2026: „a prislo ji to upozorneni?").
   emailedAt DateTime?
+  /// Co pošta řekla, když mail nevzala. Drží se tu proto, že log Vercelu po
+  /// pár hodinách zmizí a za týden už se nedá zjistit, jestli zpráva odešla.
+  emailChyba String?
   createdAt DateTime  @default(now())
 
   @@index([userId, readAt])

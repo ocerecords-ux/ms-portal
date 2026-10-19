@@ -4445,6 +4445,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.upozorneniZadna': { cs: 'Zatím mu portál nic neposlal.', en: 'Nothing sent to them yet.' },
   'uzivatel.upozorneniNeprecteno': { cs: 'zatím nepřečteno', en: 'not read yet' },
   'uzivatel.upozorneniPrecteno': { cs: 'přečteno {datum}', en: 'read {datum}' },
+  'uzivatel.upozorneniMailOdeslan': { cs: 'e-mail předán poště {datum}', en: 'e-mail handed to the server {datum}' },
+  'uzivatel.upozorneniMailChyba': { cs: 'e-mail neodešel: {duvod}', en: 'e-mail not sent: {duvod}' },
   'uzivatel.fakturaceProjektu': { cs: 'Schváleno k fakturaci', en: 'Approved to invoice' },
   'uzivatel.fakturaceProjektuPopis': {
     cs: 'jakmile projekt přejde na „Schváleno - k fakturaci", přijde mu mail s proklikem na projekt a zvoneček v portálu',

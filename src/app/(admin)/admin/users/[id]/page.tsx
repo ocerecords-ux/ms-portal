@@ -74,9 +74,25 @@ export default async function UserEditPage({ params }: { params: { id: string } 
       where: { userId: params.id },
       orderBy: { createdAt: 'desc' },
       take: 50,
-      select: { id: true, title: true, body: true, createdAt: true, readAt: true },
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        createdAt: true,
+        readAt: true,
+        emailedAt: true,
+        emailChyba: true,
+      },
     }) as Promise<
-      { id: string; title: string; body: string | null; createdAt: Date; readAt: Date | null }[]
+      {
+        id: string;
+        title: string;
+        body: string | null;
+        createdAt: Date;
+        readAt: Date | null;
+        emailedAt: Date | null;
+        emailChyba: string | null;
+      }[]
     >,
   ]);
   if (!user) notFound();
@@ -168,6 +184,23 @@ export default async function UserEditPage({ params }: { params: { id: string } 
                       })
                     : prelozit(jazyk, 'uzivatel.upozorneniNeprecteno')}
                 </span>
+                {/**
+                  * JESTLI K TOMU ODEŠEL MAIL (19. 10. 2026). Starší řádky to
+                  * nevědí - tam se nepíše nic, protože „nevíme" a „nedošel"
+                  * nejsou totéž.
+                  */}
+                {u.emailedAt && (
+                  <span className="text-xs font-body text-muted">
+                    {prelozitS(jazyk, 'uzivatel.upozorneniMailOdeslan', {
+                      datum: formatDatumCas(jazyk, u.emailedAt),
+                    })}
+                  </span>
+                )}
+                {u.emailChyba && (
+                  <span className="text-xs font-body text-danger">
+                    {prelozitS(jazyk, 'uzivatel.upozorneniMailChyba', { duvod: u.emailChyba })}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

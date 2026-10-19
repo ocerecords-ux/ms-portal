@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { notifyMany } from '@/lib/notifications';
+import { notifyMany, zaznamenejMail } from '@/lib/notifications';
 import { sendSchvalenoKFakturaciEmail } from '@/lib/email';
 import { jazykUzivatele } from '@/lib/jazykPrijemce';
 import { INTERNAL_ROLES } from '@/lib/roles';
@@ -39,7 +39,7 @@ export async function zpravaOSchvaleniKFakturaci(
     const odkaz = `${zaklad}/projekty/${encodeURIComponent(caflouProjectId)}`;
     const projekt = nazevProjektu || `Projekt ${caflouProjectId}`;
 
-    await notifyMany(
+    const upozorneni = await notifyMany(
       prijemci.map((u) => u.id),
       {
         kind: 'projekt-k-fakturaci',
@@ -52,13 +52,22 @@ export async function zpravaOSchvaleniKFakturaci(
 
     for (const u of prijemci) {
       if (!u.email?.trim()) continue;
-      await sendSchvalenoKFakturaciEmail({
+      /**
+       * VÝSLEDEK OD POŠTY SE ZAPÍŠE K UPOZORNĚNÍ (19. 10. 2026: „a prislo ji
+       * to upozorneni?"). Dřív se zahodil a po pár hodinách zmizel i z logu
+       * Vercelu, takže na otázku „odešel ten mail?" nešlo odpovědět.
+       */
+      const vysledek = await sendSchvalenoKFakturaciEmail({
         to: u.email.trim(),
         jazyk: await jazykUzivatele(u.id).catch(() => 'cs' as const),
         projekt,
         firma: nazevFirmy,
         odkaz,
-      }).catch((err) => console.error('Zpráva o schválení k fakturaci selhala:', err));
+      }).catch((err) => {
+        console.error('Zpráva o schválení k fakturaci selhala:', err);
+        return { sent: false as const, reason: err instanceof Error ? err.message : 'chyba odeslání' };
+      });
+      await zaznamenejMail(upozorneni[u.id], vysledek);
     }
   } catch (err) {
     console.error('Zprávu o schválení k fakturaci se nepodařilo poslat:', err);
