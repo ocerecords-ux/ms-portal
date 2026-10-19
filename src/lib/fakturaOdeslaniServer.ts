@@ -3,6 +3,8 @@ import { sendInvoiceEmail } from '@/lib/email';
 import { cisloUctuSKodem, computeTotals } from '@/lib/doklady';
 import { pdfFaktury } from '@/lib/dokladNahledServer';
 import { rodnyListKFakture } from '@/lib/rodnyListServer';
+import { jeReklamaProjekt } from '@/lib/reklamniProjektServer';
+import { zavriPoFakture } from '@/lib/ukonceniPoFakture';
 
 /**
  * ODESLÁNÍ FAKTURY ODBĚRATELI (zadání 6. 9. 2026). Mail nese všechno, co
@@ -244,13 +246,37 @@ export async function odesliFakturu(
    * by se zavřít mohl, a člověk to odklepne (nebo ne) - zavírá se pak
    * stejnou cestou jako ruční ukončení, /api/projekty/[id]/ukonceni.
    */
-  const nabidnoutUkonceni = Boolean(
+  const muzeSeZavrit = Boolean(
     UKONCIT_PROJEKT_PO_FAKTURE &&
       invoice.caflouProjectId &&
       meta &&
       !meta.finished &&
       (meta.statusName ?? '').trim() === STAV_PRED_FAKTUROU,
   );
+
+  /**
+   * U REKLAMY SE ZAKÁZKA ZAVŘE ROVNOU (zadání 19. 10. 2026: „u reklam chybí
+   * stav vyfakturováno. Tam by se to mělo překlopit, když se odešle faktura").
+   *
+   * Spot má jednu fakturu na konci - odeslat ji a ptát se, jestli má zakázka
+   * skončit, znamená jen nechat ji viset mezi aktivními, dokud si toho někdo
+   * nevšimne. U audioknihy se portál ptá dál: tam odchází i ostré zálohové
+   * faktury, po kterých zakázka pokračuje, a fakturu s koncem zakázky tedy
+   * nelze ztotožnit.
+   *
+   * Platí to jen tam, kde by se portál stejně ptal: projekt ještě neběží jako
+   * hotový a stojí ve stavu „Schváleno - k fakturaci".
+   */
+  const jeReklama =
+    muzeSeZavrit && invoice.caflouProjectId
+      ? await jeReklamaProjekt(invoice.caflouProjectId).catch(() => false)
+      : false;
+  if (jeReklama && invoice.caflouProjectId) {
+    await zavriPoFakture(invoice.caflouProjectId, vstup.odeslal);
+  }
+
+  // U reklamy už je zavřeno, tak se není na co ptát.
+  const nabidnoutUkonceni = muzeSeZavrit && !jeReklama;
 
   return {
     ok: true,

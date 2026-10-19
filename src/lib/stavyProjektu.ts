@@ -261,6 +261,16 @@ const STAVY_REKLAMY: KodStavu[] = [
   'NATACIME',
   'DOKONCENO_KE_SCHVALENI',
   'SCHVALENO_K_FAKTURACI',
+  /**
+   * A KONEC CESTY (19. 10. 2026: „u reklam chybí stav vyfakturováno. Tam by
+   * se to mělo překlopit, když se odešle faktura").
+   *
+   * Do té doby se u reklamy nenabízel - jenže odeslaná faktura do něj zakázku
+   * překlopí, takže stav, do kterého projekt spadne sám, musel v nabídce
+   * chybět právě tam, kde se nejčastěji používá. Zpátky se z něj dá přehodit
+   * jen proto, že je v seznamu.
+   */
+  'VYFAKTUROVANO',
 ];
 
 /**
