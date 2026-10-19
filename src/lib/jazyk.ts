@@ -10125,6 +10125,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'historie.kdo': { cs: 'Kdo', en: 'Who' },
   'historie.portal': { cs: 'portál', en: 'the portal' },
   'historie.coOdeslo': { cs: 'Co odešlo', en: 'What was sent' },
+  'historie.bezNahledu': {
+    cs: 'Náhled zprávy není — odešla dřív, než se zprávy začaly ukládat.',
+    en: 'No preview — this went out before messages were being kept.',
+  },
   'historie.nahledZpravy': { cs: 'Odeslaná zpráva', en: 'Sent message' },
   'historie.bezPredmetu': { cs: 'Bez předmětu', en: 'No subject' },
   'historie.otevritVPanelu': { cs: 'Otevřít v novém panelu', en: 'Open in a new tab' },

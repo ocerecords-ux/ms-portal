@@ -69,12 +69,18 @@ export function HistorieProjektu({
                     je u záznamu otisk zprávy - u starších se zpětně vyrobit
                     nedá, viz NahledZpravy.tsx.
                   */}
-                  {u.zpravaHtml && (
+                  {u.zpravaHtml ? (
                     <NahledZpravy
                       caflouProjectId={u.caflouProjectId}
                       udalostId={u.id}
                       predmet={u.zpravaPredmet}
                     />
+                  ) : (
+                    u.druh === 'NOTIFIKACE' && (
+                      <span className="block text-xs font-body text-muted mt-1 italic">
+                        {prelozit(jazyk, 'historie.bezNahledu')}
+                      </span>
+                    )
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm font-heading text-muted whitespace-nowrap">
