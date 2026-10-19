@@ -14,6 +14,12 @@ export type IcsEvent = {
   summary: string;
   description?: string | null;
   location?: string | null;
+  /**
+   * Odkaz události (19. 10. 2026). Kalendáře z něj dělají tlačítko „Připojit"
+   * a Google ho u online schůzky nabídne v upozornění - proto sem patří
+   * adresa, kterou má člověk opravdu otevřít.
+   */
+  url?: string | null;
   /** Kdy byl záznam naposled změněn - podle toho se kalendáře aktualizují. */
   updatedAt: Date;
   cancelled?: boolean;
@@ -104,6 +110,7 @@ export function buildIcs(name: string, events: IcsEvent[], barva?: string | null
     );
     if (e.description) radky.push(`DESCRIPTION:${esc(e.description)}`);
     if (e.location) radky.push(`LOCATION:${esc(e.location)}`);
+    if (e.url) radky.push(`URL;VALUE=URI:${esc(e.url)}`);
     radky.push(`STATUS:${e.cancelled ? 'CANCELLED' : 'CONFIRMED'}`);
     radky.push('END:VEVENT');
   }

@@ -38,7 +38,19 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   if (!nalezeno) return new NextResponse('Termín už v kalendáři není.', { status: 404 });
 
   const nazevProjektu = host.block?.projectName?.trim() || nalezeno.data.nazev;
-  const obsah = icsProHosta(nalezeno.data, nazevProjektu);
+  /**
+   * ODKAZ V KALENDÁŘI VEDE DO ČEKÁRNY (19. 10. 2026: „když pošleme klientovi
+   * pozvánku na natáčení a on si ji uloží do kalendáře, tak obejde čekárnu").
+   * Tentýž token, jaký má host v mailu - čekárna podle něj pozná, na který
+   * termín se dívá.
+   */
+  const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+  const obsah = icsProHosta(
+    nalezeno.data,
+    nazevProjektu,
+    'cs',
+    `${zaklad}/nataceni/${encodeURIComponent(token)}`,
+  );
 
   return new NextResponse(obsah, {
     headers: {

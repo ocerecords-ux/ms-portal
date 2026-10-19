@@ -13,6 +13,7 @@ import Link from 'next/link';
 import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, najdiSmajlika, popisekSmajlika, prepisTextoveSmajliky } from '@/lib/msSmajlici';
 import { doplnVelkaPismena, naVelke, zacatekVety } from '@/lib/velkePismena';
+import { bezDiakritiky } from '@/lib/countries';
 import { MsSmajlik } from './MsSmajlik';
 import { TechnickeParametryOkno } from './TechnickeParametryOkno';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
@@ -1861,6 +1862,20 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
   // Muj status v chatu (25. 9. 2026) - rucni i ten z kalendare.
   const [mujStatus, setMujStatus] = useState<StatusVChatu | null>(null);
+  /**
+   * HLEDÁNÍ V SEZNAMU (zadání Helči 19. 10. 2026: „šlo by prosím v chatu mít
+   * vyhledávání? Třeba pod nastavit status? Ať nemusím konverzaci ke každému
+   * projektu hledat").
+   *
+   * Kanálů k projektům je tolik, kolik je zakázek - a jsou seřazené, ne
+   * setříděné podle toho, co kdo zrovna hledá. Rolovat seznam o stovkách
+   * řádků kvůli jedné knize je přesně ta práce, kterou má dělat stroj.
+   *
+   * Hledá se v tom, co je na řádku vidět: v názvu. Bez diakritiky a bez
+   * ohledu na velikost písmen - „kucha" najde „KUCHAŘI SMRTI", protože
+   * nikdo nepíše do hledání háčky.
+   */
+  const [hledani, setHledani] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [zpravyNacitam, setZpravyNacitam] = useState(false);
@@ -2696,6 +2711,26 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       name: c.label,
     });
   }
+
+  /**
+   * Co hledání propustí. Prázdné hledání propustí všechno - seznam se tím
+   * chová jako dřív, dokud člověk nezačne psát.
+   */
+  const hledanyVyraz = bezDiakritiky(hledani);
+  const sediNaHledani = (text: string) =>
+    hledanyVyraz.length === 0 || bezDiakritiky(text).includes(hledanyVyraz);
+
+  const kanalyVidi = kanaly.filter((k) => sediNaHledani(k.label));
+  const dotazyVidi = dotazy.filter((c) => sediNaHledani(c.label));
+  const vZalozceVidi = vZalozce.filter((c) => sediNaHledani(c.label));
+  /** Hledá se a nic nezbylo - ať je rozdíl mezi „nic tu není" a „nic nesedí". */
+  const nicNesedi =
+    hledanyVyraz.length > 0 &&
+    (tab === 'PROJEKT'
+      ? kanalyVidi.length === 0
+      : tab === 'DOTAZ'
+        ? dotazyVidi.length === 0
+        : vZalozceVidi.length === 0);
 
   /** Otevre panel spravy s aktualnimi udaji skupiny. */
   function otevriSpravu() {
@@ -3606,11 +3641,55 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               <MujStatus status={mujStatus} onZmena={() => void nactiKonverzace()} />
             </div>
 
+            {/* HLEDÁNÍ (19. 10. 2026) - přesně tam, kde si o něj Helča řekla,
+                pod statusem a nad seznamem. U Úkolů ne: to není seznam
+                konverzací a hledá se v něm jinak. */}
+            {tab !== ZALOZKA_UKOLY && (
+              <div className="px-3 pb-2">
+                <div className="flex items-center gap-2 rounded-lg border border-line bg-field px-2.5 py-1.5 focus-within:border-brand-purple transition-colors">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-3.5 h-3.5 shrink-0 text-muted"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={hledani}
+                    onChange={(e) => setHledani(e.target.value)}
+                    placeholder={t('chat.hledatPlaceholder')}
+                    aria-label={t('chat.hledatPlaceholder')}
+                    className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm font-body text-ink placeholder:text-muted"
+                  />
+                  {hledani.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setHledani('')}
+                      aria-label={t('obecne.zavrit')}
+                      className="shrink-0 text-muted hover:text-ink transition-colors"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
               {/* ÚKOLY MÍSTO DOTAZŮ (zadání 18. 9. 2026). Není to konverzace,
                   ale vlastní to-do list - proto vlastní komponenta a ne
                   seznam níž. */}
               {tab === ZALOZKA_UKOLY && <UkolyVChatu />}
+              {nicNesedi && (
+                <p className="text-sm font-body text-muted m-0 px-1">{t('chat.hledaniPrazdno')}</p>
+              )}
               {tab === 'PROJEKT' && projekty === null && (
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.nacitamProjekty')}</p>
               )}
@@ -3618,7 +3697,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 <p className="text-xs text-danger m-0 px-1">{projektyChyba}</p>
               )}
               {tab === 'PROJEKT' &&
-                kanaly.map((k) => {
+                kanalyVidi.map((k) => {
                   const aktivni = k.conversation?.id === openId;
                   return (
                     <button
@@ -3644,7 +3723,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     </button>
                   );
                 })}
-              {tab === 'PROJEKT' && projekty !== null && kanaly.length === 0 && (
+              {tab === 'PROJEKT' && projekty !== null && kanaly.length === 0 && hledanyVyraz.length === 0 && (
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.zadneProjekty')}</p>
               )}
 
@@ -3653,11 +3732,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   chodilo upozornění. Nechodilo žádné, takže se na dotaz přišlo
                   jen náhodou. Červená je tu záměrně: je to jediné místo
                   v chatu, kde čeká KLIENT. */}
-              {tab === 'DOTAZ' && dotazy.length === 0 && (
+              {tab === 'DOTAZ' && dotazy.length === 0 && hledanyVyraz.length === 0 && (
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.zadneDotazy')}</p>
               )}
               {tab === 'DOTAZ' &&
-                dotazy.map((c) => (
+                dotazyVidi.map((c) => (
                   <button
                     key={c.id}
                     type="button"
@@ -3679,7 +3758,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   </button>
                 ))}
 
-              {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && vZalozce.length === 0 && !novy && (
+              {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && vZalozce.length === 0 && !novy && hledanyVyraz.length === 0 && (
                 <p className="text-sm font-body text-muted m-0 px-1">
                   {tab === 'SOUKROMA' ? t('chat.zadneSoukrome') : t('chat.zadneSkupiny')}
                 </p>
@@ -3687,7 +3766,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               {tab !== 'PROJEKT' &&
                 tab !== 'DOTAZ' &&
                 tab !== ZALOZKA_UKOLY &&
-                vZalozce.map((c) => (
+                vZalozceVidi.map((c) => (
                   <RadekKonverzace
                     key={c.id}
                     konverzace={c}

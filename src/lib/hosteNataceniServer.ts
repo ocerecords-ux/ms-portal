@@ -315,9 +315,24 @@ export function icsProHosta(
   nataceni: NataceniData,
   nazevProjektu: string,
   jazyk: Jazyk = 'cs',
+  /**
+   * ADRESA ČEKÁRNY (19. 10. 2026: „když pošleme klientovi pozvánku na natáčení
+   * a on si ji uloží do kalendáře, tak obejde čekárnu").
+   *
+   * Do kalendáře patří tatáž adresa jako do tlačítka v mailu - naše stránka
+   * s odpočtem, ne odkaz rovnou do hovoru. Záznam v kalendáři přežije celou
+   * pozvánku: host na něj kliká ještě za dva týdny, a tím se dosud dostal
+   * do hovoru dřív, než kdokoliv jiný byl u pultu.
+   *
+   * Když odkaz do čekárny nemáme (nepodařilo se vyrobit token), vrací se to
+   * k odkazu do hovoru - radši bez naší stránky než bez možnosti se připojit.
+   */
+  cekarnaOdkaz?: string | null,
 ): string {
   const misto = adresaNaRadek(nataceni.studioNazev, nataceni.adresa);
   const ucastnici = seznamUcastniku(nataceni);
+  // Čekárna má přednost před odkazem do hovoru - viz cekarnaOdkaz výš.
+  const kamSePripojit = nataceni.hovorOdkaz ? (cekarnaOdkaz?.trim() || nataceni.hovorOdkaz) : null;
   const popisek = (klic: string) => prelozitEmail(jazyk, klic);
   return buildIcs(nazevProjektu, [
     {
@@ -333,8 +348,9 @@ export function icsProHosta(
       // hned první v popisu a kalendáře z něj umí udělat tlačítko. Jedna podoba
       // záznamu pro všechny (9. 10. 2026) - host se rozhoduje sám až podle mailu.
       location: misto,
+      url: kamSePripojit,
       description: [
-        nataceni.hovorOdkaz ? `${popisek('mail.pozvankaNataceni.pripojitSe')}: ${nataceni.hovorOdkaz}` : '',
+        kamSePripojit ? `${popisek('mail.pozvankaNataceni.pripojitSe')}: ${kamSePripojit}` : '',
         ucastnici.length > 1
           ? `${popisek('mail.pozvankaNataceni.ucastnici')}:\n${ucastnici.map((u, i) => `${i + 1}. ${u}`).join('\n')}`
           : '',
@@ -474,8 +490,12 @@ export async function posliPozvanky(
     const jazyk = host.jazyk;
     const kdy = kdySlovy(nataceni, pasmo, jazyk);
 
-    const ics = { nazev: 'nataceni.ics', obsah: icsProHosta(nataceni, nazevProjektu, jazyk) };
+    // Odkazy napřed - .ics si z nich bere adresu čekárny (19. 10. 2026).
     const odkazy = await odkazyHosta(host.id, baseUrl);
+    const ics = {
+      nazev: 'nataceni.ics',
+      obsah: icsProHosta(nataceni, nazevProjektu, jazyk, odkazy?.cekarna ?? null),
+    };
 
     try {
       const odeslano = await sendPozvankaNataceniEmail({

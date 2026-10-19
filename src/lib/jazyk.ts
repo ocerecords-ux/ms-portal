@@ -1997,6 +1997,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.zalozkaNeprectene': { cs: '{nazev} — {pocet} nepřečtených', en: '{nazev} — {pocet} unread' },
   'chat.skrytChat': { cs: 'Skrýt MS chat', en: 'Hide MS chat' },
   'chat.nacitamProjekty': { cs: 'Načítám projekty…', en: 'Loading the projects…' },
+  'chat.hledatPlaceholder': { cs: 'Hledat v seznamu…', en: 'Search the list…' },
+  'chat.hledaniPrazdno': { cs: 'Nic nesedí.', en: 'Nothing matches.' },
   'chat.zadneProjekty': { cs: 'Žádné rozpracované projekty.', en: 'No projects in progress.' },
   'chat.dotazyKlientu': { cs: 'Dotazy klientů', en: 'Customer questions' },
   'chat.zadneSoukrome': {
