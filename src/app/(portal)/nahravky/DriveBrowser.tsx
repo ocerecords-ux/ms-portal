@@ -320,6 +320,18 @@ export function DriveBrowser({
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  /**
+   * NÁHLED SOUBORU V PORTÁLU (zadání 19. 10. 2026: „když na portálu otevřu
+   * textový soubor, tak se nedá vrátit zpět").
+   *
+   * Do teď se soubor otevíral v novém panelu - což v nainstalované aplikaci
+   * znamená nové okno bez adresního řádku a bez šipky zpět. Člověk skončil
+   * nad PDF a jedinou cestou ven bylo okno zavřít.
+   *
+   * Teď se otevře v okně nad diskem, které má vlastní „Zavřít" (a Escape).
+   * Kdo chce soubor opravdu v novém panelu, má v hlavičce okna odkaz.
+   */
+  const [nahled, setNahled] = useState<DriveItem | null>(null);
   // Rezeni klikem na nadpis sloupce (zadani 12. 9. 2026) - slozky jsou vzdy
   // nahore (bezny zvyk z Disku/Finderu), v ramci toho se radi podle nazvu
   // nebo data zmeny, vzestupne/sestupne.
@@ -389,6 +401,15 @@ export function DriveBrowser({
     setSelectedId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFolder.id]);
+
+  useEffect(() => {
+    if (!nahled) return;
+    function naKlavesu(e: KeyboardEvent) {
+      if (e.key === 'Escape') setNahled(null);
+    }
+    window.addEventListener('keydown', naKlavesu);
+    return () => window.removeEventListener('keydown', naKlavesu);
+  }, [nahled]);
 
   function openFolder(item: DriveItem) {
     setStack((prev) => [...prev, { id: item.id, name: item.name }]);
@@ -512,7 +533,13 @@ export function DriveBrowser({
       setPlayingId(item.id);
       return;
     }
-    window.open(`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`, '_blank', 'noopener');
+    // Co umí prohlížeč ukázat, se otevře v okně nad diskem (19. 10. 2026);
+    // u zbytku nezbývá než stažení - vykreslit .docx neumíme.
+    if (lzeZobrazit(item)) {
+      setNahled(item);
+      return;
+    }
+    window.open(`/api/drive/download?fileId=${encodeURIComponent(item.id)}${klic}`, '_blank', 'noopener');
   }
 
   // Klik na název UŽ OZNAČENÉ položky = přejmenovat (Finder). Čeká se chvilku,
@@ -882,10 +909,9 @@ export function DriveBrowser({
                         to na souboru nehledá. PDF, obrázek, text a Google
                         Dokument se otevřou v novém panelu. */}
                     {lzeZobrazit(item) && (
-                      <a
-                        href={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => setNahled(item)}
                         title={t('disk.otevritSoubor')}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                       >
@@ -893,7 +919,7 @@ export function DriveBrowser({
                           <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
                           <circle cx="12" cy="12" r="2.5" />
                         </svg>
-                      </a>
+                      </button>
                     )}
                     {!item.isFolder && (
                       <a
@@ -984,6 +1010,42 @@ export function DriveBrowser({
           {t('disk.napovedaKliky')}
           {!jenCteni && t('disk.napovedaPrejmenovat')}
         </p>
+      )}
+
+      {/* NÁHLED SOUBORU - viz stav `nahled` výš. Okno má vlastní cestu ven,
+          protože v nainstalované aplikaci žádná jiná není. */}
+      {nahled && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setNahled(null)}
+        >
+          <div
+            className="flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-card border border-line bg-surface shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+              <span className="min-w-0 flex-1 truncate text-sm font-heading text-ink">{nahled.name}</span>
+              <a
+                href={`/api/drive/download?fileId=${encodeURIComponent(nahled.id)}${klic}`}
+                className="shrink-0 rounded-lg border border-line px-2.5 py-1.5 text-xs font-heading font-semibold text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
+              >
+                {t('obecne.stahnout')}
+              </a>
+              <button
+                type="button"
+                onClick={() => setNahled(null)}
+                className="shrink-0 rounded-lg border border-line px-2.5 py-1.5 text-xs font-heading font-semibold text-ink hover:bg-field transition-colors"
+              >
+                {t('obecne.zavrit')}
+              </button>
+            </div>
+            <iframe
+              src={`/api/drive/download?fileId=${encodeURIComponent(nahled.id)}&disposition=inline${klic}`}
+              title={nahled.name}
+              className="flex-1 w-full border-0 bg-white"
+            />
+          </div>
+        </div>
       )}
     </div>
   );
