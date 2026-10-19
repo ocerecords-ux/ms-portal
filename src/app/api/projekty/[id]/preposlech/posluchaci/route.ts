@@ -5,6 +5,7 @@ import { cookiePosluchace, pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { nactiPosluchace, zapisDoHistorie } from '@/lib/preposlechPosluchaciServer';
 import { urlPreposlechu, zajistiOdkaz } from '@/lib/preposlechOdkaz';
 import { sendPreposlechPredanEmail } from '@/lib/email';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Posluchači odkazu do AudioTaggeru (zadání 21. 9. 2026) - viz
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!p.ok) return NextResponse.json({ error: p.message }, { status: p.status });
 
   const parsed = postSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
   const d = parsed.data as PostVstup;
 
   const lide = d.lide
@@ -178,11 +179,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const p = await pristup(req, params.id);
   if (!p.ok) return NextResponse.json({ error: p.message }, { status: p.status });
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
   const d = parsed.data as PatchVstup;
 
   const posluchac = await prisma.preposlechPosluchac.findFirst({ where: { id: d.id, caflouProjectId: params.id } });
-  if (!posluchac) return NextResponse.json({ error: 'Posluchač nenalezen.' }, { status: 404 });
+  if (!posluchac) return odpovedChyby('preposlechApi.posluchacNenalezen', 404);
 
   const data: { notifikace?: boolean; jmeno?: string | null } = {};
   if (d.notifikace !== undefined) data.notifikace = d.notifikace;
@@ -213,10 +214,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const p = await pristup(req, params.id);
   if (!p.ok) return NextResponse.json({ error: p.message }, { status: p.status });
   const id = req.nextUrl.searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'Chybí posluchač.' }, { status: 400 });
+  if (!id) return odpovedChyby('preposlechApi.chybiPosluchac', 400);
 
   const posluchac = await prisma.preposlechPosluchac.findFirst({ where: { id, caflouProjectId: params.id } });
-  if (!posluchac) return NextResponse.json({ error: 'Posluchač nenalezen.' }, { status: 404 });
+  if (!posluchac) return odpovedChyby('preposlechApi.posluchacNenalezen', 404);
   await prisma.preposlechPosluchac.delete({ where: { id } });
   await zapisDoHistorie(
     params.id,

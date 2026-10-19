@@ -5,6 +5,7 @@ import { isInternalRole } from '@/lib/roles';
 import { obnovOdkaz, stavOdkazu, zajistiOdkaz, zavriOdkaz } from '@/lib/preposlechOdkaz';
 import { prisma } from '@/lib/db';
 import { isRodnyListProjectType } from '@/lib/priceList';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Správa klientského odkazu na přeposlech (zadání 11. 9. 2026).
@@ -29,9 +30,9 @@ async function variantaOdkazu(caflouProjectId: string): Promise<'preposlech' | '
 
 async function overTym() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return { chyba: NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 }) };
+  if (!session?.user?.id) return { chyba: odpovedChyby('chybaApi.neprihlaseno', 401) };
   if (!isInternalRole(session.user.role)) {
-    return { chyba: NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 }) };
+    return { chyba: odpovedChyby('chybaApi.bezOpravneni', 403) };
   }
   return { jmeno: session.user.name || session.user.email || null };
 }
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const token = novy
     ? await obnovOdkaz(params.id, pristup.jmeno)
     : await zajistiOdkaz(params.id, pristup.jmeno);
-  if (!token) return NextResponse.json({ error: 'Odkaz se nepodařilo vyrobit.' }, { status: 500 });
+  if (!token) return odpovedChyby('preposlechApi.odkazNejdeVyrobit', 500);
 
   return NextResponse.json(await stavOdkazu(params.id, await variantaOdkazu(params.id)));
 }

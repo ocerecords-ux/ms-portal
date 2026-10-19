@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 import { kodJazyka, prelozitS, type Jazyk } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * PŘEPOSLECH PRO NEVIDOMÉ (zadání 23. 9. 2026: „dal by se v audiotaggeru
@@ -139,7 +140,7 @@ export function RezimNevidomi({
           error?: string;
         };
         if (!rStopy.ok) {
-          setChybaHlaska(data.error || t('nevidomi.nahravkyNejdou'));
+          setChybaHlaska(hlaskaChyby(data, t, t('nevidomi.nahravkyNejdou')));
           return;
         }
         setStopy(data.stopy ?? []);
@@ -229,7 +230,7 @@ export function RezimNevidomi({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setChybaHlaska(data.error || t('nevidomi.pripominkaNejde'));
+        setChybaHlaska(hlaskaChyby(data, t, t('nevidomi.pripominkaNejde')));
         ohlas(t('nevidomi.pripominkaNejde'));
         return;
       }

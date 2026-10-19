@@ -11775,6 +11775,144 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Dropbox nevydal adresu na nahrání.',
     en: 'Dropbox did not give an upload address.',
   },
+  // Obecné chyby z rout, které potřeboval přeposlech (dávka 7p, 19. 10. 2026).
+  'chybaApi.neprihlaseno': { cs: 'Nepřihlášeno.', en: 'Not signed in.' },
+  'chybaApi.chybiProjekt': { cs: 'Chybí projekt.', en: 'The project is missing.' },
+  'chybaApi.ulozitNepodarilo': {
+    cs: 'Nepodařilo se to uložit.',
+    en: 'That could not be saved.',
+  },
+  'chybaApi.chybiIdSouboru': { cs: 'Chybí ID souboru.', en: 'The file ID is missing.' },
+  'chybaApi.diskNeniNastaveny': {
+    cs: 'Napojení na Disk není nastavené.',
+    en: 'The Drive connection is not set up.',
+  },
+  // CHYBY Z ROUT PŘEPOSLECHU (dávka 7p, 19. 10. 2026). Záznam chyby
+  // v AudioTaggeru je podle slovníčku „tag".
+  'preposlechApi.posluchacNenalezen': {
+    cs: 'Posluchač nenalezen.',
+    en: 'Listener not found.',
+  },
+  'preposlechApi.chybiPosluchac': {
+    cs: 'Chybí posluchač.',
+    en: 'The listener is missing.',
+  },
+  'preposlechApi.odkazNejdeVyrobit': {
+    cs: 'Odkaz se nepodařilo vyrobit.',
+    en: 'The link could not be created.',
+  },
+  'preposlechApi.zaznamNenalezen': { cs: 'Záznam se nenašel.', en: 'The tag was not found.' },
+  'preposlechApi.chybiIdZaznamu': {
+    cs: 'Chybí ID záznamu.',
+    en: 'The tag ID is missing.',
+  },
+  'preposlechApi.upravitJenVlastni': {
+    cs: 'Upravit jde jen vlastní záznam.',
+    en: 'You can only edit your own tag.',
+  },
+  'preposlechApi.smazatJenVlastni': {
+    cs: 'Smazat jde jen vlastní záznam.',
+    en: 'You can only delete your own tag.',
+  },
+  'preposlechApi.krokNenalezen': { cs: 'Krok se nenašel.', en: 'The step was not found.' },
+  'preposlechApi.krokUzVraceny': {
+    cs: 'Tenhle krok už je vrácený.',
+    en: 'This step has already been undone.',
+  },
+  'preposlechApi.krokVratitNejde': {
+    cs: 'Tenhle krok vrátit nejde.',
+    en: 'This step cannot be undone.',
+  },
+  'preposlechApi.vratitJenVlastni': {
+    cs: 'Vrátit jde jen vlastní krok.',
+    en: 'You can only undo your own step.',
+  },
+  'preposlechApi.chybiPredchoziZneni': {
+    cs: 'K tomuhle kroku chybí předchozí znění.',
+    en: 'The previous wording for this step is missing.',
+  },
+  'preposlechApi.poznamkaNeexistuje': {
+    cs: 'Poznámka už neexistuje.',
+    en: 'The note no longer exists.',
+  },
+  'preposlechApi.chybiObsahPoznamky': {
+    cs: 'K tomuhle kroku chybí obsah poznámky.',
+    en: 'The note content for this step is missing.',
+  },
+  // NÁHLEDOVÁ OKNA POD IKONOU V PŘEHLEDU (dávka 7p, 19. 10. 2026). Tyhle tři
+  // routy posílají na obrazovku HOTOVÝ text, ne klíč - okno si řádky jen
+  // vykreslí. Jazyk si proto berou z cookie přes `nactiJazyk()`: chodí sem
+  // vždycky klik z prohlížeče, nikdy cron ani akce jménem někoho jiného,
+  // takže výjimka z dávky 7o se jich netýká.
+  'nahled.chybiDoklad': { cs: 'Chybí doklad.', en: 'The document is missing.' },
+  'nahled.uceBezFirmy': {
+    cs: 'Účet nepatří pod firmu.',
+    en: 'This account does not belong to a company.',
+  },
+  'nahled.nabidkaNenalezena': { cs: 'Nabídka nenalezena.', en: 'Quote not found.' },
+  'nahled.fakturaNenalezena': { cs: 'Faktura nenalezena.', en: 'Invoice not found.' },
+  'nahled.objednavkaNenalezena': { cs: 'Objednávka nenalezena.', en: 'Order not found.' },
+  // Náhled přeposlechu.
+  'nahled.preposlech': { cs: 'Přeposlech', en: 'Proof-listening' },
+  'nahled.otevritPreposlech': { cs: 'Otevřít přeposlech', en: 'Open the proof-listening' },
+  'nahled.stopy': { cs: 'Stopy', en: 'Tracks' },
+  'nahled.stopyPoslechnuto': {
+    cs: '{poslechnuto} z {celkem} poslechnuto',
+    en: '{poslechnuto} of {celkem} listened to',
+  },
+  'nahled.zadneStopy': { cs: 'Zatím žádné stopy', en: 'No tracks yet' },
+  'nahled.odbaveno': { cs: 'Odbaveno', en: 'Cleared' },
+  'nahled.odbavenoHotovo': {
+    cs: '{hotovo} z {celkem} označeno hotovo',
+    en: '{hotovo} of {celkem} marked done',
+  },
+  'nahled.zapisyChyb': { cs: 'Zápisy chyb', en: 'Tags logged' },
+  'nahled.zadne': { cs: 'Žádné', en: 'None' },
+  'nahled.textSlysen': { cs: 'Text slyšen', en: 'Text heard' },
+  'nahled.textSlysenHodnota': {
+    cs: '{procent} % ({slysenych} z {stran} stran)',
+    en: '{procent}% ({slysenych} of {stran} pages)',
+  },
+  'nahled.stav': { cs: 'Stav', en: 'Status' },
+  'nahled.zkontrolovano': { cs: 'Zkontrolováno', en: 'Checked' },
+  'nahled.cekaNaPreposlech': { cs: 'Čeká na přeposlech', en: 'Awaiting proof-listening' },
+  'nahled.naposledy': { cs: 'Naposledy', en: 'Last activity' },
+  // Náhled dokladu - náš i klientský.
+  'nahled.nabidkaCislo': { cs: 'Nabídka {cislo}', en: 'Quote {cislo}' },
+  'nahled.fakturaCislo': { cs: 'Faktura {cislo}', en: 'Invoice {cislo}' },
+  'nahled.objednavkaCislo': { cs: 'Objednávka {cislo}', en: 'Order {cislo}' },
+  'nahled.otevritNabidku': { cs: 'Otevřít nabídku', en: 'Open the quote' },
+  'nahled.otevritFakturu': { cs: 'Otevřít fakturu', en: 'Open the invoice' },
+  'nahled.otevritObjednavku': { cs: 'Otevřít objednávku', en: 'Open the order' },
+  'nahled.odberatel': { cs: 'Odběratel', en: 'Customer' },
+  'nahled.predmet': { cs: 'Předmět', en: 'Subject' },
+  'nahled.celkemSDph': { cs: 'Celkem s DPH', en: 'Total incl. VAT' },
+  'nahled.vystaveno': { cs: 'Vystaveno', en: 'Issued' },
+  'nahled.platiDo': { cs: 'Platí do', en: 'Valid until' },
+  'nahled.odeslano': { cs: 'Odesláno', en: 'Sent' },
+  'nahled.zatimNeodeslano': { cs: 'Zatím neodesláno', en: 'Not sent yet' },
+  'nahled.splatnost': { cs: 'Splatnost', en: 'Due date' },
+  'nahled.variabilniSymbol': { cs: 'Variabilní symbol', en: 'Variable symbol' },
+  'nahled.odeslaneUpominky': { cs: 'Odeslané upomínky', en: 'Reminders sent' },
+  'nahled.dalsiUpominka': { cs: 'Další upomínka', en: 'Next reminder' },
+  // Stavy v okně. Jsou to celé věty, ne jednoslovné značky z přehledu dokladů,
+  // proto mají vlastní klíče.
+  'nahled.stavNabidky.DRAFT': { cs: 'Rozepsaná', en: 'Draft' },
+  'nahled.stavNabidky.SENT': {
+    cs: 'Odeslaná, čeká na schválení',
+    en: 'Sent, awaiting approval',
+  },
+  'nahled.stavNabidky.APPROVED': { cs: 'Schválená', en: 'Approved' },
+  'nahled.stavNabidky.REJECTED': { cs: 'Odmítnutá', en: 'Rejected' },
+  'nahled.stavNabidky.CANCELLED': { cs: 'Zrušená', en: 'Cancelled' },
+  'nahled.stavNabidkyKlient.SENT': { cs: 'Čeká na schválení', en: 'Awaiting approval' },
+  'nahled.stavFaktury.DRAFT': { cs: 'Rozepsaná', en: 'Draft' },
+  'nahled.stavFaktury.SENT': {
+    cs: 'Vystavená, čeká na úhradu',
+    en: 'Issued, awaiting payment',
+  },
+  'nahled.stavFaktury.PAID': { cs: 'Uhrazená', en: 'Paid' },
+  'nahled.stavFaktury.CANCELLED': { cs: 'Stornovaná', en: 'Cancelled' },
 };
 
 /**

@@ -23,6 +23,7 @@ import {
   type ZapisVeFronte,
 } from '@/lib/preposlechOffline';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -1000,7 +1001,7 @@ export function Preposlech({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setZDisku('nejde');
-        setPoznamka(data?.error || t('preposlech.chybaSlozka'));
+        setPoznamka(hlaskaChyby(data, t, t('preposlech.chybaSlozka')));
         return;
       }
 
@@ -1415,7 +1416,7 @@ export function Preposlech({
       if (!res.ok) {
         // Offline stranka ze service workeru odpovi 503 - taky fronta.
         if (res.status === 503 && offline && !navigator.onLine) throw new TypeError('offline');
-        setChybaHlaska(data?.error || t('preposlech.chybaUlozit'));
+        setChybaHlaska(hlaskaChyby(data, t, t('preposlech.chybaUlozit')));
         return false;
       }
       setStav(data as Stav);
@@ -1685,7 +1686,7 @@ export function Preposlech({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChybaHlaska(data?.error || t('preposlech.chybaVratit'));
+        setChybaHlaska(hlaskaChyby(data, t, t('preposlech.chybaVratit')));
         return;
       }
       // Vraceni meni i seznam poznamek, takze se stav nacte cely znovu.

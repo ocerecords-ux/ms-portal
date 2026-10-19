@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAccessToken } from '@/lib/googleDrive';
 import { souborPreposlechu } from '@/lib/preposlechDriveServer';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Výdej jednoho souboru ze složky projektu pro přeposlech (zadání 11. 9.
@@ -24,13 +25,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!pristup.ok) return NextResponse.json({ error: pristup.message }, { status: pristup.status });
 
   const fileId = req.nextUrl.searchParams.get('soubor');
-  if (!fileId) return NextResponse.json({ error: 'Chybí ID souboru.' }, { status: 400 });
+  if (!fileId) return odpovedChyby('chybaApi.chybiIdSouboru', 400);
 
   const soubor = await souborPreposlechu(params.id, fileId);
   if (!soubor.ok) return NextResponse.json({ error: soubor.duvod }, { status: soubor.status });
 
   const token = await getAccessToken();
-  if (!token) return NextResponse.json({ error: 'Napojení na Disk není nastavené.' }, { status: 503 });
+  if (!token) return odpovedChyby('chybaApi.diskNeniNastaveny', 503);
 
   const rozsah = req.headers.get('range');
   const odpoved = await fetch(
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   if (!odpoved.ok || !odpoved.body) {
     console.error('Vydej souboru pro preposlech selhal:', odpoved.status);
-    return NextResponse.json({ error: 'Soubor se nepodařilo načíst.' }, { status: 502 });
+    return odpovedChyby('chybaApi.souborNejdeNacist', 502);
   }
 
   const hlavicky = new Headers();

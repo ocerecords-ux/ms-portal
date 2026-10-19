@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Vrácení jednoho kroku v přeposlechu (zadání 12. 9. 2026: „v té historii bych
@@ -63,17 +64,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const udalost = await prisma.preposlechUdalost.findFirst({
     where: { id: parsed.data.udalost, caflouProjectId: params.id },
   });
-  if (!udalost) return NextResponse.json({ error: 'Krok se nenašel.' }, { status: 404 });
+  if (!udalost) return odpovedChyby('preposlechApi.krokNenalezen', 404);
   if (udalost.vracenoAt) {
-    return NextResponse.json({ error: 'Tenhle krok už je vrácený.' }, { status: 409 });
+    return odpovedChyby('preposlechApi.krokUzVraceny', 409);
   }
   if (!udalost.chybaId || !['PRIDANA', 'UPRAVENA', 'SMAZANA'].includes(udalost.typ)) {
-    return NextResponse.json({ error: 'Tenhle krok vrátit nejde.' }, { status: 400 });
+    return odpovedChyby('preposlechApi.krokVratitNejde', 400);
   }
 
   const snimek = (udalost.snimek ?? {}) as Snimek;
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     : pristup.userId
       ? (snimek.createdByUserId ?? null) === pristup.userId
       : (snimek.createdByUserId ?? null) === null;
-  if (!smi) return NextResponse.json({ error: 'Vrátit jde jen vlastní krok.' }, { status: 403 });
+  if (!smi) return odpovedChyby('preposlechApi.vratitJenVlastni', 403);
 
   let popis = '';
 
@@ -96,19 +97,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     popis = 'Vrátil(a) přidání poznámky — poznámka je pryč.';
   } else if (udalost.typ === 'UPRAVENA') {
     if (typeof snimek.description !== 'string') {
-      return NextResponse.json({ error: 'K tomuhle kroku chybí předchozí znění.' }, { status: 400 });
+      return odpovedChyby('preposlechApi.chybiPredchoziZneni', 400);
     }
     const kolik = await prisma.preposlechChyba.updateMany({
       where: { id: udalost.chybaId, caflouProjectId: params.id },
       data: { description: snimek.description },
     });
     if (kolik.count === 0) {
-      return NextResponse.json({ error: 'Poznámka už neexistuje.' }, { status: 404 });
+      return odpovedChyby('preposlechApi.poznamkaNeexistuje', 404);
     }
     popis = 'Vrátil(a) úpravu — poznámka je v předchozím znění.';
   } else {
     if (!snimek.trackName || typeof snimek.trackIndex !== 'number' || !snimek.description) {
-      return NextResponse.json({ error: 'K tomuhle kroku chybí obsah poznámky.' }, { status: 400 });
+      return odpovedChyby('preposlechApi.chybiObsahPoznamky', 400);
     }
     await prisma.preposlechChyba.create({
       data: {

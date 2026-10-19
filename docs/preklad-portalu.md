@@ -90,6 +90,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7m | 15. 10. | Co nejde přes slovník: datum a čas natvrdo `cs-CZ` (natáčecí plán klienta, hosté natáčení, Tagy, kurz ČNB u faktury i výdaje) a řetězce v bublinách, `aria-label` a záložních hláškách (hlavička přehledu projektů, zkušební pult, přihlašovací jméno bez e-mailu) | [x] |
 | 7n | 17. 10. | Formáty, na které se nikdo nezeptal: datum skládané ručně z `getDate()` (karta Hudba, knihovna hudby, veřejná stránka hudby, odznak frekvencí, rozsah týdne u splatností) a desetinná čárka natvrdo u velikostí souborů (hudba, přílohy chatu i dotazů, příběhy) + šest odkazů v liště, které slovník odkazů neznal | [x] |
 | 7o | 18. 10. | **Routy v `api/**` — rozhodnuto**: hlášky z rout chodí s KLÍČEM vedle české věty a obrazovka si je přeloží (`lib/chybyApi.ts` + `lib/chybaZOdpovedi.ts`). Udělaná celá hudba (19 rout) a k tomu číselníky Novinek (publika, druhy, názvy měsíců) | [x] |
+| 7p | 19. 10. | Přeposlech a náhledová okna — hlášky devíti rout přeposlechu klíčem (vzor z 7o) a tři routy náhledu pod ikonou (přeposlech, doklad, klientský doklad), které posílají hotový text a jazyk si proto berou z cookie | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1595,6 +1596,63 @@ takže `ODKAZY_EN` je kompletní.
    český formát, takže to anglickou verzi nebolí; sjednotit se dá, až se bude
    sahat do přehledu.
 5. Oznámení pod zvonkem a zapojení pošty — dávka 6, viz níž.
+
+### Dávka 7p je HOTOVÁ (19. 10. 2026)
+
+Dvě věci, obě o přeposlechu a o okně, které se otevře klikem na ikonu
+v přehledu: **10 rout, 4 obrazovky, 41 hlášek a slovník +66 klíčů
+(5 963 → 6 029)**.
+
+**1. Routy přeposlechu jdou vzorem z dávky 7o** — `odpovedChyby(klíč, status)`
+v routě, `hlaskaChyby(data, t, záloha)` na obrazovce. Devět rout
+(`api/projekty/[id]/preposlech/*` a `api/nahled/preposlech`), 30 míst, z toho
+„Nemáte oprávnění." a „Neplatná data." ve třinácti. Záznam chyby
+v AudioTaggeru je podle slovníčku **tag**, takže „Upravit jde jen vlastní
+záznam." je „You can only edit your own tag." Obrazovky, které chybu ukazují:
+`Preposlech.tsx`, `OdkazProKlienta.tsx`, `RezimNevidomi.tsx` a `NahledIkony.tsx`.
+
+**2. Náhledová okna si JAZYK BEROU Z COOKIE — a je to v pořádku.** Tři routy
+(`api/nahled/preposlech`, `api/nahled/doklad`, `api/klient/doklady/nahled`)
+neposílají na obrazovku klíče, ale HOTOVÉ ŘÁDKY: okno je jen vykreslí a žádný
+slovník nezná. Klíč by tu znamenal poslat ke každému řádku ještě popis, co se
+do něj má dosadit. Proto si tyhle tři routy berou `nactiJazyk()` — a smí to,
+protože **chodí sem výhradně klik z prohlížeče**: cookie je tedy vždycky po
+ruce a výjimka z dávky 7o (cron, akce jménem někoho jiného) se jich netýká.
+Pravidlo 1 platí dál, čeština je ve slovníku zdrojem pravdy.
+
+Přeložilo se: nadpis a tlačítko okna, všechny popisy řádků (Odběratel,
+Celkem s DPH, Splatnost, Variabilní symbol…), stavy nabídky a faktury
+(celé věty „Odeslaná, čeká na schválení", proto vlastní klíče `nahled.stav*`,
+ne jednoslovné značky z přehledu dokladů), a věty s čísly jedním klíčem se
+značkou („{poslechnuto} z {celkem} poslechnuto"). Datum šlo přes `formatDatum`
+místo natvrdo psaného `cs-CZ`, částky přes `formatMoney(…, jazyk)` a upomínky
+přes `kdyOdesla/kdyPujde/popisPoradi(…, jazyk)` — ty jazyk uměly už od dávky
+7h, jen jim ho nikdo nepředával.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (30 řádků beze změny).
+
+**Co se našlo a NEDĚLALO se to (schválně):**
+
+1. **Řádky objednávky v klientském náhledu** zůstávají české. Skládá je
+   `popisObjednavky` v `lib/objednavkaKlientaServer.ts` a ze stejného zdroje
+   čte i PDF objednávky — a to se řídí jazykem dokladu, ne přepínačem v liště
+   (pravidlo 5). Rozdělit to je vlastní úkol: `popisObjednavky` by jazyk
+   dostávalo parametrem s výchozí češtinou (jako `formatMoney`), ale táhne za
+   sebou `nazvySluzeb`, `popisDelky` a `popisVystupu`.
+2. **Zápisy do historie přeposlechu** („Vrátil(a) úpravu — poznámka je
+   v předchozím znění.") se NEPŘEKLÁDAJÍ a je to správně: `zapisUdalost` je
+   ukládá do databáze jako hotový text, stejná třída problému jako `notify()`
+   u oznámení pod zvonkem (viz dávka 6). Co je jednou uložené, jazyk nezmění.
+3. **Hlášky ze `zod` schémat** v `preposlech/route.ts` (dvě místa) — pořád
+   otevřené z dávky 7o, čeká to na vlastní úkol.
+4. Druhá polovina dávky 6 — zapojení pošty a oznámení pod zvonkem.
+
+**Kolik ještě zbývá v `api/**`:** hrubý odhad `grep` je **1 025 českých hlášek
+v `error:`** napříč routami. Nejvíc jich je v administraci (336), pak
+`projects` (99), `kalendar` (99), `projekty` (87), `chat` (52) a `site` (51).
+Vzor je hotový a jde po oblastech; hudba (7o) a přeposlech (7p) jsou první dvě.
+Další na řadě by podle viditelnosti pro klienta byly `api/site/*`,
+`api/chat/*` a `api/klient/*`.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

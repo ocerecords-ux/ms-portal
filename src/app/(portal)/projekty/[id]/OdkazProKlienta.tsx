@@ -4,6 +4,7 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { kodJazyka } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Odkaz do AudioTaggeru pro klienta (zadání 11. 9. 2026).
@@ -51,7 +52,7 @@ export function OdkazProKlienta({
       const res = await fetch(url, init);
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || t('odkazKl.nepovedlo'));
+        setChyba(hlaskaChyby(data, t, t('odkazKl.nepovedlo')));
         return;
       }
       setStav(data as StavOdkazu);

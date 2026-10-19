@@ -4,6 +4,9 @@ import { kdoJe } from '@/lib/kdoJe';
 import { computeTotals, formatMoney } from '@/lib/doklady';
 import { stavyUpominek } from '@/lib/upominkyServer';
 import { kdyOdesla, kdyPujde, popisPoradi } from '@/lib/upominkaStav';
+import { odpovedChyby } from '@/lib/chybyApi';
+import { formatDatum, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * NÁHLED DOKLADU POD IKONOU V PŘEHLEDU (zadání 26. 9. 2026: „u dokladu se
@@ -21,40 +24,62 @@ import { kdyOdesla, kdyPujde, popisPoradi } from '@/lib/upominkaStav';
  */
 export const dynamic = 'force-dynamic';
 
-const den = (d: Date | null | undefined) =>
-  d ? d.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }) : null;
+/**
+ * JAZYK AŽ TADY (dávka 7p, 19. 10. 2026). Okno dostává hotové řádky, ne klíče,
+ * takže si routa jazyk bere z cookie přes `nactiJazyk()`. Chodí sem výhradně
+ * klik z prohlížeče, nikdy cron ani akce jménem někoho jiného - výjimka
+ * z dávky 7o se téhle routy netýká.
+ */
+const den = (jazyk: Jazyk, d: Date | null | undefined) =>
+  d ? formatDatum(jazyk, d) : null;
 
-const STAV_NABIDKY: Record<string, string> = {
-  DRAFT: 'Rozepsaná',
-  SENT: 'Odeslaná, čeká na schválení',
-  APPROVED: 'Schválená',
-  REJECTED: 'Odmítnutá',
-  CANCELLED: 'Zrušená',
+/**
+ * Stav dokladu je tu CELÁ VĚTA („Odeslaná, čeká na schválení"), ne jednoslovná
+ * značka z přehledu dokladů - proto vlastní klíče. Neznámý stav projde kódem,
+ * jak procházel dřív.
+ */
+const KLIC_STAVU_NABIDKY: Record<string, string> = {
+  DRAFT: 'nahled.stavNabidky.DRAFT',
+  SENT: 'nahled.stavNabidky.SENT',
+  APPROVED: 'nahled.stavNabidky.APPROVED',
+  REJECTED: 'nahled.stavNabidky.REJECTED',
+  CANCELLED: 'nahled.stavNabidky.CANCELLED',
 };
 
-const STAV_FAKTURY: Record<string, string> = {
-  DRAFT: 'Rozepsaná',
-  SENT: 'Vystavená, čeká na úhradu',
-  PAID: 'Uhrazená',
-  CANCELLED: 'Stornovaná',
+const KLIC_STAVU_FAKTURY: Record<string, string> = {
+  DRAFT: 'nahled.stavFaktury.DRAFT',
+  SENT: 'nahled.stavFaktury.SENT',
+  PAID: 'nahled.stavFaktury.PAID',
+  CANCELLED: 'nahled.stavFaktury.CANCELLED',
+};
+
+const stavNabidky = (jazyk: Jazyk, stav: string) => {
+  const klic = KLIC_STAVU_NABIDKY[stav];
+  return klic ? prelozit(jazyk, klic) : stav;
+};
+
+const stavFaktury = (jazyk: Jazyk, stav: string) => {
+  const klic = KLIC_STAVU_FAKTURY[stav];
+  return klic ? prelozit(jazyk, klic) : stav;
 };
 
 export async function GET(req: NextRequest) {
   const ja = await kdoJe(req);
-  if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+  if (!ja) return odpovedChyby('chybaApi.neprihlaseno', 401);
 
   const ucet = await prisma.user.findUnique({
     where: { id: ja.id },
     select: { vidiBanku: true, role: true },
   });
   if (!ucet || (!ucet.vidiBanku && ucet.role !== 'ADMIN')) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
+  const jazyk = nactiJazyk();
   const druh = req.nextUrl.searchParams.get('druh');
   const id = req.nextUrl.searchParams.get('id');
   if (!id || (druh !== 'nabidka' && druh !== 'faktura')) {
-    return NextResponse.json({ error: 'Chybí doklad.' }, { status: 400 });
+    return odpovedChyby('nahled.chybiDoklad', 400);
   }
 
   if (druh === 'nabidka') {
@@ -62,24 +87,33 @@ export async function GET(req: NextRequest) {
       where: { id },
       include: { items: true, company: { select: { name: true } } },
     });
-    if (!n) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
+    if (!n) return odpovedChyby('nahled.nabidkaNenalezena', 404);
     const soucty = computeTotals(n.items, n);
     return NextResponse.json({
-      nadpis: `Nabídka ${n.number}`,
+      nadpis: prelozitS(jazyk, 'nahled.nabidkaCislo', { cislo: n.number }),
       odkaz: `/admin/doklady/nabidky/${n.id}`,
-      tlacitko: 'Otevřít nabídku',
+      tlacitko: prelozit(jazyk, 'nahled.otevritNabidku'),
       radky: [
-        { popis: 'Odběratel', hodnota: n.company?.name ?? '—' },
-        { popis: 'Předmět', hodnota: n.subject || n.projectName || '—' },
-        { popis: 'Celkem s DPH', hodnota: formatMoney(soucty.incVat, n.currency), duraz: true },
-        { popis: 'Vystaveno', hodnota: den(n.issueDate) ?? '—' },
-        { popis: 'Platí do', hodnota: den(n.validUntil) ?? '—' },
-        { popis: 'Odesláno', hodnota: den(n.sentAt) ?? 'Zatím neodesláno' },
+        { popis: prelozit(jazyk, 'nahled.odberatel'), hodnota: n.company?.name ?? '—' },
+        { popis: prelozit(jazyk, 'nahled.predmet'), hodnota: n.subject || n.projectName || '—' },
         {
-          popis: 'Stav',
+          popis: prelozit(jazyk, 'nahled.celkemSDph'),
+          hodnota: formatMoney(soucty.incVat, n.currency, jazyk),
+          duraz: true,
+        },
+        { popis: prelozit(jazyk, 'nahled.vystaveno'), hodnota: den(jazyk, n.issueDate) ?? '—' },
+        { popis: prelozit(jazyk, 'nahled.platiDo'), hodnota: den(jazyk, n.validUntil) ?? '—' },
+        {
+          popis: prelozit(jazyk, 'nahled.odeslano'),
+          hodnota: den(jazyk, n.sentAt) ?? prelozit(jazyk, 'nahled.zatimNeodeslano'),
+        },
+        {
+          popis: prelozit(jazyk, 'nahled.stav'),
           hodnota:
-            (STAV_NABIDKY[n.status] ?? n.status) +
-            (n.approvedAt ? ` · ${den(n.approvedAt)}${n.approvedByName ? ` (${n.approvedByName})` : ''}` : ''),
+            stavNabidky(jazyk, n.status) +
+            (n.approvedAt
+              ? ` · ${den(jazyk, n.approvedAt)}${n.approvedByName ? ` (${n.approvedByName})` : ''}`
+              : ''),
         },
       ],
     });
@@ -89,7 +123,7 @@ export async function GET(req: NextRequest) {
     where: { id },
     include: { items: true, company: { select: { name: true } } },
   });
-  if (!f) return NextResponse.json({ error: 'Faktura nenalezena.' }, { status: 404 });
+  if (!f) return odpovedChyby('nahled.fakturaNenalezena', 404);
   const soucty = computeTotals(f.items, f);
   /**
    * UPOMÍNKA DO BUBLINY (zadání 29. 9. 2026: „chci to vidět i v tom rychlém
@@ -104,29 +138,33 @@ export async function GET(req: NextRequest) {
       : 0;
 
   return NextResponse.json({
-    nadpis: `Faktura ${f.number}`,
+    nadpis: prelozitS(jazyk, 'nahled.fakturaCislo', { cislo: f.number }),
     odkaz: `/admin/doklady/faktury/${f.id}`,
-    tlacitko: 'Otevřít fakturu',
+    tlacitko: prelozit(jazyk, 'nahled.otevritFakturu'),
     radky: [
-      { popis: 'Odběratel', hodnota: f.company?.name ?? '—' },
-      { popis: 'Celkem s DPH', hodnota: formatMoney(soucty.incVat, f.currency), duraz: true },
-      { popis: 'Vystaveno', hodnota: den(f.issueDate) ?? '—' },
+      { popis: prelozit(jazyk, 'nahled.odberatel'), hodnota: f.company?.name ?? '—' },
       {
-        popis: 'Splatnost',
-        hodnota: `${den(f.dueDate) ?? '—'}${poSplatnosti > 0 ? ` · ${poSplatnosti} dní po splatnosti` : ''}`,
+        popis: prelozit(jazyk, 'nahled.celkemSDph'),
+        hodnota: formatMoney(soucty.incVat, f.currency, jazyk),
+        duraz: true,
+      },
+      { popis: prelozit(jazyk, 'nahled.vystaveno'), hodnota: den(jazyk, f.issueDate) ?? '—' },
+      {
+        popis: prelozit(jazyk, 'nahled.splatnost'),
+        hodnota: `${den(jazyk, f.dueDate) ?? '—'}${poSplatnosti > 0 ? ` · ${prelozitS(jazyk, 'upominky.dniPoSplatnosti', { dnu: poSplatnosti })}` : ''}`,
         varovani: poSplatnosti > 0,
       },
-      { popis: 'Variabilní symbol', hodnota: f.variableSymbol },
+      { popis: prelozit(jazyk, 'nahled.variabilniSymbol'), hodnota: f.variableSymbol },
       {
-        popis: 'Stav',
-        hodnota: (STAV_FAKTURY[f.status] ?? f.status) + (f.paidAt ? ` · ${den(f.paidAt)}` : ''),
+        popis: prelozit(jazyk, 'nahled.stav'),
+        hodnota: stavFaktury(jazyk, f.status) + (f.paidAt ? ` · ${den(jazyk, f.paidAt)}` : ''),
       },
       ...(upominka && upominka.odeslane.length > 0
         ? [
             {
-              popis: 'Odeslané upomínky',
+              popis: prelozit(jazyk, 'nahled.odeslaneUpominky'),
               hodnota: upominka.odeslane
-                .map((o) => `${o.poradi}. ${kdyOdesla(o.kdy)}`)
+                .map((o) => `${o.poradi}. ${kdyOdesla(o.kdy, jazyk)}`)
                 .reverse()
                 .join(' · '),
             },
@@ -135,8 +173,8 @@ export async function GET(req: NextRequest) {
       ...(upominka?.dalsi
         ? [
             {
-              popis: 'Další upomínka',
-              hodnota: `${popisPoradi(upominka.dalsi.poradi)} ${kdyPujde(upominka.dalsi)}`,
+              popis: prelozit(jazyk, 'nahled.dalsiUpominka'),
+              hodnota: `${popisPoradi(upominka.dalsi.poradi, jazyk)} ${kdyPujde(upominka.dalsi, jazyk)}`,
               // Svítí jen den dopředu - jinak by u faktury, která visí měsíc,
               // svítilo pořád něco a člověk by to přestal vnímat.
               varovani: upominka.dalsi.zaDnu <= 1,

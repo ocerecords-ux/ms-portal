@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * NÁHLED POD IKONOU V PŘEHLEDU PROJEKTŮ (zadání 25. 9. 2026: „když kliknu na
@@ -108,7 +109,7 @@ export function NahledIkony({
           const res = await fetch(adresaNahledu(druh, id, klient));
           const o = await res.json().catch(() => ({}));
           if (!res.ok) {
-            setChyba(o?.error || t('ikony.nahledNenacten'));
+            setChyba(hlaskaChyby(o, t, t('ikony.nahledNenacten')));
             return;
           }
           setData(o as Nahled);

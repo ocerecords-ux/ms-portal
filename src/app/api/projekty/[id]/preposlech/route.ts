@@ -6,6 +6,7 @@ import { STAV_PREPOSLECH_HOTOVO } from '@/lib/notifikaceFirmy';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
 import { oznamDokoncenyPreposlech } from '@/lib/brunoOznameni';
 import { preklopNaOpravujeme } from '@/lib/opravujemeServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Záznamy chyb z přeposlechu nahrávky (AudioTagger) — zadání 11. 9. 2026.
@@ -43,7 +44,7 @@ async function over(req: NextRequest, caflouProjectId: string, jenInterni: boole
     return { chyba: NextResponse.json({ error: pristup.message }, { status: pristup.status }) };
   }
   if (jenInterni && !pristup.interni) {
-    return { chyba: NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 }) };
+    return { chyba: odpovedChyby('chybaApi.bezOpravneni', 403) };
   }
   return {
     userId: pristup.userId,
@@ -352,9 +353,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     where: { id: parsed.data.chyba, caflouProjectId: params.id },
     select: { id: true, createdByUserId: true, description: true },
   });
-  if (!chyba) return NextResponse.json({ error: 'Záznam se nenašel.' }, { status: 404 });
+  if (!chyba) return odpovedChyby('preposlechApi.zaznamNenalezen', 404);
   if (!smiUpravit(chyba, pristup)) {
-    return NextResponse.json({ error: 'Upravit jde jen vlastní záznam.' }, { status: 403 });
+    return odpovedChyby('preposlechApi.upravitJenVlastni', 403);
   }
 
   await prisma.preposlechChyba.update({
@@ -377,14 +378,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (zamek) return zamek;
 
   const chybaId = req.nextUrl.searchParams.get('chyba');
-  if (!chybaId) return NextResponse.json({ error: 'Chybí ID záznamu.' }, { status: 400 });
+  if (!chybaId) return odpovedChyby('preposlechApi.chybiIdZaznamu', 400);
 
   const chyba = await prisma.preposlechChyba.findFirst({
     where: { id: chybaId, caflouProjectId: params.id },
   });
   if (!chyba) return NextResponse.json(await stav(params.id, pristup));
   if (!smiUpravit(chyba, pristup)) {
-    return NextResponse.json({ error: 'Smazat jde jen vlastní záznam.' }, { status: 403 });
+    return odpovedChyby('preposlechApi.smazatJenVlastni', 403);
   }
 
   await prisma.preposlechChyba.delete({ where: { id: chyba.id } });

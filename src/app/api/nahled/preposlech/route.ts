@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { kdoJe } from '@/lib/kdoJe';
 import { isInternalRole } from '@/lib/roles';
+import { odpovedChyby } from '@/lib/chybyApi';
+import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * NÁHLED PŘEPOSLECHU POD IKONOU V PŘEHLEDU (zadání 26. 9. 2026: „u
@@ -15,22 +18,39 @@ import { isInternalRole } from '@/lib/roles';
  */
 export const dynamic = 'force-dynamic';
 
-const den = (d: Date | null | undefined) =>
+/**
+ * JAZYK AŽ TADY (dávka 7p, 19. 10. 2026). Okno dostává hotové řádky, ne klíče,
+ * takže si routa jazyk musí vzít sama - z cookie, kterou nastavuje přepínač
+ * v liště. Chodí sem výhradně klik z prohlížeče, takže cookie je vždycky
+ * k dispozici; výjimka z dávky 7o (cron a akce jménem někoho jiného) se téhle
+ * routy netýká.
+ */
+const den = (jazyk: Jazyk, d: Date | null | undefined) =>
   d
-    ? d.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague', day: 'numeric', month: 'numeric' }) +
+    ? new Intl.DateTimeFormat(kodJazyka(jazyk), {
+        timeZone: 'Europe/Prague',
+        day: 'numeric',
+        month: 'numeric',
+      }).format(d) +
       ' ' +
-      d.toLocaleTimeString('cs-CZ', { timeZone: 'Europe/Prague', hour: '2-digit', minute: '2-digit' })
+      new Intl.DateTimeFormat(kodJazyka(jazyk), {
+        timeZone: 'Europe/Prague',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(d)
     : null;
 
 export async function GET(req: NextRequest) {
   const ja = await kdoJe(req);
-  if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+  if (!ja) return odpovedChyby('chybaApi.neprihlaseno', 401);
   if (!isInternalRole(ja.role as never)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
+  const jazyk = nactiJazyk();
   const projekt = req.nextUrl.searchParams.get('projekt');
-  if (!projekt) return NextResponse.json({ error: 'Chybí projekt.' }, { status: 400 });
+  if (!projekt) return odpovedChyby('chybaApi.chybiProjekt', 400);
 
   const [stav, stopy, chyby, posledniChyba, posledniStopa] = await Promise.all([
     prisma.preposlechStav.findUnique({ where: { caflouProjectId: projekt } }),
@@ -62,33 +82,52 @@ export async function GET(req: NextRequest) {
 
   const posledni =
     posledniChyba && (!posledniStopa || posledniChyba.createdAt > posledniStopa.poslechnutoAt)
-      ? `${den(posledniChyba.createdAt)}${posledniChyba.createdByName ? ` · ${posledniChyba.createdByName}` : ''}`
+      ? `${den(jazyk, posledniChyba.createdAt)}${posledniChyba.createdByName ? ` · ${posledniChyba.createdByName}` : ''}`
       : posledniStopa
-        ? `${den(posledniStopa.poslechnutoAt)}${posledniStopa.kdo ? ` · ${posledniStopa.kdo}` : ''}`
+        ? `${den(jazyk, posledniStopa.poslechnutoAt)}${posledniStopa.kdo ? ` · ${posledniStopa.kdo}` : ''}`
         : null;
 
   return NextResponse.json({
-    nadpis: 'Přeposlech',
+    nadpis: prelozit(jazyk, 'nahled.preposlech'),
     odkaz: `/projekty/${encodeURIComponent(projekt)}?zalozka=preposlech`,
-    tlacitko: 'Otevřít přeposlech',
+    tlacitko: prelozit(jazyk, 'nahled.otevritPreposlech'),
     radky: [
       {
-        popis: 'Stopy',
-        hodnota: celkem > 0 ? `${poslechnuto} z ${celkem} poslechnuto` : 'Zatím žádné stopy',
+        popis: prelozit(jazyk, 'nahled.stopy'),
+        hodnota:
+          celkem > 0
+            ? prelozitS(jazyk, 'nahled.stopyPoslechnuto', { poslechnuto, celkem })
+            : prelozit(jazyk, 'nahled.zadneStopy'),
         duraz: true,
       },
-      { popis: 'Odbaveno', hodnota: celkem > 0 ? `${hotovo} z ${celkem} označeno hotovo` : '—' },
-      { popis: 'Zápisy chyb', hodnota: chyby > 0 ? `${chyby}` : 'Žádné', varovani: chyby > 0 },
+      {
+        popis: prelozit(jazyk, 'nahled.odbaveno'),
+        hodnota: celkem > 0 ? prelozitS(jazyk, 'nahled.odbavenoHotovo', { hotovo, celkem }) : '—',
+      },
+      {
+        popis: prelozit(jazyk, 'nahled.zapisyChyb'),
+        hodnota: chyby > 0 ? `${chyby}` : prelozit(jazyk, 'nahled.zadne'),
+        varovani: chyby > 0,
+      },
       ...(procent !== null
-        ? [{ popis: 'Text slyšen', hodnota: `${procent} % (${slysenych} z ${stran} stran)` }]
+        ? [
+            {
+              popis: prelozit(jazyk, 'nahled.textSlysen'),
+              hodnota: prelozitS(jazyk, 'nahled.textSlysenHodnota', {
+                procent,
+                slysenych,
+                stran,
+              }),
+            },
+          ]
         : []),
       {
-        popis: 'Stav',
+        popis: prelozit(jazyk, 'nahled.stav'),
         hodnota: stav?.reviewed
-          ? `Zkontrolováno${stav.reviewedAt ? ` · ${den(stav.reviewedAt)}` : ''}${stav.reviewedByName ? ` (${stav.reviewedByName})` : ''}`
-          : 'Čeká na přeposlech',
+          ? `${prelozit(jazyk, 'nahled.zkontrolovano')}${stav.reviewedAt ? ` · ${den(jazyk, stav.reviewedAt)}` : ''}${stav.reviewedByName ? ` (${stav.reviewedByName})` : ''}`
+          : prelozit(jazyk, 'nahled.cekaNaPreposlech'),
       },
-      ...(posledni ? [{ popis: 'Naposledy', hodnota: posledni }] : []),
+      ...(posledni ? [{ popis: prelozit(jazyk, 'nahled.naposledy'), hodnota: posledni }] : []),
     ],
   });
 }

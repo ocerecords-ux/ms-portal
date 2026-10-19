@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * „Tuhle stopu jsem doposlechl" (zadání 12. 9. 2026: „Přeposlechnuto — tam
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!pristup.ok) return NextResponse.json({ error: pristup.message }, { status: pristup.status });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   /**
    * NÁŠ POSLECH KLIENTOVI NIC NEPŘEPISUJE (zadání 21. 9. 2026: „chceme, abychom
@@ -77,6 +78,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('Zapis preposlechnute stopy selhal:', err);
-    return NextResponse.json({ error: 'Nepodařilo se to uložit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.ulozitNepodarilo', 500);
   }
 }

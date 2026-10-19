@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { pridejStrany, spocitejPostup } from '@/lib/preposlechPostup';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Záložka v přeposlechu (zadání 11. 9. 2026: „aby si nějak jednoduše
@@ -116,7 +117,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!kdoJe.posluchac) return NextResponse.json({ ulozeno: false });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const spolecne = {
     trackIndex: parsed.data.trackIndex,
