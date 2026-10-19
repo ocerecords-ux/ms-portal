@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePreklad } from '@/components/PrekladProvider';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * CO PŘESNĚ KLIENTOVI ODEŠLO (zadání 19. 10. 2026: „a tady v historii, když
