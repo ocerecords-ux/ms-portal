@@ -244,6 +244,24 @@ async function provozniKonflikty(
   return konflikty;
 }
 
+/**
+ * PROČ JE TO MOJE UDÁLOST (19. 10. 2026: „proč mám tuhle událost, když je to
+ * Melvil a měla by tam být Veronika?").
+ *
+ * Kdo má na kartě účtu zaškrtnutou REŽII NA DÁLKU, má mezi svými událostmi
+ * i ty, kde není zvukař ani herec - první frekvenci herce na projektu a každý
+ * casting. Je to tak schválně: na ně se připojuje, i když u pultu sedí někdo
+ * jiný. Jenže v seznamu konfliktů z toho byl jen název knihy a studio, takže
+ * to vypadalo jako cizí natáčení, které se tam připletlo.
+ *
+ * Značka to říká rovnou. Odškrtnout se dá u konkrétní události v kalendáři
+ * („Režie na dálku"), pak z konfliktů zmizí.
+ */
+function popisUdalosti(u: { nazev: string; studio: string | null; rezie?: boolean }): string {
+  const zaklad = u.studio ? `${u.nazev} (${u.studio})` : u.nazev;
+  return u.rezie ? `${zaklad} · režie na dálku` : zaklad;
+}
+
 /** Co se překrývá mně - moje natáčení, střihy, castingy, porady i schůzky. */
 async function mojeKonflikty(userId: string, od: Date, doKdy: Date): Promise<Konflikt[]> {
   const udalosti = await udalostiCloveka(userId, od, doKdy).catch(() => []);
@@ -268,8 +286,8 @@ async function mojeKonflikty(userId: string, od: Date, doKdy: Date): Promise<Kon
         duvod: 'Máte dvě věci naráz',
         duvodyKlice: [{ klic: 'konflikty.duvodDveVeciNaraz' }],
         udalosti: [
-          { cas: a.cas, popis: a.studio ? `${a.nazev} (${a.studio})` : a.nazev },
-          { cas: b.cas, popis: b.studio ? `${b.nazev} (${b.studio})` : b.nazev },
+          { cas: a.cas, popis: popisUdalosti(a) },
+          { cas: b.cas, popis: popisUdalosti(b) },
         ],
       });
     }
