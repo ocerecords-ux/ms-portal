@@ -6640,6 +6640,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'This is where the text to be recorded goes. Type it, paste it, or upload it from Word.',
   },
   'vystupy.textChyba': { cs: 'Soubor se nepodařilo přečíst.', en: 'The file could not be read.' },
+  // Zvětšení náhledu a základní formátování textu spotu (19. 10. 2026).
+  'vystupy.zvetsitText': { cs: 'Zvětšit', en: 'Zoom in' },
+  'vystupy.zmensitText': { cs: 'Zmenšit', en: 'Zoom out' },
+  'vystupy.puvodniVelikost': { cs: 'Původní velikost', en: 'Actual size' },
+  'vystupy.tucne': { cs: 'Tučně', en: 'Bold' },
+  'vystupy.kurziva': { cs: 'Kurzíva', en: 'Italic' },
+  'vystupy.podtrzeno': { cs: 'Podtrženo', en: 'Underline' },
+  'vystupy.formatovaniNapoveda': {
+    cs: 'Obalí označený text značkou — **tučně**, *kurzíva*, _podtrženo_.',
+    en: 'Wraps the selection in markers — **bold**, *italic*, _underline_.',
+  },
   'vystupy.textFormat': {
     cs: 'Nahrát jde .docx (Word), .txt a .md. Uloží se spolu s výstupem tlačítkem Uložit.',
     en: 'You can upload .docx (Word), .txt and .md. It is saved together with the deliverable using Save.',

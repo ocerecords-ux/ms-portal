@@ -134,6 +134,34 @@ const escapeHtml = (text: string): string =>
     .replace(/"/g, '&quot;');
 
 /**
+ * ZÁKLADNÍ FORMÁTOVÁNÍ TEXTU SPOTU (zadání 19. 10. 2026: „a taky nejake
+ * zakladni formatovani").
+ *
+ * Text se píše a ukládá dál jako PROSTÝ TEXT - přichází zkopírovaný z Wordu,
+ * z mailu i nahraný ze souboru, a textové pole, do kterého jde kdykoliv něco
+ * vložit, je u scénáře k nezaplacení. Formátování je proto jen pár značek
+ * v textu, ne editor s neviditelným HTML na pozadí:
+ *
+ *     **tučně**     *kurzíva*     _podtrženo_
+ *
+ * Tlačítka B/I/U u pole je jen obalí kolem výběru - kdo je nechce, píše dál
+ * prostý text a nic se neděje.
+ *
+ * PROČ PRÁVĚ `<b>`, `<i>`, `<u>`: list se na Disku převádí na dokument Google
+ * a ten si bere inline značky. Stejná úvaha jako u odsazení nezlomitelnými
+ * mezerami níž - co nepřežije převod, nemá smysl do listu psát.
+ *
+ * Pracuje se až s TEXTEM PO ESCAPOVÁNÍ, takže `<b>` napsané rukou se pořád
+ * ukáže jako text, ne jako značka.
+ */
+function znacky(escapovany: string): string {
+  return escapovany
+    .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?![*\w])/g, '$1<i>$2</i>')
+    .replace(/(^|[^_\w])_([^_\n]+)_(?![_\w])/g, '$1<u>$2</u>');
+}
+
+/**
  * Odstavce z prostého textu. Prázdný řádek = nový odstavec, jednoduchý řádek
  * zůstane řádkem. Styl se píše rovnou do atributu: Disk si při převodu na
  * dokument bere inline styly, na <style> v hlavičce se spolehnout nedá.
@@ -150,7 +178,7 @@ function odstavce(text: string, styl: string, stylPrvniho?: string): string {
       const pouzity = i === 0 && stylPrvniho ? stylPrvniho : styl;
       const telo = escapeHtml(odstavec)
         .split('\n')
-        .map((radek) => radek.replace(/^ +/, (mezery) => '&nbsp;'.repeat(mezery.length)))
+        .map((radek) => znacky(radek.replace(/^ +/, (mezery) => '&nbsp;'.repeat(mezery.length))))
         .join('<br>');
       return `<p style="${pouzity}">${telo}</p>`;
     })

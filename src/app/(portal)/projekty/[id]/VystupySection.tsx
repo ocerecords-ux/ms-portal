@@ -94,11 +94,23 @@ export function VystupySection({
   /** Náhled přes celou obrazovku (26. 9. 2026: „po kliknutí na ten dokument
    *  bych chtěl získat větší náhled"). */
   const [velkyNahled, setVelkyNahled] = useState(false);
+  /**
+   * ZVĚTŠENÍ TEXTU VE VELKÉM NÁHLEDU (19. 10. 2026: „potrebuju aby se dal
+   * zvetsovat text v nahledu u vystupu"). Počítá se výškou listu, ne
+   * transformem - roste tím všechno včetně písma a list zůstane ostrý.
+   * Malý náhled v kartě se nemění: tam platí pravidlo „celou A4 hned vždy
+   * vidět" (26. 9. 2026), tedy bez posuvníku.
+   */
+  const [zvetseni, setZvetseni] = useState(1);
 
   useEffect(() => {
     if (!velkyNahled) return;
     const zavri = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setVelkyNahled(false);
+      // Zvětšování i z klávesnice, jako v prohlížeči.
+      if (e.key === '+' || e.key === '=') setZvetseni((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100));
+      if (e.key === '-') setZvetseni((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100));
+      if (e.key === '0') setZvetseni(1);
     };
     window.addEventListener('keydown', zavri);
     return () => window.removeEventListener('keydown', zavri);
@@ -381,20 +393,53 @@ export function VystupySection({
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setVelkyNahled(false);
           }}
-          className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-auto p-4"
         >
+          {/* Při zvětšení se list nevejde na obrazovku - od toho je kolem něj
+              posuvník. V malém náhledu v kartě by posuvník být nesměl, tady
+              je to naopak jediný způsob, jak si přečíst zvětšený scénář. */}
           <iframe
             key={`velky-${verzeNahledu}`}
             src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
             title={t('vystupy.nahledNadpis')}
             scrolling="no"
-            className="h-[94vh] max-w-[96vw] aspect-[210/297] rounded-card border-0 bg-white shadow-2xl"
+            style={{ height: `${94 * zvetseni}vh` }}
+            className="shrink-0 max-w-none aspect-[210/297] rounded-card border-0 bg-white shadow-2xl"
           />
+          {/* Ovládání zvětšení. Drží se nahoře vlevo, ať neuteče s listem. */}
+          <div className="fixed top-4 left-4 flex items-center gap-1 rounded-pill bg-surface border border-line px-1.5 py-1">
+            <button
+              type="button"
+              onClick={() => setZvetseni((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
+              aria-label={t('vystupy.zmensitText')}
+              title={t('vystupy.zmensitText')}
+              className="rounded-pill border-0 bg-transparent text-ink font-heading text-base px-2.5 py-0.5 cursor-pointer hover:text-brand-purple transition-colors"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => setZvetseni(1)}
+              title={t('vystupy.puvodniVelikost')}
+              className="min-w-[52px] rounded-pill border-0 bg-transparent text-muted font-heading text-xs px-1 py-0.5 cursor-pointer hover:text-brand-purple transition-colors"
+            >
+              {Math.round(zvetseni * 100)} %
+            </button>
+            <button
+              type="button"
+              onClick={() => setZvetseni((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
+              aria-label={t('vystupy.zvetsitText')}
+              title={t('vystupy.zvetsitText')}
+              className="rounded-pill border-0 bg-transparent text-ink font-heading text-base px-2.5 py-0.5 cursor-pointer hover:text-brand-purple transition-colors"
+            >
+              +
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => setVelkyNahled(false)}
             aria-label={t('vystupy.zavritNahled')}
-            className="absolute top-4 right-4 rounded-pill bg-surface border border-line text-ink font-heading text-sm px-4 py-1.5 cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
+            className="fixed top-4 right-4 rounded-pill bg-surface border border-line text-ink font-heading text-sm px-4 py-1.5 cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
           >
             {t('obecne.zavrit')}
           </button>
@@ -454,6 +499,8 @@ function VystupRadek({
    * vedle nic nepřekrývá, takže je při psaní vidět, jak se list plní.
    */
   const [text, setText] = useState(vystup.text ?? '');
+  /** Pole se scénářem - tlačítka B/I/U obalují značkami jeho výběr. */
+  const poleTextu = useRef<HTMLTextAreaElement | null>(null);
   const [otevrenText, setOtevrenText] = useState(false);
   const [nacitam, setNacitam] = useState(false);
   const [chybaTextu, setChybaTextu] = useState<string | null>(null);
@@ -704,7 +751,51 @@ function VystupRadek({
             </p>
           )}
 
+          {/**
+            * ZÁKLADNÍ FORMÁTOVÁNÍ (19. 10. 2026). Tlačítka jen obalí výběr
+            * značkami - text zůstává prostý, takže se do něj dá pořád
+            * vložit cokoliv z Wordu nebo z mailu a nahrání ze souboru nic
+            * nerozbije. Jak značky vypadají v listu, řeší lib/nataceniText.
+            */}
+          {canEdit && (
+            <div className="flex items-center gap-1">
+              {([
+                { znacka: '**', popis: t('vystupy.tucne'), styl: 'font-bold' },
+                { znacka: '*', popis: t('vystupy.kurziva'), styl: 'italic' },
+                { znacka: '_', popis: t('vystupy.podtrzeno'), styl: 'underline' },
+              ] as const).map((v) => (
+                <button
+                  key={v.znacka}
+                  type="button"
+                  title={v.popis}
+                  aria-label={v.popis}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const pole = poleTextu.current;
+                    if (!pole) return;
+                    const od = pole.selectionStart;
+                    const do_ = pole.selectionEnd;
+                    const vybrany = text.slice(od, do_);
+                    const novy = `${text.slice(0, od)}${v.znacka}${vybrany}${v.znacka}${text.slice(do_)}`;
+                    setText(novy);
+                    // Kurzor zůstane uvnitř značek, ať se dá rovnou psát.
+                    requestAnimationFrame(() => {
+                      pole.focus();
+                      const kam = od + v.znacka.length + vybrany.length;
+                      pole.setSelectionRange(vybrany ? kam : od + v.znacka.length, kam);
+                    });
+                  }}
+                  className={`rounded-pill border border-line bg-surface px-2.5 py-0.5 text-xs text-muted cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors ${v.styl}`}
+                >
+                  {v.popis.charAt(0)}
+                </button>
+              ))}
+              <span className="text-[11px] font-body text-muted">{t('vystupy.formatovaniNapoveda')}</span>
+            </div>
+          )}
+
           <textarea
+            ref={poleTextu}
             value={text}
             disabled={!canEdit}
             rows={10}
