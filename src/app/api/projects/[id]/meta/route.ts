@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { STAV_PLANUJEME, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { zvonekOPlanovani } from '@/lib/planovaniServer';
 import { zpravaOSchvaleniKFakturaci } from '@/lib/fakturaceZpravaServer';
+import { automatickaFakturaReklamy } from '@/lib/automatickaFakturaServer';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { nazevProjektuVelky } from '@/lib/nazevProjektu';
@@ -495,6 +496,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           meta.name ?? pred?.name ?? null,
           pred?.company?.name ?? meta.companyName ?? null,
         );
+
+        /**
+         * FAKTURA U REKLAM SE VYSTAVI A ODESLE SAMA (zadani 19. 10. 2026:
+         * „potrebuju nastavit u reklam, aby se automaticky po preklopeni
+         * stavu na schvaleno - k fakturaci, vystavila z nabidky faktura
+         * a odeslala se na klienta. Jen u reklam zatim").
+         *
+         * Jen u reklam a jen kdyz je u projektu prave jedna nabidka a zadna
+         * faktura - o tom rozhoduje lib/automatickaFakturaServer.ts, ktery
+         * v kazdem jinem pripade odstoupi a da o sobe vedet. Bez cekani:
+         * ulozeni stavu nesmi zdrzet vystavovani dokladu.
+         *
+         * Posila to clovek, ktery prehodil stav - jeho jmeno je v zaznamu
+         * o odeslani faktury.
+         */
+        void automatickaFakturaReklamy({
+          caflouProjectId: params.id,
+          nazevProjektu: meta.name ?? pred?.name ?? null,
+          nazevFirmy: pred?.company?.name ?? meta.companyName ?? null,
+          kdo: { id: session.user.id, jmeno: session.user.name || session.user.email || null },
+        });
       }
 
       /**
