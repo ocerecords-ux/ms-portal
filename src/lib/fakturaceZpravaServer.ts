@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { notifyMany, zaznamenejMail } from '@/lib/notifications';
+import { brunoNapisSoukrome } from '@/lib/brunoOznameni';
 import { sendSchvalenoKFakturaciEmail } from '@/lib/email';
 import { jazykUzivatele } from '@/lib/jazykPrijemce';
 import { INTERNAL_ROLES } from '@/lib/roles';
@@ -10,9 +11,16 @@ import { INTERNAL_ROLES } from '@/lib/roles';
  * fakturaci na mě. Nejlépe email, nebo ať mi to píše Bruno. A pokud by mohl
  * do zprávy o projektu dát i proklik na projekt, tak by to bylo perfektní").
  *
- * MAIL I ZVONEK. Mail proto, že o tom má člověk vědět, i když zrovna není
- * v portálu - fakturuje se podle toho. Zvonek k tomu, protože kdo v portálu
- * je, nemá chodit pro odkaz do pošty. Obojí nese PROKLIK NA PROJEKT.
+ * MAIL, ZVONEK I BRUNO DO CHATU. Mail proto, že o tom má člověk vědět, i když
+ * zrovna není v portálu - fakturuje se podle toho. Zvonek k tomu, protože kdo
+ * v portálu je, nemá chodit pro odkaz do pošty. Všechno nese PROKLIK NA
+ * PROJEKT.
+ *
+ * BRUNO PŘIBYL 19. 10. 2026 („a neni to i nastavene, ze ji da vedet Bruno do
+ * chatu"). V zadání stálo „nejlépe email, nebo ať mi to píše Bruno" a zůstalo
+ * u mailu se zvonkem - jenže zvoneček se dá týden nerozbalit a mail zapadne.
+ * Soukromá zpráva od Bruna cinkne jako zpráva od člověka, takže je to jediný
+ * ze tří kanálů, který si o pozornost řekne sám.
  *
  * KOMU, SE ZAŠKRTÁVÁ NA KARTĚ UŽIVATELE (User.fakturaceProjektu), ne podle
  * jména v kódu - stejné pravidlo jako u zvonku „Plánujeme". Když to nemá
@@ -68,6 +76,18 @@ export async function zpravaOSchvaleniKFakturaci(
         return { sent: false as const, reason: err instanceof Error ? err.message : 'chyba odeslání' };
       });
       await zaznamenejMail(upozorneni[u.id], vysledek);
+    }
+
+    /**
+     * Bruno napíše totéž soukromě do chatu. Posílá se každému, kdo to má
+     * zaškrtnuté - stejný okruh jako u mailu a zvonku, žádné jméno v kódu.
+     * Odkaz je celý, aby se dal otevřít i z mobilu.
+     */
+    for (const u of prijemci) {
+      await brunoNapisSoukrome(
+        u.id,
+        `${projekt}${nazevFirmy ? ` (${nazevFirmy})` : ''} je schválený k fakturaci — klient zakázku odsouhlasil. ${odkaz}`,
+      ).catch(() => false);
     }
   } catch (err) {
     console.error('Zprávu o schválení k fakturaci se nepodařilo poslat:', err);
