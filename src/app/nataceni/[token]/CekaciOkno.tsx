@@ -58,6 +58,25 @@ export function CekaciOkno({
   const bezi = ted !== null && ted >= start && ted <= end;
   const doslo = ted !== null && ted > end;
 
+  /**
+   * ODKAZ DO HOVORU JE MRTVÝ, DOKUD NENÍ ČAS (zadání 19. 10. 2026: „ten odkaz
+   * v čekárně by měl být aktivní, až když uběhne ten čas. Mělo by to být
+   * zašedlé").
+   *
+   * Do 19. 10. 2026 byl odkaz klikací pořád, jen tlumeně obarvený - a host,
+   * který si ho den předem zkusil, skončil v prázdné místnosti a volal, jestli
+   * se nespletl v termínu. Teď se před začátkem nedá kliknout vůbec a pod
+   * tlačítkem stojí, odkdy to půjde.
+   *
+   * PO KONCI ZŮSTÁVÁ ŽIVÝ. Natáčení se běžně protáhne a zavřít dveře v minutě,
+   * kdy měl blok skončit, by bylo horší než nechat je otevřené.
+   *
+   * DOKUD NEVÍME, KOLIK JE HODIN (první vykreslení, `ted === null`), platí
+   * zavřeno - ať se na vteřinu nemihne zelené tlačítko tam, kde ještě nemá co
+   * dělat.
+   */
+  const lzePripojit = ted !== null && ted >= start;
+
   const kod = jazyk === 'en' ? 'en-GB' : 'cs-CZ';
   const den = new Intl.DateTimeFormat(kod, {
     weekday: 'long',
@@ -119,24 +138,36 @@ export function CekaciOkno({
       </div>
 
       {/* TLAČÍTKO SE PROBARVÍ AŽ ČASEM (zadání 12. 10. 2026: „tady by se mělo to
-          tlačítko probarvit až ve chvíli, kdy uběhne čas").
-          Do té doby svítilo značkovou fialovou už dvanáct dní předem a zvalo
-          k připojení do prázdné místnosti. Teď je do začátku (a po konci) tlumené;
-          odkaz zůstává funkční, kdyby si ho někdo chtěl vyzkoušet dopředu. */}
-      {hovorOdkaz && (
-        <a
-          href={hovorOdkaz}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`block text-center rounded-pill px-6 py-4 font-heading font-semibold text-base no-underline transition-colors ${
-            bezi
-              ? 'bg-brand-green text-onAccent hover:bg-brand-greenDeep'
-              : 'bg-surface text-muted border border-line hover:text-ink hover:border-brand-purple'
-          }`}
-        >
-          {t('cekarna.pripojit')}
-        </a>
-      )}
+          tlačítko probarvit až ve chvíli, kdy uběhne čas") A DO TÉ DOBY SE ANI
+          NEDÁ KLIKNOUT (19. 10. 2026) - viz lzePripojit výš. */}
+      {hovorOdkaz &&
+        (lzePripojit ? (
+          <a
+            href={hovorOdkaz}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`block text-center rounded-pill px-6 py-4 font-heading font-semibold text-base no-underline transition-colors ${
+              bezi
+                ? 'bg-brand-green text-onAccent hover:bg-brand-greenDeep'
+                : 'bg-surface text-ink border border-line hover:border-brand-purple'
+            }`}
+          >
+            {t('cekarna.pripojit')}
+          </a>
+        ) : (
+          <div className="flex flex-col items-stretch gap-2">
+            {/* Ne odkaz, ale kus textu - do začátku se nedá kliknout vůbec. */}
+            <div
+              aria-disabled="true"
+              className="block text-center rounded-pill px-6 py-4 font-heading font-semibold text-base bg-field text-muted border border-line opacity-60 cursor-not-allowed select-none"
+            >
+              {t('cekarna.pripojit')}
+            </div>
+            <p className="text-xs font-body text-muted text-center m-0">
+              {t('cekarna.odkazSeZpristupni', { cas: cas(zacatek) })}
+            </p>
+          </div>
+        ))}
 
       <dl className="m-0 rounded-card border border-line bg-surface divide-y divide-line">
         {radky.map((r) => (

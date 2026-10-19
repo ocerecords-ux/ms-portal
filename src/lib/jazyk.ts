@@ -528,6 +528,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Tohle natáčení už skončilo. Kdyby ještě běželo, odkaz níž pořád platí.',
     en: 'This session has ended. If it is still running, the link below works.',
   },
+  'cekarna.odkazSeZpristupni': {
+    cs: 'Odkaz se zpřístupní v {cas}.',
+    en: 'The link opens at {cas}.',
+  },
   'cekarna.pripojit': { cs: 'Připojit se k natáčení', en: 'Join the recording' },
   'cekarna.odkazRucne': { cs: 'Nebo si otevřete odkaz sami:', en: 'Or open the link yourself:' },
   'cekarna.herec': { cs: 'Herec', en: 'Narrator' },
