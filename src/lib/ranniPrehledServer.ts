@@ -3,6 +3,7 @@ import { nactiPorady } from '@/lib/poradyServer';
 import { minutesInZone, minutesToTime, utcParts, zonedToUtc } from '@/lib/calendar';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import { najdiPrvniFrekvence, oznacRezii } from '@/lib/rezieOnlineServer';
+import { nactiReziseryKlientu, prijdeRezieKlienta } from '@/lib/rezieKlientaServer';
 import { chybejiciHudbaDoPrehledu } from '@/lib/hudbaPripominkyServer';
 
 /**
@@ -325,6 +326,49 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
         actorName: b.actorName,
       })),
   ]).catch(() => new Set<string>());
+
+  /**
+   * REŽII SI U NĚKTERÝCH KLIENTŮ DĚLAJÍ SAMI (zadání 12. 10. 2026, doplněno
+   * 19. 10. 2026: „ale tohle se má dít automaticky. U Melvilu si to režíruje
+   * Veronika").
+   *
+   * Kalendář to uměl od 12. 10. 2026, tenhle seznam ne - a právě z něj se
+   * počítá přehled dne a konflikty („Máte dvě věci naráz"). První frekvence
+   * u Melvilu tak pořád padaly produkci do dne jako „režie na dálku", i když
+   * na ně nikdo z nás nejezdí, a hlásily kolizi se skutečnou prací.
+   *
+   * U firmy, která má na kartě vyplněného svého režiséra, první frekvence
+   * NEPATŘÍ nám. Výjimka zůstává: ručně zaškrtnutá naše režie u konkrétní
+   * události (`rezieOnline === true`) je výslovné „jedeme tam taky" a tu
+   * nikdo nepřebíjí.
+   */
+  if (sRezii.size > 0) {
+    const vsechny = [
+      ...sloty.map((s) => ({
+        id: s.id,
+        caflouProjectId: s.request.caflouProjectId,
+        rezieKlienta: s.rezieKlienta,
+        rezieOnline: s.rezieOnline,
+      })),
+      ...bloky.map((b) => ({
+        id: b.id,
+        caflouProjectId: b.caflouProjectId,
+        rezieKlienta: b.rezieKlienta,
+        rezieOnline: b.rezieOnline,
+      })),
+    ];
+    const reziseri = await nactiReziseryKlientu(vsechny.map((u) => u.caflouProjectId)).catch(
+      () => new Map<string, { jmeno: string }>(),
+    );
+    if (reziseri.size > 0) {
+      for (const u of vsechny) {
+        if (!sRezii.has(u.id) || u.rezieOnline === true) continue;
+        if (!u.caflouProjectId || !reziseri.get(u.caflouProjectId)) continue;
+        if (!prijdeRezieKlienta(u.rezieKlienta, prvniIds.has(u.id))) continue;
+        sRezii.delete(u.id);
+      }
+    }
+  }
 
   const mojeSloty = sloty.filter(
     (s) => !clovek?.rezieNaDalku || sRezii.has(s.id) || s.zvukarUserId === userId || s.request.actorUserId === userId,
