@@ -247,7 +247,7 @@ function StopIcon() {
   );
 }
 
-type SortBy = 'name' | 'date';
+type SortBy = 'name' | 'date' | 'dokonceno';
 
 function SortIcon({ dir }: { dir: 'asc' | 'desc' }) {
   return (
@@ -272,6 +272,7 @@ export function DriveBrowser({
   jenCteni,
   odkazPripominek,
   slozkaId,
+  dokonceni,
 }: {
   initialFolderId: string;
   rootName: string;
@@ -303,6 +304,17 @@ export function DriveBrowser({
    * člověk má. Je to ID ZÁZNAMU v portálu, ne ID složky na Disku.
    */
   slozkaId?: string | null;
+  /**
+   * KDY SE NA SLOŽCE DODĚLALO (zadání 20. 10. 2026: „u klientů bych
+   * potřeboval, aby na stránce nahrávky bylo řazení i podle dokončení
+   * posledního projektu").
+   *
+   * Klíčem je ID složky na Disku, hodnotou datum odevzdání zakázky - u složky
+   * klienta té poslední hotové. Skládá to server (lib/nahravkyDokonceni.ts);
+   * Disk sám o zakázkách nic neví a „upraveno" se hne při každém uložení
+   * souboru. Prázdné = sloupec se neukáže.
+   */
+  dokonceni?: Record<string, string>;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -603,11 +615,31 @@ export function DriveBrowser({
   const dotaz = bezDiakritiky(hledani.trim());
   const nalezene = dotaz ? items.filter((i) => bezDiakritiky(i.name).includes(dotaz)) : items;
 
+  /** Kdy se na téhle složce dodělávalo; null = nevíme (viz `dokonceni`). */
+  const kdyDokonceno = (id: string): number | null => {
+    const kdy = dokonceni?.[id];
+    if (!kdy) return null;
+    const cas = new Date(kdy).getTime();
+    return Number.isFinite(cas) ? cas : null;
+  };
+  /** Sloupec se ukáže jen tam, kde je co ukázat - u souborů by byl prázdný. */
+  const maDokonceni = Object.keys(dokonceni ?? {}).length > 0 && items.some((i) => kdyDokonceno(i.id) !== null);
+
   const sorted = [...nalezene].sort((a, b) => {
     if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
     const dirMul = sortDir === 'asc' ? 1 : -1;
     if (sortBy === 'date') {
       return dirMul * (new Date(a.modifiedTime).getTime() - new Date(b.modifiedTime).getTime());
+    }
+    if (sortBy === 'dokonceno') {
+      const ka = kdyDokonceno(a.id);
+      const kb = kdyDokonceno(b.id);
+      // Co datum nemá, jde VŽDYCKY dolů - at se řadí od nejnovějšího nebo od
+      // nejstaršího. Prázdné nahoře by vypadalo jako „dodělané nejdřív".
+      if (ka === null && kb === null) return a.name.localeCompare(b.name, 'cs');
+      if (ka === null) return 1;
+      if (kb === null) return -1;
+      return dirMul * (ka - kb);
     }
     return dirMul * a.name.localeCompare(b.name, 'cs');
   });
@@ -769,6 +801,26 @@ export function DriveBrowser({
             {t('disk.nazev')}
             {sortBy === 'name' && <SortIcon dir={sortDir} />}
           </button>
+          {/**
+            * DOKONČENO (20. 10. 2026). Popisek je psaný rovnou tady, ne přes
+            * slovník: `lib/jazyk.ts` má rozepsaný jiný úkol a dvě ruce
+            * v jednom souboru končí přepsanou prací.
+            */}
+          {maDokonceni && (
+            <button
+              type="button"
+              onClick={() => toggleSort('dokonceno')}
+              title={
+                jazyk === 'en'
+                  ? 'Date the job was delivered - for a client folder the most recent one'
+                  : 'Datum odevzdání zakázky — u složky klienta té poslední'
+              }
+              className="w-24 shrink-0 hidden md:flex items-center justify-end gap-1 uppercase tracking-wide hover:text-ink transition-colors"
+            >
+              {sortBy === 'dokonceno' && <SortIcon dir={sortDir} />}
+              {jazyk === 'en' ? 'Delivered' : 'Dokončeno'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => toggleSort('date')}
@@ -860,6 +912,11 @@ export function DriveBrowser({
                           {badge}
                         </span>
                       )}
+                    </span>
+                  )}
+                  {maDokonceni && (
+                    <span className="text-xs text-muted font-body tabular-nums w-24 text-right shrink-0 hidden md:block">
+                      {dokonceni?.[item.id] ? formatDate(dokonceni[item.id], jazyk) : '—'}
                     </span>
                   )}
                   <span className="text-xs text-muted font-body tabular-nums w-24 text-right shrink-0 hidden sm:block">

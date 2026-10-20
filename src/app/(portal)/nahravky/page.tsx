@@ -5,6 +5,7 @@ import { extractDriveFolderId } from '@/lib/googleDrive';
 import { isInternalRole } from '@/lib/roles';
 import { DriveBrowser } from './DriveBrowser';
 import { slozkyProUzivatele } from '@/lib/diskoveSlozkyServer';
+import { mapaDokonceni } from '@/lib/nahravkyDokonceni';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 
@@ -32,6 +33,14 @@ export default async function NahravkyPage({
    * nemá, o ní z portálu nezjistí ani to, že existuje - v přepínači není.
    */
   const slozky = await slozkyProUzivatele(session!.user.id);
+
+  /**
+   * KDY SE NA SLOŽCE DODĚLALO (zadání 20. 10. 2026: „u klientů bych
+   * potřeboval, aby na stránce nahrávky bylo řazení i podle dokončení
+   * posledního projektu"). Dva dotazy na celou stránku, viz
+   * lib/nahravkyDokonceni.ts.
+   */
+  const dokonceni = await mapaDokonceni();
   const vybranaZAdresy = searchParams?.slozka
     ? (slozky.find((s) => s.id === searchParams.slozka) ?? null)
     : null;
@@ -181,6 +190,7 @@ export default async function NahravkyPage({
           key={zvolenaSlozka?.id ?? 'firma'}
           initialFolderId={folderId}
           slozkaId={zvolenaSlozka?.id ?? null}
+          dokonceni={dokonceni}
           rootName={
             zvolenaSlozka
               ? zvolenaSlozka.nazev
