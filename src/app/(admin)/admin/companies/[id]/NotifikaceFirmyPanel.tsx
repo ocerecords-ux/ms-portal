@@ -226,7 +226,17 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
               o ničem. Zavřený řádek rovnou říká, komu to teď chodí. */}
           {nastaveni[stav] !== 'NIKAM' && (() => {
             const vlastni = prijemciStavu[stav] ?? [];
-            const platne = vlastni.length > 0 ? vlastni : prijemci;
+            /**
+             * TŘI PATRA, STEJNĚ JAKO NA SERVERU (20. 10. 2026: „nechápu, proč
+             * to tady šlo na Helču a Karolínu, když nejsou u toho nastavené").
+             *
+             * Do teď tu svítilo „nikdo", když nebyl vyplněný ani seznam
+             * u stavu, ani u firmy - jenže server v tu chvíli posílá výchozí
+             * dvojici (viz interniPrijemciFirmy). Řádek tedy tvrdil něco
+             * jiného, než se dělo, a kopie v mailu přišla jako překvapení.
+             */
+            const vychozi = vlastni.length === 0 && prijemci.length === 0;
+            const platne = vlastni.length > 0 ? vlastni : vychozi ? INTERNI_PRIJEMCI : prijemci;
             const jmenem = (adresa: string) =>
               nabidka.find((u) => u.email.toLowerCase() === adresa)?.jmeno ?? adresa;
             return (
@@ -241,7 +251,10 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
                   <span className="text-ink">
                     {platne.length > 0 ? vyjmenuj(platne.map(jmenem)) : t('firma.komuZNasNikdo')}
                   </span>
-                  {vlastni.length === 0 && ` · ${t('firma.komuZNasJakoFirma')}`}
+                  {vlastni.length === 0 &&
+                    (vychozi
+                      ? ` · ${jazyk === 'en' ? 'default pair' : 'výchozí dvojice'}`
+                      : ` · ${t('firma.komuZNasJakoFirma')}`)}
                   {/**
                     * KOMU U KLIENTA JE VIDĚT ROVNOU V ZAVŘENÉM ŘÁDKU
                     * (20. 10. 2026). Bez toho nikdo netuší, že se adresy
