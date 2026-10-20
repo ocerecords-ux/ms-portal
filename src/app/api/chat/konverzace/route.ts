@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat, loadConversations, loadTeam } from '@/lib/chatServer';
+import { klicDvojice } from '@/lib/chat';
 import { INTERNAL_ROLES, ROBOT_ROLES } from '@/lib/roles';
 import { zkusDatabazi } from '@/lib/dbZnovu';
 import { nactiStatusy } from '@/lib/statusyServer';
@@ -152,22 +153,49 @@ export async function POST(req: NextRequest) {
       });
       if (!druhy) return NextResponse.json({ error: 'Takového člena týmu nemáme.' }, { status: 400 });
 
-      // Uz spolu mluvi? Hledame konverzaci, kde jsou oba - jinak by kazde
-      // kliknuti zalozilo dalsi vlakno s tou samou osobou.
+      /**
+       * JEDEN ROZHOVOR NA DVOJICI (oprava 20. 10. 2026: „Peter má v chatu dvě
+       * konverzace s jednou Helčou").
+       *
+       * Hledání „konverzace, kde jsou oba" bylo správně, ale ne atomicky: dva
+       * požadavky ve stejnou chvíli (dvojklik, dvě zařízení, Bruno píšící
+       * zrovna, když si člověk rozhovor otevře) nenašly nic obě a založily
+       * dva. Rozhoduje proto KLÍČ DVOJICE s unikátním indexem - závoru drží
+       * databáze, ne pořadí dotazů.
+       *
+       * Starší rozhovor klíč ještě nemá, tak se nejdřív hledá postaru a klíč
+       * se mu doplní; teprve když není, zakládá se nový.
+       */
+      const klic = klicDvojice(me, druhy.id);
+
       const existing = await prisma.conversation.findFirst({
         where: {
           kind: 'SOUKROMA',
           AND: [{ members: { some: { userId: me } } }, { members: { some: { userId: druhy.id } } }],
         },
+        select: { id: true, parKlic: true },
       });
-      if (existing) return NextResponse.json({ id: existing.id });
+      if (existing) {
+        if (!existing.parKlic) {
+          await prisma.conversation
+            .update({ where: { id: existing.id }, data: { parKlic: klic } })
+            .catch(() => undefined);
+        }
+        return NextResponse.json({ id: existing.id });
+      }
 
-      const created = await prisma.conversation.create({
-        data: {
+      // Upsert podle klice: kdyz mezitim stihl rozhovor zalozit nekdo druhy,
+      // vrati se jeho, ne druhy radek.
+      const created = await prisma.conversation.upsert({
+        where: { parKlic: klic },
+        update: {},
+        create: {
           kind: 'SOUKROMA',
+          parKlic: klic,
           createdById: me,
           members: { create: [{ userId: me }, { userId: druhy.id }] },
         },
+        select: { id: true },
       });
       return NextResponse.json({ id: created.id }, { status: 201 });
     }

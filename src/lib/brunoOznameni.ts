@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { klicDvojice } from '@/lib/chat';
 import { BRUNO_EMAIL } from '@/lib/brunoUcet';
 import { komuPoslatUpozorneni } from '@/lib/chatUpozorneniServer';
 import { posliPush } from '@/lib/pushServer';
@@ -23,21 +24,31 @@ export async function brunoNapisSoukrome(userId: string, text: string): Promise<
     const bruno = await prisma.user.findUnique({ where: { email: BRUNO_EMAIL }, select: { id: true } });
     if (!bruno || bruno.id === userId) return false;
 
+    // Jeden rozhovor na dvojici - klic hlida unikatni index (20. 10. 2026).
+    const klic = klicDvojice(bruno.id, userId);
     let kanal = await prisma.conversation.findFirst({
       where: {
         kind: 'SOUKROMA',
         AND: [{ members: { some: { userId: bruno.id } } }, { members: { some: { userId } } }],
       },
-      select: { id: true },
+      select: { id: true, parKlic: true },
     });
+    if (kanal && !kanal.parKlic) {
+      await prisma.conversation
+        .update({ where: { id: kanal.id }, data: { parKlic: klic } })
+        .catch(() => undefined);
+    }
     if (!kanal) {
-      kanal = await prisma.conversation.create({
-        data: {
+      kanal = await prisma.conversation.upsert({
+        where: { parKlic: klic },
+        update: {},
+        create: {
           kind: 'SOUKROMA',
+          parKlic: klic,
           createdById: bruno.id,
           members: { create: [{ userId: bruno.id }, { userId }] },
         },
-        select: { id: true },
+        select: { id: true, parKlic: true },
       });
     }
 

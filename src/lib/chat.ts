@@ -9,6 +9,15 @@ import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
  * to sla pouzit i klientska komponenta panelu.
  */
 
+/**
+ * KLÍČ SOUKROMÉHO ROZHOVORU (20. 10. 2026). Dvojice id seřazená abecedně,
+ * takže vyjde stejně, ať rozhovor zakládá kdokoliv z těch dvou. Ukládá se do
+ * `Conversation.parKlic`, kde ho hlídá unikátní index - viz schema.prisma.
+ */
+export function klicDvojice(a: string, b: string): string {
+  return [a, b].sort().join(':');
+}
+
 export const CHAT_TABS: { kind: ConversationKind; label: string }[] = [
   // "Misto Kanalu to bude nazvano Projekty" (zadani 8. 9. 2026).
   { kind: 'PROJEKT', label: 'Projekty' },

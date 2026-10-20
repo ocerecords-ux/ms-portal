@@ -238,6 +238,7 @@ async function main() {
   await prispevkyNaSiteJenOndrejovi();
   await castiJenTamKdeSeNaCastiFakturuje();
   await londynAnglickyALibry();
+  await sloucDvojiteSoukromeChaty();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -481,6 +482,110 @@ async function londynAnglickyALibry() {
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
   } catch (err) {
     console.warn('  London: nastaveni jazyka a meny se nepodarilo:', err);
+  }
+}
+
+/**
+ * DVA ROZHOVORY S TÝMŽ ČLOVĚKEM SE SLIJÍ DO JEDNOHO (zadání 20. 10. 2026:
+ * „Peter má v chatu dvě konverzace s jednou Helčou").
+ *
+ * Soukromý rozhovor se před založením hledal dotazem „konverzace, kde jsou
+ * oba". Správně, ale ne atomicky: dva požadavky ve stejnou chvíli nenašly nic
+ * obě a založily dva. Od 20. 10. 2026 to hlídá `Conversation.parKlic`
+ * s unikátním indexem; tohle uklidí, co vzniklo do té doby.
+ *
+ * JAK SE SLÉVÁ: zůstává NEJSTARŠÍ rozhovor dvojice - ten, co lidi mají
+ * v seznamu nahoře a znají ho. Zprávy z mladších se do něj přesunou (nic se
+ * nemaže, jen mění konverzaci), členství se dotáhne, kdyby v mladším byl
+ * někdo navíc, a prázdný mladší se smaže. Čas poslední zprávy se dopočítá,
+ * ať rozhovor neskočí na konec seznamu.
+ *
+ * NA CO SE NESAHÁ: rozhovor, který má v sobě víc než dva lidi (to není
+ * dvojice), a případ, kdy jsou „dvě Helčy" ve skutečnosti DVA ÚČTY. Druhý
+ * případ tahle úprava nepozná ani poznat nemá - dvojice jsou pak různé a
+ * správně mají každá svůj rozhovor; to se řeší sloučením účtů v Uživatelích.
+ */
+async function sloucDvojiteSoukromeChaty() {
+  const ZNAMKA = 'chat-soukrome-dvojice-2026-10-20';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const rozhovory = (await prisma.conversation.findMany({
+      where: { kind: 'SOUKROMA' },
+      select: {
+        id: true,
+        createdAt: true,
+        parKlic: true,
+        members: { select: { userId: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    })) as {
+      id: string;
+      createdAt: Date;
+      parKlic: string | null;
+      members: { userId: string }[];
+    }[];
+
+    /** Dvojice -> rozhovory od nejstaršího. Jiné počty členů se přeskakují. */
+    const podleDvojice = new Map<string, { id: string; clenove: string[] }[]>();
+    for (const r of rozhovory) {
+      const lide = [...new Set(r.members.map((m) => m.userId))].sort();
+      if (lide.length !== 2) continue;
+      const klic = lide.join(':');
+      const seznam = podleDvojice.get(klic) ?? [];
+      seznam.push({ id: r.id, clenove: lide });
+      podleDvojice.set(klic, seznam);
+    }
+
+    let slouceno = 0;
+    let doplneno = 0;
+
+    for (const [klic, seznam] of podleDvojice) {
+      const [zustava, ...navic] = seznam;
+
+      for (const duplicita of navic) {
+        // Zpravy pod nejstarsi rozhovor - nic se nemaze.
+        await prisma.message.updateMany({
+          where: { conversationId: duplicita.id },
+          data: { conversationId: zustava.id },
+        });
+        // Clenstvi uz v nejstarsim je (tataz dvojice), takze staci smazat -
+        // ConversationMember visi na konverzaci kaskadou.
+        await prisma.conversation.delete({ where: { id: duplicita.id } });
+        slouceno += 1;
+      }
+
+      if (navic.length > 0) {
+        const posledni = await prisma.message.findFirst({
+          where: { conversationId: zustava.id },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        });
+        if (posledni) {
+          await prisma.conversation.update({
+            where: { id: zustava.id },
+            data: { lastMessageAt: posledni.createdAt },
+          });
+        }
+      }
+
+      // Klic doplnime i tam, kde zadna duplicita nebyla - aby zavora platila
+      // pro vsechny rozhovory, ne jen pro nove zalozene.
+      try {
+        await prisma.conversation.update({ where: { id: zustava.id }, data: { parKlic: klic } });
+        doplneno += 1;
+      } catch {
+        // Klic uz nekdo ma (zbytek po drivejsim behu) - nic se nedeje.
+      }
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    if (slouceno > 0 || doplneno > 0) {
+      console.log(`  chat: slouceno ${slouceno} dvojitych rozhovoru, klic doplnen u ${doplneno}`);
+    }
+  } catch (err) {
+    console.warn('  chat: slouceni dvojitych rozhovoru se nepodarilo:', err);
   }
 }
 

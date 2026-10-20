@@ -1532,6 +1532,19 @@ model Conversation {
   /// ten je v ni, a doplni se sam pri prvnim otevreni chatu.
   vsichni        Boolean          @default(false)
 
+  /// KLIC DVOJICE U SOUKROME KONVERZACE (20. 10. 2026: „Peter ma v chatu dve
+  /// konverzace s jednou Helcou").
+  ///
+  /// Dva lide maji mit jeden rozhovor. Hledalo se pred zalozenim dotazem
+  /// „konverzace, kde jsou oba" - spravne, ale ne atomicky: dve pozadavky
+  /// ve stejnou chvili (dvojklik, dve zarizeni, Bruno pisici zrovna, kdyz si
+  /// clovek rozhovor otevre) nenasly nic obe a zalozily dva.
+  ///
+  /// Klic je dvojice id serazena abecedne a spojena dvojteckou. Unikatni
+  /// index z toho dela zavoru, kterou databaze drzi sama - druhy zapis
+  /// neprojde, at prijdou jakkoliv blizko sebe. U skupin a kanalu je prazdny.
+  parKlic         String?          @unique
+
   createdById     String
   createdBy       User             @relation("ConversationCreatedBy", fields: [createdById], references: [id])
   createdAt       DateTime         @default(now())
