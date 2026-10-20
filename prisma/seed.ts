@@ -240,6 +240,7 @@ async function main() {
   await londynAnglickyALibry();
   await sloucDvojiteSoukromeChaty();
   await rozdelPreposlechNaNasAKlienta();
+  await nazvySeriiVelkymi();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -3152,6 +3153,83 @@ async function rozdelPreposlechNaNasAKlienta() {
     );
   } catch (err) {
     console.warn('  rozdeleni preposlechu na nas a klienta se nepodarilo:', err);
+  }
+}
+
+/**
+ * NÁZVY SÉRIÍ VELKÝMI (zadání 20. 10. 2026: „u názvů sérií držme vše velkými
+ * písmeny, jako u názvu projektu. Oprav to i zpětně, když někdo napsal
+ * malými").
+ *
+ * Totéž, co se 22. 9. 2026 zavedlo u názvu projektu. Série se v přehledu
+ * ukazuje hned vedle názvu knihy, takže „Lake Spark" vedle „STOJÍ ZA ČEKÁNÍ"
+ * trčí - a sérii často píše klient do objednávky, takže se to bez pravidla
+ * rozejde pokaždé. Od teď se velkými ukládá rovnou (lib/nazevProjektu.ts);
+ * tohle dožene, co v databázi zůstalo.
+ *
+ * Srovnají se všechna tři místa, kde název série leží: projekt, objednávka
+ * a předloha hudby série. Hudba se páruje bez ohledu na velikost písmen,
+ * takže se tím nic neztratí - jde o to, aby seznam sérií vypadal jednotně.
+ *
+ * SLÉVÁ TO, CO SE SLÍT MÁ: „Lake spark" a „LAKE SPARK" byly do dneška dvě
+ * série a po srovnání jsou jedna, což je přesně ten důvod, proč se to dělá.
+ */
+async function nazvySeriiVelkymi() {
+  const ZNAMKA = 'serie-velkymi-2026-10-20';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    /** Tentýž převod jako v lib/nazevProjektu.ts - seed si ho nese sám. */
+    const velkymi = (t: string) => t.replace(/\s+/g, ' ').trim().toLocaleUpperCase('cs-CZ');
+
+    let projektu = 0;
+    let objednavek = 0;
+    let hudby = 0;
+
+    const projekty = (await prisma.projectMeta.findMany({
+      where: { serie: { not: null } },
+      select: { caflouProjectId: true, serie: true },
+    })) as { caflouProjectId: string; serie: string | null }[];
+    for (const p of projekty) {
+      const nove = velkymi(p.serie ?? '');
+      if (!nove || nove === p.serie) continue;
+      await prisma.projectMeta.update({
+        where: { caflouProjectId: p.caflouProjectId },
+        data: { serie: nove },
+      });
+      projektu += 1;
+    }
+
+    const objednavky = (await prisma.order.findMany({
+      where: { serie: { not: null } },
+      select: { id: true, serie: true },
+    })) as { id: string; serie: string | null }[];
+    for (const o of objednavky) {
+      const nove = velkymi(o.serie ?? '');
+      if (!nove || nove === o.serie) continue;
+      await prisma.order.update({ where: { id: o.id }, data: { serie: nove } });
+      objednavek += 1;
+    }
+
+    const predlohy = (await prisma.hudbaSerie.findMany({
+      select: { id: true, serie: true },
+    })) as { id: string; serie: string }[];
+    for (const h of predlohy) {
+      const nove = velkymi(h.serie ?? '');
+      if (!nove || nove === h.serie) continue;
+      await prisma.hudbaSerie.update({ where: { id: h.id }, data: { serie: nove } });
+      hudby += 1;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    if (projektu || objednavek || hudby) {
+      console.log(
+        `  serie velkymi: projekty ${projektu}, objednavky ${objednavek}, hudba serie ${hudby}`,
+      );
+    }
+  } catch (err) {
+    console.warn('  nazvy serii se nepodarilo srovnat na velka pismena:', err);
   }
 }
 

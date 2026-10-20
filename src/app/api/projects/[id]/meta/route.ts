@@ -10,7 +10,7 @@ import { zpravaOSchvaleniKFakturaci } from '@/lib/fakturaceZpravaServer';
 import { automatickaFakturaReklamy } from '@/lib/automatickaFakturaServer';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
-import { nazevProjektuVelky } from '@/lib/nazevProjektu';
+import { nazevProjektuVelky, nazevSerieVelky } from '@/lib/nazevProjektu';
 import { cisloDilu } from '@/lib/serie';
 import { zkopirujHudbuSerie } from '@/lib/hudbaSerieServer';
 import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
@@ -285,7 +285,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
      * dílu - samotné číslo bez série by v přehledu nebylo k čemu.
      */
     if (data.serie !== undefined) {
-      const nazevSerie = data.serie.trim();
+      // Velkými jako název projektu (20. 10. 2026).
+      const nazevSerie = nazevSerieVelky(data.serie);
       values.serie = nazevSerie || null;
       if (!nazevSerie) values.serieDil = null;
     }
@@ -577,10 +578,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
      * stejně, jako by u ní byl od začátku. Co u projektu už leží, se nepřidá
      * znovu, takže opakované uložení formuláře hudbu nezdvojí.
      */
-    if (data.serie !== undefined && data.serie.trim()) {
+    if (data.serie !== undefined && nazevSerieVelky(data.serie)) {
       void zkopirujHudbuSerie({
         caflouProjectId: params.id,
-        serie: data.serie.trim(),
+        serie: nazevSerieVelky(data.serie),
         companyId: meta.companyId ?? null,
         pridalId: session.user.id,
       }).catch(() => undefined);

@@ -15,7 +15,7 @@ import { adresaVUlozisti, overPrilohu, uploadOrderAttachment } from '@/lib/stora
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { noveIdProjektu } from '@/lib/projektId';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
-import { nazevProjektuVelky } from '@/lib/nazevProjektu';
+import { nazevProjektuVelky, nazevSerieVelky } from '@/lib/nazevProjektu';
 import { cisloDilu, nazevSeSerii } from '@/lib/serie';
 import { zalozKanalProjektu } from '@/lib/kanalProjektuServer';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
@@ -141,8 +141,9 @@ export async function POST(req: NextRequest) {
   // Název projektu i objednávky držíme velkými (zadání 22. 9. 2026).
   const title = nazevProjektuVelky(parsed.data.title);
   const isAudiobook = kind === 'AUDIOBOOK';
-  // Série jen u audioknihy - u reklamy nedává smysl.
-  const serie = isAudiobook ? (parsed.data.serie ?? '').trim() || null : null;
+  // Série jen u audioknihy - u reklamy nedává smysl. Velkými jako název
+  // projektu (20. 10. 2026) - i když ji někdo napíše malými.
+  const serie = isAudiobook ? nazevSerieVelky(parsed.data.serie ?? '') || null : null;
   const serieDil = serie ? cisloDilu(parsed.data.serieDil) : null;
   const preferredNarrator = parsed.data.preferredNarrator?.trim() || null;
   const pageCount = isAudiobook && parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;

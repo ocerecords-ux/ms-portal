@@ -1008,6 +1008,10 @@ model ProjectMeta {
   ///
   /// Číslo dílu je celé a nejvýš dvouciferné - musí se vejít do kolečka
   /// a řadí se podle něj.
+  ///
+  /// VELKÝMI PÍSMENY (zadání 20. 10. 2026), stejně jako název projektu -
+  /// stojí v přehledu hned vedle něj. Sráží to na velká lib/nazevProjektu.ts
+  /// při každém uložení, ať sérii píše klient v objednávce, nebo my v kartě.
   serie       String?
   serieDil    Int?
 
