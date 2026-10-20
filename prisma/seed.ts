@@ -241,6 +241,7 @@ async function main() {
   await sloucDvojiteSoukromeChaty();
   await rozdelPreposlechNaNasAKlienta();
   await nazvySeriiVelkymi();
+  await vystupyJaecooRadio();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -3230,6 +3231,178 @@ async function nazvySeriiVelkymi() {
     }
   } catch (err) {
     console.warn('  nazvy serii se nepodarilo srovnat na velka pismena:', err);
+  }
+}
+
+/**
+ * VÝSTUPY PRO DEALERY JAECOO 8 (zadání 20. 10. 2026: „u projektu Jaecoo8 radio
+ * potřebuju uložit výstupy dle názvu z tabulky. Vzor je AF CENTRUM, s.r.o.").
+ *
+ * Spot se točí jednou a pak se k němu dotáčí dealerská dotáčka - jeden výstup
+ * na každého prodejce. Dealerů je přes třicet a zakládat je v kartě po jednom
+ * je půl hodiny klikání, proto jednorázově odsud.
+ *
+ * VZOREM JE EXISTUJÍCÍ VÝSTUP, ne hodnoty napsané tady: délka, typ, herci,
+ * služby i licence se zkopírují z „JAECOO 8 CZ - AF CENTRUM, s.r.o.", který
+ * v projektu už je. Kdyby se do nasazení změnil, pojedou podle něj i ostatní.
+ * Název se skládá ze stejné předpony („JAECOO 8 CZ - ") plus jméno prodejce
+ * přesně tak, jak stojí v tabulce.
+ *
+ * TEXT SPOTU SE NEVYPLŇUJE. Tohle zakládá řádky, ne obsah - dotáčky se liší
+ * jednou větou a ta patří do textu výstupu, až bude odsouhlasená.
+ *
+ * MĚSTO V ZÁVORCE JEN U SHODY JMEN: Auto Hruška, MACH MOTORS, OLFIN Car
+ * a SRBA SERVIS mají dvě pobočky a dva stejně pojmenované výstupy by se
+ * v seznamu nedaly rozeznat.
+ *
+ * Co už v projektu je (podle názvu), se nezakládá znovu.
+ */
+const DEALERI_JAECOO: { firma: string; mesto: string }[] = [
+  { firma: 'AF CENTRUM, s.r.o.', mesto: 'Ostrava - Vítkovice' },
+  { firma: 'Auto Hruška s.r.o.', mesto: 'Ostrava' },
+  { firma: 'AUTO KALNÝ s.r.o.', mesto: 'Klatovy' },
+  { firma: 'AUTOKOMPLEX Matějka s.r.o.', mesto: 'Olomouc' },
+  { firma: 'AUTO DORDA s.r.o.', mesto: 'Česká Lípa' },
+  { firma: 'Autoprodej Šrámek s.r.o.', mesto: 'Plzeň' },
+  { firma: 'AUTOSALON KUDRNA a.s.', mesto: 'Orlová 4-Poruba' },
+  { firma: 'AUTOSALON DĚDEK, s.r.o.', mesto: 'Náchod' },
+  { firma: 'BRNOCAR a.s.', mesto: 'Brno - Medlánky' },
+  { firma: 'CARTec motor, s.r.o.', mesto: 'Brno - Komárov' },
+  { firma: 'MACH MOTORS s.r.o.', mesto: 'České Budějovice' },
+  { firma: 'MACH MOTORS s.r.o.', mesto: 'Praha' },
+  { firma: 'OLFIN Car s.r.o.', mesto: 'Hradec Králové' },
+  { firma: 'OLFIN Car s.r.o.', mesto: 'Trutnov' },
+  { firma: 'M-CAR', mesto: 'Tábor' },
+  { firma: 'ROKO - MOTOR, s.r.o.', mesto: 'Zlín' },
+  { firma: 'SRBA SERVIS s.r.o.', mesto: 'Praha - západ (Jíloviště)' },
+  { firma: 'UH CAR AUTO, s.r.o.', mesto: 'Staré Město' },
+  { firma: 'V-group auto s.r.o.', mesto: 'Kladno' },
+  { firma: 'SFR Motor s.r.o.', mesto: 'Praha' },
+  { firma: 'SMAŽÍK NORD s.r.o.', mesto: 'Ústí nad Labem' },
+  { firma: 'ALGON PLUS - AUTO, a.s.', mesto: 'Cheb' },
+  { firma: 'SRBA SERVIS s.r.o.', mesto: 'Praha' },
+  { firma: 'AGREGA a.s.', mesto: 'Bludov' },
+  { firma: 'AUTO KOUTEK s.r.o.', mesto: 'Liberec' },
+  { firma: 'Auto Vysočina s.r.o.', mesto: 'Jihlava' },
+  { firma: 'H+H Metel-CZ (Hlouch Motors)', mesto: 'Třebíč' },
+  { firma: 'Suchomel New s.r.o.', mesto: 'Ústí nad Orlicí' },
+  { firma: 'Elis Auto s.r.o.', mesto: 'Znojmo' },
+  { firma: 'KŠV Group s.r.o.', mesto: 'Chomutov Otvice' },
+  { firma: 'Auto Hruška s.r.o.', mesto: 'Opava' },
+];
+
+async function vystupyJaecooRadio() {
+  const ZNAMKA = 'vystupy-jaecoo-radio-2026-10-20';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    /** Vzor pozná projekt líp než jeho název - ten se může přepsat. */
+    const vzor = (await prisma.vystup.findFirst({
+      where: {
+        AND: [
+          { nazev: { contains: 'JAECOO', mode: 'insensitive' } },
+          { nazev: { contains: 'AF CENTRUM', mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        caflouProjectId: true,
+        nazev: true,
+        typKlic: true,
+        delkaSekund: true,
+        sluzby: true,
+        rezie: true,
+        hudbaNazev: true,
+        hudbaAutor: true,
+        bezHudby: true,
+        klientNaRL: true,
+        licenceUziti: true,
+        licenceOd: true,
+        licenceMesicu: true,
+        herci: { select: { id: true } },
+        licence: { select: { id: true } },
+      },
+    })) as
+      | {
+          id: string;
+          caflouProjectId: string;
+          nazev: string;
+          typKlic: string | null;
+          delkaSekund: number | null;
+          sluzby: string[];
+          rezie: string | null;
+          hudbaNazev: string | null;
+          hudbaAutor: string | null;
+          bezHudby: boolean;
+          klientNaRL: string | null;
+          licenceUziti: string | null;
+          licenceOd: Date | null;
+          licenceMesicu: number | null;
+          herci: { id: string }[];
+          licence: { id: string }[];
+        }
+      | null;
+
+    if (!vzor) {
+      console.log('  vystupy JAECOO: vzor AF CENTRUM nenalezen, preskakuji');
+      return;
+    }
+
+    // Predpona z nazvu vzoru: „JAECOO 8 CZ - AF CENTRUM, s.r.o." -> „JAECOO 8 CZ".
+    const deli = vzor.nazev.indexOf(' - ');
+    const predpona = deli > 0 ? vzor.nazev.slice(0, deli) : 'JAECOO 8 CZ';
+
+    const uzVProjektu = (await prisma.vystup.findMany({
+      where: { caflouProjectId: vzor.caflouProjectId },
+      select: { nazev: true, poradi: true },
+    })) as { nazev: string; poradi: number }[];
+    const maji = new Set(uzVProjektu.map((v) => v.nazev.trim().toLocaleLowerCase('cs-CZ')));
+    let poradi = uzVProjektu.reduce((max, v) => Math.max(max, v.poradi), 0);
+
+    const kolikrat = new Map<string, number>();
+    for (const d of DEALERI_JAECOO) {
+      kolikrat.set(d.firma, (kolikrat.get(d.firma) ?? 0) + 1);
+    }
+
+    let zalozeno = 0;
+    for (const dealer of DEALERI_JAECOO) {
+      const sMestem = (kolikrat.get(dealer.firma) ?? 0) > 1;
+      const nazev = `${predpona} - ${dealer.firma}${sMestem ? ` (${dealer.mesto})` : ''}`;
+      if (maji.has(nazev.trim().toLocaleLowerCase('cs-CZ'))) continue;
+
+      poradi += 1;
+      await prisma.vystup.create({
+        data: {
+          caflouProjectId: vzor.caflouProjectId,
+          poradi,
+          nazev,
+          typKlic: vzor.typKlic,
+          delkaSekund: vzor.delkaSekund,
+          sluzby: vzor.sluzby,
+          rezie: vzor.rezie,
+          hudbaNazev: vzor.hudbaNazev,
+          hudbaAutor: vzor.hudbaAutor,
+          bezHudby: vzor.bezHudby,
+          klientNaRL: vzor.klientNaRL,
+          licenceUziti: vzor.licenceUziti,
+          licenceOd: vzor.licenceOd,
+          licenceMesicu: vzor.licenceMesicu,
+          // Zalozeno nami, ne navrh z objednavky - potvrzene rovnou.
+          potvrzenoAt: new Date(),
+          herci: { connect: vzor.herci.map((h) => ({ id: h.id })) },
+          licence: { connect: vzor.licence.map((l) => ({ id: l.id })) },
+        },
+      });
+      maji.add(nazev.trim().toLocaleLowerCase('cs-CZ'));
+      zalozeno += 1;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  vystupy JAECOO: zalozeno ${zalozeno} dealerskych vystupu`);
+  } catch (err) {
+    console.warn('  vystupy JAECOO se nepodarilo zalozit:', err);
   }
 }
 
