@@ -53,6 +53,8 @@ const schema = z.object({
   nabidkyEmaily: z.array(z.string().trim().max(200)).max(20).optional(),
   /** Kam posílat faktury (20. 10. 2026) - prázdné pole = kontakt firmy. */
   fakturyEmaily: z.array(z.string().trim().max(200)).max(20).optional(),
+  /** Všechny kontaktní adresy firmy (20. 10. 2026); první je contactEmail. */
+  kontaktEmaily: z.array(z.string().trim().max(200)).max(20).optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -109,6 +111,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(data.paymentTermDays !== undefined ? { paymentTermDays: toIntOrNull(data.paymentTermDays) } : {}),
         ...(data.contactName !== undefined ? { contactName: data.contactName || null } : {}),
         ...(data.contactEmail !== undefined ? { contactEmail: data.contactEmail || null } : {}),
+        // Vsechny kontaktni adresy firmy (20. 10. 2026) - prvni z nich je
+        // `contactEmail`, aby zbytek portalu mohl dal pracovat s jednou.
+        ...(data.kontaktEmaily !== undefined
+          ? { kontaktEmaily: data.kontaktEmaily.map((e) => e.trim()).filter(Boolean) }
+          : {}),
         ...(data.fakturyKlientovi !== undefined ? { fakturyKlientovi: data.fakturyKlientovi } : {}),
         ...(data.contactPhone !== undefined ? { contactPhone: data.contactPhone || null } : {}),
         ...(data.type === 'KLIENT'

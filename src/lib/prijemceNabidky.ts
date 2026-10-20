@@ -68,6 +68,8 @@ export async function najdiPrijemceNabidky(vstup: {
     contactEmail: string | null;
     contactName: string | null;
     nabidkyEmaily?: string[] | null;
+    /** Všechny kontaktní adresy firmy (20. 10. 2026) - `contactEmail` je první. */
+    kontaktEmaily?: string[] | null;
   };
 }): Promise<PrijemceNabidky | null> {
   const naNabidky = (vstup.company.nabidkyEmaily ?? []).map((e) => e.trim()).filter(Boolean);
@@ -78,9 +80,17 @@ export async function najdiPrijemceNabidky(vstup: {
   const klient = await klientProjektu(vstup.caflouProjectId);
   if (klient) return { emaily: [klient.email], jmeno: klient.jmeno, zdroj: 'klient' };
 
-  const mailFirmy = vstup.company.contactEmail?.trim();
-  if (mailFirmy) {
-    return { emaily: [mailFirmy], jmeno: vstup.company.contactName?.trim() || null, zdroj: 'firma' };
+  /**
+   * KONTAKT FIRMY SNESE VÍC ADRES (20. 10. 2026: „tady potřebuju více polí,
+   * nechci to oddělovat čárkou"). Za kontaktem firmy sedí často víc lidí;
+   * `contactEmail` je první z nich a zbytek je v `kontaktEmaily`.
+   */
+  const vsechny = [vstup.company.contactEmail, ...(vstup.company.kontaktEmaily ?? [])]
+    .map((e) => (e ?? '').trim())
+    .filter(Boolean);
+  const firemni = [...new Set(vsechny)];
+  if (firemni.length > 0) {
+    return { emaily: firemni, jmeno: vstup.company.contactName?.trim() || null, zdroj: 'firma' };
   }
   return null;
 }

@@ -192,6 +192,19 @@ model Company {
   /// portál ho vezme z projektu, ke kterému je faktura navázaná.
   fakturyKlientovi Boolean @default(false)
   contactEmail   String?
+  /// DALŠÍ KONTAKTNÍ ADRESY FIRMY (zadání 20. 10. 2026: „tady potřebuju více
+  /// polí, nechci to oddělovat čárkou").
+  ///
+  /// Na kontaktní e-mail firmy chodí nabídky i faktury, když u nich není
+  /// vyplněný vlastní seznam - a sedí za ním často víc lidí (účtárna
+  /// a asistentka, dvě pobočky). Jedno pole svádí psát adresy přes čárku
+  /// a takový řetězec se pak posílá jako jedna adresa.
+  ///
+  /// `contactEmail` ZŮSTÁVÁ PRVNÍ Z NICH - je po celém portálu (karta Můj
+  /// účet, pozvánky k údajům, předvyplnění dokladu) a udělat z něj seznam by
+  /// znamenalo sáhnout na deset míst kvůli jedné kolonce. Tenhle sloupec je
+  /// celý seznam; kdo potřebuje jednu adresu, bere dál `contactEmail`.
+  kontaktEmaily  String[]  @default([])
   contactPhone   String?
   ic             String?
   dic            String?

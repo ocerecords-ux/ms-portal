@@ -55,7 +55,20 @@ export function CompanyForm({
   const [paymentTermDays, setPaymentTermDays] = useState(String(company.paymentTermDays ?? ''));
 
   const [contactName, setContactName] = useState(company.contactName ?? '');
-  const [contactEmail, setContactEmail] = useState(company.contactEmail ?? '');
+  /**
+   * KONTAKTNÍ ADRESY FIRMY (zadání 20. 10. 2026: „tady potřebuju více polí,
+   * nechci to oddělovat čárkou").
+   *
+   * Řádek na každou adresu. První z nich je `contactEmail` - ten je po celém
+   * portálu (Můj účet, pozvánky k údajům, předvyplnění dokladu), takže
+   * zůstává jednou adresou; ostatní se vedou vedle něj a při posílání
+   * nabídek a faktur se počítají taky.
+   */
+  const [kontaktEmaily, setKontaktEmaily] = useState<string[]>(() => {
+    const ulozene = ((company as { kontaktEmaily?: string[] }).kontaktEmaily ?? []).filter(Boolean);
+    if (ulozene.length > 0) return ulozene;
+    return company.contactEmail ? [company.contactEmail] : [''];
+  });
   /**
    * KAM POSÍLAT CENOVÉ NABÍDKY (zadání 12. 10. 2026: „potřebuju ještě u firem
    * nastavit zvlášť maily na zasílání cenových nabídek").
@@ -221,7 +234,9 @@ export function CompanyForm({
           addressCountry,
           paymentTermDays,
           contactName,
-          contactEmail,
+          // Prvni adresa je `contactEmail`, cely seznam jde vedle nej.
+          contactEmail: kontaktEmaily.map((e) => e.trim()).filter(Boolean)[0] ?? '',
+          kontaktEmaily: kontaktEmaily.map((e) => e.trim()).filter(Boolean),
           contactPhone,
           fakturyKlientovi,
           ...(isClient
@@ -387,7 +402,38 @@ export function CompanyForm({
         </div>
         <div className="flex-1 min-w-[160px]">
           <AdminField label={t('firma.sloupecEmail')} hint={t('firma.emailHint')}>
-            <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="admin-input" />
+            <div className="flex flex-col gap-2">
+              {kontaktEmaily.map((mail, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    value={mail}
+                    onChange={(e) =>
+                      setKontaktEmaily((p) => p.map((x, j) => (j === i ? e.target.value : x)))
+                    }
+                    className="admin-input flex-1"
+                  />
+                  {kontaktEmaily.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setKontaktEmaily((p) => p.filter((_, j) => j !== i))}
+                      title={t('obecne.odebrat')}
+                      aria-label={t('obecne.odebrat')}
+                      className="shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-danger hover:border-danger transition-colors cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setKontaktEmaily((p) => [...p, ''])}
+                className="self-start text-xs font-heading text-brand-purple hover:underline"
+              >
+                + {t('firma.nabidkyPridatMail')}
+              </button>
+            </div>
           </AdminField>
         </div>
         <div className="flex-1 min-w-[160px]">

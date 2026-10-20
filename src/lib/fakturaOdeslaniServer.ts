@@ -113,8 +113,20 @@ export async function odesliFakturu(
   const vlastniFaktury = ((invoice.company as { fakturyEmaily?: string[] | null }).fakturyEmaily ?? [])
     .map((e) => e.trim())
     .filter(Boolean);
-  const mailFirmy = vlastniFaktury[0] ?? invoice.company.contactEmail?.trim() ?? null;
-  const dalsiFaktury = vlastniFaktury.slice(1);
+  /**
+   * KONTAKT FIRMY SNESE VÍC ADRES (20. 10. 2026: „tady potřebuju více polí,
+   * nechci to oddělovat čárkou"). Když vlastní seznam na faktury vyplněný
+   * není, jde faktura na všechny kontaktní adresy firmy - `contactEmail` je
+   * první z nich.
+   */
+  const kontakty = [...new Set(
+    [invoice.company.contactEmail, ...(((invoice.company as { kontaktEmaily?: string[] | null }).kontaktEmaily) ?? [])]
+      .map((e) => (e ?? '').trim())
+      .filter(Boolean),
+  )];
+  const naFakturu = vlastniFaktury.length > 0 ? vlastniFaktury : kontakty;
+  const mailFirmy = naFakturu[0] ?? null;
+  const dalsiFaktury = naFakturu.slice(1);
   const meta = invoice.caflouProjectId
     ? await prisma.projectMeta.findUnique({
         where: { caflouProjectId: invoice.caflouProjectId },
