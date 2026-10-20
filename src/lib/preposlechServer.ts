@@ -59,6 +59,13 @@ export type PreposlechPrehled = {
 
 export async function nactiPreposlechPrehled(
   caflouProjectIds: string[],
+  /**
+   * KLIENTSKÝ PŘEHLED (zadání 20. 10. 2026: interní přeposlech „by neměl
+   * vidět klient"). Pak se do počtu poznámek nezapočítají ty naše a hotovo
+   * znamená jen klientovo odškrtnutí - jinak by mu u zakázky svítilo, že má
+   * přeposlechnuto, protože jsme si ji poslechli my.
+   */
+  proKlienta = false,
 ): Promise<Map<string, PreposlechPrehled>> {
   const prehled = new Map<string, PreposlechPrehled>();
   if (caflouProjectIds.length === 0) return prehled;
@@ -70,6 +77,7 @@ export async function nactiPreposlechPrehled(
         select: {
           caflouProjectId: true,
           reviewed: true,
+          interniReviewed: true,
           pocetStop: true,
           slyseneStrany: true,
           slyseneStranyZ: true,
@@ -84,7 +92,10 @@ export async function nactiPreposlechPrehled(
       // Zapsane chyby (25. 9. 2026) - jeden dotaz na cely seznam.
       prisma.preposlechChyba.groupBy({
         by: ['caflouProjectId'],
-        where: { caflouProjectId: { in: caflouProjectIds } },
+        where: {
+          caflouProjectId: { in: caflouProjectIds },
+          ...(proKlienta ? { interni: false } : {}),
+        },
         _count: { _all: true },
       }),
     ]);
@@ -95,7 +106,7 @@ export async function nactiPreposlechPrehled(
       prehled.set(stav.caflouProjectId, {
         stop: stav.pocetStop,
         poslechnuto: pocty.get(stav.caflouProjectId) ?? 0,
-        hotovo: stav.reviewed,
+        hotovo: stav.reviewed || (!proKlienta && Boolean(stav.interniReviewed)),
         chyb: poctyChyb.get(stav.caflouProjectId) ?? 0,
         procent: spocitejPostup(stav.slyseneStrany ?? [], stav.slyseneStranyZ ?? stav.textStran)?.procent ?? null,
       });
@@ -123,27 +134,49 @@ export async function nactiPreposlechPrehled(
   return prehled;
 }
 
-export async function nactiPreposlech(caflouProjectId: string): Promise<PreposlechStavData> {
+/**
+ * KAŽDÁ STRANA VIDÍ SVOU (zadání 20. 10. 2026: „když budeme poslouchat některé
+ * knihy interně nebo si interně v portálu značit něco, tak by to neměl vidět
+ * klient"). Tohle je první vykreslení AudioTaggeru ze serveru; dál už se stav
+ * čte z /api/projekty/[id]/preposlech, kde se dělí stejně - viz komentář
+ * u funkce `stav` v té routě.
+ */
+export async function nactiPreposlech(
+  caflouProjectId: string,
+  /** Čte to klient (účtem nebo odkazem z mailu)? Pak bez našich zápisů. */
+  proKlienta = false,
+): Promise<PreposlechStavData> {
   try {
     const [chyby, stav, hotove] = await Promise.all([
       prisma.preposlechChyba.findMany({
-        where: { caflouProjectId },
+        where: { caflouProjectId, ...(proKlienta ? { interni: false } : {}) },
         orderBy: [{ trackIndex: 'asc' }, { localTime: 'asc' }],
         take: 2000,
       }),
       prisma.preposlechStav.findUnique({ where: { caflouProjectId } }),
       // Odskrtnute stopy (zadani 14. 9. 2026) - jen poradi, nic vic z nich
-      // AudioTagger nepotrebuje.
+      // AudioTagger nepotrebuje. Nase odskrtnuti ma vlastni pole, takze
+      // klientovi stopy nezezelenaji nasi kontrolou (20. 10. 2026).
       prisma.preposlechStopa.findMany({
-        where: { caflouProjectId, hotovoAt: { not: null } },
+        where: proKlienta
+          ? { caflouProjectId, hotovoAt: { not: null } }
+          : { caflouProjectId, hotovoInterniAt: { not: null } },
         select: { trackIndex: true },
       }),
     ]);
 
+    const naseHotovo = !proKlienta && Boolean(stav?.interniReviewed);
+    const klientHotovo = Boolean(stav?.reviewed);
+    const kdyHotovo = klientHotovo ? stav?.reviewedAt : naseHotovo ? stav?.interniReviewedAt : null;
+
     return {
-      reviewed: Boolean(stav?.reviewed),
-      reviewedByName: stav?.reviewedByName ?? null,
-      reviewedAt: stav?.reviewedAt ? stav.reviewedAt.toISOString() : null,
+      reviewed: klientHotovo || naseHotovo,
+      reviewedByName: klientHotovo
+        ? (stav?.reviewedByName ?? null)
+        : naseHotovo
+          ? (stav?.interniReviewedByName ?? null)
+          : null,
+      reviewedAt: kdyHotovo ? kdyHotovo.toISOString() : null,
       chyby: chyby.map((ch) => ({
         id: ch.id,
         trackIndex: ch.trackIndex,

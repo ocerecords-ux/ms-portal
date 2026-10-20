@@ -60,7 +60,7 @@ Nejrychlejší cesta je **označit chybu rovnou v textu myší**. Stane se pak t
 - **nahrávka se zastaví**,
 - **čas se vezme z okamžiku, kdy jste začali táhnout**, ne kdy jste výběr dotáhli. Než chybu označíte, nahrávce uteče pár vteřin a značka patří tam, kde jste ji slyšeli.
 
-Zvýraznění patří k záznamu chyby, takže ho vidí i klient ve svém odkazu — a naopak. Označit nejde text, který v PDF textem není (třeba tiráž vepsaná jako poznámka v editoru); vlastní text knihy označit jde.
+Zvýraznění patří k záznamu chyby — klient tedy ve svém odkazu vidí zvýraznění u **svých** poznámek a my u všech (naše poznámky klient nevidí, viz níž). Označit nejde text, který v PDF textem není (třeba tiráž vepsaná jako poznámka v editoru); vlastní text knihy označit jde.
 
 Bez textu to jde taky: tlačítkem **+ Přidat chybu** nebo klávesou **E** se založí záznam na aktuálním čase.
 
@@ -96,7 +96,7 @@ Tlačítko **🔖 Pauza** zamkne přeposlech a založí místo, kde jste skonči
 
 # PŘEPOSLECHNUTO
 
-Velké tlačítko, kterým se za nahrávku někdo postaví. Portál si pamatuje, kdo ho zmáčkl a kdy. Odškrtnutí se pro jistotu ptá. **Zmáčknout ho může i klient** (od 12. 9. 2026) — je to jeho slovo, že nahrávku poslechl, a u záznamu zůstane jméno, takže je vidět, kdo to odklepl.
+Velké tlačítko, kterým se za nahrávku někdo postaví. Portál si pamatuje, kdo ho zmáčkl a kdy. Odškrtnutí se pro jistotu ptá. **Zmáčknout ho může i klient** (od 12. 9. 2026) — je to jeho slovo, že nahrávku poslechl, a u záznamu zůstane jméno, takže je vidět, kdo to odklepl. **Naše odškrtnutí a klientovo jsou dvě různé věci** — viz „Interní přeposlech klient nevidí".
 
 # Odkaz pro klienta
 
@@ -139,7 +139,20 @@ Tlačítko **⬇ Poslouchat offline** v hlavičce stáhne všechny nahrávky a t
 
 # Náš poslech klientovi nic nemění
 
-Když někdo z týmu poslouchá — v portálu i na odkazu, který šel klientovi (je přihlášený) — počítá se jako **náš**: má vlastní záložku a probarvení stop, nepřidává klientovi procenta, nezapisuje „doposlechnuto" do počtu stop a do historie se nezapíše jako otevření odkazu klientem. Okno „Kdo bude poslouchat?" se nám neukazuje. Ruční zaškrtnutí stopy jako hotové a PŘEPOSLECHNUTO jsou vědomé kroky a platí dál.
+Když někdo z týmu poslouchá — v portálu i na odkazu, který šel klientovi (je přihlášený) — počítá se jako **náš**: má vlastní záložku a probarvení stop, nepřidává klientovi procenta, nezapisuje „doposlechnuto" do počtu stop a do historie se nezapíše jako otevření odkazu klientem. Okno „Kdo bude poslouchat?" se nám neukazuje.
+
+# Interní přeposlech klient nevidí
+
+Od 20. 10. 2026 si každý zápis v AudioTaggeru nese, **čí je**. Co uděláme my, zůstává u nás; co udělá klient, vidíme oba. Platí to pro:
+
+- **poznámky k opravě** — naše se klientovi v jeho odkazu neukážou (ani v tabulce ke stažení, ani ve zvýrazněném textu), a do počtu v jeho přehledu se nepočítají;
+- **historii** — naše kroky nad poznámkami vidíme jen my. Výjimka je krok, který se klienta dotkne: když mu odemkneme uzavřený přeposlech nebo mu sundáme fajfku, v historii to vidí, aby mu zámek nezmizel bez vysvětlení;
+- **odškrtnuté stopy** — zelená stopa je od teď dvojí: naše odškrtnutí vidíme my, klientovo on. Každý přepíná to svoje;
+- **PŘEPOSLECHNUTO** — když nahrávku odškrtneme my, je to naše práce, ne jeho slovo. Klientovi se u zakázky nerozsvítí zelená fajfka a **neodejde mu žádná zpráva**. V našem okně je odškrtnuto vidět tak i tak.
+
+Kdo poznámku napsal, poznáme u ní podle jména. Starší záznamy portál rozdělil podle autora jednorázově při nasazení; jeho **vlastní „mám přeposlechnuto" ani zámek se zpětně nerušily** — jinak by klientům odešly upomínky „čekáme na opravy" u knih, které jsou dávno hotové.
+
+**Stav projektu se interním přeposlechem neposune.** Na „Opravujeme" portál přehodí zakázku po našem odškrtnutí jen tehdy, když ji klient už má (**Dokončeno - ke schválení** nebo **Čekáme na opravy**) — tam to má smysl, protože se čeká na nás a upomínky mají skončit. Kniha, kterou si kontrolujeme ještě před odevzdáním, zůstane ve svém stavu. Po klientově odškrtnutí se stav posouvá vždycky.
 
 # Bruno ohlásí dokončený přeposlech
 
@@ -155,7 +168,7 @@ Po potvrzení se přeposlech **uzamkne**:
 - V liště má klient „🔒 Přeposlech uzavřen" a tlačítko na stažení tabulky.
 - **My vidíme „🔒 Uzamkl klient" a tlačítko Odemknout klientovi.** Odemknutí vrátí přeposlech do práce (označení přeposlechnuto se tím zruší, stejně jako dřív tlačítko „zrušit").
 
-**Zamyká jen klient.** Když nahrávku označíme jako přeposlechnutou my z portálu — tedy u knih, které přeposloucháváme interně — nezamyká se nic a **nikomu neodejde žádný e-mail**. Zpráva „přeposlech hotový, pouštíme se do oprav" chodí klientovi jen tehdy, když přeposlech dokončil on sám.
+**Zamyká jen klient.** Když nahrávku označíme jako přeposlechnutou my z portálu — tedy u knih, které přeposloucháváme interně — nezamyká se nic a **nikomu neodejde žádný e-mail**. Zpráva „přeposlech hotový, pouštíme se do oprav" chodí klientovi jen tehdy, když přeposlech dokončil on sám. Odškrtnutí zpátky (**Odemknout klientovi**) je jediná cesta, jak vrátit nahrávku do práce — sundá i to naše označení.
 
 # Kolik je přeposlechnuto (procenta)
 

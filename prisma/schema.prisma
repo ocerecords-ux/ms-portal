@@ -3573,6 +3573,20 @@ model PreposlechChyba {
   createdByName   String?
   createdAt       DateTime @default(now())
 
+  /// NASE POZNAMKA, KLIENT JI NEVIDI (zadani 20. 10. 2026: „kdyz budeme
+  /// poslouchat nektere knihy interne nebo si interne v portalu znacit neco,
+  /// tak by to nemel videt klient").
+  ///
+  /// Preposlech je jeden, ale ctou ho dve strany. Zvukar si do nej pise, co
+  /// jeste predelat; klient to, co mu vadi. Do 20. 10. 2026 videli oba
+  /// vsechno - a nase interni kontrola se tak klientovi ukazala jako seznam
+  /// chyb v jeho knize, jeste nez ji vubec dostal.
+  ///
+  /// Kdo poznamku napsal, podle toho se rozdeluje: zapis z tymu Mediaspace
+  /// je interni, zapis klienta (uctem i odkazem z mailu) neni. My vidime
+  /// obe strany, klient jen svou.
+  interni         Boolean  @default(false)
+
   @@index([caflouProjectId, trackIndex, localTime])
 }
 
@@ -3636,6 +3650,18 @@ model PreposlechStav {
   uzamcenoAt      DateTime?
   uzamcenoKym     String?
 
+  /// PREPOSLECHNUTO ODSKRTNUTE NAMI (zadani 20. 10. 2026). Zamerne jine pole
+  /// nez `reviewed`: ten patri klientovi a nese jeho „mam preposlechnuto" -
+  /// podle nej se mu v prehledu sviti zelena fajfka a podle nej mu portal
+  /// posila zpravu o dokoncenem preposlechu. Kdyz si knihu preposlechneme
+  /// interne, je to nase prace, ne jeho slovo; klient o ni vedet nema.
+  ///
+  /// My v AudioTaggeru vidime odskrtnuto tak i tak - pole se scitaji az pri
+  /// cteni (viz /api/projekty/[id]/preposlech).
+  interniReviewed       Boolean   @default(false)
+  interniReviewedAt     DateTime?
+  interniReviewedByName String?
+
   /// Kolik stop ma AudioTagger u projektu k dispozici (zadani 12. 9. 2026:
   /// sloupec „K preposlechu" u klienta). Zapisuje se pri kazdem nacteni stop
   /// - slozka na Disku je zdroj pravdy, tohle je jen jeji posledni znama
@@ -3688,6 +3714,12 @@ model PreposlechStopa {
   /// jeste vracet.
   hotovoAt        DateTime?
   hotovoKdo       String?
+
+  /// Totez odskrtnute NAMI (20. 10. 2026). Dve strany, dve odskrtavatka -
+  /// jinak by se klientovi stopy zezelenaly nasi kontrolou a on by si
+  /// myslel, ze je uz poslechl. Kazdy vidi a prepina to svoje.
+  hotovoInterniAt  DateTime?
+  hotovoInterniKdo String?
 
   @@unique([caflouProjectId, trackIndex])
   @@index([caflouProjectId])
@@ -4183,6 +4215,10 @@ model PreposlechUdalost {
   snimek          Json?
   /// Uz byl tenhle krok vracen? Vracet ho podruhe nema smysl.
   vracenoAt       DateTime?
+
+  /// Nas krok - v historii ho vidime jen my (20. 10. 2026, viz
+  /// PreposlechChyba.interni). Co udelal klient, vidi oba.
+  interni         Boolean  @default(false)
 
   createdAt       DateTime @default(now())
 

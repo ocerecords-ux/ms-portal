@@ -302,7 +302,9 @@ export default async function ProjektyPage() {
 
   // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen
   // u rozpracovanych projektu - u dokoncenych uz nema co ukazovat.
-  const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)));
+  // Jen klientovo (20. 10. 2026): nase interni poznamky ani nase odskrtnuti
+  // „preposlechnuto" se do klientskeho prehledu nepocitaji.
+  const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)), true);
   const preposlech = Object.fromEntries(preposlechMapa);
 
   // Proklik do AudioTaggeru misto zelene fajfky (zadani 14. 9. 2026). Jednim

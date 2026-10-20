@@ -50,12 +50,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     const kdo = pristup.jmeno ?? (pristup.pres_odkaz ? 'Klient' : null);
     const hotovo = parsed.data.hotovo;
+    /**
+     * DVĚ ODŠKRTÁVÁTKA, KAŽDÁ STRANA SVOJE (zadání 20. 10. 2026: „když budeme
+     * poslouchat některé knihy interně… tak by to neměl vidět klient").
+     * Odškrtnutá stopa je v AudioTaggeru zelená - a stopa, kterou si odškrtne
+     * zvukař, by klientovi říkala, že ji má poslechnutou on.
+     */
     const zmenaHotovo =
       hotovo === undefined
         ? {}
-        : hotovo
-          ? { hotovoAt: new Date(), hotovoKdo: kdo }
-          : { hotovoAt: null, hotovoKdo: null };
+        : pristup.interni
+          ? hotovo
+            ? { hotovoInterniAt: new Date(), hotovoInterniKdo: kdo }
+            : { hotovoInterniAt: null, hotovoInterniKdo: null }
+          : hotovo
+            ? { hotovoAt: new Date(), hotovoKdo: kdo }
+            : { hotovoAt: null, hotovoKdo: null };
 
     await prisma.preposlechStopa.upsert({
       where: {

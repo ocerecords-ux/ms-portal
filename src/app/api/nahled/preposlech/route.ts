@@ -56,7 +56,9 @@ export async function GET(req: NextRequest) {
     prisma.preposlechStav.findUnique({ where: { caflouProjectId: projekt } }),
     prisma.preposlechStopa.findMany({
       where: { caflouProjectId: projekt },
-      select: { hotovoAt: true },
+      // Odskrtnuto nami i klientem (20. 10. 2026) - okno je interni, takze
+      // ukazuje obe strany; viz PreposlechStopa.hotovoInterniAt.
+      select: { hotovoAt: true, hotovoInterniAt: true },
     }),
     prisma.preposlechChyba.count({ where: { caflouProjectId: projekt } }),
     prisma.preposlechChyba.findFirst({
@@ -73,7 +75,7 @@ export async function GET(req: NextRequest) {
 
   const celkem = stav?.pocetStop ?? 0;
   const poslechnuto = stopy.length;
-  const hotovo = stopy.filter((s) => s.hotovoAt).length;
+  const hotovo = stopy.filter((s) => s.hotovoAt || s.hotovoInterniAt).length;
 
   // Kolik z textu už klient při poslechu měl před očima (21. 9. 2026).
   const stran = stav?.slyseneStranyZ ?? stav?.textStran ?? 0;

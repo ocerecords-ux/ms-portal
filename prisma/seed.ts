@@ -239,6 +239,7 @@ async function main() {
   await castiJenTamKdeSeNaCastiFakturuje();
   await londynAnglickyALibry();
   await sloucDvojiteSoukromeChaty();
+  await rozdelPreposlechNaNasAKlienta();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -3062,6 +3063,98 @@ async function zalozHistoriiPortalu() {
  * Rozhoduje ID účtu, ne podobnost jmen - ručně psaná jména bez účtu (casting,
  * host) zůstávají, jak jsou.
  */
+/**
+ * NAŠE STRANA PŘEPOSLECHU SE ODDĚLÍ OD KLIENTOVY (zadání 20. 10. 2026: „když
+ * budeme poslouchat některé knihy interně nebo si interně v portálu značit
+ * něco, tak by to neměl vidět klient a neměla by jít na něj ani žádná
+ * notifikace o ukončeném přeposlechu apod.").
+ *
+ * Od 20. 10. 2026 si každý zápis v AudioTaggeru nese, ČÍ je (PreposlechChyba
+ * .interni, PreposlechUdalost.interni, PreposlechStopa.hotovoInterniAt).
+ * Záznamy z dřívějška příznak nemají, takže by naše staré poznámky zůstaly
+ * klientovi na očích - a přesně o ty tady jde.
+ *
+ * ROZHODUJE AUTOR, ne obsah: poznámka od účtu s interní rolí (Žůžo-labůžo,
+ * Produkce, Zvukař) je naše, poznámka klienta - účtem i odkazem z mailu -
+ * jeho. U historie se podle jména dohledá týž klíč; jména bez účtu („Klient",
+ * posluchači odkazu) zůstávají klientovi, jak byla.
+ *
+ * NA CO SE NESAHÁ:
+ *  - `PreposlechStav.reviewed` (klientovo „mám přeposlechnuto"). I kdyby ho
+ *    tehdy odškrtl někdo od nás, dnes na něm visí, že se u zakázky nemá
+ *    upomínat „čekáme na opravy" - sundat ho zpětně by znamenalo rozeslat
+ *    klientům upomínky na knihy, které jsou dávno hotové.
+ *  - Řádky historie o zámku a o přeposlechnutí (PREPOSLECHNUTO, ZNOVU,
+ *    OTEVRENO, POSLUCHAC). Mluví o klientově straně, i když u nich stojí naše
+ *    jméno.
+ */
+async function rozdelPreposlechNaNasAKlienta() {
+  const ZNAMKA = 'preposlech-interni-2026-10-20';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const nasi = (await prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
+      select: { id: true, name: true, email: true },
+    })) as { id: string; name: string | null; email: string }[];
+
+    if (nasi.length === 0) {
+      await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+      return;
+    }
+
+    const idNasich = nasi.map((u) => u.id);
+    /** Jak se nas clovek podepisuje do historie: jmeno, a kdyz chybi, e-mail. */
+    const jmenaNasich = [
+      ...new Set(nasi.map((u) => (u.name && u.name.trim() ? u.name.trim() : u.email))),
+    ];
+
+    const poznamky = await prisma.preposlechChyba.updateMany({
+      where: { createdByUserId: { in: idNasich }, interni: false },
+      data: { interni: true },
+    });
+
+    const historie = await prisma.preposlechUdalost.updateMany({
+      where: {
+        interni: false,
+        kdo: { in: jmenaNasich },
+        typ: { in: ['PRIDANA', 'UPRAVENA', 'SMAZANA', 'VRACENO'] },
+      },
+      data: { interni: true },
+    });
+
+    /**
+     * ODŠKRTNUTÉ STOPY SE PŘESTĚHUJÍ. Ruční „tenhle track mám hotový" si do
+     * teď odškrtával hlavně náš přeposlouchávač - a od teď je to pole
+     * klientovo. Bez přestěhování by zelené stopy skočily klientovi do okna.
+     */
+    const stopy = (await prisma.preposlechStopa.findMany({
+      where: { hotovoAt: { not: null }, hotovoInterniAt: null, hotovoKdo: { in: jmenaNasich } },
+      select: { id: true, hotovoAt: true, hotovoKdo: true },
+    })) as { id: string; hotovoAt: Date | null; hotovoKdo: string | null }[];
+
+    for (const st of stopy) {
+      await prisma.preposlechStopa.update({
+        where: { id: st.id },
+        data: {
+          hotovoInterniAt: st.hotovoAt,
+          hotovoInterniKdo: st.hotovoKdo,
+          hotovoAt: null,
+          hotovoKdo: null,
+        },
+      });
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(
+      `  preposlech: nasich poznamek ${poznamky.count}, radku historie ${historie.count}, odskrtnutych stop ${stopy.length}`,
+    );
+  } catch (err) {
+    console.warn('  rozdeleni preposlechu na nas a klienta se nepodarilo:', err);
+  }
+}
+
 async function srovnejJmenaHercuVKalendari() {
   const ZNAMKA = 'jmena-v-kalendari-srovnana';
   try {

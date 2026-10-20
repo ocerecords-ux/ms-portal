@@ -57,11 +57,19 @@ export default async function PreposlechOdkazemPage({ params }: { params: { toke
     );
   }
 
+  /**
+   * NAŠ ČLOVĚK NA KLIENTOVĚ ODKAZU (21. 9. 2026) SE POZNÁ DŘÍV NEŽ DATA
+   * (20. 10. 2026). Podle toho se rozhoduje, jestli do AudioTaggeru patří
+   * i naše interní poznámky a odškrtnuté stopy - klient je vidět nemá.
+   */
+  const session = await getServerSession(authOptions).catch(() => null);
+  const interni = Boolean(session?.user?.id && isInternalRole(session.user.role));
+
   const [meta, stav, schvaleni] = await Promise.all([
     prisma.projectMeta
       .findUnique({ where: { caflouProjectId }, select: { name: true } })
       .catch(() => null),
-    nactiPreposlech(caflouProjectId),
+    nactiPreposlech(caflouProjectId, !interni),
     /**
      * SCHVÁLIT I ODSUD (oprava 23. 9. 2026: „klient schválil projekt Strabag,
      * ale nikam se to nepropsalo"). Reklamní klient, který dostal odkaz do
@@ -75,8 +83,6 @@ export default async function PreposlechOdkazemPage({ params }: { params: { toke
   // Od 21. 9. 2026 i KDO - kdo se u prohlizece predstavil e-mailem.
   // Nas clovek na klientove odkazu se do statistiky otevreni nepocita
   // (21. 9. 2026) - klient by jinak „otevrel odkaz", i kdyz to byl Ondrej.
-  const session = await getServerSession(authOptions).catch(() => null);
-  const interni = Boolean(session?.user?.id && isInternalRole(session.user.role));
   const ja = interni ? null : await posluchacZCookie(caflouProjectId);
   if (!interni) void zapisOtevreni(params.token, ja ? ja.jmeno?.trim() || ja.email : null);
 

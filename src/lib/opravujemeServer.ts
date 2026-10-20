@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
-import { STAV_OPRAVUJEME, STAVY_PROJEKTU } from '@/lib/stavyProjektu';
+import { STAV_OPRAVUJEME, STAV_ODEVZDANO, STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 
 /**
  * PO DOKONČENÉM PŘEPOSLECHU SE OPRAVUJE (zadání 27. 9. 2026: „když se označí
@@ -28,6 +28,14 @@ const PORADI = STAVY_PROJEKTU.map((s) => s.nazev);
 export async function preklopNaOpravujeme(
   caflouProjectId: string,
   kdo: string | null,
+  /**
+   * PŘEPOSLECHLI JSME SI TO MY SAMI (zadání 20. 10. 2026: interní přeposlech
+   * „by neměl vidět klient"). Pak se stav posune jen u zakázky, kterou klient
+   * už má - „Dokončeno - ke schválení" nebo „Čekáme na opravy". U knihy, kterou
+   * si kontrolujeme ještě před odevzdáním, by „Opravujeme" klientovi oznámilo
+   * práci, o které nemá vědět, a posunulo zakázku o dva stavy dopředu.
+   */
+  interni = false,
 ): Promise<boolean> {
   try {
     const projekt = await prisma.projectMeta.findUnique({
@@ -47,6 +55,7 @@ export async function preklopNaOpravujeme(
 
     const ted = PORADI.indexOf((projekt.statusName ?? '').trim());
     const cil = PORADI.indexOf(STAV_OPRAVUJEME);
+    if (interni && ted < PORADI.indexOf(STAV_ODEVZDANO)) return false;
     // Stav mimo naši cestu (starý přenos z Caflou) necháváme být - nevíme,
     // kde v cestě je, a přepsat ho by znamenalo hádat.
     if (ted < 0 || cil < 0 || ted >= cil) return false;

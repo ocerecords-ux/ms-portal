@@ -27,6 +27,8 @@ const schema = z.object({ udalost: z.string().min(1).max(100) });
 
 type Snimek = {
   createdByUserId?: string | null;
+  /** Byla to nase poznamka? (20. 10. 2026) Pri vraceni smazani se zachova. */
+  interni?: boolean;
   createdByName?: string | null;
   trackIndex?: number;
   trackName?: string;
@@ -122,6 +124,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         description: snimek.description,
         createdByUserId: snimek.createdByUserId ?? null,
         createdByName: snimek.createdByName ?? null,
+        // Postavena poznamka patri tomu, kdo ji napsal - ne tomu, kdo ji
+        // vratil. Stare zaznamy snimek bez priznaku nemaji, ty beru podle
+        // kroku, ze ktereho se vraci.
+        interni: snimek.interni ?? udalost.interni ?? false,
       },
     });
     popis = 'Vrátil(a) smazání — poznámka je zpátky.';
@@ -132,7 +138,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     data: { vracenoAt: new Date() },
   });
   await prisma.preposlechUdalost
-    .create({ data: { caflouProjectId: params.id, typ: 'VRACENO', popis, kdo: jmeno } })
+    .create({
+      data: {
+        caflouProjectId: params.id,
+        typ: 'VRACENO',
+        popis,
+        kdo: jmeno,
+        // Vraceni nasi poznamky zustava u nas (20. 10. 2026).
+        interni: Boolean(pristup.interni),
+      },
+    })
     .catch(() => undefined);
 
   return NextResponse.json({ ok: true });

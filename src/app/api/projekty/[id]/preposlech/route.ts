@@ -59,6 +59,11 @@ async function zapisUdalost(
   typ: string,
   popis: string,
   kdo: string | null,
+  /**
+   * Náš krok, nebo klientův? (zadání 20. 10. 2026) Naše kroky zůstávají
+   * v historii jen nám - viz komentář u `stav` níž.
+   */
+  interni: boolean,
   /** Které poznámky se to týkalo a jak vypadala PŘED tímhle krokem. */
   krok?: { chybaId?: string | null; snimek?: unknown },
 ) {
@@ -69,6 +74,7 @@ async function zapisUdalost(
         typ,
         popis,
         kdo,
+        interni,
         chybaId: krok?.chybaId ?? null,
         snimek: (krok?.snimek as never) ?? undefined,
       },
@@ -108,16 +114,35 @@ function smiUpravit(chyba: { createdByUserId: string | null }, kdo: Pristup): bo
   return kdo.userId ? chyba.createdByUserId === kdo.userId : chyba.createdByUserId === null;
 }
 
+/**
+ * KLIENT VIDÍ JEN SVOU STRANU PŘEPOSLECHU (zadání 20. 10. 2026: „když budeme
+ * poslouchat některé knihy interně nebo si interně v portálu značit něco, tak
+ * by to neměl vidět klient a neměla by jít na něj ani žádná notifikace
+ * o ukončeném přeposlechu apod.").
+ *
+ * AudioTagger je jeden, ale slouží dvěma stranám. My si do něj píšeme, co se
+ * má předělat, a odškrtáváme si, co máme hotové; klient píše, co mu vadí.
+ * Do dneška viděli oba všechno - takže naše interní kontrola klientovi
+ * ukázala seznam chyb v jeho knize, a naše odškrtnutí „přeposlechnuto" mu
+ * rozsvítilo zelenou fajfku u zakázky, kterou ještě ani neslyšel.
+ *
+ * Od teď se to dělí podle toho, KDO ten zápis udělal: tým Mediaspace =
+ * interní, klient (účtem i odkazem z mailu) = klientův. Klient dostane jen
+ * svoje, my obojí - jedním filtrem rovnou v dotazu, aby se naše poznámky
+ * nedostaly ven ani omylem v nějakém dalším poli odpovědi.
+ */
 async function stav(caflouProjectId: string, kdo?: Pristup) {
+  // Prazdno = bez filtru (nas clovek vidi obe strany).
+  const jenKlientovo = kdo?.interni ? {} : { interni: false };
   const [chyby, preposlech, historie] = await Promise.all([
     prisma.preposlechChyba.findMany({
-      where: { caflouProjectId },
+      where: { caflouProjectId, ...jenKlientovo },
       orderBy: [{ trackIndex: 'asc' }, { localTime: 'asc' }],
       take: 2000,
     }),
     prisma.preposlechStav.findUnique({ where: { caflouProjectId } }),
     prisma.preposlechUdalost.findMany({
-      where: { caflouProjectId },
+      where: { caflouProjectId, ...jenKlientovo },
       orderBy: { createdAt: 'desc' },
       take: 200,
     }),
@@ -128,10 +153,23 @@ async function stav(caflouProjectId: string, kdo?: Pristup) {
   const zamceno = Boolean(preposlech?.uzamceno);
   const smiPsat = Boolean(kdo) && (kdo!.interni || !zamceno);
 
+  /**
+   * PŘEPOSLECHNUTO MÁ DVĚ ODŠKRTÁVÁTKA (20. 10. 2026). Klientovo je jeho
+   * slovo („mám přeposlechnuto"), naše je naše práce. Klient vidí jen svoje,
+   * v našem okně se sčítají - odškrtnuté je odškrtnuté, ať to byl kdokoliv.
+   */
+  const naseHotovo = Boolean(kdo?.interni) && Boolean(preposlech?.interniReviewed);
+  const klientHotovo = Boolean(preposlech?.reviewed);
+  const kdyHotovo = klientHotovo ? preposlech?.reviewedAt : naseHotovo ? preposlech?.interniReviewedAt : null;
+
   return {
-    reviewed: Boolean(preposlech?.reviewed),
-    reviewedByName: preposlech?.reviewedByName ?? null,
-    reviewedAt: preposlech?.reviewedAt ? preposlech.reviewedAt.toISOString() : null,
+    reviewed: klientHotovo || naseHotovo,
+    reviewedByName: klientHotovo
+      ? (preposlech?.reviewedByName ?? null)
+      : naseHotovo
+        ? (preposlech?.interniReviewedByName ?? null)
+        : null,
+    reviewedAt: kdyHotovo ? kdyHotovo.toISOString() : null,
     uzamceno: zamceno,
     uzamcenoKym: preposlech?.uzamcenoKym ?? null,
     uzamcenoAt: preposlech?.uzamcenoAt ? preposlech.uzamcenoAt.toISOString() : null,
@@ -219,6 +257,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       zvyrazneni: parsed.data.zvyrazneni ?? undefined,
       createdByUserId: pristup.userId,
       createdByName: pristup.jmeno,
+      // Nase poznamka zustava u nas (20. 10. 2026) - viz komentar u `stav`.
+      interni: pristup.interni,
     },
   });
 
@@ -227,6 +267,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     'PRIDANA',
     `Přidal(a) poznámku u stopy ${parsed.data.trackIndex}.`,
     pristup.jmeno,
+    pristup.interni,
     // Pred pridanim nebylo co vracet - snimek nese jen to, kdo poznamku
     // zalozil, aby se dalo overit, kdo ji smi zase odebrat.
     { chybaId: vytvorena.id, snimek: { createdByUserId: pristup.userId } },
@@ -242,7 +283,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const telo = await req.json().catch(() => ({}));
   const reviewed = Boolean((telo as { reviewed?: unknown })?.reviewed);
   const predtim = await prisma.preposlechStav
-    .findUnique({ where: { caflouProjectId: params.id }, select: { reviewed: true, uzamceno: true } })
+    .findUnique({
+      where: { caflouProjectId: params.id },
+      select: { reviewed: true, uzamceno: true, interniReviewed: true },
+    })
     .catch(() => null);
 
   // Zamčený přeposlech odškrtne zpátky jen někdo od nás - klient už se k němu
@@ -257,27 +301,57 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
    * „odemknout klientovi".
    */
   const zamknout = reviewed && !pristup.interni;
+  const ted = new Date();
+
+  /**
+   * NAŠE ODŠKRTNUTÍ JDE DO NAŠEHO POLE (zadání 20. 10. 2026: interní
+   * přeposlech „by neměl vidět klient"). `reviewed` je klientovo slovo -
+   * podle něj se mu v přehledu rozsvítí zelená fajfka a podle něj mu odejde
+   * zpráva o dokončeném přeposlechu. Když si knihu přeposlechneme my,
+   * je to naše práce a do jeho pole nepatří.
+   *
+   * ODŠKRTNUTÍ ZPÁTKY MAŽE OBOJÍ. Je to naše „odemknout klientovi" (13. 10.
+   * 2026) a zároveň jediná cesta, jak vrátit nahrávku k přeposlechu - kdyby
+   * sahalo jen na naše pole, zůstal by klientovi zámek i fajfka a nikdo by
+   * je už nesundal.
+   */
+  const zapis = pristup.interni
+    ? {
+        interniReviewed: reviewed,
+        interniReviewedAt: reviewed ? ted : null,
+        interniReviewedByName: reviewed ? pristup.jmeno : null,
+        ...(reviewed
+          ? {}
+          : {
+              reviewed: false,
+              reviewedAt: null,
+              reviewedByName: null,
+              uzamceno: false,
+              uzamcenoAt: null,
+              uzamcenoKym: null,
+            }),
+      }
+    : {
+        reviewed,
+        reviewedAt: reviewed ? ted : null,
+        reviewedByName: reviewed ? pristup.jmeno : null,
+        uzamceno: zamknout,
+        uzamcenoAt: zamknout ? ted : null,
+        uzamcenoKym: zamknout ? pristup.jmeno : null,
+      };
 
   await prisma.preposlechStav.upsert({
     where: { caflouProjectId: params.id },
-    create: {
-      caflouProjectId: params.id,
-      reviewed,
-      reviewedAt: reviewed ? new Date() : null,
-      reviewedByName: reviewed ? pristup.jmeno : null,
-      uzamceno: zamknout,
-      uzamcenoAt: zamknout ? new Date() : null,
-      uzamcenoKym: zamknout ? pristup.jmeno : null,
-    },
-    update: {
-      reviewed,
-      reviewedAt: reviewed ? new Date() : null,
-      reviewedByName: reviewed ? pristup.jmeno : null,
-      uzamceno: zamknout,
-      uzamcenoAt: zamknout ? new Date() : null,
-      uzamcenoKym: zamknout ? pristup.jmeno : null,
-    },
+    create: { caflouProjectId: params.id, ...zapis },
+    update: zapis,
   });
+
+  /**
+   * Náš krok vidíme jen my - KROMĚ TOHO, KTERÝ SE DOTKNE KLIENTA. Když mu
+   * odemkneme uzavřený přeposlech nebo mu sundáme jeho fajfku, musí v historii
+   * vidět, co se stalo; zámek, který zmizí bez vysvětlení, je horší než zámek.
+   */
+  const dotykaSeKlienta = !reviewed && Boolean(predtim?.reviewed || predtim?.uzamceno);
 
   await zapisUdalost(
     params.id,
@@ -290,6 +364,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ? 'Odemkl(a) přeposlech a vrátil(a) nahrávku k přeposlechu.'
         : 'Vrátil(a) nahrávku k přeposlechu.',
     pristup.jmeno,
+    pristup.interni && !dotykaSeKlienta,
   );
 
   /**
@@ -298,7 +373,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
    * přeposlech"). Jen při skutečném přepnutí na hotovo, ne při opakovaném
    * kliknutí.
    */
-  if (reviewed && !predtim?.reviewed) {
+  const poprve = reviewed && !(pristup.interni ? predtim?.interniReviewed : predtim?.reviewed);
+  if (poprve) {
     await oznamDokoncenyPreposlech(params.id, pristup.jmeno, !pristup.interni);
     /**
      * A KLIENTOVI ODEJDE ZPRÁVA (zadání 25. 9. 2026: „klientům u audioknih by
@@ -326,7 +402,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
      * spolklo. Od téhle chvíle projekt nespadá pod denní překlápění na
      * „Čekáme na opravy" - čeká se na nás, ne na klienta.
      */
-    await preklopNaOpravujeme(params.id, pristup.jmeno);
+    /**
+     * U INTERNÍHO PŘEPOSLECHU JEN Z ODEVZDANÉ ZAKÁZKY (20. 10. 2026). Stav
+     * „Opravujeme" klient vidí - a u knihy, kterou si interně kontrolujeme
+     * ještě před odevzdáním, by mu portál posunul zakázku, o které nic neví.
+     * Když ale projekt u klienta už je („Dokončeno - ke schválení", „Čekáme
+     * na opravy"), platí to původní: upomínky „čekáme na opravy" skončí,
+     * protože se čeká na nás. Klientovo odškrtnutí posouvá stav vždycky.
+     */
+    await preklopNaOpravujeme(params.id, pristup.jmeno, pristup.interni);
   }
 
   return NextResponse.json(await stav(params.id, pristup));
@@ -363,7 +447,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     data: { description: parsed.data.description },
   });
 
-  await zapisUdalost(params.id, 'UPRAVENA', 'Upravil(a) znění poznámky.', pristup.jmeno, {
+  await zapisUdalost(params.id, 'UPRAVENA', 'Upravil(a) znění poznámky.', pristup.jmeno, pristup.interni, {
     chybaId: chyba.id,
     snimek: { createdByUserId: chyba.createdByUserId, description: chyba.description },
   });
@@ -390,12 +474,15 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   await prisma.preposlechChyba.delete({ where: { id: chyba.id } });
 
-  await zapisUdalost(params.id, 'SMAZANA', 'Smazal(a) poznámku.', pristup.jmeno, {
+  await zapisUdalost(params.id, 'SMAZANA', 'Smazal(a) poznámku.', pristup.jmeno, pristup.interni, {
     chybaId: chyba.id,
     // Cely zaznam - z nej se poznamka da postavit zpatky.
     snimek: {
       createdByUserId: chyba.createdByUserId,
       createdByName: chyba.createdByName,
+      // Ci poznamka to byla (20. 10. 2026) - at ji vraceni postavi zpatky
+      // na tu stranu, kde byla.
+      interni: chyba.interni,
       trackIndex: chyba.trackIndex,
       trackName: chyba.trackName,
       localTime: chyba.localTime,
