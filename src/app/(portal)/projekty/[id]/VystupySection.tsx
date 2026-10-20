@@ -501,9 +501,27 @@ function VystupRadek({
   const [text, setText] = useState(vystup.text ?? '');
   /** Pole se scénářem - tlačítka B/I/U obalují značkami jeho výběr. */
   const poleTextu = useRef<HTMLTextAreaElement | null>(null);
+  /**
+   * NÁZEV VÝSTUPU JE VIDĚT CELÝ (zadání 20. 10. 2026: „tady musí být vidět
+   * celý název. A měl by být zabalený s možností úpravy").
+   *
+   * Do teď to bylo jednořádkové políčko s pevnou šířkou, takže „JAECOO 8 CZ -
+   * AUTOSALON KUDRNA a.s. - 20s_rádio" se uřízlo v půlce a u třiceti
+   * dealerských spotů se řádky od sebe nedaly rozeznat. Teď je to pole, které
+   * text zalomí a samo si doroste výšku - pořád se v něm dá psát.
+   */
+  const poleNazvu = useRef<HTMLTextAreaElement | null>(null);
   const [otevrenText, setOtevrenText] = useState(false);
   const [nacitam, setNacitam] = useState(false);
   const [chybaTextu, setChybaTextu] = useState<string | null>(null);
+
+  /** Výška podle obsahu - jinak by zalomený název zůstal schovaný pod okrajem. */
+  useLayoutEffect(() => {
+    const pole = poleNazvu.current;
+    if (!pole) return;
+    pole.style.height = 'auto';
+    pole.style.height = `${pole.scrollHeight}px`;
+  }, [nazev]);
 
   // Co přijde ze serveru po uložení, přebije rozepsané - jinak by v políčku
   // zůstala stará hodnota, když ji server upraví (třeba ořízne mezery).
@@ -586,25 +604,41 @@ function VystupRadek({
 
   return (
     <li className={rodic ? 'ml-6' : ''}>
-      <div className="flex items-center gap-2 flex-wrap rounded-card border border-line bg-surface px-3 py-2">
-        {rodic && <span className="text-muted text-sm shrink-0">↳</span>}
+      <div className="flex flex-col gap-1.5 rounded-card border border-line bg-surface px-3 py-2">
+        <div className="flex items-start gap-2">
+          {rodic && <span className="text-muted text-sm shrink-0 pt-1.5">↳</span>}
 
-        <input
-          value={nazev}
-          disabled={!canEdit}
-          placeholder={nazevProjektu}
-          onChange={(e) => setNazev(e.target.value)}
-          /**
-           * Po dopsání se název srovná na tvar STRABAG - 2min._online (26. 9.
-           * 2026: „takhle chci, abys přepisoval ten název"). Až při opuštění
-           * políčka, ne při každém písmenu - jinak by příponu přepisoval
-           * pod rukama a kurzor skákal na konec.
-           */
-          onBlur={() => prepoctiNazev(delkaSekund, licenceIds)}
-          aria-label={t('vystupy.nazevVystupu')}
-          className="flex-1 min-w-[140px] max-w-[280px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field disabled:opacity-60"
-        />
+          <textarea
+            ref={poleNazvu}
+            rows={1}
+            value={nazev}
+            disabled={!canEdit}
+            placeholder={nazevProjektu}
+            /**
+             * Název je jednořádkový údaj, i když se v poli zalomí: Enter ho
+             * proto uzavře místo odřádkování a vložený text se slepí zpátky
+             * do jedné řádky.
+             */
+            onChange={(e) => setNazev(e.target.value.replace(/\s*\n+\s*/g, ' '))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            }}
+            /**
+             * Po dopsání se název srovná na tvar STRABAG - 2min._online (26. 9.
+             * 2026: „takhle chci, abys přepisoval ten název"). Až při opuštění
+             * políčka, ne při každém písmenu - jinak by příponu přepisoval
+             * pod rukama a kurzor skákal na konec.
+             */
+            onBlur={() => prepoctiNazev(delkaSekund, licenceIds)}
+            aria-label={t('vystupy.nazevVystupu')}
+            className="w-full resize-none overflow-hidden rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm leading-snug outline-none hover:border-line focus:border-brand-purple focus:bg-field disabled:opacity-60"
+          />
+        </div>
 
+        <div className="flex items-center gap-2 flex-wrap">
         {/* Kdo v něm mluví - u Strabagu je v každé délce někdo jiný. */}
         <VyberVOkne
           popisek={t('vystupy.herci')}
@@ -713,6 +747,7 @@ function VystupRadek({
             onSmaz={onSmaz}
           />
         )}
+        </div>
       </div>
 
       {otevrenText && (
