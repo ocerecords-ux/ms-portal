@@ -320,14 +320,6 @@ export default async function ProjektyPage() {
   const ukazNormostrany = !(company?.dealsAds && !company?.dealsAudiobooks);
 
   /**
-   * Kolik lidí z klientovy firmy má v portálu účet - podle toho se ukazuje
-   * (nebo neukazuje) přepínač Moje / Celá firma.
-   */
-  const pocetKlientuFirmy = companyId
-    ? await prisma.user.count({ where: { companyId, role: 'CLIENT' } })
-    : 0;
-
-  /**
    * PŘEHLED U KLIENTA REKLAM (zadání 25. 9. 2026: „u klientů reklam bude jinak
    * poskládaný přehled projektů: Název projektu, Stav, Herec, Typ projektu,
    * Licence… Datum dokončení, Odkaz na složku, Připomínkovat").
@@ -412,9 +404,19 @@ export default async function ProjektyPage() {
           přepínač jen mění, co je vidět - viz ZalozkyKlienta.tsx. */}
       <ZalozkyKlienta
         pocetFirmy={firemniVse.length}
-        /* Jediný klient firmy nemá co přepínat - „moje" a „firemní" je totéž
-           (25. 9. 2026). */
-        samotny={pocetKlientuFirmy <= 1}
+        /* KDY MÁ PŘEPÍNAČ SMYSL. Do 20. 10. 2026 o tom rozhodoval počet
+           klientských účtů u firmy: jediný klient „nemá co přepínat". Jenže
+           zakázka nemusí mít kontaktní osobu vůbec, nebo ji má vedenou na
+           někom bez účtu v portálu - a ta do „mých" nespadne. U firmy
+           s jedním účtem tak zmizel i přepínač a člověk koukal na prázdno,
+           přestože firma u nás zakázky má (20. 10. 2026: „Libor, když se
+           přepne na firmu Čti mi, tak nevidí žádné projekty. Měl by vidět
+           i celou firmu, když to bude o někoho jiného").
+
+           Rozhoduje proto porovnání seznamů: když firma má víc zakázek než
+           já, je co přepínat; když jsou stejné, přepínač nabízí totéž
+           dvakrát a nekreslí se. */
+        samotny={firemniVse.length <= active.length + finished.length}
         moje={
           jeKlientReklam ? (
             <ReklamaPrehled

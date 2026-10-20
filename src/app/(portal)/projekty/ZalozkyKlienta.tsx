@@ -27,10 +27,14 @@ export function ZalozkyKlienta({
   /** Kolik zakázek má firma celkem - ať je vidět, jestli se vůbec vyplatí klikat. */
   pocetFirmy: number;
   /**
-   * Je klient u firmy sám? (oprava 25. 9. 2026: „vypni ten přepínač Celá
-   * firma u klienta v přehledu projektů, když má firma pod sebou jen jednoho
-   * klienta. To je nesmysl.") Přepínat mezi „mými" a „firemními" zakázkami
-   * nemá u jednoho člověka co ukazovat - obě záložky jsou totéž.
+   * NENÍ CO PŘEPÍNAT - obě záložky by ukázaly totéž (25. 9. 2026: „vypni ten
+   * přepínač Celá firma u klienta v přehledu projektů, když má firma pod
+   * sebou jen jednoho klienta. To je nesmysl.").
+   *
+   * Od 20. 10. 2026 o tom rozhoduje POROVNÁNÍ SEZNAMŮ, ne počet klientských
+   * účtů u firmy. Zakázka totiž nemusí mít kontaktní osobu vůbec, nebo ji má
+   * vedenou na někom bez účtu v portálu - a u firmy s jedním účtem tak mizel
+   * přepínač i tam, kde firma zakázky měla a člověk koukal na prázdno.
    */
   samotny?: boolean;
 }) {
