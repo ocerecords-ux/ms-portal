@@ -242,6 +242,7 @@ async function main() {
   await rozdelPreposlechNaNasAKlienta();
   await nazvySeriiVelkymi();
   await vystupyJaecooRadio();
+  await vystupyJaecooDorovnaniNazvu();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -3403,6 +3404,99 @@ async function vystupyJaecooRadio() {
     console.log(`  vystupy JAECOO: zalozeno ${zalozeno} dealerskych vystupu`);
   } catch (err) {
     console.warn('  vystupy JAECOO se nepodarilo zalozit:', err);
+  }
+}
+
+/**
+ * DOROVNÁNÍ NÁZVŮ DEALERSKÝCH VÝSTUPŮ (20. 10. 2026, oprava téhož dne).
+ *
+ * První běh pojmenoval výstupy „JAECOO 8 CZ - <prodejce>", jenže vzor
+ * „AF CENTRUM, s.r.o." má v portálu ještě příponu s délkou a typem
+ * („... - 20s_rádio"), stejně jako hlavní spot. Dealerské řádky tedy mají mít
+ * tvar PŘEDPONA + prodejce + PŘÍPONA, ne jen první dvě části.
+ *
+ * PŘÍPONA SE ČTE ZE VZORU, ne z napsaného řetězce: vzor je ten z výstupů,
+ * který nese jméno AF CENTRUM a je nejdelší - tedy ten s příponou. Co je před
+ * jménem prodejce, je předpona, co za ním, je přípona.
+ *
+ * A SMAŽE SE ŘÁDEK NAVÍC. První běh založil i vlastní „AF CENTRUM, s.r.o."
+ * bez přípony, protože ho proti vzoru nerozpoznal - je to prázdný duplikát
+ * z téhož dne, maže se jen když u něj není text ani rodný list.
+ */
+async function vystupyJaecooDorovnaniNazvu() {
+  const ZNAMKA = 'vystupy-jaecoo-pripona-2026-10-20';
+  const VZOROVA_FIRMA = 'AF CENTRUM, s.r.o.';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const kotva = (await prisma.vystup.findFirst({
+      where: {
+        AND: [
+          { nazev: { contains: 'JAECOO', mode: 'insensitive' } },
+          { nazev: { contains: 'AF CENTRUM', mode: 'insensitive' } },
+        ],
+      },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string } | null;
+    if (!kotva) return;
+
+    const vsechny = (await prisma.vystup.findMany({
+      where: { caflouProjectId: kotva.caflouProjectId },
+      select: { id: true, nazev: true, text: true, _count: { select: { rodneListy: true } } },
+    })) as { id: string; nazev: string; text: string | null; _count: { rodneListy: number } }[];
+
+    // Vzor = nejdelsi nazev s AF CENTRUM, tedy ten s priponou.
+    const sAfCentrem = vsechny
+      .filter((v) => v.nazev.includes(VZOROVA_FIRMA))
+      .sort((a, b) => b.nazev.length - a.nazev.length);
+    const vzor = sAfCentrem[0];
+    if (!vzor) return;
+
+    const kde = vzor.nazev.indexOf(VZOROVA_FIRMA);
+    const predpona = vzor.nazev.slice(0, kde);
+    const pripona = vzor.nazev.slice(kde + VZOROVA_FIRMA.length);
+    // Bez pripony neni co dorovnavat - nazvy uz sedi.
+    if (!pripona.trim()) {
+      await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+      return;
+    }
+
+    const kolikrat = new Map<string, number>();
+    for (const d of DEALERI_JAECOO) {
+      kolikrat.set(d.firma, (kolikrat.get(d.firma) ?? 0) + 1);
+    }
+
+    const podleNazvu = new Map(vsechny.map((v) => [v.nazev, v]));
+    let prejmenovano = 0;
+    let smazano = 0;
+
+    for (const dealer of DEALERI_JAECOO) {
+      const sMestem = (kolikrat.get(dealer.firma) ?? 0) > 1;
+      const jmeno = `${dealer.firma}${sMestem ? ` (${dealer.mesto})` : ''}`;
+      const stary = `${predpona}${jmeno}`;
+      const novy = `${predpona}${jmeno}${pripona}`;
+      const radek = podleNazvu.get(stary);
+      if (!radek || radek.id === vzor.id) continue;
+
+      // Duplikat vzoru z prvniho behu - prazdny, takze pryc.
+      if (podleNazvu.has(novy)) {
+        if (!radek.text?.trim() && radek._count.rodneListy === 0) {
+          await prisma.vystup.delete({ where: { id: radek.id } });
+          smazano += 1;
+        }
+        continue;
+      }
+
+      await prisma.vystup.update({ where: { id: radek.id }, data: { nazev: novy } });
+      podleNazvu.set(novy, radek);
+      prejmenovano += 1;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  vystupy JAECOO: prejmenovano ${prejmenovano}, smazan duplikat ${smazano}`);
+  } catch (err) {
+    console.warn('  nazvy dealerskych vystupu se nepodarilo dorovnat:', err);
   }
 }
 
