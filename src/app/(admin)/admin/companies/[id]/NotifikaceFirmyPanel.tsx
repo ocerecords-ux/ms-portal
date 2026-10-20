@@ -242,12 +242,22 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
                     {platne.length > 0 ? vyjmenuj(platne.map(jmenem)) : t('firma.komuZNasNikdo')}
                   </span>
                   {vlastni.length === 0 && ` · ${t('firma.komuZNasJakoFirma')}`}
-                  {(klientiStavu[stav] ?? []).filter((e) => e.trim()).length > 0 && (
+                  {/**
+                    * KOMU U KLIENTA JE VIDĚT ROVNOU V ZAVŘENÉM ŘÁDKU
+                    * (20. 10. 2026). Bez toho nikdo netuší, že se adresy
+                    * u klienta nastavují právě tady - otevírátko mluví
+                    * o „nás" a nastavení klienta je za ním schované.
+                    */}
+                  {nastaveni[stav] === 'KLIENT' && (
                     <>
                       {' · '}
                       <span className="text-ink">
                         {jazyk === 'en' ? 'client: ' : 'klient: '}
-                        {vyjmenuj((klientiStavu[stav] ?? []).filter((e) => e.trim()))}
+                        {(klientiStavu[stav] ?? []).filter((e) => e.trim()).length > 0
+                          ? vyjmenuj((klientiStavu[stav] ?? []).filter((e) => e.trim()))
+                          : jazyk === 'en'
+                            ? 'as on the project'
+                            : 'podle projektu'}
                       </span>
                     </>
                   )}
