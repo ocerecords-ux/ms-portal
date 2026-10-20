@@ -255,9 +255,20 @@ export async function posliNotifikaciKeStavu(
       firma: nazevFirmy,
       klient: projekt.klient?.name ?? '',
       stav,
-      // Osloveni uz neni v mailu natvrdo, ale ve vzoru (zadani 15. 9. 2026).
-      // Interni zprava nema komu vykat jmenem.
-      osloveni: nastaveni.komu === 'INTERNE' ? 'Dobrý den,' : pozdrav(projekt.klient?.name ?? null),
+      /**
+       * OSLOVENÍ JMÉNEM JEN TAM, KDE JE KOMU (zadání 20. 10. 2026: „tady
+       * nedává smysl oslovení, když tady je více lidí. Když to tak bude, tak
+       * tam musí jít jen univerzální Dobrý den,").
+       *
+       * Osloveni uz neni v mailu natvrdo, ale ve vzoru (zadani 15. 9. 2026).
+       * Interni zprava nema komu vykat jmenem - a stejne tak zprava, ktera jde
+       * na adresy nastavene u stavu nebo na vic lidi najednou: „Dobrý den,
+       * Luboši," ctou tri lidi a dva z nich Lubos nejsou.
+       */
+      osloveni:
+        nastaveni.komu === 'INTERNE' || uStavu.length > 0 || klientovi.length > 1
+          ? pozdrav(null)
+          : pozdrav(projekt.klient?.name ?? null),
     };
 
     const vysledek = await sendStavProjektuEmail({

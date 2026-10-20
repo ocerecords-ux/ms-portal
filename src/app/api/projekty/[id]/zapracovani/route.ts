@@ -167,7 +167,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const vysledek = await sendZapracovaniPripominekEmail({
         prijemci,
         skrytaKopie: nasi,
-        jmenoKlienta: projekt.klient?.name ?? null,
+        /**
+         * Jménem oslovíme jen jednoho člověka (20. 10. 2026) - když zpráva
+         * jde na adresy nastavené u stavu nebo na víc lidí, čte „Dobrý den,
+         * Luboši," i ten, kdo Luboš není.
+         */
+        jmenoKlienta: uStavu.length > 0 || prijemci.length > 1 ? null : (projekt.klient?.name ?? null),
         nazevProjektu: projekt.name ?? 'Projekt',
         kolo: poradi,
         poznamka,
