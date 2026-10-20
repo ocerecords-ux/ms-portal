@@ -243,6 +243,7 @@ async function main() {
   await nazvySeriiVelkymi();
   await vystupyJaecooRadio();
   await vystupyJaecooDorovnaniNazvu();
+  await vystupyJaecooZbytek();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -3497,6 +3498,82 @@ async function vystupyJaecooDorovnaniNazvu() {
     console.log(`  vystupy JAECOO: prejmenovano ${prejmenovano}, smazan duplikat ${smazano}`);
   } catch (err) {
     console.warn('  nazvy dealerskych vystupu se nepodarilo dorovnat:', err);
+  }
+}
+
+/**
+ * POSLEDNÍ DOROVNÁNÍ DEALERSKÝCH VÝSTUPŮ (20. 10. 2026).
+ *
+ * Předchozí krok srovnával řádky podle seznamu prodejců, takže řádek, jehož
+ * název se od seznamu v jediném znaku lišil, zůstal bez přípony. Tenhle
+ * nekouká na seznam vůbec: vezme VŠECHNY výstupy projektu, které začínají
+ * stejnou předponou jako vzor a nemají v sobě délku („20s_"), a příponu jim
+ * doplní. Řádek projektu („JAECOO 8 CZ RÁDIO", bez pomlčky) ani hlavní spot
+ * (ten už délku má) tím neprojdou.
+ */
+async function vystupyJaecooZbytek() {
+  const ZNAMKA = 'vystupy-jaecoo-zbytek-2026-10-20';
+  const VZOROVA_FIRMA = 'AF CENTRUM, s.r.o.';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const kotva = (await prisma.vystup.findFirst({
+      where: {
+        AND: [
+          { nazev: { contains: 'JAECOO', mode: 'insensitive' } },
+          { nazev: { contains: 'AF CENTRUM', mode: 'insensitive' } },
+        ],
+      },
+      select: { caflouProjectId: true },
+    })) as { caflouProjectId: string } | null;
+    if (!kotva) return;
+
+    const vsechny = (await prisma.vystup.findMany({
+      where: { caflouProjectId: kotva.caflouProjectId },
+      select: { id: true, nazev: true, text: true, _count: { select: { rodneListy: true } } },
+    })) as { id: string; nazev: string; text: string | null; _count: { rodneListy: number } }[];
+
+    const vzor = vsechny
+      .filter((v) => v.nazev.includes(VZOROVA_FIRMA))
+      .sort((a, b) => b.nazev.length - a.nazev.length)[0];
+    if (!vzor) return;
+
+    const kde = vzor.nazev.indexOf(VZOROVA_FIRMA);
+    const predpona = vzor.nazev.slice(0, kde);
+    const pripona = vzor.nazev.slice(kde + VZOROVA_FIRMA.length);
+    if (!pripona.trim() || !predpona.trim()) {
+      await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+      return;
+    }
+
+    const obsazene = new Set(vsechny.map((v) => v.nazev));
+    let dorovnano = 0;
+    let smazano = 0;
+
+    for (const v of vsechny) {
+      if (v.id === vzor.id) continue;
+      if (!v.nazev.startsWith(predpona)) continue;
+      // Uz ma delku v nazvu („- 20s_radio", „- 15s_radio") - nechavame byt.
+      if (/\d+\s*s_/i.test(v.nazev)) continue;
+
+      const novy = `${v.nazev}${pripona}`;
+      if (obsazene.has(novy)) {
+        if (!v.text?.trim() && v._count.rodneListy === 0) {
+          await prisma.vystup.delete({ where: { id: v.id } });
+          smazano += 1;
+        }
+        continue;
+      }
+      await prisma.vystup.update({ where: { id: v.id }, data: { nazev: novy } });
+      obsazene.add(novy);
+      dorovnano += 1;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  vystupy JAECOO zbytek: dorovnano ${dorovnano}, smazano ${smazano}`);
+  } catch (err) {
+    console.warn('  zbytek dealerskych vystupu se nepodarilo dorovnat:', err);
   }
 }
 
