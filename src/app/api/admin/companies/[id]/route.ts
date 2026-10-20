@@ -51,6 +51,8 @@ const schema = z.object({
   mena: z.enum(['CZK', 'EUR', 'USD', 'GBP']).optional(),
   /** Kam posílat cenové nabídky (12. 10. 2026) - prázdné pole = jako dosud. */
   nabidkyEmaily: z.array(z.string().trim().max(200)).max(20).optional(),
+  /** Kam posílat faktury (20. 10. 2026) - prázdné pole = kontakt firmy. */
+  fakturyEmaily: z.array(z.string().trim().max(200)).max(20).optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -132,6 +134,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               ...(data.tagyVydavatel !== undefined ? { tagyVydavatel: data.tagyVydavatel || null } : {}),
               ...(data.nabidkyEmaily !== undefined
                 ? { nabidkyEmaily: data.nabidkyEmaily.map((e) => e.trim()).filter(Boolean) }
+                : {}),
+              ...(data.fakturyEmaily !== undefined
+                ? { fakturyEmaily: data.fakturyEmaily.map((e) => e.trim()).filter(Boolean) }
                 : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }

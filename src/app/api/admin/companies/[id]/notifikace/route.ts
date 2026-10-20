@@ -29,6 +29,11 @@ const schema = z.object({
   interniPrijemci: z.array(z.string()).max(20).optional(),
   /** Komu z nás u jednotlivých stavů (12. 10. 2026). Prázdné = jako u firmy. */
   prijemciStavu: z.record(z.array(z.string()).max(20)).optional(),
+  /**
+   * Komu u KLIENTA u jednotlivých stavů (20. 10. 2026). Prázdné = klientovi
+   * vedenému u projektu, jako dosud.
+   */
+  klientiStavu: z.record(z.array(z.string()).max(20)).optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -38,7 +43,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const [radky, firma, ucty] = await Promise.all([
     prisma.notifikaceFirmy.findMany({
       where: { companyId: params.id },
-      select: { stav: true, komu: true, interniPrijemci: true },
+      select: { stav: true, komu: true, interniPrijemci: true, klientiEmaily: true },
     }),
     prisma.company.findUnique({ where: { id: params.id }, select: { interniPrijemci: true } }),
     // Nabidka k zaskrtnuti - jen aktivni interni ucty Mediaspace. Adresu mimo
@@ -52,13 +57,18 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const nastaveni = prazdneNastaveni();
   const prijemciStavu = prazdniPrijemciStavu();
+  const klientiStavu = prazdniPrijemciStavu();
   for (const r of radky) {
     if (r.stav in nastaveni) nastaveni[r.stav] = r.komu;
     if (r.stav in prijemciStavu) prijemciStavu[r.stav] = r.interniPrijemci ?? [];
+    if (r.stav in klientiStavu) {
+      klientiStavu[r.stav] = (r as { klientiEmaily?: string[] | null }).klientiEmaily ?? [];
+    }
   }
   return NextResponse.json({
     nastaveni,
     prijemciStavu,
+    klientiStavu,
     interniPrijemci: firma?.interniPrijemci ?? [],
     nabidkaUctu: ucty.map((u) => ({ email: u.email, jmeno: u.name ?? u.email })),
   });
@@ -115,13 +125,39 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     poStavech.set(stav, ocistene);
   }
 
+  /** Adresy u klienta - táž kontrola (20. 10. 2026). */
+  const klientiPoStavech = new Map<string, string[]>();
+  const zadaniKlienti: [string, string[]][] = Object.entries(parsed.data.klientiStavu ?? {});
+  for (const [stav, adresy] of zadaniKlienti) {
+    if (!STAVY_S_NOTIFIKACI.includes(stav)) continue;
+    const ocistene: string[] = Array.from(
+      new Set<string>(adresy.map((e) => e.trim().toLowerCase()).filter(Boolean)),
+    );
+    const spatny = ocistene.find((e) => !jeToEmail(e));
+    if (spatny) {
+      return NextResponse.json({ error: `"${spatny}" nevypadá jako e-mail.` }, { status: 400 });
+    }
+    klientiPoStavech.set(stav, ocistene);
+  }
+
   await prisma.$transaction([
     ...zapisy.map(([stav, komu]) => {
       const adresy = poStavech.get(stav);
+      const klienti = klientiPoStavech.get(stav);
       return prisma.notifikaceFirmy.upsert({
         where: { companyId_stav: { companyId: params.id, stav } },
-        create: { companyId: params.id, stav, komu, interniPrijemci: adresy ?? [] },
-        update: adresy ? { komu, interniPrijemci: adresy } : { komu },
+        create: {
+          companyId: params.id,
+          stav,
+          komu,
+          interniPrijemci: adresy ?? [],
+          klientiEmaily: klienti ?? [],
+        },
+        update: {
+          komu,
+          ...(adresy ? { interniPrijemci: adresy } : {}),
+          ...(klienti ? { klientiEmaily: klienti } : {}),
+        },
       });
     }),
     ...(prijemci

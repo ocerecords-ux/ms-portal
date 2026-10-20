@@ -70,6 +70,7 @@ import { nactiLicencniListy, vychoziLicencniList } from '@/lib/licencniListServe
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
 import { OdkazProKlienta } from './OdkazProKlienta';
+import { ZapracovaniPripominek } from './ZapracovaniPripominek';
 import { nactiPreposlech, nactiPreposlechPrehled } from '@/lib/preposlechServer';
 import { OdznakPreposlechu } from '@/components/OdznakPreposlechu';
 import { stavOdkazu, zajistiOdkaz } from '@/lib/preposlechOdkaz';
@@ -1164,6 +1165,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           )}
 
           <OdkazProKlienta caflouProjectId={caflouProjectId} pocatecni={odkaz} />
+
+          {/* ZAPRACOVANÉ PŘIPOMÍNKY (20. 10. 2026) - tlačítko, zpráva klientovi
+              a historie kol. Stav projektu se tím nemění. */}
+          <ZapracovaniPripominek caflouProjectId={caflouProjectId} canEdit={canEdit} />
 
           {!token ? (
             <p className="text-sm font-body text-muted m-0">

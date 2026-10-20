@@ -100,7 +100,21 @@ export async function odesliFakturu(
   const chceKlienta =
     vstup.klientovi === undefined ? invoice.company.fakturyKlientovi : vstup.klientovi === true;
 
-  const mailFirmy = invoice.company.contactEmail?.trim() || null;
+  /**
+   * VLASTNÍ ADRESY NA FAKTURY MAJÍ PŘEDNOST (zadání 20. 10. 2026: „u klientů
+   * reklam nastavím maily zvlášť na zasílání nabídek a faktur").
+   *
+   * Totéž pravidlo jako u nabídek (12. 10. 2026): vyplněný seznam na kartě
+   * firmy kontaktní e-mail NAHRAZUJE. U větších klientů chodí faktury do
+   * účtárny, zatímco na kontaktu firmy sedí člověk od zakázek - poslat ji
+   * oběma by znamenalo, že ji jednou zaplatí účtárna a podruhé se po ní
+   * shání někdo, komu nepatří.
+   */
+  const vlastniFaktury = ((invoice.company as { fakturyEmaily?: string[] | null }).fakturyEmaily ?? [])
+    .map((e) => e.trim())
+    .filter(Boolean);
+  const mailFirmy = vlastniFaktury[0] ?? invoice.company.contactEmail?.trim() ?? null;
+  const dalsiFaktury = vlastniFaktury.slice(1);
   const meta = invoice.caflouProjectId
     ? await prisma.projectMeta.findUnique({
         where: { caflouProjectId: invoice.caflouProjectId },
@@ -109,9 +123,11 @@ export async function odesliFakturu(
     : null;
   const mailKlienta = meta?.klient?.email?.trim() || null;
 
-  const prijemci = [chceFirmu ? mailFirmy : null, chceKlienta ? mailKlienta : null].filter(
-    (m): m is string => Boolean(m),
-  );
+  const prijemci = [
+    chceFirmu ? mailFirmy : null,
+    ...(chceFirmu ? dalsiFaktury : []),
+    chceKlienta ? mailKlienta : null,
+  ].filter((m): m is string => Boolean(m));
   // Duplicita nastane, kdyz je klient projektu zaroven kontaktem firmy.
   const [to, ...kopie] = [...new Set(prijemci)];
   /**

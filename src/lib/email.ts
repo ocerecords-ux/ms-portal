@@ -3958,6 +3958,134 @@ export function buildUpominkaTerminuHtml(input: UpominkaTerminuInput): string {
   });
 }
 
+/* ==========================================================================
+   ZAPRACOVANÉ PŘIPOMÍNKY (zadání 20. 10. 2026: „pak bych tam dal nějaké
+   tlačítko, když připomínky zapracujeme, aby po stisknutí se nezměnil stav,
+   ale šla notifikace, zapracovali jsme připomínky. I s nějakým přehledem, co
+   bylo zapracované, pro přehled. A ještě tohle se může opakovat několikrát,
+   než to klient schválí.")
+
+   ZÁMĚRNĚ MIMO ZPRÁVY KE STAVŮM. Zprávy ke stavu se posílají jednou a hlídá
+   je značka „už odesláno"; tahle chodí klidně popáté, protože tolikrát se
+   spot dolaďuje. A hlavně stav nemění - zakázka zůstane „Dokončeno -
+   ke schválení", dokud klient neřekne, že je to dobře.
+   ========================================================================== */
+
+export type ZapracovaniPripominekInput = {
+  prijemci: string[];
+  /** My v kopii - klient nás v „Komu" vidět nemá (11. 9. 2026). */
+  skrytaKopie?: string[];
+  jmenoKlienta: string | null;
+  nazevProjektu: string;
+  /** Kolikáté kolo úprav to je. Klient tak pozná, že se to vrství. */
+  kolo: number;
+  /** Co jsme k tomu napsali (nepovinné). */
+  poznamka: string | null;
+  /** Co bylo zapracováno - přesně ty připomínky, které klient napsal. */
+  polozky: { soubor: string; cas: string; text: string; autor: string | null }[];
+  /** Kam si to má poslechnout; prázdné = bez tlačítka. */
+  odkaz: string | null;
+  jazyk?: Jazyk;
+};
+
+export function buildZapracovaniPripominekHtml(input: ZapracovaniPripominekInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+
+  /**
+   * SEZNAM JE OTISK TOHO, CO KLIENT NAPSAL. Nepřepisujeme to vlastními slovy:
+   * on svoje věty pozná a hned vidí, že se nic neztratilo. Řádky se escapují,
+   * takže z připomínky nejde do mailu propašovat značka.
+   */
+  const radky = input.polozky
+    .map(
+      (p) => `
+      <tr>
+        <td class="label" style="white-space:nowrap;">${escapeHtml(p.cas)}</td>
+        <td class="value regular">${escapeHtml(p.text)}${
+          p.soubor ? `<br /><span style="color:#6C6580;font-size:12px;">${escapeHtml(p.soubor)}</span>` : ''
+        }</td>
+      </tr>`,
+    )
+    .join('');
+
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.zapracovani.stitek'),
+    preheader: prelozitEmail(jazyk, 'mail.zapracovani.preheader'),
+    body: `
+    <span class="badge">${prelozitEmailS(jazyk, 'mail.zapracovani.kolo', { kolo: input.kolo })}</span>
+    <h2>${prelozitEmail(jazyk, 'mail.zapracovani.nadpis')}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoKlienta ?? ''))}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.zapracovani.uvod', {
+      projekt: `<strong>${escapeHtml(input.nazevProjektu)}</strong>`,
+    })}</p>
+
+    ${
+      input.poznamka?.trim()
+        ? `<p class="small"><strong>${prelozitEmail(jazyk, 'mail.zapracovani.poznamkaNadpis')}:</strong> ${escapeHtml(
+            input.poznamka.trim(),
+          )}</p>`
+        : ''
+    }
+
+    ${
+      radky
+        ? `<p class="small" style="margin-bottom:6px;"><strong>${prelozitEmail(
+            jazyk,
+            'mail.zapracovani.seznamNadpis',
+          )}</strong></p>
+    <table role="presentation" class="field-table">${radky}</table>`
+        : ''
+    }
+
+    ${
+      input.odkaz
+        ? `<div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.zapracovani.tlacitko')}</a>
+    </div>`
+        : ''
+    }
+
+    <p class="small">${prelozitEmail(jazyk, 'mail.zapracovani.patka')}</p>
+  `,
+  });
+}
+
+export async function sendZapracovaniPripominekEmail(input: ZapracovaniPripominekInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
+  const predmet = prelozitEmailS(jazyk, 'mail.zapracovani.predmet', { projekt: input.nazevProjektu });
+  const telo = buildZapracovaniPripominekHtml(input);
+
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.prijemci.join(', '),
+    bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
+    subject: predmet,
+    text: [
+      pozdravPosty(jazyk, input.jmenoKlienta ?? ''),
+      '',
+      prelozitEmailS(jazyk, 'mail.zapracovani.textUvod', { projekt: input.nazevProjektu }),
+      input.poznamka?.trim() || '',
+      '',
+      input.polozky.length > 0 ? prelozitEmail(jazyk, 'mail.zapracovani.textSeznam') : '',
+      ...input.polozky.map((p) => `- ${p.cas} ${p.text}`),
+      '',
+      input.odkaz ? prelozitEmail(jazyk, 'mail.zapracovani.textOdkaz') : '',
+      input.odkaz ?? '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: telo,
+  });
+
+  return { ...overOdeslani(vysledekPosty, 'sendZapracovaniPripominekEmail'), predmet, telo };
+}
+
 export async function sendUpominkaTerminuEmail(input: UpominkaTerminuInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };

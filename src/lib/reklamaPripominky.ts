@@ -93,8 +93,18 @@ export async function nactiPripominky(
   driveFileId: string,
 ): Promise<PripominkaKVideu[]> {
   try {
+    /**
+     * ZAPRACOVANÉ PŘIPOMÍNKY ZE SEZNAMU MIZÍ (zadání 20. 10. 2026: „a
+     * připomínky zmizí, ale měla by tam být nějaká historie, co se
+     * upravovalo").
+     *
+     * Jakmile kolo úprav odejde klientovi, jsou ty připomínky vyřízené věcí -
+     * v taggeru by jen překážely u dalšího poslechu a klient by nevěděl, co
+     * z toho je nové. Nic se nemaže: visí u svého kola a jsou k přečtení
+     * v kartě projektu (záložka Připomínky, Historie úprav).
+     */
     const radky = await prisma.reklamaPripominka.findMany({
-      where: { caflouProjectId, driveFileId },
+      where: { caflouProjectId, driveFileId, zapracovaniId: null },
       orderBy: { cas: 'asc' },
       take: 500,
     });

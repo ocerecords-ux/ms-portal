@@ -57,6 +57,19 @@ Jakmile odešle, **cinkne zvoneček manažerovi projektu** a všem, kdo mají na
 
 Připomínky si můžete odškrtávat jako vyřízené — tlačítko **Hotovo** u řádku vidí jen přihlášený tým, ne klient.
 
+# Zapracovali jsme připomínky
+
+Když jsou opravy hotové, je v záložce **Připomínky** tlačítko **Zapracovali jsme připomínky** (20. 10. 2026). Co dělá:
+
+- **Klientovi odejde zpráva** se seznamem toho, co bylo zapracováno — přesně těmi větami, které napsal on, s časem a názvem souboru. Dá se k tomu připsat poznámka („dotáčku jsme zkrátili a hudbu stáhli pod hlasem").
+- **Stav zakázky se nemění.** Projekt zůstává v „Dokončeno - ke schválení"; schvaluje pořád klient, tohle je zpráva mezitím.
+- **Připomínky ze seznamu zmizí** — klient i my máme čistý stůl pro další poslech. Nic se nemaže: visí dál u svého kola.
+- **Historie úprav** je hned pod tlačítkem. Každé kolo má datum, kdo ho odeslal, poznámku a celý seznam toho, co se tehdy opravovalo.
+
+**Může se to opakovat, kolikrát je potřeba.** Klient znovu napíše připomínky, my je zapracujeme a pošleme druhé kolo — a tak dokola, dokud zakázku neschválí. Zprávy ke stavům se posílají jednou, tahle ne.
+
+Komu zpráva jde: adresám nastaveným u stavu **Dokončeno - ke schválení** na kartě firmy, a když tam žádné nejsou, klientovi vedenému u projektu. My jsme ve skryté kopii.
+
 # Schválení zakázky
 
 Tlačítko **Schválit** je na třech místech a všechna dělají totéž:

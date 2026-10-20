@@ -114,7 +114,7 @@ export async function posliNotifikaciKeStavu(
 
     const ulozene = await prisma.notifikaceFirmy.findUnique({
       where: { companyId_stav: { companyId: projekt.companyId, stav } },
-      select: { komu: true, interniPrijemci: true },
+      select: { komu: true, interniPrijemci: true, klientiEmaily: true },
     });
     /**
      * „Přeposlech dokončen" chodí klientovi i bez nastavení (25. 9. 2026) -
@@ -149,11 +149,30 @@ export async function posliNotifikaciKeStavu(
      * Do té doby jsme byli v „Komu" vedle klienta — bylo vidět, kdo všechno
      * u nás o jeho projektu ví, a odpověď „všem" by šla celé produkci.
      */
-    const klientovi = nastaveni.komu !== 'INTERNE' && projekt.klient?.email ? [projekt.klient.email] : [];
+    /**
+     * ADRESY U STAVU MAJÍ PŘEDNOST PŘED KLIENTEM PROJEKTU (zadání 20. 10.
+     * 2026: „a pak ještě zvlášť na stav dokončeno - ke schválení").
+     *
+     * Spot schvaluje často někdo jiný, než kdo zakázku objednal, a u reklam
+     * to bývá celá skupina lidí. Vyplněný seznam u stavu proto klienta
+     * projektu NAHRAZUJE - sčítat obojí by znamenalo posílat schvalovací
+     * odkaz i tomu, kdo s ním nemá co dělat.
+     */
+    const uStavu = ((ulozene as { klientiEmaily?: string[] | null } | null)?.klientiEmaily ?? [])
+      .map((e) => e.trim())
+      .filter(Boolean);
+    const klientovi =
+      nastaveni.komu === 'INTERNE'
+        ? []
+        : uStavu.length > 0
+          ? uStavu
+          : projekt.klient?.email
+            ? [projekt.klient.email]
+            : [];
     const prijemci = klientovi.length > 0 ? klientovi : nasi;
     const skrytaKopie = klientovi.length > 0 ? nasi : [];
 
-    if (nastaveni.komu === 'KLIENT' && !projekt.klient?.email) {
+    if (nastaveni.komu === 'KLIENT' && klientovi.length === 0) {
       // Projekt nema vyplneneho klienta - poslat "klientovi" nejde. Zapisujeme
       // to jako duvod, ne jako chybu; casto to znamena jen nedodelany projekt.
       console.warn(`Notifikace ke stavu "${stav}": projekt ${caflouProjectId} nemá klienta.`);

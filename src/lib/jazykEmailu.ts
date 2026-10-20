@@ -1062,6 +1062,37 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     cs: 'Odkaz patri jen vam, neposilejte ho dal.',
     en: 'The link is yours alone, please do not forward it.',
   },
+
+  // ZAPRACOVANE PRIPOMINKY (zadani 20. 10. 2026). Zprava mezi „Dokonceno -
+  // ke schvaleni" a schvalenim: stav se nemeni, jen rikame, co jsme opravili.
+  'mail.zapracovani.stitek': { cs: 'MS Portal - zapracované připomínky', en: 'MS Portal - feedback addressed' },
+  'mail.zapracovani.predmet': {
+    cs: '{projekt} - zapracovali jsme vaše připomínky',
+    en: '{projekt} - we have addressed your feedback',
+  },
+  'mail.zapracovani.preheader': {
+    cs: 'Opravená verze je na disku, mrkněte na ni.',
+    en: 'The updated version is in the folder - please take a listen.',
+  },
+  'mail.zapracovani.nadpis': { cs: 'Zapracovali jsme vaše připomínky', en: 'We have addressed your feedback' },
+  'mail.zapracovani.uvod': {
+    cs: 'u projektu {projekt} jsme zapracovali připomínky, které jste nám poslali. Opravená verze je ve složce projektu — poslechněte si ji prosím a dejte vědět, jestli je to tak, jak má být.',
+    en: 'we have addressed the feedback you sent us on {projekt}. The updated version is in the project folder - please take a listen and let us know whether it is right now.',
+  },
+  'mail.zapracovani.kolo': { cs: '{kolo}. kolo úprav', en: 'Revision round {kolo}' },
+  'mail.zapracovani.seznamNadpis': { cs: 'Co jsme upravili', en: 'What we changed' },
+  'mail.zapracovani.poznamkaNadpis': { cs: 'Poznámka od nás', en: 'A note from us' },
+  'mail.zapracovani.tlacitko': { cs: 'Poslechnout a připomínkovat', en: 'Listen and comment' },
+  'mail.zapracovani.patka': {
+    cs: 'Stav zakázky zůstává „ke schválení" — čekáme na vaše slovo. Kdyby něco ještě nesedělo, napište to rovnou do připomínek.',
+    en: 'The project stays "awaiting approval" - we are waiting for your word. If anything is still off, write it straight into the comments.',
+  },
+  'mail.zapracovani.textUvod': {
+    cs: 'u projektu {projekt} jsme zapracovali vase pripominky. Opravena verze je ve slozce projektu.',
+    en: 'we have addressed your feedback on {projekt}. The updated version is in the project folder.',
+  },
+  'mail.zapracovani.textSeznam': { cs: 'Co jsme upravili:', en: 'What we changed:' },
+  'mail.zapracovani.textOdkaz': { cs: 'Poslechnout a pripominkovat:', en: 'Listen and comment:' },
 };
 
 /** Přeloží klíč pošty. Co ve slovníku není, projde česky - a je to vidět. */

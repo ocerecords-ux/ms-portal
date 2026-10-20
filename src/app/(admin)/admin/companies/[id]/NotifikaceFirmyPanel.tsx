@@ -47,6 +47,14 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
   const [prijemci, setPrijemci] = useState<string[]>([]);
   // Komu z nás u jednotlivých stavů (12. 10. 2026). Prázdné = jako u firmy.
   const [prijemciStavu, setPrijemciStavu] = useState<PrijemciStavu>(prazdniPrijemciStavu());
+  /**
+   * KOMU U KLIENTA (zadání 20. 10. 2026: „a pak ještě zvlášť na stav
+   * dokončeno - ke schválení"). Prázdné = klientovi vedenému u projektu.
+   *
+   * Na rozdíl od našich lidí se tu nevybírá ze seznamu účtů - lidé u klienta
+   * účet v portálu nemají, takže se adresy píšou ručně.
+   */
+  const [klientiStavu, setKlientiStavu] = useState<PrijemciStavu>(prazdniPrijemciStavu());
   // Který řádek má rozbalený výběr lidí - rozbalené všechny naráz by byla zeď.
   const [otevreny, setOtevreny] = useState<string | null>(null);
   const [nabidka, setNabidka] = useState<Ucet[]>([]);
@@ -63,6 +71,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
         if (d?.nastaveni) setNastaveni(d.nastaveni);
         if (Array.isArray(d?.interniPrijemci)) setPrijemci(d.interniPrijemci);
         if (d?.prijemciStavu) setPrijemciStavu({ ...prazdniPrijemciStavu(), ...d.prijemciStavu });
+        if (d?.klientiStavu) setKlientiStavu({ ...prazdniPrijemciStavu(), ...d.klientiStavu });
         if (Array.isArray(d?.nabidkaUctu)) setNabidka(d.nabidkaUctu);
       })
       .catch(() => undefined)
@@ -101,6 +110,25 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
     setChyba(null);
   }
 
+  /** Adresy u klienta - řádek na každou, ať se nemusí rozdělovat čárkami. */
+  function zmenKlienta(stav: string, i: number, hodnota: string) {
+    setKlientiStavu((k) => ({
+      ...k,
+      [stav]: (k[stav] ?? []).map((x, j) => (j === i ? hodnota : x)),
+    }));
+    setUlozeno(false);
+  }
+
+  function pridejKlienta(stav: string) {
+    setKlientiStavu((k) => ({ ...k, [stav]: [...(k[stav] ?? []), ''] }));
+    setUlozeno(false);
+  }
+
+  function odeberKlienta(stav: string, i: number) {
+    setKlientiStavu((k) => ({ ...k, [stav]: (k[stav] ?? []).filter((_, j) => j !== i) }));
+    setUlozeno(false);
+  }
+
   /** Adresa mimo portál - třeba společná schránka, která účet nemá. */
   function pridejAdresu() {
     const adresa = novaAdresa.trim().toLowerCase();
@@ -122,7 +150,17 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
       const res = await fetch(`/api/admin/companies/${companyId}/notifikace`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nastaveni, interniPrijemci: prijemci, prijemciStavu }),
+        body: JSON.stringify({
+          nastaveni,
+          interniPrijemci: prijemci,
+          prijemciStavu,
+          klientiStavu: Object.fromEntries(
+            Object.entries(klientiStavu).map(([stav, adresy]) => [
+              stav,
+              (adresy as string[]).map((e) => e.trim()).filter(Boolean),
+            ]),
+          ),
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -204,10 +242,61 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
                     {platne.length > 0 ? vyjmenuj(platne.map(jmenem)) : t('firma.komuZNasNikdo')}
                   </span>
                   {vlastni.length === 0 && ` · ${t('firma.komuZNasJakoFirma')}`}
+                  {(klientiStavu[stav] ?? []).filter((e) => e.trim()).length > 0 && (
+                    <>
+                      {' · '}
+                      <span className="text-ink">
+                        {jazyk === 'en' ? 'client: ' : 'klient: '}
+                        {vyjmenuj((klientiStavu[stav] ?? []).filter((e) => e.trim()))}
+                      </span>
+                    </>
+                  )}
                 </button>
 
                 {otevreny === stav && (
                   <div className="mt-2 flex flex-col gap-2 bg-field rounded-lg p-3">
+                    {/**
+                      * KOMU U KLIENTA (20. 10. 2026). Jen u stavů, které
+                      * klientovi vůbec chodí. Popisky jsou psané rovnou tady,
+                      * ne přes slovník: `lib/jazyk.ts` má rozepsaný jiný úkol
+                      * a dvě ruce v jednom souboru končí přepsanou prací.
+                      */}
+                    {nastaveni[stav] === 'KLIENT' && (
+                      <div className="flex flex-col gap-2 border-b border-line pb-3">
+                        <p className="text-xs font-body text-muted m-0">
+                          {jazyk === 'en'
+                            ? 'Client-side e-mails for this status. Filled in = the message goes here instead of the client on the project.'
+                            : 'Adresy u klienta pro tenhle stav. Vyplněné = zpráva jde sem místo klientovi vedenému u projektu.'}
+                        </p>
+                        {(klientiStavu[stav] ?? []).map((mail, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <input
+                              type="email"
+                              value={mail}
+                              placeholder="schvalovani@klient.cz"
+                              onChange={(e) => zmenKlienta(stav, i, e.target.value)}
+                              className="admin-input flex-1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => odeberKlienta(stav, i)}
+                              title={t('obecne.odebrat')}
+                              aria-label={t('obecne.odebrat')}
+                              className="shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-danger hover:border-danger transition-colors cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => pridejKlienta(stav)}
+                          className="self-start text-xs font-heading text-brand-purple hover:underline"
+                        >
+                          + {jazyk === 'en' ? 'Add an address' : 'Přidat adresu'}
+                        </button>
+                      </div>
+                    )}
                     <p className="text-xs font-body text-muted m-0">{t('firma.komuZNasStavPopis')}</p>
                     <div className="flex flex-wrap gap-2">
                       {nabidka.map((u) => {

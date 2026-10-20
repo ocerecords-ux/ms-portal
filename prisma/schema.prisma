@@ -104,6 +104,18 @@ model Company {
   /// u projektu, a kdyz ho projekt nema, na kontaktni e-mail firmy.
   /// Viz lib/prijemceNabidky.ts.
   nabidkyEmaily  String[]  @default([])
+
+  /// KAM POSÍLAT FAKTURY (zadání 20. 10. 2026: „u klientů reklam nastavím
+  /// maily zvlášť na zasílání nabídek a faktur a pak ještě zvlášť na stav
+  /// dokončeno - ke schválení").
+  ///
+  /// Totéž co `nabidkyEmaily`, jen pro faktury: u větších klientů je chce
+  /// účtárna, ne člověk, se kterým se řeší spot. Vyplněný seznam NAHRAZUJE
+  /// kontaktní e-mail firmy - sčítat obojí by znamenalo posílat fakturu dvakrát.
+  ///
+  /// PRÁZDNÉ = jako dosud, tedy na kontaktní e-mail firmy. Zaškrtávátko
+  /// „faktury i klientovi" platí v obou případech.
+  fakturyEmaily  String[]  @default([])
   caflouCompanyId String?   // ID firmy/kontaktu v Caflou - podle nej se z Caflou API tahaji projekty teto firmy
   driveFolderUrl String?   // odkaz na slozku klienta na Google Disku (prirazuje admin rucne)
 
@@ -1232,6 +1244,17 @@ model NotifikaceFirmy {
   /// Vyplneny seznam firemni NAHRAZUJE, nescita se s nim: smysl tehle volby
   /// je u nekterych stavu okruh ZUZIT.
   interniPrijemci String[] @default([])
+
+  /// KOMU U KLIENTA (zadání 20. 10. 2026: „a pak ještě zvlášť na stav
+  /// dokončeno - ke schválení").
+  ///
+  /// Do teď šla zpráva o stavu vždycky klientovi vedenému u projektu. Jenže
+  /// „Dokončeno - ke schválení" schvaluje často někdo jiný než ten, kdo
+  /// zakázku objednal - a u reklam to bývá celá skupina lidí.
+  ///
+  /// Vyplněný seznam klienta u projektu NAHRAZUJE, stejně jako u nabídek
+  /// a faktur. Prázdné = jako dosud. My zůstáváme ve skryté kopii tak jako tak.
+  klientiEmaily String[] @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3626,6 +3649,15 @@ model ReklamaPripominka {
 
   /// Odskrtnuto na nasi strane - „tohle uz je opravene".
   vyrizeno   Boolean  @default(false)
+
+  /// DO KTEREHO KOLA UPRAV PATRI (zadani 20. 10. 2026: „a pripominky zmizi,
+  /// ale mela by tam byt nejaka historie, co se upravovalo").
+  ///
+  /// Vyplnene = pripominka uz je zapracovana a ze seznamu zmizela; zustava
+  /// viset u sveho kola, odkud se da precist, co se tehdy opravovalo. Nic se
+  /// nemaze - seznam uprav je to jedine, co po dvou trech kolech zbyde.
+  zapracovaniId String?
+  zapracovani   ZapracovaniPripominek? @relation(fields: [zapracovaniId], references: [id], onDelete: SetNull)
   /// Kdy klient stiskl „Odeslat pripominky" (upresneni 18. 9. 2026: „pak tam
   /// bude jen tlacitko odeslat pripominky"). Dokud je prazdne, klient si je
   /// jeste rozmysli - zapsane uz jsou, ale nikoho neupozornuji.
@@ -3633,6 +3665,43 @@ model ReklamaPripominka {
   createdAt  DateTime @default(now())
 
   @@index([caflouProjectId, driveFileId, cas])
+  @@index([zapracovaniId])
+}
+
+/// JEDNO KOLO ZAPRACOVANYCH PRIPOMINEK (zadani 20. 10. 2026: „pak bych tam dal
+/// nejake tlacitko, kdyz pripominky zapracujeme, aby po stisknuti se nezmenil
+/// stav, ale sla notifikace, zapracovali jsme pripominky. I s nejakym
+/// prehledem, co bylo zapracovane... a jeste tohle se muze opakovat
+/// nekolikrat, nez to klient schvali").
+///
+/// ZAMERNE VLASTNI TABULKA, ne priznak u pripominky: kolo je udalost - ma svuj
+/// cas, sveho cloveka, poznamku a seznam toho, co do nej patrilo. Druhe kolo
+/// se tak neslije s prvnim a klient i my vidime, co se kdy opravovalo.
+///
+/// STAV PROJEKTU SE TIM NEMENI. Zakazka zustava „Dokonceno - ke schvaleni",
+/// dokud klient nerekne, ze je to dobre; tohle je zprava mezitim.
+model ZapracovaniPripominek {
+  id              String @id @default(cuid())
+  caflouProjectId String
+
+  /// Kolikate kolo uprav u tohohle projektu (1, 2, 3...).
+  poradi   Int
+  /// Co jsme k tomu napsali klientovi - nepovinne.
+  poznamka String? @db.Text
+  /// Kdo tlacitko zmackl - jmenem, at je radek citelny i bez uctu.
+  kdoJmeno String?
+
+  /// Komu zprava odesla a kdy. Prazdne odeslanoAt = mail se nepovedl;
+  /// kolo samotne tim nepada, uprava uz je udelana.
+  prijemci   String[]  @default([])
+  odeslanoAt DateTime?
+
+  pripominky ReklamaPripominka[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([caflouProjectId, poradi])
+  @@index([caflouProjectId])
 }
 
 /// Stav preposlechu celeho projektu - tlacitko PREPOSLECHNUTO z prototypu.

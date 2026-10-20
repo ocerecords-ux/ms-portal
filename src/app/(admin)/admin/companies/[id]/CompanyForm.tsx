@@ -39,6 +39,8 @@ export function CompanyForm({
   const router = useRouter();
   const t = usePreklad();
   const jazyk = useJazyk();
+  /** Popisky psané rovnou v komponentě - viz komentář u pole s fakturami. */
+  const jeAnglicky = jazyk === 'en';
   const isClient = company.type === 'KLIENT';
 
   const [name, setName] = useState(company.name);
@@ -64,6 +66,14 @@ export function CompanyForm({
    */
   const [nabidkyEmaily, setNabidkyEmaily] = useState<string[]>(
     ((company as { nabidkyEmaily?: string[] }).nabidkyEmaily ?? []).filter(Boolean),
+  );
+  /**
+   * KAM POSÍLAT FAKTURY (zadání 20. 10. 2026: „u klientů reklam nastavím maily
+   * zvlášť na zasílání nabídek a faktur"). Totéž co u nabídek: vyplněný
+   * seznam nahrazuje kontaktní e-mail firmy, prázdný nechává vše po staru.
+   */
+  const [fakturyEmaily, setFakturyEmaily] = useState<string[]>(
+    ((company as { fakturyEmaily?: string[] }).fakturyEmaily ?? []).filter(Boolean),
   );
   const [contactPhone, setContactPhone] = useState(company.contactPhone ?? '');
   /**
@@ -230,6 +240,7 @@ export function CompanyForm({
                 tagyPovoleny,
                 tagyVydavatel: tagyPovoleny ? tagyVydavatel : '',
                 nabidkyEmaily: nabidkyEmaily.map((e) => e.trim()).filter(Boolean),
+                fakturyEmaily: fakturyEmaily.map((e) => e.trim()).filter(Boolean),
               }
             : {}),
         }),
@@ -415,6 +426,53 @@ export function CompanyForm({
           <button
             type="button"
             onClick={() => setNabidkyEmaily((p) => [...p, ''])}
+            className="self-start inline-flex items-center gap-1.5 font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer"
+          >
+            + {t('firma.nabidkyPridatMail')}
+          </button>
+        </div>
+      </AdminField>
+
+      {/**
+        * KAM POSÍLAT FAKTURY (20. 10. 2026). Prázdné = kontaktní e-mail firmy,
+        * jako dosud. Popisek je zatím psaný rovnou tady, ne přes slovník -
+        * `lib/jazyk.ts` má rozepsaný jiný úkol a dvě ruce v jednom souboru
+        * končí přepsanou prací; klíče se tam přesunou, až bude volný.
+        */}
+      <AdminField
+        label={jeAnglicky ? 'E-mails for invoices' : 'Maily na zasílání faktur'}
+        hint={
+          jeAnglicky
+            ? 'When filled in, invoices go here instead of the company contact e-mail. Empty = as before.'
+            : 'Když je vyplněné, faktury chodí sem místo na kontaktní e-mail firmy. Prázdné = jako dosud.'
+        }
+      >
+        <div className="flex flex-col gap-2">
+          {fakturyEmaily.map((mail, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="email"
+                value={mail}
+                placeholder="fakturace@firma.cz"
+                onChange={(e) =>
+                  setFakturyEmaily((p) => p.map((x, j) => (j === i ? e.target.value : x)))
+                }
+                className="admin-input flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setFakturyEmaily((p) => p.filter((_, j) => j !== i))}
+                title={t('obecne.odebrat')}
+                aria-label={t('obecne.odebrat')}
+                className="shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-danger hover:border-danger transition-colors cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setFakturyEmaily((p) => [...p, ''])}
             className="self-start inline-flex items-center gap-1.5 font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer"
           >
             + {t('firma.nabidkyPridatMail')}
