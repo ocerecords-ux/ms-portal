@@ -227,6 +227,12 @@ export async function nastavUkazky(id: string, sekce: Sekce, ids: string[]): Pro
 
 export type PrezentaceProKlienta = {
   id: string;
+  /**
+   * JE UŽ VENKU? (20. 10. 2026) Klient nezveřejněnou nabídku nedostane vůbec;
+   * nám se otevře, aby šla vyladit, a stránka nad ní ukáže pruh, že je to
+   * rozdělané a vidíme to jen my.
+   */
+  zverejneno: boolean;
   nadpis: string;
   podtitul: string | null;
   projectName: string;
@@ -264,7 +270,19 @@ export type PrezentaceProKlienta = {
  * prezentace se tváří, že není - ať se klientovi neotevře rozdělaná, kdyby
  * odkaz někdo poslal dřív.
  */
-export async function nactiProKlienta(token: string): Promise<PrezentaceProKlienta | null> {
+export async function nactiProKlienta(
+  token: string,
+  /**
+   * ČTEME TO MY (zadání 20. 10. 2026: „potřebuju ještě nějak vidět náhled té
+   * prezentace, pojďme pokračovat v odladění").
+   *
+   * Nezveřejněná nabídka je pro klienta 404 - to zůstává. Jenže vyladit se dá
+   * jen to, co je vidět, a dokud se prezentace neodklepne, nebylo kde se na ni
+   * podívat jinak než ji zveřejnit. Přihlášený člověk z týmu ji tedy uvidí
+   * i rozdělanou.
+   */
+  proNas = false,
+): Promise<PrezentaceProKlienta | null> {
   const r = await prisma.prezentaceNabidky
     .findUnique({
       where: { token },
@@ -326,7 +344,8 @@ export async function nactiProKlienta(token: string): Promise<PrezentaceProKlien
     })
     .catch(() => null);
 
-  if (!r || !r.zverejneno) return null;
+  if (!r) return null;
+  if (!r.zverejneno && !proNas) return null;
 
   /**
    * KDO JE POD NABÍDKOU. První věc, kterou klient hledá, když chce něco
@@ -343,6 +362,7 @@ export async function nactiProKlienta(token: string): Promise<PrezentaceProKlien
 
   return {
     id: r.id,
+    zverejneno: r.zverejneno,
     nadpis: r.nadpis?.trim() || r.projectName,
     podtitul: r.podtitul,
     projectName: r.projectName,

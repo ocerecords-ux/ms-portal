@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   SEKCE,
   delkaSlovy,
@@ -264,6 +264,23 @@ function Editor({
   const [navrh, setNavrh] = useState(prezentace.navrhReseni ?? '');
   const [podminky, setPodminky] = useState(prezentace.podminky ?? '');
   const odkaz = `${zakladAdresy}/prezentace/${prezentace.token}`;
+  /**
+   * NÁHLED PŘÍMO V KARTĚ (zadání 20. 10. 2026: „potřebuju ještě nějak vidět
+   * náhled té prezentace, pojďme pokračovat v odladění").
+   *
+   * Je to TA SAMÁ stránka, co dostane klient - v rámečku, ne druhé
+   * vykreslení, které by se časem rozešlo. Přihlášenému člověku z týmu se
+   * otevře i nezveřejněná (pruhem nad ní říká, že je rozdělaná) a jako
+   * otevření klientem se to nepočítá.
+   *
+   * Číslo verze v adrese překresluje rámeček po každém uložení - prohlížeč
+   * by jinak ukázal tutéž stránku z mezipaměti a vypadalo by to, že se
+   * úprava neuložila.
+   */
+  const [verzeNahledu, setVerzeNahledu] = useState(0);
+  useEffect(() => {
+    setVerzeNahledu((v) => v + 1);
+  }, [prezentace]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -332,6 +349,35 @@ function Editor({
             {t('prezentace.klientVybralHlas')} <strong>{prezentace.vybranyHerec}</strong>
           </span>
         )}
+      </div>
+
+      {/* NÁHLED (20. 10. 2026). Popisky jsou psané rovnou tady, ne přes
+          slovník: `lib/jazyk.ts` má rozepsaný jiný úkol a dvě ruce v jednom
+          souboru končí přepsanou prací. */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-heading font-semibold text-ink">
+            {t('ikony.nahled')}
+          </span>
+          <span className="text-[11px] font-body text-muted">
+            {jazyk === 'en'
+              ? 'The page as the client sees it. Opening it here does not count as a client view.'
+              : 'Stránka tak, jak ji uvidí klient. Otevření tady se nepočítá jako otevření klientem.'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setVerzeNahledu((v) => v + 1)}
+            className="ml-auto shrink-0 rounded-pill border border-line bg-surface text-ink font-heading font-semibold text-xs px-3 py-1.5 cursor-pointer"
+          >
+            {jazyk === 'en' ? 'Refresh' : 'Obnovit'}
+          </button>
+        </div>
+        <iframe
+          key={verzeNahledu}
+          src={`/prezentace/${prezentace.token}?nahled=${verzeNahledu}`}
+          title={t('ikony.nahled')}
+          className="w-full h-[70vh] min-h-[420px] rounded-card border border-line bg-white"
+        />
       </div>
 
       <Pole

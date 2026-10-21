@@ -24,10 +24,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function PrezentacePage({ params }: { params: { token: string } }) {
   const jazyk = nactiJazyk();
-  const data = await nactiProKlienta(params.token);
-  if (!data) notFound();
 
   /**
+   * NEJDŘÍV KDO SE DÍVÁ, PAK CO SE NAČTE (20. 10. 2026). Přihlášený člověk
+   * z týmu uvidí i nezveřejněnou prezentaci, aby se dala vyladit; klientovi
+   * zůstává nezveřejněná neexistující.
+   *
    * ŽE SE NA TO KLIENT PODÍVAL. Nesmí stránku zdržet ani shodit.
    *
    * Náš člověk na klientově odkazu se nepočítá - stejně jako u přeposlechu
@@ -36,6 +38,10 @@ export default async function PrezentacePage({ params }: { params: { token: stri
    */
   const session = await getServerSession(authOptions).catch(() => null);
   const interni = Boolean(session?.user?.id && isInternalRole(session.user.role));
+
+  const data = await nactiProKlienta(params.token, interni);
+  if (!data) notFound();
+
   if (!interni) void zapisOtevreni(data.id).catch(() => undefined);
 
   const mena = (data.nabidka?.mena ?? 'CZK') as Parameters<typeof formatMoney>[1];
@@ -73,5 +79,25 @@ export default async function PrezentacePage({ params }: { params: { token: stri
       }
     : null;
 
-  return <Prezentace token={params.token} data={data} cenik={cenik} jazyk={jazyk} />;
+  /**
+   * PRUH NAD ROZDĚLANOU NABÍDKOU (20. 10. 2026). Nezveřejněnou prezentaci
+   * vidíme jen my - a musí to být vidět na první pohled, ať se nikdo nelekne,
+   * že klientovi odešlo něco nedodělaného. Text je psaný rovnou tady:
+   * `lib/jazyk.ts` má rozepsaný jiný úkol a dvě ruce v jednom souboru končí
+   * přepsanou prací.
+   */
+  const pruh = !data.zverejneno ? (
+    <div className="bg-warnTint text-status-progress px-4 py-2.5 text-center font-heading font-semibold text-sm">
+      {jazyk === 'en'
+        ? 'Draft — not published yet, so only your team can see this. The client gets a “not found” page.'
+        : 'Rozdělané — zatím nezveřejněné, takže to vidíte jen vy z týmu. Klientovi se odkaz neotevře.'}
+    </div>
+  ) : null;
+
+  return (
+    <>
+      {pruh}
+      <Prezentace token={params.token} data={data} cenik={cenik} jazyk={jazyk} />
+    </>
+  );
 }
