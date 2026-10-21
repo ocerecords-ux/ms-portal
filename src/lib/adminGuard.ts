@@ -20,9 +20,7 @@ export async function requireAdmin() {
  * ověřit, že ten konkrétní účet JE herec. Bez toho by právo na karty herců
  * otevřelo celou správu uživatelů.
  */
-export async function requireSpravuHercu(): Promise<
-  { session: Awaited<ReturnType<typeof getServerSession>>; jenHerci: boolean } | null
-> {
+export async function requireSpravuHercu() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
   if (session.user.role === 'ADMIN') return { session, jenHerci: false };
