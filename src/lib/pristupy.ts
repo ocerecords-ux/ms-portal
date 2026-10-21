@@ -358,7 +358,16 @@ export const SEKCE: Sekce[] = [
     ikona: 'lide',
     nazev: 'Herci',
     popis: 'Karty herců, pozvánky a jejich údaje.',
-    cesty: ['/pozvanky'],
+    /**
+     * SEZNAM UŽIVATELŮ JEN S HERCI (zadání 20. 10. 2026: „Helča by měla vidět
+     * uživatele - herce. Ostatní uživatele by ale neměla mít právo měnit").
+     *
+     * Administrace uživatelů byla do teď jen pro Žůžo-labůžo. Kdo má tohle
+     * zaškrtnuté, dostane se do ní taky - ale uvidí v ní POUZE záložku Herci
+     * a jinou kartu než herce neotevře ani adresou (hlídá si to stránka
+     * i API, ne jen schovaná záložka).
+     */
+    cesty: ['/pozvanky', '/admin/users'],
     prava: [
       {
         klic: 'HERCI.UPRAVY',

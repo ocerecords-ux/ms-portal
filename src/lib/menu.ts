@@ -84,7 +84,9 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/ukazky': ['ADMIN', 'PRODUKCE'],
   '/admin/vzor-prezentace': ['ADMIN', 'PRODUKCE'],
   '/admin/zpravy-portalu': ['ADMIN'],
-  '/admin/users': ['ADMIN'],
+  // Uzivatele: cely seznam jen Zuzo-labuzo, produkce se zaskrtnutymi Herci
+  // uvidi jen zalozku Herci (20. 10. 2026) - viz sekce HERCI v lib/pristupy.ts.
+  '/admin/users': ['ADMIN', 'PRODUKCE'],
   '/admin/ceniky': ['ADMIN'],
   '/admin/studia': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],

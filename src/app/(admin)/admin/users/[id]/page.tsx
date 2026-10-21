@@ -97,6 +97,17 @@ export default async function UserEditPage({ params }: { params: { id: string } 
   ]);
   if (!user) notFound();
 
+  /**
+   * CIZÍ KARTU NEOTEVŘE (zadání 20. 10. 2026: „ostatní uživatele by ale
+   * neměla mít právo měnit").
+   *
+   * Do administrace uživatelů se dostane i produkce se zaškrtnutými Herci.
+   * Seznam jí ukazuje jen herce, ale adresa se dá napsat ručně - karta
+   * kohokoliv jiného se jí proto tváří, že není. Totéž hlídá i API, takže
+   * ani odeslaný formulář nic nezmění.
+   */
+  if (session?.user?.role !== 'ADMIN' && user.role !== 'HEREC') notFound();
+
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
       <div>

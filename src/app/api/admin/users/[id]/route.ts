@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { CHYBA_PRIHLASOVACI_JMENO, jePrihlasovaciJmeno } from '@/lib/prihlasovaciJmeno';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
-import { requireAdmin } from '@/lib/adminGuard';
+import { requireAdmin, requireSpravuHercu } from '@/lib/adminGuard';
 import { uploadUserPhoto } from '@/lib/storage';
 import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
 import { jeZpusobSmazani } from '@/lib/archiv';
@@ -172,8 +172,16 @@ function readFormData(formData: FormData) {
 // bez try/catch skoncila nezachycena vyjimka jako holy 500 bez JSON tela.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
  try {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  /**
+   * KARTU HERCE SMÍ UPRAVIT I PRODUKCE (zadání 20. 10. 2026: „Helča by měla
+   * vidět uživatele - herce. Ostatní uživatele by ale neměla mít právo
+   * měnit"). Komu se sahat nesmí, hlídá `jenHerci` níž - a role se tím
+   * měnit nedá vůbec, jinak by si z herce šlo udělat cokoliv.
+   */
+  const pristup = await requireSpravuHercu();
+  if (!pristup?.session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  const session = pristup.session;
+  const jenHerci = pristup.jenHerci;
 
   // Přístupy do sekcí rozdává jen superadmin - viz níž u `pristupy`.
   const jsemSuperadmin = Boolean(
@@ -195,6 +203,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const existingUser = await prisma.user.findUnique({ where: { id: params.id } });
   if (!existingUser) {
     return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
+  }
+
+  // Kdo má jen karty herců, sáhne jen na herce - a nepřepíše mu roli.
+  if (jenHerci && (existingUser.role !== 'HEREC' || (data.role && data.role !== 'HEREC'))) {
+    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
 
   const nextRole = data.role ?? existingUser.role;

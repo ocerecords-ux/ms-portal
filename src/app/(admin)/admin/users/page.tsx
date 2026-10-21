@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { NewUserForm } from './NewUserForm';
 import { UsersTable, type UsersColumn, type UserRow } from './UsersTable';
@@ -43,11 +45,29 @@ export default async function UsersAdminPage({
         ],
       }
     : {};
-  const activeTab = USER_TABS.find((t) => t.key === searchParams?.tab) ?? USER_TABS[0];
+  /**
+   * JEN HERCI PRO TOHO, KDO NENÍ ŽŮŽO-LABŮŽO (zadání 20. 10. 2026: „Helča by
+   * měla vidět uživatele - herce. Ostatní uživatele by ale neměla mít právo
+   * měnit").
+   *
+   * Do administrace uživatelů se dostane i produkce se zaškrtnutými Herci
+   * (viz sekce HERCI v lib/pristupy.ts) - ale vidí jen záložku Herci a dotaz
+   * do databáze se omezí na ně. Ostatní účty tedy neuvidí ani adresou
+   * `?tab=mediaspace`; karta jiného než herce se jí navíc vůbec neotevře.
+   */
+  const session = await getServerSession(authOptions);
+  const jenHerci = session?.user?.role !== 'ADMIN';
+  const zalozky = jenHerci ? USER_TABS.filter((t) => t.key === 'herci') : USER_TABS;
+  const activeTab = jenHerci
+    ? (zalozky[0] ?? USER_TABS[2])
+    : (USER_TABS.find((t) => t.key === searchParams?.tab) ?? USER_TABS[0]);
 
   const [users, companies, roleCounts] = await Promise.all([
     prisma.user.findMany({
-      where: companyId ? { companyId, ...searchWhere } : { role: { in: activeTab.roles }, ...searchWhere },
+      where:
+        companyId && !jenHerci
+          ? { companyId, ...searchWhere }
+          : { role: { in: activeTab.roles }, ...searchWhere },
       // Studia zvukare (zadani 20. 9. 2026) - v zalozce Mediaspace se
       // ukazuji ve sloupci Lokace, stejne jako mesta u hercu.
       include: { company: true, zvukarStudia: { select: { shortName: true } } },
@@ -145,14 +165,16 @@ export default async function UsersAdminPage({
               „v Uzivatelich, hercich bude nahore tlacitko Nova pozvanka") -
               jmeno a cislo uctu si vyplni sam, at se to neopisuje z telefonu. */}
           {!filteredCompany && activeTab.key === 'herci' && <NovaPozvankaHerce />}
-          {zalozitUzivatele}
+          {/* Účet ručně zakládá jen Žůžo-labůžo (20. 10. 2026). Produkce zve
+              herce pozvánkou vedle - jméno a číslo účtu si vyplní sám. */}
+          {!jenHerci && zalozitUzivatele}
         </div>
       </div>
 
       {!filteredCompany && (
         <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">
           <div className="flex items-center gap-1">
-          {USER_TABS.map((tab) => {
+          {zalozky.map((tab) => {
             const active = tab.key === activeTab.key;
             return (
               <Link
