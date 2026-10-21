@@ -2073,6 +2073,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.odpovediMalo': { cs: '{pocet} odpovědi ›', en: '{pocet} replies ›' },
   'chat.odpovediMnoho': { cs: '{pocet} odpovědí ›', en: '{pocet} replies ›' },
   'chat.odpovedet': { cs: 'Odpovědět', en: 'Reply' },
+  /**
+   * ZMÍNKA ČLOVĚKA, KTERÝ V ROZHOVORU NENÍ (21. 10. 2026). Pod zavináčem se
+   * nabízí celý tým, ale upozornění dostane jen člen rozhovoru - tahle věta
+   * to řekne dřív, než člověk zprávu odešle.
+   */
+  'chat.zminkaMimoRozhovor': {
+    cs: '{jmena} v tomhle rozhovoru není — zmínku nedostane. Přidej ho do skupiny, nebo mu napiš soukromě.',
+    en: '{jmena} is not in this conversation — the mention will not reach them. Add them to the group, or write to them privately.',
+  },
   'chat.napsatZpravu': {
     cs: 'Napište zprávu… (@ zmíní kolegu nebo zadá úkol, # odkáže na projekt)',
     en: 'Write a message… (@ mentions a colleague or sets a task, # links to a project)',

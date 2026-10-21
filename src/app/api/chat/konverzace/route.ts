@@ -68,6 +68,16 @@ export async function GET() {
         status: k.protejsekId ? (statusy[k.protejsekId] ?? null) : null,
       })),
       tym: tym.map((t) => ({ ...t, status: statusy[t.id] ?? null })),
+      /**
+       * JÁ SÁM (zadání 21. 10. 2026: „nějak se chová divně označení").
+       *
+       * Seznam týmu je schválně BEZ MĚ - do nabídky pod zavináčem sám sebe
+       * nikdo nepotřebuje. Jenže podle téhož seznamu se zmínky i zvýrazňují,
+       * takže zmínka MĚ se jediná zobrazovala jako obyčejný text: Barbora
+       * v „@Barbora Šíblová a @Ondřej Černý" viděla zvýrazněného jen Ondřeje.
+       * Pro zvýraznění proto chodí jméno zvlášť.
+       */
+      ja: { id: session.user.id, label: session.user.name || session.user.email },
       mujStatus: statusy[session.user.id] ?? null,
     });
   } catch (err) {

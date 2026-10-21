@@ -57,6 +57,7 @@ import { Avatar } from './Avatar';
 import { oznamNeprectene, oznamPocetDoku, usePoctyDoku, usePosluchacOtevreni, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
 import { useJazyk, usePreklad } from './JazykProvider';
+import { vyjmenuj } from '@/lib/dotoceni';
 import { kodJazyka, prelozitKolem } from '@/lib/jazyk';
 
 /**
@@ -371,12 +372,18 @@ function Telo({
   jmena,
   projekty,
   mine,
+  jaLabel,
 }: {
   body: string;
   jmena: string[];
   /** Projekty, na ktere jde ve zprave odkazat mrizkou (#Nazev). */
   projekty: ProjektZminka[];
   mine: boolean;
+  /**
+   * Moje jméno - zmínka MĚ se kreslí zeleně (21. 10. 2026). V bublině plné
+   * jmen je to jediné, co člověk hledá: týká se tohle mě?
+   */
+  jaLabel?: string | null;
 }) {
   return (
     <>
@@ -396,11 +403,19 @@ function Telo({
           );
         }
         if (cast.kind === 'mention') {
+          // Zmínka MĚ je zelená - viz `jaLabel`.
+          const oMne =
+            Boolean(jaLabel) &&
+            cast.value.slice(1).trim().toLowerCase() === (jaLabel ?? '').trim().toLowerCase();
           return (
             <strong
               key={index}
               className={`font-heading font-semibold rounded px-0.5 ${
-                mine ? 'bg-white/25 text-white' : 'bg-brand-purple/15 text-brand-purpleDark'
+                oMne
+                  ? 'bg-brand-green text-black'
+                  : mine
+                    ? 'bg-white/25 text-white'
+                    : 'bg-brand-purple/15 text-brand-purpleDark'
               }`}
             >
               {cast.value}
@@ -1860,6 +1875,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   /** Kdy jsme naposledy ohlasili, ze pisu - at se to nehlasi na kazdy znak. */
   const ohlasenoRef = useRef(0);
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
+  /**
+   * JÁ SÁM (zadání 21. 10. 2026: „nějak se chová divně označení").
+   *
+   * V `team` schválně nejsem - pod zavináčem sám sebe nikdo nehledá. Jenže
+   * podle téhož seznamu se zmínky i zvýrazňují, takže zmínka MĚ se jediná
+   * kreslila jako obyčejný text. Vlastní jméno proto chodí ze serveru zvlášť.
+   */
+  const [ja, setJa] = useState<{ id: string; label: string } | null>(null);
   // Muj status v chatu (25. 9. 2026) - rucni i ten z kalendare.
   const [mujStatus, setMujStatus] = useState<StatusVChatu | null>(null);
   /**
@@ -2163,6 +2186,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       setError(null);
       setConversations(sCerstvymi(Array.isArray(data?.konverzace) ? data.konverzace : []));
       setTeam(Array.isArray(data?.tym) ? data.tym : []);
+      setJa(data?.ja ?? null);
       setMujStatus(data?.mujStatus ?? null);
     } catch {
       // vypadek site - zkusi se zas za chvili
@@ -3380,7 +3404,36 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     return { jmeno: zminen?.label ?? null };
   }
 
-  const jmenaTymu = team.map((u) => u.label);
+  // Zvýrazňuje se i MOJE jméno (21. 10. 2026) - viz `ja` výš.
+  /**
+   * KOHO JSEM ZMÍNIL, ALE V ROZHOVORU NENÍ (zadání 21. 10. 2026: „Barboře
+   * nechodí upozornění z chatu a nějak se chová divně označení").
+   *
+   * Pod zavináčem se nabízí CELÝ TÝM, jenže upozornění na zmínku dostane jen
+   * člen rozhovoru - zmínka kohokoliv jiného je dopis, který nikdo nedostane,
+   * a odesílatel o tom neví. Tohle to řekne rovnou pod psátkem.
+   *
+   * Kanálů projektů a dotazů klientů se to netýká: ty vidí celý tým, takže
+   * tam žádná zmínka nepropadne.
+   */
+  function zminenMimoRozhovor(text: string): string[] {
+    if (!otevrena || otevrena.kind === 'PROJEKT' || otevrena.kind === 'DOTAZ') return [];
+    const clenove = new Set(otevrena.memberIds ?? []);
+    if (clenove.size === 0) return [];
+    return team
+      .filter((u) => !clenove.has(u.id))
+      .filter((u) => {
+        const krestni = u.label.split(/\s+/)[0];
+        const podoby = [u.label, krestni].filter((j) => j.length >= 3);
+        return podoby.some((j) =>
+          new RegExp(`(^|\\s)@${j.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu').test(text),
+        );
+      })
+      .map((u) => u.label);
+  }
+
+  // Zvýrazňuje se i MOJE jméno (21. 10. 2026) - viz `ja` výš.
+  const jmenaTymu = [...team.map((u) => u.label), ...(ja?.label ? [ja.label] : [])];
   /** Projekty, na ktere jde odkazat - stejny seznam, ze ktereho jsou kanaly. */
   const projektyProZminky: ProjektZminka[] = (projekty ?? []).map((p) => ({ id: p.id, name: p.name }));
   const nabidkaZminek =
@@ -4133,7 +4186,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                           ) : (
                             <>
                               <BublinaZpravy mine={m.mine} text={m.body} onReakce={(code) => prepniReakci(m.id, code)}>
-                                <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
+                                <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} jaLabel={ja?.label ?? null} />
                               </BublinaZpravy>
                               <Prilohy prilohy={m.prilohy ?? []} />
                               <Reakce
@@ -4215,6 +4268,18 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       hlaska={ukolHlaska}
                     />
                   )}
+
+                  {/* Zmínka člověka, který v rozhovoru není - viz
+                      zminenMimoRozhovor. */}
+                  {(() => {
+                    const mimo = zminenMimoRozhovor(draft);
+                    if (mimo.length === 0) return null;
+                    return (
+                      <p className="text-[11px] font-body text-status-progress m-0 px-1 pb-1">
+                        {t('chat.zminkaMimoRozhovor', { jmena: vyjmenuj(mimo, jazyk) })}
+                      </p>
+                    );
+                  })()}
 
                   <Psatko
                     hodnota={draft}
@@ -4330,7 +4395,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             ) : (
                               <>
                                 <BublinaZpravy mine={m.mine} text={m.body} onReakce={(code) => prepniReakci(m.id, code)}>
-                                  <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
+                                  <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} jaLabel={ja?.label ?? null} />
                                 </BublinaZpravy>
                                 <Prilohy prilohy={m.prilohy ?? []} />
                                 <Reakce
