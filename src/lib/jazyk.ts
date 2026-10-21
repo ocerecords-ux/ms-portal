@@ -2078,6 +2078,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
    * nabízí celý tým, ale upozornění dostane jen člen rozhovoru - tahle věta
    * to řekne dřív, než člověk zprávu odešle.
    */
+  /** Rozepsaná zpráva v seznamu rozhovorů (21. 10. 2026). */
+  /** Výsledky hledání ve zprávách (21. 10. 2026). */
+  'chat.nalezeneZpravy': { cs: 'Nalezené zprávy', en: 'Messages found' },
+  'chat.koncept': { cs: 'koncept', en: 'draft' },
+  'chat.konceptPopis': {
+    cs: 'Máte tu rozepsanou zprávu — drží se, dokud ji neodešlete nebo nesmažete.',
+    en: 'You have a message in progress here — it stays until you send or clear it.',
+  },
   'chat.zminkaMimoRozhovor': {
     cs: '{jmena} v tomhle rozhovoru není — zmínku nedostane. Přidej ho do skupiny, nebo mu napiš soukromě.',
     en: '{jmena} is not in this conversation — the mention will not reach them. Add them to the group, or write to them privately.',

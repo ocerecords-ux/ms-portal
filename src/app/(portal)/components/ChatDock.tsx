@@ -53,6 +53,7 @@ import {
 } from '@/lib/chatPrilohy';
 import { WaveformPlayer } from './WaveformPlayer';
 import { UpozorneniChatu } from './UpozorneniChatu';
+import { NotificationBell } from './NotificationBell';
 import { Avatar } from './Avatar';
 import { oznamNeprectene, oznamPocetDoku, usePoctyDoku, usePosluchacOtevreni, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
@@ -1853,6 +1854,39 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
  */
 const KLIC_POSLEDNI_KONVERZACE = 'msportal_chat_posledni';
 
+/**
+ * ROZEPSANÉ ZPRÁVY (připomínka Petra Drátvy 21. 10. 2026: „možnost
+ * automatického ukládání rozpísanej správy (koncept?)").
+ *
+ * Do teď bylo psátko JEDNO pro všechny rozhovory: rozepsaná věta se při
+ * přepnutí nesmazala, ale ukázala se u někoho jiného - a při zavření
+ * aplikace zmizela úplně. Teď má každý rozhovor svůj koncept, drží se přes
+ * zavření okna a v seznamu je u něj vidět štítek.
+ *
+ * JE TO ZVYK PROHLÍŽEČE, NE ÚČTU - proto localStorage a ne databáze. Koncept
+ * je rozepsaná myšlenka, ne zpráva; posílat ji na server, aby si ji člověk
+ * přečetl na jiném zařízení, by znamenalo ukládat něco, co nikdy nechtěl
+ * odeslat.
+ */
+const KLIC_KONCEPTY = 'msportal_chat_koncepty';
+
+function nactiKoncepty(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const ulozene = window.localStorage.getItem(KLIC_KONCEPTY);
+    const data = ulozene ? (JSON.parse(ulozene) as unknown) : null;
+    if (!data || typeof data !== 'object') return {};
+    const out: Record<string, string> = {};
+    for (const [id, text] of Object.entries(data as Record<string, unknown>)) {
+      if (typeof text === 'string' && text.trim()) out[id] = text;
+    }
+    return out;
+  } catch {
+    // Soukromé okno localStorage odmítá - pak se prostě nic nepamatuje.
+    return {};
+  }
+}
+
 export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // Na samostatne strance je chat rovnou otevreny, neni co rozbalovat.
   const t = usePreklad();
@@ -1907,6 +1941,26 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   /** Ktera konverzace je opravdu otevrena - viz nactiZpravy. */
   const otevrenaRef = useRef<string | null>(null);
   const [draft, setDraft] = useState('');
+  /**
+   * Koncepty podle rozhovoru (21. 10. 2026) - viz KLIC_KONCEPTY výš.
+   * V `ref` kvůli přepnutí rozhovoru (efekt níž čte poslední hodnotu),
+   * ve `state` kvůli štítku v seznamu.
+   */
+  const [koncepty, setKoncepty] = useState<Record<string, string>>({});
+  /**
+   * NALEZENÉ ZPRÁVY (připomínka Petra Drátvy 21. 10. 2026: „v chate pridať
+   * možnosť fulltext vyhľadávania v správach").
+   *
+   * Hledání v liště do teď procházelo jen názvy rozhovorů. Tohle je druhá
+   * půlka: co se našlo přímo ve zprávách - viz /api/chat/hledani.
+   */
+  const [nalezene, setNalezene] = useState<
+    { id: string; konverzaceId: string; konverzace: string; vlaknoId: string | null; autor: string | null; text: string; kdy: string }[]
+  >([]);
+  const [hledaZpravy, setHledaZpravy] = useState(false);
+  const konceptyRef = useRef<Record<string, string>>({});
+  const draftRef = useRef('');
+  const predchoziKonverzaceRef = useRef<string | null>(null);
   // Otevrene vlakno (zadani 8. 9. 2026) - ID zpravy, pod kterou se odpovida.
   const [vlaknoId, setVlaknoId] = useState<string | null>(null);
   const [vlakno, setVlakno] = useState<ChatMessage[]>([]);
@@ -2253,6 +2307,79 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     }, REFRESH_MS);
     return () => clearInterval(timer);
   }, [nactiKonverzace, nactiZpravy, nactiVlakno, openId, vlaknoId]);
+
+  /**
+   * Hledání ve zprávách běží se zpožděním - při psaní by to byl dotaz na
+   * každé písmeno. Od tří znaků, jinak by to vrátilo půlku chatu.
+   */
+  useEffect(() => {
+    const dotaz = hledani.trim();
+    if (dotaz.length < 3) {
+      setNalezene([]);
+      setHledaZpravy(false);
+      return;
+    }
+    setHledaZpravy(true);
+    let zivy = true;
+    const timer = window.setTimeout(() => {
+      fetch(`/api/chat/hledani?q=${encodeURIComponent(dotaz)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!zivy) return;
+          setNalezene(Array.isArray(d?.zpravy) ? d.zpravy : []);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (zivy) setHledaZpravy(false);
+        });
+    }, 300);
+    return () => {
+      zivy = false;
+      window.clearTimeout(timer);
+    };
+  }, [hledani]);
+
+  /** Koncepty z prohlížeče - jednou při otevření chatu. */
+  useEffect(() => {
+    const ulozene = nactiKoncepty();
+    konceptyRef.current = ulozene;
+    setKoncepty(ulozene);
+  }, []);
+
+  /** Zapíše koncept rozhovoru do paměti prohlížeče. Prázdný se zahodí. */
+  const ulozKoncept = useCallback((konverzaceId: string | null, text: string) => {
+    if (!konverzaceId) return;
+    const mapa = { ...konceptyRef.current };
+    if (text.trim()) mapa[konverzaceId] = text;
+    else delete mapa[konverzaceId];
+    konceptyRef.current = mapa;
+    setKoncepty(mapa);
+    try {
+      window.localStorage.setItem(KLIC_KONCEPTY, JSON.stringify(mapa));
+    } catch {
+      // Soukromé okno - koncept zůstane jen do zavření.
+    }
+  }, []);
+
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  /**
+   * PŘEPNUTÍ ROZHOVORU: co je rozepsané, zůstane u toho, kde se psalo
+   * (21. 10. 2026). Do té doby text zůstal v psátku a ukázal se u někoho
+   * jiného - párkrát to znamenalo zprávu poslanou do špatného okna.
+   */
+  useEffect(() => {
+    const predchozi = predchoziKonverzaceRef.current;
+    if (predchozi !== openId) {
+      if (predchozi) ulozKoncept(predchozi, draftRef.current);
+      const novy = openId ? (konceptyRef.current[openId] ?? '') : '';
+      setDraft(novy);
+      draftRef.current = novy;
+      predchoziKonverzaceRef.current = openId;
+    }
+  }, [openId, ulozKoncept]);
 
   useEffect(() => {
     otevrenaRef.current = openId;
@@ -2969,6 +3096,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       setPrilohyVlakno([]);
     } else {
       setDraft('');
+      draftRef.current = '';
+      ulozKoncept(konverzace, '');
       setPrilohyHlavni([]);
     }
     setZminkyPro(null);
@@ -3548,6 +3677,18 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0 shrink-0">MS portal</h2>
               <span className="ml-auto flex items-center gap-3 shrink-0">
                 {listaDruhu}
+                {/**
+                  * ZVONEK S HISTORIÍ I V APLIKACI CHATU (připomínka Petra
+                  * Drátvy 21. 10. 2026: „história notifikácii v mobilnom
+                  * chate - možnosť dohľadať posledné notifikácie, aj keď už
+                  * boli raz prečítané").
+                  *
+                  * V portálu zvonek je, ale chat na ploše telefonu je vlastní
+                  * aplikace a horní lišta portálu v ní není - upozornění se
+                  * tedy dalo přečíst jen ve chvíli, kdy cinklo. Je to týž
+                  * zvonek jako v liště: posledních dvacet, přečtená i ne.
+                  */}
+                <NotificationBell unread={0} />
                 <UpozorneniChatu
                   skupiny={skupinyProUpozorneni}
                   onZmenaSkupiny={(id, rezim) => void nastavUpozorneni(id, rezim)}
@@ -3740,8 +3881,43 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   ale vlastní to-do list - proto vlastní komponenta a ne
                   seznam níž. */}
               {tab === ZALOZKA_UKOLY && <UkolyVChatu />}
-              {nicNesedi && (
+              {nicNesedi && nalezene.length === 0 && !hledaZpravy && (
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.hledaniPrazdno')}</p>
+              )}
+
+              {/* NALEZENÉ ZPRÁVY (21. 10. 2026) - pod seznamem rozhovorů.
+                  Klepnutí otevře rozhovor, a když zpráva visí ve vlákně,
+                  rovnou to vlákno. */}
+              {hledani.trim().length >= 3 && (nalezene.length > 0 || hledaZpravy) && (
+                <div className="mt-2 border-t border-line pt-2 flex flex-col gap-1">
+                  <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0 px-1">
+                    {t('chat.nalezeneZpravy')}
+                  </p>
+                  {hledaZpravy && nalezene.length === 0 && (
+                    <p className="text-xs font-body text-muted m-0 px-1">{t('obecne.nacitam')}</p>
+                  )}
+                  {nalezene.map((z) => (
+                    <button
+                      key={z.id}
+                      type="button"
+                      onClick={() => {
+                        setOpenId(z.konverzaceId);
+                        setVlaknoId(z.vlaknoId);
+                        setHledani('');
+                      }}
+                      className="text-left rounded-lg px-2.5 py-1.5 hover:bg-field"
+                    >
+                      <span className="block text-[11px] font-heading font-semibold text-brand-purple truncate">
+                        {z.konverzace}
+                        {z.autor ? ` · ${z.autor}` : ''}
+                      </span>
+                      <span className="block text-xs font-body text-ink break-words">{z.text}</span>
+                      <span className="block text-[10px] font-body text-muted tabular-nums">
+                        {formatFullTime(z.kdy, jazyk)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               )}
               {tab === 'PROJEKT' && projekty === null && (
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.nacitamProjekty')}</p>
@@ -3844,6 +4020,16 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                           Seznam má být jen jména. */}
                       <span className="block font-heading text-sm text-ink truncate">{c.label}</span>
                     </span>
+                    {/* ROZEPSANÁ ZPRÁVA (21. 10. 2026) - ať je vidět, kde
+                        něco čeká na dopsání, i když tam není nic nového. */}
+                    {Boolean(koncepty[c.id]?.trim()) && c.id !== openId && (
+                      <span
+                        title={t('chat.konceptPopis')}
+                        className="shrink-0 rounded-pill border border-line bg-field px-1.5 text-[10px] font-heading font-semibold text-muted leading-[18px]"
+                      >
+                        {t('chat.koncept')}
+                      </span>
+                    )}
                     {c.unread > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
                         {c.unread}
@@ -4285,6 +4471,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     hodnota={draft}
                     zmena={(v, kurzor) => {
                       setDraft(v);
+                      draftRef.current = v;
+                      // Koncept se drží i po zavření aplikace (21. 10. 2026).
+                      ulozKoncept(otevrena.id, v);
                       sledujZminku(v, 'hlavni', kurzor);
                       if (v.trim()) ohlasZePisu(otevrena.id);
                     }}
