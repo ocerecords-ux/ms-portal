@@ -17,6 +17,7 @@ import {
   type Vrstva,
 } from '@/lib/socialni';
 import type { ObrazekRadek, PrispevekDetail } from '@/lib/socialniServer';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
@@ -274,7 +275,7 @@ export function Editor({
       data.append('vyska', String(zmenseny.vyska));
       const res = await fetch('/api/site/obrazky', { method: 'POST', body: data });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || t('siteEditor.obrazekNenahran'));
+      if (!res.ok) throw new Error(hlaskaChyby(telo, t, t('siteEditor.obrazekNenahran')));
       const novy = telo.obrazek as ObrazekRadek;
       setObrazky((p) => [novy, ...p]);
       if (kamPozadi) {
@@ -302,7 +303,7 @@ export function Editor({
           body: JSON.stringify({ nazev, format, platno, popisek, hashtagy, ...dalsi }),
         });
         const telo = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(telo.error || t('siteEditor.neulozeno'));
+        if (!res.ok) throw new Error(hlaskaChyby(telo, t, t('siteEditor.neulozeno')));
         setUlozeno(true);
         router.refresh();
       } catch (err) {
@@ -345,7 +346,7 @@ export function Editor({
         body: JSON.stringify({ sit: f.sit, oCem, textyNaPlatne }),
       });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || t('siteEditor.brunoNeodpovida'));
+      if (!res.ok) throw new Error(hlaskaChyby(telo, t, t('siteEditor.brunoNeodpovida')));
       setPopisek(telo.popisek || '');
       setHashtagy(telo.hashtagy || '');
       setUlozeno(false);

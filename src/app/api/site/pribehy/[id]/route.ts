@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { authOptions } from '@/lib/auth';
 import {
   smazPribeh,
@@ -45,17 +46,17 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const kdo = { id: session.user.id, role: session.user.role };
   // Od 6. 10. 2026 se neschvaluje - vyvěsit smí každý, kdo smí posílat.
   if (!(await smiPoslatPribeh(kdo))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Neplatná volba.' }, { status: 400 });
+    return odpovedChyby('chybaApi.neplatnaVolba', 400);
   }
 
   /** Uložení rozdělaného konceptu - text, podoba textu, případně jiná fotka. */
@@ -69,7 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const soubor = await overPrilohu(parsed.data.klic);
       const url = soubor ? adresaVUlozisti(parsed.data.klic) : null;
       if (!soubor || !url) {
-        return NextResponse.json({ error: 'Soubor se do úložiště nedostal.' }, { status: 400 });
+        return odpovedChyby('chybaApi.souborNedosel', 400);
       }
       zmena.url = url;
       zmena.typSouboru = soubor.mime;
@@ -77,7 +78,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (parsed.data.nazevSouboru) zmena.nazevSouboru = parsed.data.nazevSouboru;
     }
     const koncept = await upravKoncept(kdo, params.id, zmena);
-    if (!koncept) return NextResponse.json({ error: 'Koncept už upravit nejde.' }, { status: 409 });
+    if (!koncept) return odpovedChyby('chybaApi.konceptNejdeUpravit', 409);
     return NextResponse.json({ pribeh: koncept });
   }
 
@@ -89,7 +90,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const pribeh = await vyridPribeh(kdo, params.id, parsed.data.stav, parsed.data.vzkaz ?? null);
   if (!pribeh) {
-    return NextResponse.json({ error: 'Tenhle příběh už někdo vyřídil.' }, { status: 409 });
+    return odpovedChyby('chybaApi.pribehVyrizen', 409);
   }
   return NextResponse.json({ pribeh });
 }
@@ -97,9 +98,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const ok = await smazPribeh({ id: session.user.id, role: session.user.role }, params.id);
-  if (!ok) return NextResponse.json({ error: 'Příběh už stáhnout nejde.' }, { status: 409 });
+  if (!ok) return odpovedChyby('chybaApi.pribehNejdeStahnout', 409);
   return NextResponse.json({ ok: true });
 }

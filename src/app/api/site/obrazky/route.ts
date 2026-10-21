@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { uploadPripominkaObrazek } from '@/lib/storage';
@@ -20,7 +21,7 @@ const MAX = 8 * 1024 * 1024;
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || !(await smiSite(session.user.id))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   return NextResponse.json({ obrazky: await nactiObrazky(session.user.id) });
 }
@@ -28,19 +29,19 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !(await smiSite(session.user.id))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const form = await req.formData().catch(() => null);
   const soubor = form?.get('soubor');
   if (!(soubor instanceof File)) {
-    return NextResponse.json({ error: 'Chybí soubor.' }, { status: 400 });
+    return odpovedChyby('chybaApi.chybiSoubor', 400);
   }
   if (!soubor.type.startsWith('image/')) {
-    return NextResponse.json({ error: 'Tohle není obrázek.' }, { status: 400 });
+    return odpovedChyby('chybaApi.neniObrazek', 400);
   }
   if (soubor.size > MAX) {
-    return NextResponse.json({ error: 'Obrázek je moc velký.' }, { status: 400 });
+    return odpovedChyby('chybaApi.obrazekMocVelky', 400);
   }
 
   const sirka = Number(form?.get('sirka')) || null;

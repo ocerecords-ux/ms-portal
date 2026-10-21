@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { authOptions } from '@/lib/auth';
 import { anthropicHlavicky } from '@/lib/anthropic';
 import { smiSite } from '@/lib/socialniServer';
@@ -43,17 +44,17 @@ Hashtagů dej na Instagram 5-10, na LinkedIn 3-5, všechny malými písmeny a be
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !(await smiSite(session.user.id))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Napište aspoň větu o tom, o čem příspěvek je.' }, { status: 400 });
+    return odpovedChyby('chybaApi.popisekBezVety', 400);
   }
 
   const klic = process.env.ANTHROPIC_API_KEY;
   if (!klic) {
-    return NextResponse.json({ error: 'Bruno není nastavený (chybí ANTHROPIC_API_KEY).' }, { status: 503 });
+    return odpovedChyby('chybaApi.brunoNeniNastaveny', 503);
   }
 
   const { sit, oCem, textyNaPlatne } = parsed.data;
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
     if (!odpoved.ok) {
       const proc = await odpoved.text().catch(() => '');
       console.error('Sítě: popisek od Bruna selhal', odpoved.status, proc.slice(0, 300));
-      return NextResponse.json({ error: 'Bruno teď neodpovídá, zkuste to za chvíli.' }, { status: 502 });
+      return odpovedChyby('chybaApi.brunoNeodpovida', 502);
     }
 
     const telo = (await odpoved.json()) as { content?: { type: string; text?: string }[] };
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
     const zacatek = napsal.indexOf('{');
     const konec = napsal.lastIndexOf('}');
     if (zacatek < 0 || konec < zacatek) {
-      return NextResponse.json({ error: 'Odpověď se nepodařilo přečíst.' }, { status: 502 });
+      return odpovedChyby('chybaApi.odpovedNeprectena', 502);
     }
     const json = JSON.parse(napsal.slice(zacatek, konec + 1)) as {
       popisek?: string;
@@ -101,6 +102,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('Sítě: popisek od Bruna selhal:', err);
-    return NextResponse.json({ error: 'Popisek se nepodařilo vyrobit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.popisekNevyroben', 500);
   }
 }

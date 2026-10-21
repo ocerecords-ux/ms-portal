@@ -91,6 +91,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7n | 17. 10. | Formáty, na které se nikdo nezeptal: datum skládané ručně z `getDate()` (karta Hudba, knihovna hudby, veřejná stránka hudby, odznak frekvencí, rozsah týdne u splatností) a desetinná čárka natvrdo u velikostí souborů (hudba, přílohy chatu i dotazů, příběhy) + šest odkazů v liště, které slovník odkazů neznal | [x] |
 | 7o | 18. 10. | **Routy v `api/**` — rozhodnuto**: hlášky z rout chodí s KLÍČEM vedle české věty a obrazovka si je přeloží (`lib/chybyApi.ts` + `lib/chybaZOdpovedi.ts`). Udělaná celá hudba (19 rout) a k tomu číselníky Novinek (publika, druhy, názvy měsíců) | [x] |
 | 7p | 19. 10. | Přeposlech a náhledová okna — hlášky devíti rout přeposlechu klíčem (vzor z 7o) a tři routy náhledu pod ikonou (přeposlech, doklad, klientský doklad), které posílají hotový text a jazyk si proto berou z cookie | [x] |
+| 7q | 19. 10. | Hlášky rout Sítí a Příběhů — `api/site/**` klíčem (vzor 7o/7p): příběhy, příspěvky, obrázky a popisek od Bruna. Nově `odpovedChybyS` pro větu se značkou | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1653,6 +1654,64 @@ v `error:`** napříč routami. Nejvíc jich je v administraci (336), pak
 Vzor je hotový a jde po oblastech; hudba (7o) a přeposlech (7p) jsou první dvě.
 Další na řadě by podle viditelnosti pro klienta byly `api/site/*`,
 `api/chat/*` a `api/klient/*`.
+
+### Dávka 7q je HOTOVÁ (19. 10. 2026)
+
+Sítě a Příběhy: **10 rout, 3 obrazovky, 53 hlášek a slovník +23 klíčů
+(6 054 → 6 077)**. Vzor je z dávek 7o a 7p — routa pošle vedle české věty
+KLÍČ (`odpovedChyby`) a obrazovka si ji přeloží (`hlaskaChyby`).
+
+Přeložené routy: `api/site/pribehy` (seznam, podpis, detail, soubor, zmínky),
+`api/site/prispevky` (seznam i detail), `api/site/obrazky`,
+`api/site/obrazek/[id]` a `api/site/popisek` (popisek od Bruna). Obrazovky,
+které hlášky ukazují: `site/Editor.tsx`, `site/SitePrehled.tsx`
+a `site/pribehy/Editor.tsx` — devět míst, kde dosud stálo
+`telo.error || t('záloha')`, teď je `hlaskaChyby(telo, t, t('záloha'))`.
+
+**NOVĚ JDE VĚTA SE ZNAČKOU — `odpovedChybyS` v `lib/chybyApi.ts`.** Hláška
+„Soubor je moc velký - vejde se do {kolik}." je potřeba i z routy, a dosavadní
+`odpovedChyby` umí jen celý klíč bez dosazení. Routa teď posílá `hodnoty`
+vedle klíče a dosazuje je až obrazovka, do své jazykové verze věty (pravidlo
+7 platí dál: věta zůstává jeden klíč). **Hodnoty musí být jazykově neutrální
+— proto se strop posílá v CELÝCH megabajtech** (`Math.floor`), ne přes
+`velikostVMB`: ten dává „120,0 MB" a desetinná čárka by v angličtině zůstala
+česká (pravidlo 3). Klientská kontrola v editoru, která se ozve první, si
+`velikostVMB(…, jazyk)` bere dál — tam jazyk k ruce je.
+
+**Hláška, kterou skript nenašel:** „Instagram vezme jen JPEG, PNG, WEBP, MP4
+nebo MOV." nemá ani jedno písmeno s diakritikou, takže v hledání podle
+diakritiky nebyla vidět. V `api/**` je proto užitečnější hledat `error: '`
+než českou diakritiku:
+
+```bash
+grep -rn "error: ['\`]" src/app/api --include=route.ts
+```
+
+**Typová kontrola: diff proti známým hláškám prázdný** (30 řádků beze změny).
+
+**Co se našlo a NEDĚLALO se to (schválně):**
+
+1. **Důvod nevyvěšení na Instagram** chodí jiným kanálem než `error` — jako
+   pole `chyba` v odpovědi 207 z `vyvesPribehNaInstagram`
+   (`lib/pribehyServer.ts`) a dál z `vyvesPribeh` v `lib/instagramServer.ts`.
+   Pět vět je našich, ale zbytek je **hotový text od Mety** (`d.error?.message`),
+   který prochází tak, jak přišel — cizí služba se nepřekládá. Rozdělit to je
+   vlastní úkol: výsledek by vedle `chyba` nesl i `klic`, a projít se musí
+   i `pripojUcet` a obrazovka fronty.
+2. **Hlášky ze `zod` schémat** ve třech routách hudby — pořád otevřené
+   z dávky 7o.
+3. Druhá polovina dávky 6 — zapojení pošty a oznámení pod zvonkem.
+
+**Dnešní obrazovky byly čisté.** Kontrola všech souborů v `src` změněných
+19. 10. (karta uživatele se zvonkem, Čekárna, zpětný náhled zprávy, historie
+projektu, faktura z nabídky, okno nad Diskem, stav „Vyfakturováno") nenašla
+ani jeden český řetězec na obrazovce — denní práce už s překladem počítá.
+Zbytek češtiny v `src/lib/*.tsx` je zdroj pravdy (popisky ikon, stavy dokladů,
+stavy projektu), překládá se podle KÓDU.
+
+**Kolik ještě zbývá v `api/**`:** z hrubého odhadu 1 025 hlášek ubyla hudba
+(7o), přeposlech (7p) a teď Sítě. Další na řadě jsou podle viditelnosti pro
+klienta `api/chat/*` (52) a `api/klient/*`, pak administrace (336).
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

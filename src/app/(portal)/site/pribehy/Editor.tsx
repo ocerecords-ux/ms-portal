@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import type { PribehRadek } from '@/lib/pribehyServer';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import {
   MAX_POPISEK,
   PRIJIMANE_PRIPONY,
@@ -418,7 +419,7 @@ export function Editor({
       body: JSON.stringify({ nazev, typ, velikost: data.size }),
     });
     const podpis = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(podpis.error || t('pribehy.neodeslano'));
+    if (!res.ok) throw new Error(hlaskaChyby(podpis, t, t('pribehy.neodeslano')));
     await nahrajDoUloziste(podpis.uploadUrl, data, typ, setProcenta);
     setProcenta(null);
     return { klic: podpis.key, nazev };
@@ -434,7 +435,7 @@ export function Editor({
       body: JSON.stringify({ nazev: soubor.name, typ, velikost: soubor.size }),
     });
     const podpis = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(podpis.error || t('pribehy.neodeslano'));
+    if (!res.ok) throw new Error(hlaskaChyby(podpis, t, t('pribehy.neodeslano')));
     await nahrajDoUloziste(podpis.uploadUrl, soubor, typ, setProcenta);
     setProcenta(null);
     return { klic: podpis.key, nazev: soubor.name };
@@ -454,7 +455,7 @@ export function Editor({
         body: JSON.stringify({ klic: nahrane.klic, nazevSouboru: nahrane.nazev, popisek }),
       });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok && res.status !== 207) throw new Error(telo.error || t('pribehy.neodeslano'));
+      if (!res.ok && res.status !== 207) throw new Error(hlaskaChyby(telo, t, t('pribehy.neodeslano')));
       // 207: pribeh je ulozeny, jen ho Instagram nevzal - duvod se ukaze ve fronte.
       if (telo.chyba) setChyba(telo.chyba);
       if (zKonceptu) await fetch(`/api/site/pribehy/${zKonceptu.id}`, { method: 'DELETE' });
@@ -490,7 +491,7 @@ export function Editor({
           }),
         });
         const telo = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(telo.error || t('pribehy.neodeslano'));
+        if (!res.ok) throw new Error(hlaskaChyby(telo, t, t('pribehy.neodeslano')));
       } else {
         const nahrane = await nahrajPuvodni();
         if (!nahrane) throw new Error(t('pribehy.neodeslano'));
@@ -506,7 +507,7 @@ export function Editor({
           }),
         });
         const telo = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(telo.error || t('pribehy.neodeslano'));
+        if (!res.ok) throw new Error(hlaskaChyby(telo, t, t('pribehy.neodeslano')));
       }
       zacniZnovu();
       setZKonceptu(null);

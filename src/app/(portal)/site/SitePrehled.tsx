@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FORMATY, SABLONY, najdiFormat } from '@/lib/socialni';
 import type { PrispevekRadek } from '@/lib/socialniServer';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, prelozitNaKusy } from '@/lib/jazyk';
 
@@ -47,7 +48,7 @@ export function SitePrehled({ prispevky }: { prispevky: PrispevekRadek[] }) {
         }),
       });
       const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || t('site.nezalozeno'));
+      if (!res.ok) throw new Error(hlaskaChyby(telo, t, t('site.nezalozeno')));
       router.push(`/site/${telo.prispevek.id}`);
     } catch (err) {
       setChyba(err instanceof Error ? err.message : t('site.nezalozeno'));

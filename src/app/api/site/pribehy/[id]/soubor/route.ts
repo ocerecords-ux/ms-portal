@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { authOptions } from '@/lib/auth';
 import { nactiPribeh, smiPoslatPribeh, smiSchvalovatPribehy } from '@/lib/pribehyServer';
 import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
@@ -22,12 +23,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const kdo = { id: session.user.id, role: session.user.role };
 
   const pribeh = await nactiPribeh(params.id);
-  if (!pribeh) return NextResponse.json({ error: 'Příběh nenalezen.' }, { status: 404 });
+  if (!pribeh) return odpovedChyby('chybaApi.pribehNenalezen', 404);
 
   /**
    * VIDI TO CELY TYM (zadání 8. 10. 2026: „Ty fotky musí vidět všichni
@@ -43,9 +44,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
    * přesně jako v seznamu.
    */
   const smiNaPribehy = (await smiPoslatPribeh(kdo)) || (await smiSchvalovatPribehy(kdo));
-  if (!smiNaPribehy) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!smiNaPribehy) return odpovedChyby('chybaApi.bezOpravneni', 403);
   if (pribeh.stav === 'KONCEPT' && pribeh.autorId !== session.user.id) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   if (pribeh.url.startsWith('data:')) {
@@ -62,6 +63,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const odkaz = klic
     ? await podepsanyOdkazNaPrilohu(klic, pribeh.nazevSouboru, jakoPrilohu)
     : pribeh.url;
-  if (!odkaz) return NextResponse.json({ error: 'Soubor se nepodařilo načíst.' }, { status: 500 });
+  if (!odkaz) return odpovedChyby('chybaApi.souborNejdeNacist', 500);
   return NextResponse.redirect(odkaz);
 }

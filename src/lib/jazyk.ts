@@ -11804,6 +11804,74 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'chybaApi.neniCoMenit': { cs: 'Není co měnit.', en: 'There is nothing to change.' },
   'chybaApi.smazatNepodarilo': { cs: 'Smazat se nepodařilo.', en: 'Deleting did not work.' },
+  // Hlášky z rout Sítí a Příběhů (dávka 7q, 19. 10. 2026) - `api/site/**`.
+  'chybaApi.pribehyBezUloziste': {
+    cs: 'Příběhy zatím nejdou - portál nemá nastavené úložiště souborů.',
+    en: 'Stories are not available yet — the portal has no file storage set up.',
+  },
+  'chybaApi.neplatnySoubor': { cs: 'Neplatný soubor.', en: 'Invalid file.' },
+  'chybaApi.instagramTypy': {
+    cs: 'Instagram vezme jen JPEG, PNG, WEBP, MP4 nebo MOV.',
+    en: 'Instagram only accepts JPEG, PNG, WEBP, MP4 or MOV.',
+  },
+  // Celé megabajty schválně: číslo bez desetinné čárky se čte stejně česky
+  // i anglicky, a routa jazyk toho, kdo se ptá, nezná (pravidlo 3).
+  'chybaApi.souborMocVelky': {
+    cs: 'Soubor je moc velký - vejde se do {kolik}.',
+    en: 'The file is too big — the limit is {kolik}.',
+  },
+  'chybaApi.neplatnyPribeh': { cs: 'Neplatný příběh.', en: 'Invalid story.' },
+  'chybaApi.souborNedoselZnovu': {
+    cs: 'Soubor se do úložiště nedostal. Zkuste to znovu.',
+    en: 'The file did not reach storage. Please try again.',
+  },
+  'chybaApi.souborNedosel': {
+    cs: 'Soubor se do úložiště nedostal.',
+    en: 'The file did not reach storage.',
+  },
+  'chybaApi.neplatnaVolba': { cs: 'Neplatná volba.', en: 'Invalid choice.' },
+  'chybaApi.konceptNejdeUpravit': {
+    cs: 'Koncept už upravit nejde.',
+    en: 'The draft can no longer be edited.',
+  },
+  'chybaApi.pribehVyrizen': {
+    cs: 'Tenhle příběh už někdo vyřídil.',
+    en: 'Someone has already dealt with this story.',
+  },
+  'chybaApi.pribehNejdeStahnout': {
+    cs: 'Příběh už stáhnout nejde.',
+    en: 'The story can no longer be taken back.',
+  },
+  'chybaApi.pribehNenalezen': { cs: 'Příběh nenalezen.', en: 'Story not found.' },
+  'chybaApi.prispevekNenalezen': { cs: 'Příspěvek nenalezen.', en: 'Post not found.' },
+  'chybaApi.chybiSoubor': { cs: 'Chybí soubor.', en: 'The file is missing.' },
+  'chybaApi.neniObrazek': { cs: 'Tohle není obrázek.', en: 'This is not an image.' },
+  'chybaApi.obrazekMocVelky': { cs: 'Obrázek je moc velký.', en: 'The image is too large.' },
+  'chybaApi.obrazekNenalezen': { cs: 'Obrázek nenalezen.', en: 'Image not found.' },
+  'chybaApi.obrazekNejdeNacist': {
+    cs: 'Obrázek se nepodařilo načíst.',
+    en: 'The image could not be loaded.',
+  },
+  'chybaApi.popisekBezVety': {
+    cs: 'Napište aspoň větu o tom, o čem příspěvek je.',
+    en: 'Write at least a sentence about what the post is about.',
+  },
+  'chybaApi.brunoNeniNastaveny': {
+    cs: 'Bruno není nastavený (chybí ANTHROPIC_API_KEY).',
+    en: 'Bruno is not set up (ANTHROPIC_API_KEY is missing).',
+  },
+  'chybaApi.brunoNeodpovida': {
+    cs: 'Bruno teď neodpovídá, zkuste to za chvíli.',
+    en: 'Bruno is not responding right now, please try again in a moment.',
+  },
+  'chybaApi.odpovedNeprectena': {
+    cs: 'Odpověď se nepodařilo přečíst.',
+    en: 'The response could not be read.',
+  },
+  'chybaApi.popisekNevyroben': {
+    cs: 'Popisek se nepodařilo vyrobit.',
+    en: 'The caption could not be generated.',
+  },
   // Důvody z `lib/vyzvaHudbaServer.ts` - výzva klientovi, aby dodal hudbu.
   'hudbaVyzva.duvodBezKontaktu': {
     cs: 'Projekt nemá e-mail klienta ani kontakt firmy.',

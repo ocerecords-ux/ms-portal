@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { authOptions } from '@/lib/auth';
 import { nactiPrispevek, smazPrispevek, smiSite, upravPrispevek } from '@/lib/socialniServer';
 import type { Platno } from '@/lib/socialni';
@@ -21,35 +22,35 @@ const schema = z.object({
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !(await smiSite(session.user.id))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const prispevek = await nactiPrispevek(session.user.id, params.id);
-  if (!prispevek) return NextResponse.json({ error: 'Příspěvek nenalezen.' }, { status: 404 });
+  if (!prispevek) return odpovedChyby('chybaApi.prispevekNenalezen', 404);
   return NextResponse.json({ prispevek });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !(await smiSite(session.user.id))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const prispevek = await upravPrispevek(session.user.id, params.id, {
     ...parsed.data,
     platno: parsed.data.platno as Platno | undefined,
   });
-  if (!prispevek) return NextResponse.json({ error: 'Příspěvek nenalezen.' }, { status: 404 });
+  if (!prispevek) return odpovedChyby('chybaApi.prispevekNenalezen', 404);
   return NextResponse.json({ prispevek });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !(await smiSite(session.user.id))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const ok = await smazPrispevek(session.user.id, params.id);
-  if (!ok) return NextResponse.json({ error: 'Příspěvek nenalezen.' }, { status: 404 });
+  if (!ok) return odpovedChyby('chybaApi.prispevekNenalezen', 404);
   return NextResponse.json({ ok: true });
 }
