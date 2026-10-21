@@ -19,6 +19,9 @@ export async function requireAdmin() {
  * Vrací `jenHerci: true` tam, kde to není Žůžo-labůžo - volající pak musí
  * ověřit, že ten konkrétní účet JE herec. Bez toho by právo na karty herců
  * otevřelo celou správu uživatelů.
+ *
+ * Návratový typ schválně nepíšeme ručně - vlastní anotace shodila build,
+ * protože typ session z `getServerSession` se v ní ztratí.
  */
 export async function requireSpravuHercu() {
   const session = await getServerSession(authOptions);
