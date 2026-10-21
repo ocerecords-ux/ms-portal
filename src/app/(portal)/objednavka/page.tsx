@@ -5,6 +5,7 @@ import { OrderForm } from './OrderForm';
 import { AdOrderForm } from './AdOrderForm';
 import { OrderTypeSwitcher } from './OrderTypeSwitcher';
 import { bezTitulu } from '@/lib/jmena';
+import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { firmaChceUvodZaver } from '@/lib/uvodZaver';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
@@ -43,6 +44,18 @@ export default async function ObjednavkaPage() {
     );
   }
 
+  /**
+   * SOUJMENOVCI I V OBJEDNÁVCE (zadání 20. 10. 2026: „stala se chyba asi
+   * u objednávky z webu… vidí klient, že může vybrat dva Ondry Nováky? Nám se
+   * totiž propsal pražský a má to být Brno").
+   *
+   * Rozlišení dvou stejných jmen městem vzniklo 9. 10. 2026, jenže jen pro
+   * naše obrazovky. Klient v objednávce viděl dvakrát „Ondřej Novák" bez
+   * rozdílu - vybral jednoho a portál přiřadil toho, na kterého narazil
+   * dřív. Teď vidí „Ondřej Novák - Praha" a „Ondřej Novák - Brno", stejně
+   * jako my, a podle toho se taky přiřadí účet.
+   */
+  const rozlisHerce = company.dealsAudiobooks ? await nactiRozliseniHercu() : null;
   const herci = company.dealsAudiobooks
     ? (
         await prisma.user.findMany({
@@ -50,7 +63,12 @@ export default async function ObjednavkaPage() {
           select: { id: true, name: true, code: true },
           orderBy: { name: 'asc' },
         })
-      ).map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.code || h.id }))
+      ).map((h) => ({
+        id: h.id,
+        label: rozlisHerce
+          ? rozlisHerce(h.id, bezTitulu(h.name) || h.code || h.id)
+          : bezTitulu(h.name) || h.code || h.id,
+      }))
     : [];
 
   // Úvod a závěr audioknihy (22. 9. 2026) - zatím jen Audiotéka.

@@ -23,6 +23,7 @@ import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
 import { nahrajPrilohuObjednavkyNaDisk } from '@/lib/prilohaObjednavkyServer';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { bezTitulu } from '@/lib/jmena';
+import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { notifyMany } from '@/lib/notifications';
 import { zkopirujHudbuSerie } from '@/lib/hudbaSerieServer';
 import { vidiCenuObjednavky } from '@/lib/roles';
@@ -385,12 +386,41 @@ export async function POST(req: NextRequest) {
             select: { id: true, name: true, code: true },
           })
         : [];
+      /**
+       * SOUJMENOVCI (zadání 20. 10. 2026: „nám se totiž propsal pražský
+       * a má to být Brno").
+       *
+       * Objednávka nese JMÉNO, ne účet - a dvě jména „Ondřej Novák" se podle
+       * jména rozlišit nedají. Dokud se hledal první, kdo sedí, přiřadil se
+       * ten, na kterého portál narazil dřív; že je to ten druhý, se zjistilo
+       * až u natáčení.
+       *
+       * Od teď platí dvě pravidla:
+       *  1. Sedí i jméno S ROZLIŠENÍM („Ondřej Novák - Brno") - přesně tak,
+       *     jak ho klient vidí v objednávce.
+       *  2. Když na holé jméno sedí VÍC lidí, nepřiřadí se nikdo. Jméno
+       *     zůstane textem v poli „herec z Caflou", kde je vidět, že se
+       *     k němu má někdo postavit - což je pořád lepší než tiše vybrat
+       *     špatného člověka.
+       */
+      const rozlisHerce = jmena.length ? await nactiRozliseniHercu() : null;
       const herciIds: string[] = [];
       const zbylaJmena: string[] = [];
       for (const jmeno of jmena) {
-        const shoda = ucty.find(
-          (u) => klic(bezTitulu(u.name) || '') === klic(jmeno) || u.code === jmeno,
-        );
+        const sedici = ucty.filter((u) => {
+          const zaklad = bezTitulu(u.name) || '';
+          if (u.code && u.code === jmeno) return true;
+          if (klic(zaklad) === klic(jmeno)) return true;
+          const sMestem = rozlisHerce ? rozlisHerce(u.id, zaklad) : zaklad;
+          return klic(sMestem) === klic(jmeno);
+        });
+        // Jednoznacna shoda s rozlisenim prebiji holé jméno, na které sedí víc lidí.
+        const presne = sedici.filter((u) => {
+          const zaklad = bezTitulu(u.name) || '';
+          const sMestem = rozlisHerce ? rozlisHerce(u.id, zaklad) : zaklad;
+          return klic(sMestem) === klic(jmeno) || (u.code && u.code === jmeno);
+        });
+        const shoda = presne.length === 1 ? presne[0] : sedici.length === 1 ? sedici[0] : null;
         if (shoda && !herciIds.includes(shoda.id)) herciIds.push(shoda.id);
         else if (!shoda) zbylaJmena.push(jmeno);
       }
