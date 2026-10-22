@@ -16,11 +16,22 @@ export function VyberHerceKlientem({
 }: {
   token: string;
   en: boolean;
-  navrhy: { id: string; jmeno: string; vybrano: boolean; vybralKdo: string | null }[];
+  navrhy: {
+    id: string;
+    jmeno: string;
+    /** Naše zelená hvězdička - koho doporučujeme (22. 10. 2026). */
+    preferovany: boolean;
+    odKlienta: boolean;
+    vybrano: boolean;
+    vybralKdo: string | null;
+  }[];
 }) {
   const router = useRouter();
   const [pracuje, setPracuje] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
+  /** Vlastní návrh klienta (22. 10. 2026) - jméno rukou, účet mít nemusí. */
+  const [vlastni, setVlastni] = useState('');
+  const [posilamVlastni, setPosilamVlastni] = useState(false);
 
   const uzVybrano = navrhy.find((n) => n.vybrano) ?? null;
 
@@ -44,6 +55,30 @@ export function VyberHerceKlientem({
       setChyba(en ? 'Something went wrong.' : 'Něco se nepovedlo.');
     } finally {
       setPracuje(null);
+    }
+  }
+
+  async function posliVlastni() {
+    if (!vlastni.trim() || posilamVlastni) return;
+    setPosilamVlastni(true);
+    setChyba(null);
+    try {
+      const res = await fetch(`/api/navrhy/${encodeURIComponent(token)}/navrh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jmeno: vlastni.trim() }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        setChyba(data?.error || (en ? 'Something went wrong.' : 'Něco se nepovedlo.'));
+        return;
+      }
+      setVlastni('');
+      router.refresh();
+    } catch {
+      setChyba(en ? 'Something went wrong.' : 'Něco se nepovedlo.');
+    } finally {
+      setPosilamVlastni(false);
     }
   }
 
@@ -77,6 +112,21 @@ export function VyberHerceKlientem({
               {i + 1}.
             </span>
             <span className="font-heading font-semibold text-base text-ink truncate">{n.jmeno}</span>
+            {/* Naše doporučení - zelená hvězdička u jednoho jediného jména. */}
+            {n.preferovany && (
+              <span
+                className="shrink-0 text-brand-green text-lg leading-none"
+                title={en ? 'Our pick' : 'Náš tip'}
+                aria-label={en ? 'Our pick' : 'Náš tip'}
+              >
+                ★
+              </span>
+            )}
+            {n.odKlienta && (
+              <span className="shrink-0 text-[11px] font-body text-muted">
+                {en ? 'your suggestion' : 'váš návrh'}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => void vyber(n.id)}
@@ -94,6 +144,34 @@ export function VyberHerceKlientem({
           {chyba}
         </p>
       )}
+
+      {/* VLASTNÍ NÁVRH KLIENTA (22. 10. 2026) - jméno rukou, účet mít nemusí. */}
+      <div className="border-t border-line pt-3 flex flex-col gap-2">
+        <span className="text-xs font-heading font-semibold text-muted uppercase tracking-wide">
+          {en ? 'Someone else in mind?' : 'Máte vlastní tip?'}
+        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            value={vlastni}
+            onChange={(e) => setVlastni(e.target.value)}
+            placeholder={en ? 'Name of the actor' : 'Jméno herce'}
+            className="flex-1 min-w-[180px] rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink placeholder:text-muted outline-none focus:border-brand-purple"
+          />
+          <button
+            type="button"
+            onClick={() => void posliVlastni()}
+            disabled={posilamVlastni || !vlastni.trim()}
+            className="rounded-pill border border-brand-purple text-brand-purple font-heading font-semibold text-sm px-4 py-2 bg-transparent cursor-pointer disabled:opacity-50"
+          >
+            {posilamVlastni ? (en ? 'Sending…' : 'Odesílám…') : en ? 'Send' : 'Poslat nám ho'}
+          </button>
+        </div>
+        <p className="text-xs font-body text-muted m-0">
+          {en
+            ? 'We will look into whether they are available.'
+            : 'Mrkneme, jestli má čas, a ozveme se.'}
+        </p>
+      </div>
 
       <p className="text-xs font-body text-muted m-0">
         {en

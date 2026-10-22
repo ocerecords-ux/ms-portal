@@ -31,6 +31,10 @@ export type NavrhHerce = {
   autorJmeno: string | null;
   user: { name: string | null; email: string } | null;
   /** Odesláno klientovi k výběru (22. 10. 2026) - ISO, nebo prázdno. */
+  /** Naše zelená hvězdička - koho doporučujeme (22. 10. 2026). */
+  preferovany: boolean;
+  /** Návrh napsal klient na své stránce. */
+  odKlienta: boolean;
   odeslanoKlientoviAt: string | null;
   vybranoAt: string | null;
   /** Jméno nebo mail toho, kdo z klientské strany vybral. */
@@ -58,6 +62,9 @@ const TEXTY = {
     odeslanoHlaska: 'Odesláno — klient si vybere a dáme vědět zvonkem.',
     vybralKlient: (kdo: string) => `vybral klient · ${kdo}`,
     vybranoHlaska: 'Herce si přidejte do obsazení ručně — výběr nic nepřeklápí.',
+    hvezdicka: 'Doporučit klientovi',
+    hvezdickaPryc: 'Zrušit doporučení',
+    odKlienta: 'od klienta',
   },
   en: {
     nadpis: 'Suggested actors',
@@ -79,6 +86,9 @@ const TEXTY = {
     odeslanoHlaska: 'Sent - the client picks and the bell tells us.',
     vybralKlient: (kdo: string) => `picked by the client · ${kdo}`,
     vybranoHlaska: 'Add the actor to the cast by hand - picking changes nothing on its own.',
+    hvezdicka: 'Recommend to the client',
+    hvezdickaPryc: 'Remove the recommendation',
+    odKlienta: 'from the client',
   },
 };
 
@@ -155,6 +165,22 @@ export function NavrhyHercu({
     }
   }
 
+  /**
+   * ZELENÁ HVĚZDIČKA (22. 10. 2026). Svítí vždycky jen u jednoho - server
+   * ostatním zhasne sám, viz routa [navrhId].
+   */
+  async function prepniHvezdicku(navrh: NavrhHerce) {
+    setNavrhy((n) =>
+      n.map((x) => ({ ...x, preferovany: x.id === navrh.id ? !navrh.preferovany : false })),
+    );
+    await fetch(`${zaklad}/${encodeURIComponent(navrh.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferovany: !navrh.preferovany }),
+    }).catch(() => undefined);
+    await nacti();
+  }
+
   async function smaz(id: string) {
     setNavrhy((n) => n.filter((x) => x.id !== id));
     await fetch(`${zaklad}/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => undefined);
@@ -220,9 +246,26 @@ export function NavrhyHercu({
               <span className="shrink-0 w-[22px] h-[22px] rounded-full bg-surface-soft text-muted text-[11px] font-heading font-bold grid place-items-center">
                 {i + 1}.
               </span>
+              <button
+                type="button"
+                onClick={() => void prepniHvezdicku(n)}
+                title={n.preferovany ? t.hvezdickaPryc : t.hvezdicka}
+                aria-label={n.preferovany ? t.hvezdickaPryc : t.hvezdicka}
+                aria-pressed={n.preferovany}
+                className={`shrink-0 text-base leading-none transition-colors ${
+                  n.preferovany ? 'text-brand-green' : 'text-muted/50 hover:text-muted'
+                }`}
+              >
+                ★
+              </button>
               <span className="font-heading font-semibold text-sm text-ink/80 truncate">
                 {jmenoNavrhu(n)}
               </span>
+              {n.odKlienta && (
+                <span className="shrink-0 rounded-full border border-line text-muted text-[9px] font-heading font-bold uppercase tracking-wide px-1.5 py-[1px]">
+                  {t.odKlienta}
+                </span>
+              )}
               {n.poznamka && (
                 <span className="text-xs font-body text-muted truncate">· {n.poznamka}</span>
               )}

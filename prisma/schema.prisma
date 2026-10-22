@@ -5643,6 +5643,16 @@ model NavrhHerce {
   /// Klient chodi pres token projektu na /navrhy/<token>; vidi jen jmena,
   /// nase poznamky ne. Vyber nic neprepina v obsazeni - herce si pridame
   /// rucne, tohle je jen vzkaz, koho si klient preje.
+  /// NAS FAVORIT (zadani 22. 10. 2026: „dej mi jeste moznost, ze dam hvezdicku
+  /// zelenou u herce, ktereho preferuji. Oznacim si v portalu a jim se ukaze
+  /// jen u toho jmena"). Hvezdicku vidi i klient - v mailu i na strance.
+  preferovany         Boolean   @default(false)
+
+  /// NAVRH OD KLIENTA (zadani 22. 10. 2026: „klient by tam mel mit moznost
+  /// vlastnich navrhu"). Zapisuje se z verejne stranky /navrhy/<token>,
+  /// v karte je u nej videt, ze je jejich - at se neplete s nasimi.
+  odKlienta           Boolean   @default(false)
+
   odeslanoKlientoviAt DateTime?
   vybranoAt           DateTime?
   /// Jmeno nebo mail toho, kdo vybral - at je v karte videt, kdo rozhodl.

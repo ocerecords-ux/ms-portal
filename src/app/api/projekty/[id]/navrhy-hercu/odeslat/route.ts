@@ -7,6 +7,7 @@ import { sendNavrhyHercuEmail } from '@/lib/email';
 import { zajistiOdkaz, zakladPortalu } from '@/lib/preposlechOdkaz';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
 import { jazykUzivatele } from '@/lib/jazykPrijemce';
+import { prelozitEmail } from '@/lib/jazykEmailu';
 
 /**
  * ODESLÁNÍ NÁVRHŮ HERCŮ KLIENTOVI (zadání 22. 10. 2026: „uděláme tlačítko
@@ -33,6 +34,8 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       select: {
         name: true,
         klient: { select: { id: true, name: true, email: true } },
+        // Druh zakazky do vety „navrh obsazeni pro audioknihu X" (22. 10. 2026).
+        company: { select: { dealsAds: true, dealsAudiobooks: true } },
       },
     });
     if (!projekt) return NextResponse.json({ error: 'Projekt nenalezen.' }, { status: 404 });
@@ -46,7 +49,12 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     const navrhy = await prisma.navrhHerce.findMany({
       where: { caflouProjectId: params.id, vybranoAt: null },
       orderBy: [{ poradi: 'asc' }, { createdAt: 'asc' }],
-      select: { id: true, jmeno: true, user: { select: { name: true, email: true } } },
+      select: {
+        id: true,
+        jmeno: true,
+        preferovany: true,
+        user: { select: { name: true, email: true } },
+      },
     });
     if (navrhy.length === 0) {
       return NextResponse.json({ error: 'Nejsou tu žádné návrhy k odeslání.' }, { status: 400 });
@@ -57,14 +65,34 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Nepodařilo se vyrobit odkaz pro klienta.' }, { status: 500 });
     }
 
-    const jmena = navrhy.map((n) => (n.user ? n.user.name || n.user.email : n.jmeno || '—'));
+    const jmena = navrhy.map((n) => ({
+      jmeno: n.user ? n.user.name || n.user.email : n.jmeno || '—',
+      preferovany: n.preferovany,
+    }));
+
+    /**
+     * „pro audioknihu", „pro reklamu", jinak „pro projekt" - bere se podle
+     * zaskrtavatek na karte firmy, ne podle typu projektu: ten je volny text
+     * z ceniku a dal by se na nej spolehnout jen tezko.
+     */
+    const jazykKlienta = await jazykUzivatele(projekt.klient.id).catch(() => 'cs' as const);
+    const typ = prelozitEmail(
+      jazykKlienta,
+      projekt.company?.dealsAudiobooks
+        ? 'mail.navrhyHercu.typAudiokniha'
+        : projekt.company?.dealsAds
+          ? 'mail.navrhyHercu.typReklama'
+          : 'mail.navrhyHercu.typProjekt',
+    );
+
     const vysledek = await sendNavrhyHercuEmail({
       prijemci: [projekt.klient.email],
       jmenoKlienta: projekt.klient.name ?? null,
       nazevProjektu: projekt.name ?? 'Projekt',
       jmena,
+      typ,
       odkaz: `${zakladPortalu()}/navrhy/${encodeURIComponent(token)}`,
-      jazyk: await jazykUzivatele(projekt.klient.id).catch(() => 'cs' as const),
+      jazyk: jazykKlienta,
     });
 
     if (!vysledek.sent) {
@@ -80,7 +108,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     await zapisNotifikaci({
       caflouProjectId: params.id,
       stav: 'Návrhy herců',
-      popis: `Návrhy herců (${jmena.length}) — odesláno na ${projekt.klient.email}.`,
+      popis: `Návrh obsazení (${jmena.length}) — odesláno na ${projekt.klient.email}.`,
       prijemci: [projekt.klient.email],
       zpravaPredmet: 'predmet' in vysledek ? vysledek.predmet : null,
       zpravaHtml: 'telo' in vysledek ? vysledek.telo : null,

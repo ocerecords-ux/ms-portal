@@ -1121,21 +1121,22 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     cs: 'Pripravili jsme nekolik hlasu, stacil klik.',
     en: 'We have lined up a few voices - one click is enough.',
   },
-  'mail.navrhyHercu.nadpis': { cs: 'Koho do toho obsadime?', en: 'Who should we cast?' },
+  'mail.navrhyHercu.nadpis': { cs: 'Návrh obsazení', en: 'Suggested casting' },
+  // Zneni podle zadani 22. 10. 2026 - kratce, jedna veta. „{typ}" je
+  // „audioknihu", „reklamu" nebo „projekt" podle druhu zakazky.
   'mail.navrhyHercu.uvod': {
-    cs: 'k projektu {projekt} jsme vybrali herce, kteri by podle nas sedli. Kliknete prosim na toho, ktereho chcete - dal uz se o to postarame.',
-    en: 'for {projekt} we have picked a few actors we think fit. Click the one you want and we will take it from there.',
+    cs: 'zasíláme návrh obsazení pro {typ} {projekt}.',
+    en: 'here is our suggested casting for {typ} {projekt}.',
   },
-  'mail.navrhyHercu.seznamNadpis': { cs: 'Nase navrhy', en: 'Our suggestions' },
   'mail.navrhyHercu.tlacitko': { cs: 'Vybrat herce', en: 'Pick an actor' },
-  'mail.navrhyHercu.patka': {
-    cs: 'Vyber neni zavazny - kdyby vam nesedel nikdo, napiste nam a pripravime dalsi.',
-    en: 'Nothing is binding - if none of them fits, tell us and we will line up more.',
-  },
   'mail.navrhyHercu.textUvod': {
-    cs: 'k projektu {projekt} jsme vybrali herce, kteri by podle nas sedli:',
-    en: 'for {projekt} we have picked a few actors we think fit:',
+    cs: 'zasíláme návrh obsazení pro {typ} {projekt}:',
+    en: 'here is our suggested casting for {typ} {projekt}:',
   },
+  // Druh zakazky do vety vys - at nepiseme „pro projekt" u audioknihy.
+  'mail.navrhyHercu.typAudiokniha': { cs: 'audioknihu', en: 'the audiobook' },
+  'mail.navrhyHercu.typReklama': { cs: 'reklamu', en: 'the ad' },
+  'mail.navrhyHercu.typProjekt': { cs: 'projekt', en: 'the project' },
   'mail.navrhyHercu.textOdkaz': { cs: 'Vybrat herce:', en: 'Pick an actor:' },
   'mail.zapracovani.textOdkaz': { cs: 'Poslechnout a pripominkovat:', en: 'Listen and comment:' },
 };

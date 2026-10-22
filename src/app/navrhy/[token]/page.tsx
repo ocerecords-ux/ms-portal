@@ -63,6 +63,8 @@ export default async function NavrhyPage({ params }: { params: { token: string }
         select: {
           id: true,
           jmeno: true,
+          preferovany: true,
+          odKlienta: true,
           vybranoAt: true,
           vybralKdo: true,
           user: { select: { name: true, email: true } },
@@ -109,6 +111,8 @@ export default async function NavrhyPage({ params }: { params: { token: string }
           navrhy={navrhy.map((n) => ({
             id: n.id,
             jmeno: n.user ? n.user.name || n.user.email : n.jmeno || '—',
+            preferovany: n.preferovany,
+            odKlienta: n.odKlienta,
             vybrano: Boolean(n.vybranoAt),
             vybralKdo: n.vybralKdo,
           }))}

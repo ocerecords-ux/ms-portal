@@ -515,6 +515,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             jmeno: true,
             poznamka: true,
             autorJmeno: true,
+            preferovany: true,
+            odKlienta: true,
             odeslanoKlientoviAt: true,
             vybranoAt: true,
             vybralKdo: true,
@@ -528,6 +530,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         jmeno: string | null;
         poznamka: string | null;
         autorJmeno: string | null;
+        preferovany: boolean;
+        odKlienta: boolean;
         odeslanoKlientoviAt: Date | null;
         vybranoAt: Date | null;
         vybralKdo: string | null;

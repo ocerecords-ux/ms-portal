@@ -13,6 +13,8 @@ const schema = z.object({
   jmeno: z.string().trim().max(160).nullable().optional(),
   poznamka: z.string().trim().max(500).nullable().optional(),
   poradi: z.number().int().min(0).max(1000).optional(),
+  /** Zelená hvězdička u našeho favorita (22. 10. 2026) - viz níž. */
+  preferovany: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -29,6 +31,18 @@ export async function PATCH(
   const d = parsed.data;
 
   try {
+    /**
+     * HVĚZDIČKA JE JEN JEDNA (22. 10. 2026: „hvězdičku zelenou u herce,
+     * kterého preferuji"). Když se zapne u jednoho, ostatním v témž projektu
+     * zhasne - dvě doporučení najednou by klientovi nic neřekla.
+     */
+    if (d.preferovany === true) {
+      await prisma.navrhHerce.updateMany({
+        where: { caflouProjectId: params.id, id: { not: params.navrhId } },
+        data: { preferovany: false },
+      });
+    }
+
     await prisma.navrhHerce.updateMany({
       // Návrh musí patřit TOMUHLE projektu - jinak by cizí id z adresy
       // přepsalo poznámku u jiné zakázky.
@@ -38,6 +52,7 @@ export async function PATCH(
         ...(d.jmeno !== undefined ? { jmeno: d.jmeno?.trim() || null } : {}),
         ...(d.poznamka !== undefined ? { poznamka: d.poznamka?.trim() || null } : {}),
         ...(d.poradi !== undefined ? { poradi: d.poradi } : {}),
+        ...(d.preferovany !== undefined ? { preferovany: d.preferovany } : {}),
       },
     });
     return NextResponse.json({ ok: true });

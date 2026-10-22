@@ -4063,8 +4063,13 @@ export type NavrhyHercuInput = {
   skrytaKopie?: string[];
   jmenoKlienta: string | null;
   nazevProjektu: string;
-  /** Jen jména - naše poznámky ke klientovi nejdou (zadání 22. 10. 2026). */
-  jmena: string[];
+  /**
+   * Jen jména - naše poznámky ke klientovi nejdou (zadání 22. 10. 2026).
+   * `preferovany` je naše zelená hvězdička: u koho svítí, toho doporučujeme.
+   */
+  jmena: { jmeno: string; preferovany?: boolean }[];
+  /** „audioknihu", „reklamu", „projekt" - viz slovník pošty. */
+  typ: string;
   odkaz: string;
   jazyk?: Jazyk;
 };
@@ -4079,12 +4084,21 @@ export type NavrhyHercuInput = {
  */
 export function buildNavrhyHercuHtml(input: NavrhyHercuInput): string {
   const jazyk = input.jazyk ?? 'cs';
+  /**
+   * HVĚZDIČKA U NAŠEHO FAVORITA (22. 10. 2026). Je to prostý znak ★ v zelené -
+   * obrázek by se v půlce poštovních klientů nenačetl a alt text by na jeho
+   * místě vypadal jako chyba.
+   */
   const radky = input.jmena
     .map(
-      (jmeno, i) => `
+      (polozka, i) => `
       <tr>
         <td class="label" style="white-space:nowrap;">${i + 1}.</td>
-        <td class="value regular">${escapeHtml(jmeno)}</td>
+        <td class="value regular">${escapeHtml(polozka.jmeno)}${
+          polozka.preferovany
+            ? ' <span style="color:#1FDF67;font-size:15px;line-height:1;">&#9733;</span>'
+            : ''
+        }</td>
       </tr>`,
     )
     .join('');
@@ -4097,20 +4111,15 @@ export function buildNavrhyHercuHtml(input: NavrhyHercuInput): string {
     <h2>${prelozitEmail(jazyk, 'mail.navrhyHercu.nadpis')}</h2>
     <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoKlienta ?? ''))}</p>
     <p>${prelozitEmailS(jazyk, 'mail.navrhyHercu.uvod', {
+      typ: escapeHtml(input.typ),
       projekt: `<strong>${escapeHtml(input.nazevProjektu)}</strong>`,
     })}</p>
 
-    <p class="small" style="margin-bottom:6px;"><strong>${prelozitEmail(
-      jazyk,
-      'mail.navrhyHercu.seznamNadpis',
-    )}</strong></p>
     <table role="presentation" class="field-table">${radky}</table>
 
     <div class="cta-row">
       <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.navrhyHercu.tlacitko')}</a>
     </div>
-
-    <p class="small">${prelozitEmail(jazyk, 'mail.navrhyHercu.patka')}</p>
   `,
   });
 }
@@ -4133,8 +4142,11 @@ export async function sendNavrhyHercuEmail(input: NavrhyHercuInput) {
     text: [
       pozdravPosty(jazyk, input.jmenoKlienta ?? ''),
       '',
-      prelozitEmailS(jazyk, 'mail.navrhyHercu.textUvod', { projekt: input.nazevProjektu }),
-      ...input.jmena.map((j, i) => `${i + 1}. ${j}`),
+      prelozitEmailS(jazyk, 'mail.navrhyHercu.textUvod', {
+        typ: input.typ,
+        projekt: input.nazevProjektu,
+      }),
+      ...input.jmena.map((j, i) => `${i + 1}. ${j.jmeno}${j.preferovany ? ' *' : ''}`),
       '',
       prelozitEmail(jazyk, 'mail.navrhyHercu.textOdkaz'),
       input.odkaz,

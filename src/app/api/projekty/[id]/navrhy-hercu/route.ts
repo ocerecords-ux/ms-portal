@@ -45,6 +45,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         jmeno: true,
         poznamka: true,
         autorJmeno: true,
+        preferovany: true,
+        odKlienta: true,
         odeslanoKlientoviAt: true,
         vybranoAt: true,
         vybralKdo: true,
