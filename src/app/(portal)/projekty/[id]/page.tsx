@@ -499,6 +499,36 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     smiSpravovatParametry(session.user.id),
   ]);
 
+  /**
+   * NÁVRHY HERCŮ (zadání 22. 10. 2026). Šedý blok pod obsazením - vidí ho
+   * jen admin a produkce, ostatním se ani nenačítá.
+   */
+  const navrhyHercu = canEdit
+    ? ((await prisma.navrhHerce
+        .findMany({
+          where: { caflouProjectId },
+          orderBy: [{ poradi: 'asc' }, { createdAt: 'asc' }],
+          select: {
+            id: true,
+            poradi: true,
+            userId: true,
+            jmeno: true,
+            poznamka: true,
+            autorJmeno: true,
+            user: { select: { name: true, email: true } },
+          },
+        })
+        .catch(() => [])) as {
+        id: string;
+        poradi: number;
+        userId: string | null;
+        jmeno: string | null;
+        poznamka: string | null;
+        autorJmeno: string | null;
+        user: { name: string | null; email: string } | null;
+      }[])
+    : [];
+
   // Zalozky (zprava uzivatele 8. 9. 2026: "u projektu uz to zacina byt trochu
   // neprehledne... Natacecí frekvence a doklady by mohly byt nahore v
   // zalozce"). Obsah se vykresli na serveru a do zalozek prijde hotovy.
@@ -539,6 +569,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         }))}
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
         herci={herciUctu.map((h) => ({ id: h.id, label: rozlis(h.id, bezTitulu(h.name) || h.email) }))}
+        navrhyHercu={navrhyHercu}
+        smiNavrhy={canEdit}
         dotoceniHercu={dotoceniPodleHerce}
         normostranyHercu={normostranyPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}

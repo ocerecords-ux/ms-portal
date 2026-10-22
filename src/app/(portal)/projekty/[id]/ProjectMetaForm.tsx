@@ -13,6 +13,7 @@ import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
+import { NavrhyHercu, type NavrhHerce } from './NavrhyHercu';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { OdznakStrany, posledniStranyHercu } from '../OdznakStrany';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
@@ -155,6 +156,8 @@ export function ProjectMetaForm({
   klienti,
   firmy,
   herci,
+  navrhyHercu,
+  smiNavrhy,
   herecZCaflou,
   klientNameZCaflou,
   companyDriveFolderUrl,
@@ -184,6 +187,12 @@ export function ProjectMetaForm({
   firmy: { id: string; label: string }[];
   /** Ucty hercu. */
   herci: Herec[];
+  /**
+   * NÁVRHY HERCŮ (22. 10. 2026) - šedý blok pod obsazením. Vidí ho jen admin
+   * a produkce, proto se posílá zvlášť `smiNavrhy`; ostatním se nevykreslí.
+   */
+  navrhyHercu: NavrhHerce[];
+  smiNavrhy: boolean;
   /** Jmeno herce z Caflou - voditko, dokud neni pridelen ucet. */
   herecZCaflou: string | null;
   /** Stitek z Caflou se jmenem objednavajici osoby - voditko pri prirazovani. */
@@ -968,6 +977,23 @@ export function ProjectMetaForm({
                 bezNormostran ? undefined : (id, ns) => void ulozNormostrany(id, ns)
               }
             />
+            {/* Návrhy herců (22. 10. 2026) - šedý blok hned pod obsazením,
+                schválně jinou barvou, viz NavrhyHercu.tsx. */}
+            {smiNavrhy && (
+              <NavrhyHercu
+                caflouProjectId={caflouProjectId}
+                herci={herci}
+                pocatecni={navrhyHercu}
+                obsazeni={values.actorUserIds}
+                onDoObsazeni={(id) =>
+                  set(
+                    'actorUserIds',
+                    values.actorUserIds.includes(id) ? values.actorUserIds : [...values.actorUserIds, id],
+                  )
+                }
+                jazyk={jazyk}
+              />
+            )}
             {zpravaKlientovi && (
               <span className="text-xs font-body text-brand-greenDeep">{zpravaKlientovi}</span>
             )}

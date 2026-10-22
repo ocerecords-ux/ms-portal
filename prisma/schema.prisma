@@ -794,6 +794,9 @@ model User {
   ukazkyJakoHerec     UkazkaNabidky[]     @relation("UkazkyHerce")
   nahraneUkazky       UkazkaNabidky[]     @relation("UkazkyNahral")
   vytvorenePrezentace PrezentaceNabidky[] @relation("PrezentaceVytvoril")
+
+  /// Navrhy hercu k projektum (22. 10. 2026) - viz NavrhHerce.
+  navrhyHercu NavrhHerce[]
 }
 
 model Order {
@@ -5606,4 +5609,35 @@ model Technika {
 
   @@index([kategorieId])
   @@index([studioId])
+}
+
+/// NÁVRHY HERCŮ K PROJEKTU (zadani 22. 10. 2026: „chtel bych mit nekde jeste
+/// u projektu moznost pridat me navrhy hercu. Nejaka pole 1. 2. 3., ale aby
+/// se to nemotalo do hercu u projektu").
+///
+/// SCHVALNE MIMO OBSAZENI. Obsazeni projektu je `ProjectMeta.actorUserIds` -
+/// z nej se tisknou rodne listy, delaji smlouvy a pocitaji honorare. Navrh je
+/// jen poznamka, koho zvazujeme; v karte je sedy a nikam dal nejde.
+///
+/// Herec s uctem se ulozi pres `userId` (pak jde navrh jednim klikem
+/// preklopit do obsazeni), nekdo zvenci se napise do `jmeno`.
+model NavrhHerce {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  /// Poradi ve vypisu - 1., 2., 3.
+  poradi          Int      @default(0)
+
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Jmeno napsane rukou, kdyz herec v portalu ucet nema.
+  jmeno           String?
+
+  poznamka        String?
+  /// Kdo navrh zapsal - at je po mesici poznat, ci napad to byl.
+  autorJmeno      String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([caflouProjectId])
 }
