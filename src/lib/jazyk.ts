@@ -9976,6 +9976,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   /* --- Natáčecí plán na detailu projektu (RecordingSection, dávka 7f) --- */
   'natacPlan.nadpis': { cs: 'Natáčecí plán', en: 'Recording plan' },
+  'natacPlan.upravitNabidku': { cs: 'Upravit nabídku', en: 'Edit the offer' },
   /* Tři tvary čísla: česky 1-4 „frekvence" a od pěti „frekvencí",
      anglicky jednotné číslo jen u jedničky. */
   'natacPlan.normostranJedna': {

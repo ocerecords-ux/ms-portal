@@ -5,6 +5,7 @@ import {
   zonedToUtc,
   type TimeRange,
 } from '@/lib/calendar';
+import { svatkyVRoce, zemePodlePasma } from '@/lib/svatky';
 
 /**
  * AUTOMATICKÁ NABÍDKA TERMÍNŮ (zadání 19. 9. 2026: „Počítá se potřebný počet
@@ -22,6 +23,12 @@ import {
  * - den od zítřka do posledního dne období (poslední možná frekvence),
  * - okno podle zkratek studia (9–13, 13–17); studio bez zkratek se rozdělí
  *   na bloky o délce frekvence od začátku pracovní doby,
+ * - NE VE STÁTNÍ SVÁTEK (připomínka Heleny 22. 10. 2026: „nabídka termínů
+ *   hercům nereflektuje Vánoce"). Svátky se berou podle země studia - česká
+ *   pro Brno a Prahu, britská pro Londýn (viz lib/svatky.ts), takže
+ *   24.–26. 12., 1. 1. ani Velký pátek se hercům vůbec nenabídnou. Dny mezi
+ *   svátky (27.–31. 12.) svátky nejsou a nabízejí se dál - ty se z nabídky
+ *   vyhazují ručně křížkem,
  * - v pracovní době studia, ale JEN VE VŠEDNÍ DEN (zadání 30. 9. 2026:
  *   „zkusme v plánovacím kalendáři vyhodit víkendy"). Do té doby se sobota
  *   a neděle nabízely s příznakem „po domluvě" (upřesnění 19. 9. 2026) -
@@ -98,9 +105,19 @@ export function spocitejVolnaMista(vstup: {
 }): VolneMisto[] {
   const vysledek: VolneMisto[] = [];
   const dny = dnyObdobi(vstup.od, vstup.doo);
+  const roky = Array.from(new Set(dny.map((d) => Number(d.slice(0, 4)))));
 
   for (const studio of vstup.studia) {
     const obsazenoTady = vstup.obsazeno.filter((o) => o.studioId === studio.id);
+    /**
+     * Svátky země, ve které studio stojí (22. 10. 2026). Spočítají se jednou
+     * na studio, ne na každý den - je to čistý výpočet z data Velikonoc.
+     */
+    const zeme = zemePodlePasma(studio.timezone);
+    const svatky = new Set<string>();
+    for (const rok of roky) {
+      for (const den of svatkyVRoce(rok, zeme).keys()) svatky.add(den);
+    }
     for (const den of dny) {
       const [y, m, d] = den.split('-').map(Number);
       const poledne = zonedToUtc(y, m, d, 12 * 60, studio.timezone);
@@ -109,6 +126,8 @@ export function spocitejVolnaMista(vstup: {
       // nebo nedeli tim zustava nedotcena - jen se z ni nedelaji nabidnuta
       // mista; rucne zapsat nataceni na vikend jde dal.
       if (jeVikend(denVTydnu)) continue;
+      // Statni svatek se nenabizi - viz komentar nahore.
+      if (svatky.has(den)) continue;
       const pravidlo = studio.hours.find((h) => h.weekday === denVTydnu);
       // Zavreno - nic.
       if (!pravidlo) continue;

@@ -376,6 +376,18 @@ export function RecordingSection({
                 </Link>
                 <span className="block text-xs font-body text-muted">
                   {r.studioName} · {formatDateTime(r.createdAt, undefined, jazyk)}
+                  {' · '}
+                  {/* CESTA K ODEBRÁNÍ TERMÍNU (připomínka Heleny 22. 10. 2026:
+                      „nabídka termínů hercům nereflektuje Vánoce a nemohu je
+                      tam ani manuálně odebrat"). Křížek u jednotlivých termínů
+                      je v nabídce samotné - sem patří zřetelný odkaz, protože
+                      ze jména herce nad tím nikdo nepozná, že je proklikem. */}
+                  <Link
+                    href={`/kalendar/nabidka/${r.id}`}
+                    className="text-brand-purple hover:underline no-underline"
+                  >
+                    {t('natacPlan.upravitNabidku')}
+                  </Link>
                 </span>
               </span>
               <span className="flex items-center gap-4 shrink-0">
