@@ -89,6 +89,8 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/users': ['ADMIN', 'PRODUKCE'],
   '/admin/ceniky': ['ADMIN'],
   '/admin/studia': ['ADMIN'],
+  // Technika a kde ktera je (zadani 22. 10. 2026) - inventura studii.
+  '/admin/technika': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],
   '/admin/archiv': ['ADMIN'],
   // Site - priprava prispevku na Instagram a LinkedIn (zadani 27. 9. 2026:
@@ -208,6 +210,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/studia', label: 'Studia' },
+  { href: '/admin/technika', label: 'Technika' },
   // Pribehy na Instagram (6. 10. 2026) - zvukar si odkaz prida sam.
   { href: '/site/pribehy', label: 'Příběhy' },
   { href: '/admin/doklady', label: 'Doklady' },

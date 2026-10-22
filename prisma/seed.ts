@@ -205,6 +205,7 @@ async function main() {
   await palubovkaJenOndrejovi();
   await zalozHistoriiPortalu();
   await srovnejJmenaHercuVKalendari();
+  await zalozKategorieTechniky();
   await parametrySpravujiOndrejAPeter();
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
@@ -3589,5 +3590,46 @@ async function srovnejJmenaHercuVKalendari() {
     );
   } catch (err) {
     console.warn('  jmena v kalendari se nepodarilo srovnat:', err);
+  }
+}
+
+/**
+ * VYCHOZI KATEGORIE TECHNIKY (zadani 22. 10. 2026: „potrebuju vytvorit
+ * kategorii, kde bude seznam techniky. Bude rozdelen do kategorii").
+ *
+ * Jen zacatek, ze ktereho se da vyjit - kategorie se daji v portalu
+ * prejmenovat, pridat i smazat. Bezi jednou; kdo si je prejmenuje, o ne
+ * dalsim nasazenim neprijde.
+ */
+async function zalozKategorieTechniky() {
+  const ZNAMKA = 'technika-vychozi-kategorie';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const vychozi = [
+      'Mikrofony',
+      'Predzesilovace a prevodniky',
+      'Sluchatka',
+      'Monitory a reproduktory',
+      'Pocitace a disky',
+      'Kabelaz a stojany',
+      'Kamery a svetla',
+      'Nabytek a akustika',
+      'Ostatni',
+    ];
+
+    let poradi = 10;
+    for (const nazev of vychozi) {
+      await prisma.technikaKategorie
+        .upsert({ where: { nazev }, update: {}, create: { nazev, poradi } })
+        .catch(() => undefined);
+      poradi += 10;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  technika: zalozeno ${vychozi.length} kategorii`);
+  } catch (err) {
+    console.warn('  kategorie techniky se nepodarilo zalozit:', err);
   }
 }

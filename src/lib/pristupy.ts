@@ -275,7 +275,7 @@ export const SEKCE: Sekce[] = [
     ikona: 'mikrofon-studio',
     nazev: 'Studia',
     popis: 'Nastavení studií, rezervační kalendář a ceník studia.',
-    cesty: ['/studio', '/admin/studia', '/cenik-studia'],
+    cesty: ['/studio', '/admin/studia', '/admin/technika', '/cenik-studia'],
     prava: [
       {
         klic: 'STUDIA.REZERVACE',
@@ -288,6 +288,12 @@ export const SEKCE: Sekce[] = [
         nazev: 'Nastavení studií',
         popis: 'Pobočky, místnosti, otevírací doba, vedoucí.',
         cesty: ['/admin/studia'],
+      },
+      {
+        klic: 'STUDIA.TECHNIKA',
+        nazev: 'Technika',
+        popis: 'Seznam techniky po kategoriich a to, ve kterem studiu stoji.',
+        cesty: ['/admin/technika'],
       },
       {
         klic: 'STUDIA.CENIK',

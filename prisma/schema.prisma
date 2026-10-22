@@ -2632,6 +2632,9 @@ model Studio {
   /// Cenik studia (zadani 28. 9. 2026) - jeden na studio, viz StudioCenik.
   cenik     StudioCenik?
 
+  /// Technika, ktera v tomhle studiu stoji (zadani 22. 10. 2026) - viz Technika.
+  technika  Technika[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -5557,4 +5560,50 @@ model NovinkaPortalu {
 
   @@index([datum])
   @@index([zverejneno])
+}
+
+/// KATEGORIE TECHNIKY (zadani 22. 10. 2026: „potrebuju vytvorit kategorii, kde
+/// bude seznam techniky. Bude rozdelen do kategorii").
+///
+/// Kategorie se zakladaji v portalu, nejsou v kodu: co je dnes „Mikrofony"
+/// a „Prevodniky", muze zitra potrebovat „Kamery". Vychozi sadu zaklada seed.
+model TechnikaKategorie {
+  id        String     @id @default(cuid())
+  nazev     String     @unique
+  /// Poradi ve vypisu; stejne cislo = podle abecedy.
+  poradi    Int        @default(0)
+  kusy      Technika[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+/// JEDEN KUS TECHNIKY (zadani 22. 10. 2026). Inventura: co mame, co to je
+/// a hlavne KDE TO JE - proto vazba na studio.
+model Technika {
+  id           String             @id @default(cuid())
+  nazev        String
+  kategorieId  String?
+  kategorie    TechnikaKategorie? @relation(fields: [kategorieId], references: [id], onDelete: SetNull)
+
+  vyrobce      String?
+  model        String?
+  serioveCislo String?
+
+  /// Kde ten kus stoji. Prazdne = zatim nezarazeno (sklad, na ceste).
+  studioId     String?
+  studio       Studio?            @relation(fields: [studioId], references: [id], onDelete: SetNull)
+
+  poznamka     String?
+  /// Fotka jako data: URL primo v databazi - uloziste na Vercelu nastavene
+  /// neni a je to tentyz zpusob, jakym se ukladaji fotky uzivatelu.
+  foto         String?
+
+  /// Vyrazene kusy se nemazou - zmizi z vypisu, ale historie zustava.
+  vyrazeno     Boolean            @default(false)
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([kategorieId])
+  @@index([studioId])
 }
