@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { projektPodleTokenu, zapisOtevreni } from '@/lib/preposlechOdkaz';
 import { VyberHerceKlientem } from './VyberHerceKlientem';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { ukazkyKNavrhum } from '@/lib/ukazkyHercuServer';
 
 /**
  * VÝBĚR HERCE KLIENTEM (zadání 22. 10. 2026: „uděláme tlačítko odeslat návrhy
@@ -62,6 +63,7 @@ export default async function NavrhyPage({ params }: { params: { token: string }
         orderBy: [{ poradi: 'asc' }, { createdAt: 'asc' }],
         select: {
           id: true,
+          userId: true,
           jmeno: true,
           preferovany: true,
           odKlienta: true,
@@ -88,6 +90,13 @@ export default async function NavrhyPage({ params }: { params: { token: string }
     );
   }
 
+  /**
+   * UKÁZKY HLASU (22. 10. 2026: „přehrávač by měl pak u toho hlasu vypadat
+   * jako v prezentaci. Překlik mezi ukázkami daného herce 1, 2, 3, 4…").
+   * Tatáž dema jako v nabídkové prezentaci - knihovna je jedna.
+   */
+  const ukazky = await ukazkyKNavrhum(navrhy).catch(() => ({}));
+
   return (
     <main className="min-h-screen bg-page p-3 sm:p-6">
       <div className="max-w-[640px] mx-auto flex flex-col gap-4">
@@ -108,6 +117,7 @@ export default async function NavrhyPage({ params }: { params: { token: string }
         <VyberHerceKlientem
           token={params.token}
           en={en}
+          ukazky={ukazky}
           navrhy={navrhy.map((n) => ({
             id: n.id,
             jmeno: n.user ? n.user.name || n.user.email : n.jmeno || '—',

@@ -14,6 +14,7 @@ import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
 import { NavrhyHercu, type NavrhHerce } from './NavrhyHercu';
+import type { UkazkaData } from '@/lib/prezentaceNabidky';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { OdznakStrany, posledniStranyHercu } from '../OdznakStrany';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
@@ -157,6 +158,7 @@ export function ProjectMetaForm({
   firmy,
   herci,
   navrhyHercu,
+  ukazkyNavrhu,
   smiNavrhy,
   herecZCaflou,
   klientNameZCaflou,
@@ -192,6 +194,8 @@ export function ProjectMetaForm({
    * a produkce, proto se posílá zvlášť `smiNavrhy`; ostatním se nevykreslí.
    */
   navrhyHercu: NavrhHerce[];
+  /** Dema hercu z knihovny ukazek, klic je id navrhu (22. 10. 2026). */
+  ukazkyNavrhu?: Record<string, UkazkaData[]>;
   smiNavrhy: boolean;
   /** Jmeno herce z Caflou - voditko, dokud neni pridelen ucet. */
   herecZCaflou: string | null;
@@ -984,6 +988,7 @@ export function ProjectMetaForm({
                 caflouProjectId={caflouProjectId}
                 herci={herci}
                 pocatecni={navrhyHercu}
+                pocatecniUkazky={ukazkyNavrhu}
                 obsazeni={values.actorUserIds}
                 onDoObsazeni={(id) =>
                   set(

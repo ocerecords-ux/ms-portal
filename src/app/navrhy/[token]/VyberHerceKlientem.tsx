@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { UkazkyHerce } from '@/components/PrehravacUkazky';
+import type { UkazkaData } from '@/lib/prezentaceNabidky';
 
 /**
  * Seznam navržených herců pro klienta (22. 10. 2026) - jedno klepnutí na
@@ -13,9 +15,15 @@ export function VyberHerceKlientem({
   token,
   en,
   navrhy,
+  ukazky,
 }: {
   token: string;
   en: boolean;
+  /**
+   * Dema hlasu, klíč je id návrhu (22. 10. 2026: „přehrávač by měl pak
+   * u toho hlasu vypadat jako v prezentaci").
+   */
+  ukazky?: Record<string, UkazkaData[]>;
   navrhy: {
     id: string;
     jmeno: string;
@@ -32,6 +40,8 @@ export function VyberHerceKlientem({
   /** Vlastní návrh klienta (22. 10. 2026) - jméno rukou, účet mít nemusí. */
   const [vlastni, setVlastni] = useState('');
   const [posilamVlastni, setPosilamVlastni] = useState(false);
+  /** Hraje vždycky jen jeden hlas - dvě dema přes sebe nejde posoudit. */
+  const [hraje, setHraje] = useState<string | null>(null);
 
   const uzVybrano = navrhy.find((n) => n.vybrano) ?? null;
 
@@ -107,7 +117,8 @@ export function VyberHerceKlientem({
 
       <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line">
         {navrhy.map((n, i) => (
-          <li key={n.id} className="flex items-center gap-3 py-3">
+          <li key={n.id} className="flex flex-col gap-3 py-3">
+            <div className="flex items-center gap-3">
             <span className="shrink-0 w-7 h-7 rounded-full bg-field text-muted text-xs font-heading font-bold grid place-items-center">
               {i + 1}.
             </span>
@@ -135,6 +146,20 @@ export function VyberHerceKlientem({
             >
               {pracuje === n.id ? (en ? 'Sending…' : 'Odesílám…') : en ? 'Pick' : 'Vybrat'}
             </button>
+            </div>
+
+            {/* UKÁZKY HLASU (22. 10. 2026). Tentýž přehrávač jako v nabídkové
+                prezentaci; čísla nad ním přepínají dema téhož herce. */}
+            {(ukazky?.[n.id]?.length ?? 0) > 0 && (
+              <div className="rounded-card border border-line bg-field/40 px-3 py-3">
+                <UkazkyHerce
+                  ukazky={ukazky?.[n.id] ?? []}
+                  jazyk={en ? 'en' : 'cs'}
+                  hraje={hraje === n.id}
+                  onHraje={() => setHraje(n.id)}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>

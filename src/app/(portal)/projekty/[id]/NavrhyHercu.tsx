@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { VyberHerce, type Herec } from '../VyberHerce';
+import { UkazkyHerce } from '@/components/PrehravacUkazky';
+import type { UkazkaData } from '@/lib/prezentaceNabidky';
 
 /**
  * NÁVRHY HERCŮ (zadání 22. 10. 2026: „chtěl bych mít někde ještě u projektu
@@ -65,6 +67,11 @@ const TEXTY = {
     hvezdicka: 'Doporučit klientovi',
     hvezdickaPryc: 'Zrušit doporučení',
     odKlienta: 'od klienta',
+    ukazky: (n: number) => (n === 1 ? '1 ukázka' : n < 5 ? `${n} ukázky` : `${n} ukázek`),
+    bezUkazky: 'bez ukázky',
+    bezUkazkyTitulek: 'V knihovně ukázek k tomuhle jménu nic není.',
+    poslechnout: 'Poslechnout ukázky',
+    schovat: 'Schovat ukázky',
   },
   en: {
     nadpis: 'Suggested actors',
@@ -89,6 +96,11 @@ const TEXTY = {
     hvezdicka: 'Recommend to the client',
     hvezdickaPryc: 'Remove the recommendation',
     odKlienta: 'from the client',
+    ukazky: (n: number) => (n === 1 ? '1 sample' : `${n} samples`),
+    bezUkazky: 'no sample',
+    bezUkazkyTitulek: 'Nothing in the sample library under this name.',
+    poslechnout: 'Play the samples',
+    schovat: 'Hide the samples',
   },
 };
 
@@ -96,6 +108,7 @@ export function NavrhyHercu({
   caflouProjectId,
   herci,
   pocatecni,
+  pocatecniUkazky,
   obsazeni,
   onDoObsazeni,
   jazyk,
@@ -104,6 +117,8 @@ export function NavrhyHercu({
   /** Herci s účtem - z nich se vybírá, aby šel návrh překlopit do obsazení. */
   herci: Herec[];
   pocatecni: NavrhHerce[];
+  /** Dema z knihovny ukázek, klíč je id návrhu (22. 10. 2026). */
+  pocatecniUkazky?: Record<string, UkazkaData[]>;
   /** ID herců, kteří už v obsazení jsou - u nich se „Do obsazení" nenabízí. */
   obsazeni: string[];
   onDoObsazeni: (userId: string) => void;
@@ -111,6 +126,9 @@ export function NavrhyHercu({
 }) {
   const t = TEXTY[jazyk === 'en' ? 'en' : 'cs'];
   const [navrhy, setNavrhy] = useState<NavrhHerce[]>(pocatecni);
+  const [ukazky, setUkazky] = useState<Record<string, UkazkaData[]>>(pocatecniUkazky ?? {});
+  /** Rozbalený přehrávač - vždycky jen jeden, dvě dema přes sebe nejde soudit. */
+  const [poslouchane, setPoslouchane] = useState<string | null>(null);
   const [pridavam, setPridavam] = useState(false);
   const [novyUserId, setNovyUserId] = useState('');
   const [noveJmeno, setNoveJmeno] = useState('');
@@ -126,8 +144,12 @@ export function NavrhyHercu({
     try {
       const res = await fetch(zaklad, { cache: 'no-store' });
       if (!res.ok) return;
-      const data = (await res.json()) as { navrhy?: NavrhHerce[] };
+      const data = (await res.json()) as {
+        navrhy?: NavrhHerce[];
+        ukazky?: Record<string, UkazkaData[]>;
+      };
       if (Array.isArray(data.navrhy)) setNavrhy(data.navrhy);
+      if (data.ukazky) setUkazky(data.ukazky);
     } catch {
       // Seznam zustane, jaky byl.
     }
@@ -241,8 +263,9 @@ export function NavrhyHercu({
           {navrhy.map((n, i) => (
             <li
               key={n.id}
-              className="flex items-center gap-2.5 py-1.5 border-t border-line first:border-t-0"
+              className="flex flex-col gap-2 py-1.5 border-t border-line first:border-t-0"
             >
+              <div className="flex items-center gap-2.5">
               <span className="shrink-0 w-[22px] h-[22px] rounded-full bg-surface-soft text-muted text-[11px] font-heading font-bold grid place-items-center">
                 {i + 1}.
               </span>
@@ -268,6 +291,30 @@ export function NavrhyHercu({
               )}
               {n.poznamka && (
                 <span className="text-xs font-body text-muted truncate">· {n.poznamka}</span>
+              )}
+              {/* UKÁZKA HLASU (22. 10. 2026: „měl bych vědět, než budu posílat
+                  na klienta, jestli máme ukázku toho herce někde v portálu").
+                  Dema se berou z knihovny nabídkových prezentací - nic se
+                  nikam nekopíruje, jen se dohledají. */}
+              {(ukazky[n.id]?.length ?? 0) > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setPoslouchane((p) => (p === n.id ? null : n.id))}
+                  title={poslouchane === n.id ? t.schovat : t.poslechnout}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-brand-green/50 text-brand-green text-[9px] font-heading font-bold uppercase tracking-wide px-1.5 py-[1px] hover:bg-brand-green/10 transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5">
+                    <path d="M7 5v14l11-7z" />
+                  </svg>
+                  {t.ukazky(ukazky[n.id]?.length ?? 0)}
+                </button>
+              ) : (
+                <span
+                  title={t.bezUkazkyTitulek}
+                  className="shrink-0 rounded-full border border-dashed border-line text-muted/70 text-[9px] font-heading font-bold uppercase tracking-wide px-1.5 py-[1px]"
+                >
+                  {t.bezUkazky}
+                </span>
               )}
               {/* Vybraný návrh je jediný, který v kartě zůstane - zelený, ať
                   je na první pohled vidět, na čem jsme (22. 10. 2026). */}
@@ -301,6 +348,16 @@ export function NavrhyHercu({
                   {t.smazat}
                 </button>
               </span>
+              </div>
+
+              {poslouchane === n.id && (ukazky[n.id]?.length ?? 0) > 0 && (
+                <div className="rounded-lg border border-line bg-surface px-3 py-2.5 ml-[32px]">
+                  <UkazkyHerce
+                    ukazky={ukazky[n.id] ?? []}
+                    jazyk={jazyk === 'en' ? 'en' : 'cs'}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>

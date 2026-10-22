@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
+import { ukazkyKNavrhum } from '@/lib/ukazkyHercuServer';
 
 /**
  * NÁVRHY HERCŮ K PROJEKTU (zadání 22. 10. 2026: „chtěl bych mít někde ještě
@@ -55,7 +56,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     })
     .catch(() => []);
 
-  return NextResponse.json({ navrhy });
+  /**
+   * Ukázky hlasu k jednotlivým návrhům (22. 10. 2026: „měl bych vědět, než
+   * budu posílat na klienta, jestli máme ukázku toho herce"). Chodí spolu se
+   * seznamem, ať se po přidání návrhu nemusí stránka načítat znovu.
+   */
+  const ukazky = await ukazkyKNavrhum(navrhy).catch(() => ({}));
+
+  return NextResponse.json({ navrhy, ukazky });
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {

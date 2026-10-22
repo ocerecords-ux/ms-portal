@@ -94,6 +94,7 @@ import { ProgresNataceniKarta } from './ProgresNataceniKarta';
 import { bezTitulu } from '@/lib/jmena';
 import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { ukazkyKNavrhum } from '@/lib/ukazkyHercuServer';
 import { formatDatum, formatDatumCas, prelozit, prelozitS } from '@/lib/jazyk';
 
 // Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
@@ -539,6 +540,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       }[])
     : [];
 
+  /**
+   * Dema navrzenych hercu z knihovny ukazek (22. 10. 2026: „měl bych vědět,
+   * než budu posílat na klienta, jestli máme ukázku toho herce"). Jen metadata
+   * - zvuk se tahá až po kliknutí na přehrávač.
+   */
+  const ukazkyNavrhu = navrhyHercu.length > 0 ? await ukazkyKNavrhum(navrhyHercu) : {};
+
   // Zalozky (zprava uzivatele 8. 9. 2026: "u projektu uz to zacina byt trochu
   // neprehledne... Natacecí frekvence a doklady by mohly byt nahore v
   // zalozce"). Obsah se vykresli na serveru a do zalozek prijde hotovy.
@@ -584,6 +592,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           odeslanoKlientoviAt: n.odeslanoKlientoviAt ? n.odeslanoKlientoviAt.toISOString() : null,
           vybranoAt: n.vybranoAt ? n.vybranoAt.toISOString() : null,
         }))}
+        ukazkyNavrhu={ukazkyNavrhu}
         smiNavrhy={canEdit}
         dotoceniHercu={dotoceniPodleHerce}
         normostranyHercu={normostranyPodleHerce}
