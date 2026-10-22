@@ -59,6 +59,7 @@ import { Avatar } from './Avatar';
 import { oznamNeprectene, oznamPocetDoku, usePoctyDoku, usePosluchacOtevreni, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
 import { useJazyk, usePreklad } from './JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { vyjmenuj } from '@/lib/dotoceni';
 import { kodJazyka, prelozitKolem } from '@/lib/jazyk';
 
@@ -2036,7 +2037,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       const res = await fetch(`/api/chat/zpravy/${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setUpravaChyba((data as { error?: string })?.error || t('chat.smazatNepodarilo'));
+        setUpravaChyba(hlaskaChyby(data, t, t('chat.smazatNepodarilo')));
         return;
       }
       const bez = (seznam: ChatMessage[]) => seznam.filter((z) => z.id !== id);
@@ -2074,7 +2075,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setUpravaChyba(data?.error || t('chat.upravitNepodarilo'));
+        setUpravaChyba(hlaskaChyby(data, t, t('chat.upravitNepodarilo')));
         return;
       }
       const uprav = (seznam: ChatMessage[]) =>
@@ -2963,7 +2964,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('chat.ulozeniNezdarilo'));
+        setError(hlaskaChyby(data, t, t('chat.ulozeniNezdarilo')));
         return;
       }
       setSpravaOtevrena(false);
@@ -2985,7 +2986,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('chat.odchodNezdaril'));
+        setError(hlaskaChyby(data, t, t('chat.odchodNezdaril')));
         return;
       }
       setSpravaOtevrena(false);
@@ -3008,7 +3009,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('chat.otevritNepodarilo'));
+        setError(hlaskaChyby(data, t, t('chat.otevritNepodarilo')));
         return;
       }
       setNovy(false);
@@ -3091,7 +3092,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data = await podpis.json().catch(() => ({}));
       if (!podpis.ok) {
-        setError(data?.error || t('chat.prilohaNepripravena'));
+        setError(hlaskaChyby(data, t, t('chat.prilohaNepripravena')));
         return null;
       }
       // Prohlizec posila soubor primo do uloziste, tedy na cizi adresu.
@@ -3203,7 +3204,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         ),
       });
       const data: any = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t('chat.zpravaNeodeslana'));
+      if (!res.ok) throw new Error(hlaskaChyby(data, t, t('chat.zpravaNeodeslana')));
 
       /**
        * ÚKOL (zadání 18. 9. 2026). Server vrací, komu ho založil - nebo proč
@@ -3480,7 +3481,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
           });
       if (!res.ok) {
         const data: any = await res.json().catch(() => ({}));
-        throw new Error(data?.error || t('chat.serverOdmitl', { stav: res.status }));
+        throw new Error(hlaskaChyby(data, t, t('chat.serverOdmitl', { stav: res.status })));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('chat.odklizeniNepodarilo'));
@@ -5346,11 +5347,16 @@ function IkonaZalozky({ kind }: { kind: ZalozkaChatu }) {
     );
   }
   if (kind === ZALOZKA_UPOZORNENI) {
-    // Zvonek - tentyz znak, jaky ma upozorneni v liste portalu.
+    /*
+     * SCHRÁNKA, NE ZVONEK (22. 10. 2026: „je teď matoucí, že je tam milion
+     * zvonečků"). V hlavičce chatu už dva jsou - ztlumení celého chatu a
+     * ztlumení rozhovoru - a třetí by se s nimi pletl. Schránka navíc líp
+     * říká, co tam je: co mi přišlo, ne co zazvoní.
+     */
     return (
       <svg {...spolecne}>
-        <path d="M18 15.6v-4a6 6 0 0 0-12 0v4L4.6 17v.7h14.8V17z" />
-        <path d="M10.2 20.4a2 2 0 0 0 3.6 0" />
+        <path d="M4 13h4l1.5 2.5h5L16 13h4" />
+        <path d="M4 13 6.5 5h11L20 13v4.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
       </svg>
     );
   }
