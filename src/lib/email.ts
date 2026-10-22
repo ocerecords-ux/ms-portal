@@ -4008,15 +4008,22 @@ export function buildZapracovaniPripominekHtml(input: ZapracovaniPripominekInput
     )
     .join('');
 
+  /**
+   * NOVÁ VERZE BEZ PŘIPOMÍNEK (22. 10. 2026). Tlačítko jde zmáčknout, i když
+   * klient nic nenapsal - pak se nepíše „zapracovali jsme vaše připomínky",
+   * ale prostě „poslali jsme novou verzi".
+   */
+  const novaVerze = input.polozky.length === 0;
+
   return emailShell({
     jazyk,
     tag: prelozitEmail(jazyk, 'mail.zapracovani.stitek'),
     preheader: prelozitEmail(jazyk, 'mail.zapracovani.preheader'),
     body: `
-    <span class="badge">${prelozitEmailS(jazyk, 'mail.zapracovani.kolo', { kolo: input.kolo })}</span>
-    <h2>${prelozitEmail(jazyk, 'mail.zapracovani.nadpis')}</h2>
+    <span class="badge">${prelozitEmailS(jazyk, 'mail.zapracovani.verze', { verze: input.kolo + 1 })}</span>
+    <h2>${prelozitEmail(jazyk, novaVerze ? 'mail.zapracovani.nadpisVerze' : 'mail.zapracovani.nadpis')}</h2>
     <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoKlienta ?? ''))}</p>
-    <p>${prelozitEmailS(jazyk, 'mail.zapracovani.uvod', {
+    <p>${prelozitEmailS(jazyk, novaVerze ? 'mail.zapracovani.uvodVerze' : 'mail.zapracovani.uvod', {
       projekt: `<strong>${escapeHtml(input.nazevProjektu)}</strong>`,
     })}</p>
 
@@ -4058,7 +4065,12 @@ export async function sendZapracovaniPripominekEmail(input: ZapracovaniPripomine
 
   const jazyk = input.jazyk ?? 'cs';
   const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
-  const predmet = prelozitEmailS(jazyk, 'mail.zapracovani.predmet', { projekt: input.nazevProjektu });
+  const bezPripominek = input.polozky.length === 0;
+  const predmet = prelozitEmailS(
+    jazyk,
+    bezPripominek ? 'mail.zapracovani.predmetVerze' : 'mail.zapracovani.predmet',
+    { projekt: input.nazevProjektu },
+  );
   const telo = buildZapracovaniPripominekHtml(input);
 
   const vysledekPosty = await transport.sendMail({
@@ -4069,7 +4081,9 @@ export async function sendZapracovaniPripominekEmail(input: ZapracovaniPripomine
     text: [
       pozdravPosty(jazyk, input.jmenoKlienta ?? ''),
       '',
-      prelozitEmailS(jazyk, 'mail.zapracovani.textUvod', { projekt: input.nazevProjektu }),
+      prelozitEmailS(jazyk, bezPripominek ? 'mail.zapracovani.textUvodVerze' : 'mail.zapracovani.textUvod', {
+        projekt: input.nazevProjektu,
+      }),
       input.poznamka?.trim() || '',
       '',
       input.polozky.length > 0 ? prelozitEmail(jazyk, 'mail.zapracovani.textSeznam') : '',

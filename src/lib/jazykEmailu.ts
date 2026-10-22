@@ -1092,6 +1092,23 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     en: 'we have addressed your feedback on {projekt}. The updated version is in the project folder.',
   },
   'mail.zapracovani.textSeznam': { cs: 'Co jsme upravili:', en: 'What we changed:' },
+  // NOVA VERZE BEZ PRIPOMINEK (22. 10. 2026): tlacitko jde zmacknout, i kdyz
+  // klient nic nenapsal - treba kdyz jsme neco doladili sami. Pak by „zapracovali
+  // jsme vase pripominky" byla hloupost.
+  'mail.zapracovani.predmetVerze': {
+    cs: '{projekt} - nová verze k poslechu',
+    en: '{projekt} - a new version to listen to',
+  },
+  'mail.zapracovani.nadpisVerze': { cs: 'Poslali jsme novou verzi', en: 'We have sent a new version' },
+  'mail.zapracovani.uvodVerze': {
+    cs: 'u projektu {projekt} je nová verze. Je ve složce projektu — poslechněte si ji prosím a dejte vědět, jestli je to tak, jak má být.',
+    en: 'there is a new version of {projekt}. It is in the project folder - please take a listen and let us know whether it is right.',
+  },
+  'mail.zapracovani.textUvodVerze': {
+    cs: 'u projektu {projekt} je nova verze. Najdete ji ve slozce projektu.',
+    en: 'there is a new version of {projekt}. You will find it in the project folder.',
+  },
+  'mail.zapracovani.verze': { cs: 'Verze {verze}', en: 'Version {verze}' },
   'mail.zapracovani.textOdkaz': { cs: 'Poslechnout a pripominkovat:', en: 'Listen and comment:' },
 };
 

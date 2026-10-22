@@ -24,6 +24,22 @@ import { INTERNAL_ROLES } from '@/lib/roles';
 const OD_MINUT = 10;
 const DO_MINUT = 20;
 
+/**
+ * KOLIK ZBÝVÁ, ŘEKNE SE PRAVDA (oprava 22. 10. 2026: „a Bruno lže ta událost,
+ * co píše - Retrokrimi je v 9:00 a je 8:40").
+ *
+ * Úloha běží po pěti minutách a bere okno 10-20 minut dopředu, takže „za 15
+ * minut" sedělo jen náhodou - ve skutečnosti to bylo klidně dvacet. Teď se
+ * počítá, kolik do začátku opravdu zbývá.
+ */
+function zaKolik(start: Date, ted: Date): string {
+  const minut = Math.round((start.getTime() - ted.getTime()) / 60_000);
+  if (minut <= 0) return 'Už začíná';
+  if (minut === 1) return 'Za minutu';
+  if (minut < 5) return `Za ${minut} minuty`;
+  return `Za ${minut} minut`;
+}
+
 export type VysledekPripominek = {
   odeslano: number;
   lidi: number;
@@ -85,9 +101,10 @@ export async function posliPripominkyUdalosti(
           .catch(() => false);
         if (!zapsano) continue;
 
-        await brunoNapisSoukrome(clovek.id, `Za 15 minut: ${u.cas} — ${u.popis}`).catch(() => false);
+        const zbyva = zaKolik(u.start, ted);
+        await brunoNapisSoukrome(clovek.id, `${zbyva}: ${u.cas} — ${u.popis}`).catch(() => false);
         await posliPush([clovek.id], {
-          titulek: 'Za 15 minut',
+          titulek: zbyva,
           text: `${u.cas} — ${u.popis}`,
           odkaz: '/kalendar',
           znacka: `pripominka-${u.klic}`,

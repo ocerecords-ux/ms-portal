@@ -38,10 +38,11 @@ type Kolo = {
 
 const TEXTY = {
   cs: {
-    nadpis: 'Zapracované připomínky',
+    nadpis: 'Verze pro klienta',
     ceka: (n: number) => `Čeká na zapracování: ${n}`,
     nicNeceka: 'Žádné nové připomínky od klienta.',
     tlacitko: 'Zapracovali jsme připomínky',
+    tlacitkoVerze: 'Poslat novou verzi',
     posilam: 'Odesílám…',
     poznamka: 'Poznámka pro klienta (nepovinná)',
     poznamkaPlaceholder: 'Např. „Dotáčku jsme zkrátili a hudbu stáhli pod hlasem."',
@@ -49,17 +50,22 @@ const TEXTY = {
     zrusit: 'Zrušit',
     vysvetleni:
       'Klientovi odejde zpráva se seznamem toho, co bylo zapracováno. Stav zakázky se nemění — pořád čekáme na schválení.',
-    historie: 'Historie úprav',
-    koloCislo: (n: number) => `${n}. kolo`,
+    vysvetleniVerze:
+      'Klientovi odejde zpráva, že je ve složce nová verze k poslechu. Stav zakázky se nemění — pořád čekáme na schválení.',
+    historie: 'Historie verzí',
+    historiePrazdno: 'Zatím jsme novou verzi neposlali — u klienta je první odevzdání.',
+    verzeCislo: (n: number) => `Verze ${n}`,
+    novaVerzeBezPolozek: 'nová verze, bez připomínek',
     neodeslano: 'zpráva neodešla',
     bezPolozek: 'bez položek',
     chyba: 'Nepodařilo se to odeslat.',
   },
   en: {
-    nadpis: 'Feedback addressed',
+    nadpis: 'Versions for the client',
     ceka: (n: number) => `Waiting to be addressed: ${n}`,
     nicNeceka: 'No new feedback from the client.',
     tlacitko: 'We have addressed the feedback',
+    tlacitkoVerze: 'Send a new version',
     posilam: 'Sending…',
     poznamka: 'Note for the client (optional)',
     poznamkaPlaceholder: 'E.g. "We shortened the tag and pulled the music under the voice."',
@@ -67,8 +73,12 @@ const TEXTY = {
     zrusit: 'Cancel',
     vysvetleni:
       'The client gets a message listing what was addressed. The project status stays the same — we are still waiting for approval.',
-    historie: 'Revision history',
-    koloCislo: (n: number) => `Round ${n}`,
+    vysvetleniVerze:
+      'The client gets a message that a new version is in the folder. The project status stays the same — we are still waiting for approval.',
+    historie: 'Version history',
+    historiePrazdno: 'No new version has been sent yet - the client has the original delivery.',
+    verzeCislo: (n: number) => `Version ${n}`,
+    novaVerzeBezPolozek: 'new version, no feedback',
     neodeslano: 'message not sent',
     bezPolozek: 'no items',
     chyba: 'Sending failed.',
@@ -156,20 +166,22 @@ export function ZapracovaniPripominek({
         <span className="text-xs font-body text-muted">
           {ceka > 0 ? t.ceka(ceka) : t.nicNeceka}
         </span>
-        {canEdit && ceka > 0 && !otevreno && (
+        {/* TLAČÍTKO JE TU VŽDYCKY (22. 10. 2026). Nová verze vzniká i bez
+            připomínek - podle toho se jen mění, co na něm stojí. */}
+        {canEdit && !otevreno && (
           <button
             type="button"
             onClick={() => setOtevreno(true)}
             className="ml-auto shrink-0 rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-3.5 py-2 border-0 cursor-pointer"
           >
-            {t.tlacitko}
+            {ceka > 0 ? t.tlacitko : t.tlacitkoVerze}
           </button>
         )}
       </div>
 
       {otevreno && (
         <div className="flex flex-col gap-2 rounded-lg bg-field px-3 py-3">
-          <p className="text-xs font-body text-muted m-0">{t.vysvetleni}</p>
+          <p className="text-xs font-body text-muted m-0">{ceka > 0 ? t.vysvetleni : t.vysvetleniVerze}</p>
           <label className="text-xs font-heading text-muted">{t.poznamka}</label>
           <textarea
             value={poznamka}
@@ -207,11 +219,13 @@ export function ZapracovaniPripominek({
         </p>
       )}
 
+      <div className="flex flex-col gap-1.5">
+        <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">{t.historie}</p>
+        {kola.length === 0 && <p className="text-xs font-body text-muted m-0">{t.historiePrazdno}</p>}
+      </div>
+
       {kola.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">
-            {t.historie}
-          </p>
           {kola.map((k) => (
             <div key={k.id} className="rounded-lg border border-line bg-field/40 px-3 py-2">
               <button
@@ -220,12 +234,13 @@ export function ZapracovaniPripominek({
                 className="w-full text-left text-xs font-body text-muted hover:text-ink"
               >
                 {rozbalene === k.id ? '▾ ' : '▸ '}
-                <span className="font-heading font-semibold text-ink">{t.koloCislo(k.poradi)}</span>
+                {/* První odevzdání je verze 1, každé další kolo posouvá číslo. */}
+                <span className="font-heading font-semibold text-ink">{t.verzeCislo(k.poradi + 1)}</span>
                 {' · '}
                 {den(k.kdy)}
                 {k.kdoJmeno ? ` · ${k.kdoJmeno}` : ''}
                 {' · '}
-                {k.polozky.length > 0 ? `${k.polozky.length}×` : t.bezPolozek}
+                {k.polozky.length > 0 ? `${k.polozky.length}×` : t.novaVerzeBezPolozek}
                 {!k.odeslanoAt && ` · ${t.neodeslano}`}
               </button>
 

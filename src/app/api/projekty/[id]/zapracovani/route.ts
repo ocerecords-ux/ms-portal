@@ -104,12 +104,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { caflouProjectId: params.id, odeslanoAt: { not: null }, zapracovaniId: null },
       orderBy: [{ driveFileName: 'asc' }, { cas: 'asc' }],
     });
-    if (cekaji.length === 0) {
-      return NextResponse.json(
-        { error: 'Nejsou tu žádné odeslané připomínky, které by šlo zapracovat.' },
-        { status: 400 },
-      );
-    }
+    /**
+     * JDE TO I BEZ PŘIPOMÍNEK (22. 10. 2026: „tady chybí to tlačítko na
+     * odeslání nové verze, když zapracujeme připomínky"). Nová verze vzniká
+     * i tehdy, když klient nic nenapsal - třeba když si něco doladíme sami.
+     * Klientovi pak odejde zpráva „poslali jsme novou verzi", bez seznamu.
+     */
 
     // Kolikate kolo to je. Pocita se z tabulky, ne z poctu pripominek.
     const posledni = await prisma.zapracovaniPripominek.findFirst({
@@ -199,9 +199,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await zapisNotifikaci({
       caflouProjectId: params.id,
       stav: STAV_REKLAMY,
-      popis: odeslano
-        ? `Zapracované připomínky (${poradi}. kolo, ${polozky.length}) — zpráva odešla na ${prijemci.join(', ')}.`
-        : `Zapracované připomínky (${poradi}. kolo, ${polozky.length}) — zpráva neodešla, není komu.`,
+      popis: (() => {
+        const co =
+          polozky.length > 0
+            ? `Zapracované připomínky (verze ${poradi + 1}, ${polozky.length})`
+            : `Nová verze (verze ${poradi + 1})`;
+        return odeslano
+          ? `${co} — zpráva odešla na ${prijemci.join(', ')}.`
+          : `${co} — zpráva neodešla, není komu.`;
+      })(),
       prijemci,
       zpravaPredmet: predmet,
       zpravaHtml: telo,

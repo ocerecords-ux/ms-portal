@@ -64,7 +64,8 @@ Když jsou opravy hotové, je v záložce **Připomínky** tlačítko **Zapracov
 - **Klientovi odejde zpráva** se seznamem toho, co bylo zapracováno — přesně těmi větami, které napsal on, s časem a názvem souboru. Dá se k tomu připsat poznámka („dotáčku jsme zkrátili a hudbu stáhli pod hlasem").
 - **Stav zakázky se nemění.** Projekt zůstává v „Dokončeno - ke schválení"; schvaluje pořád klient, tohle je zpráva mezitím.
 - **Připomínky ze seznamu zmizí** — klient i my máme čistý stůl pro další poslech. Nic se nemaže: visí dál u svého kola.
-- **Historie úprav** je hned pod tlačítkem. Každé kolo má datum, kdo ho odeslal, poznámku a celý seznam toho, co se tehdy opravovalo.
+- **Historie verzí** je hned pod tlačítkem. Každá verze má datum, kdo ji odeslal, poznámku a celý seznam toho, co se tehdy opravovalo. První odevzdání je verze 1, každé zapracování posouvá číslo dál — stejné číslo vidí klient i v mailu.
+- **Jde to i bez připomínek** (22. 10. 2026). Když klient nic nenapsal a verzi jsme doladili sami, na tlačítku stojí **Poslat novou verzi** a klientovi odejde zpráva „poslali jsme novou verzi" — bez seznamu, jinak stejná.
 
 **Může se to opakovat, kolikrát je potřeba.** Klient znovu napíše připomínky, my je zapracujeme a pošleme druhé kolo — a tak dokola, dokud zakázku neschválí. Zprávy ke stavům se posílají jednou, tahle ne.
 
