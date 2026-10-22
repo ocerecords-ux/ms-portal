@@ -96,6 +96,23 @@ export function SpotTagger({
       )}&disposition=inline`
     : '';
 
+  /**
+   * STAŽENÍ SPOTU (zadání 22. 10. 2026: „když klientovi přijde mail s verzí
+   * nahrávky po připomínkách, tak ji nemůže stáhnout").
+   *
+   * Tatáž adresa jako pro přehrávač, jen bez `disposition=inline` - tím se
+   * z ní stane příloha. Vstupenkou je pořád token z odkazu, takže to funguje
+   * i ve starých odkazech, které už klient dostal; stránka se vykresluje
+   * pokaždé znovu, nic se nemusí přegenerovávat.
+   *
+   * Záměrně BEZ atributu `download`: ten by jméno souboru přepsal. Takhle si
+   * ho prohlížeč vezme z hlavičky od serveru - tedy přesně to, jak se soubor
+   * jmenuje na Disku, i s diakritikou.
+   */
+  const stazeni = fileId
+    ? `/api/drive/download?fileId=${encodeURIComponent(fileId)}&k=${encodeURIComponent(token)}`
+    : '';
+
   /* ---------- přepnutí spotu ---------- */
 
   const nactiZnovu = useCallback(
@@ -408,6 +425,27 @@ export function SpotTagger({
         >
           {t('pripominkovat.oznacitMisto', { cas: cas(znacka ?? ted) })}
         </button>
+        {stazeni && (
+          <a
+            href={stazeni}
+            title={spot.nazev}
+            className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border border-line text-xs font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="w-3.5 h-3.5"
+              aria-hidden="true"
+            >
+              <path d="M12 4v11m0 0 4-4m-4 4-4-4" />
+              <path d="M4 19h16" />
+            </svg>
+            {t('obecne.stahnout')}
+          </a>
+        )}
         <span className="ml-auto font-heading text-sm text-ink tabular-nums">
           {cas(ted)} {delka > 0 && <span className="text-muted">/ {cas(delka)}</span>}
         </span>
