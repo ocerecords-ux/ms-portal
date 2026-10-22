@@ -38,12 +38,37 @@ async function ostatniPisici(conversationId: string, me: string) {
   return lide.map(userLabel);
 }
 
+/**
+ * ZNAČKA POSLEDNÍ ZPRÁVY (zadání Petra Dratvy 21. 10. 2026: „správa na desktop
+ * app sa zobrazí asi 5-10 sekúnd neskôr, ako príde notifikácia na mobile").
+ *
+ * Seznam konverzací se načítá po dvanácti vteřinách, takže nová zpráva se v
+ * otevřeném rozhovoru ukázala až s tímhle zpožděním. Tenhle dotaz sem chodí
+ * každé tři vteřiny kvůli „kdo píše" - přibalíme k němu i značku poslední
+ * zprávy, ať prohlížeč pozná, že má něco nového, a nemusí se kvůli tomu
+ * ptát navíc. Žádný další provoz to nestojí.
+ */
+async function znackaPosledni(conversationId: string) {
+  const z = await prisma.message
+    .findFirst({
+      where: { conversationId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    })
+    .catch(() => null);
+  return z?.id ?? null;
+}
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
     return NextResponse.json({ pisou: [] });
   }
-  return NextResponse.json({ pisou: await ostatniPisici(params.id, session.user.id) });
+  const [pisou, posledni] = await Promise.all([
+    ostatniPisici(params.id, session.user.id),
+    znackaPosledni(params.id),
+  ]);
+  return NextResponse.json({ pisou, posledni });
 }
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -64,5 +89,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     })
     .catch(() => undefined);
 
-  return NextResponse.json({ pisou: await ostatniPisici(params.id, me) });
+  const [pisou, posledni] = await Promise.all([
+    ostatniPisici(params.id, me),
+    znackaPosledni(params.id),
+  ]);
+  return NextResponse.json({ pisou, posledni });
 }

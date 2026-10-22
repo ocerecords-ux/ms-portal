@@ -24,6 +24,13 @@ self.addEventListener('fetch', () => {
    Upozornění na nové zprávy
 -------------------------------------------------------------------------- */
 
+/** Z odkazu v upozorneni vytahne, ktere konverzace se tyka. */
+function konverzaceZOdkazu(odkaz) {
+  const kde = String(odkaz || '').indexOf('konverzace=');
+  if (kde < 0) return null;
+  return decodeURIComponent(String(odkaz).slice(kde + 'konverzace='.length).split('&')[0]) || null;
+}
+
 self.addEventListener('push', (event) => {
   let data = {};
   try {
@@ -45,7 +52,24 @@ self.addEventListener('push', (event) => {
     data: { odkaz: data.odkaz || '/chat' },
   };
 
-  event.waitUntil(self.registration.showNotification(titulek, nastaveni));
+  /*
+   * OTEVRENE OKNO SE DOZVI HNED (zadani Petra Dratvy 21. 10. 2026: „sprava na
+   * desktop app sa zobrazi asi 5-10 sekund neskor, ako pride notifikacia na
+   * mobile"). Upozorneni dorazi okamzite, kdezto stranka se ptala az pri
+   * dalsim kole dotazu - tak jí to rekneme rovnou.
+   */
+  const konverzace = konverzaceZOdkazu(nastaveni.data.odkaz);
+
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(titulek, nastaveni),
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((okna) => {
+        okna.forEach((okno) => {
+          if ('postMessage' in okno) okno.postMessage({ typ: 'nova-zprava', konverzace });
+        });
+      }),
+    ]),
+  );
 });
 
 /**
@@ -64,11 +88,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const odkaz = (event.notification.data && event.notification.data.odkaz) || '/chat';
-  const konverzace = (() => {
-    const kde = odkaz.indexOf('konverzace=');
-    if (kde < 0) return null;
-    return decodeURIComponent(odkaz.slice(kde + 'konverzace='.length).split('&')[0]) || null;
-  })();
+  const konverzace = konverzaceZOdkazu(odkaz);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (okna) => {

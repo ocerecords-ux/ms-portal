@@ -1940,6 +1940,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const cacheZprav = useRef(new Map<string, ChatMessage[]>());
   /** Ktera konverzace je opravdu otevrena - viz nactiZpravy. */
   const otevrenaRef = useRef<string | null>(null);
+  /**
+   * Znacka posledni zpravy otevreneho rozhovoru (21. 10. 2026). Chodi s
+   * dotazem "kdo pise" kazde tri vteriny - kdyz se lisi od te nactene, je
+   * tam neco noveho a nacte se to hned. Viz efekt u PISE_MS niz.
+   */
+  const znackaPosledniRef = useRef<string | null>(null);
+  /** Otevrene vlakno - aby ho sel obnovit i z efektu, ktery na nem nevisi. */
+  const vlaknoRef = useRef<string | null>(null);
   const [draft, setDraft] = useState('');
   /**
    * Koncepty podle rozhovoru (21. 10. 2026) - viz KLIC_KONCEPTY výš.
@@ -2383,6 +2391,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
   useEffect(() => {
     otevrenaRef.current = openId;
+    // Pri prepnuti rozhovoru zacina znacka nanovo - zpravy se stejne nacitaji.
+    znackaPosledniRef.current = null;
     setVlaknoId(null);
     if (!openId) {
       setMessages([]);
@@ -2400,6 +2410,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   }, [openId, nactiZpravy]);
 
   useEffect(() => {
+    vlaknoRef.current = vlaknoId;
     if (openId && vlaknoId) void nactiVlakno(openId, vlaknoId);
     else setVlakno([]);
   }, [openId, vlaknoId, nactiVlakno]);
@@ -2572,14 +2583,32 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
     function prijmi(e: MessageEvent) {
-      const data = e.data as { typ?: string; konverzace?: string } | null;
-      if (!data || data.typ !== 'otevri-konverzaci' || typeof data.konverzace !== 'string') return;
+      const data = e.data as { typ?: string; konverzace?: string | null } | null;
+      if (!data) return;
+
+      /*
+       * Upozorneni doslo na toto zarizeni - nacteme novinky hned, at na
+       * mobilu necinka drive, nez se zprava ukaze v okne (zadani Petra
+       * Dratvy 21. 10. 2026).
+       */
+      if (data.typ === 'nova-zprava') {
+        void nactiKonverzace();
+        const otevrena = otevrenaRef.current;
+        if (otevrena && (!data.konverzace || data.konverzace === otevrena)) {
+          void nactiZpravy(otevrena, true);
+          const vlakno = vlaknoRef.current;
+          if (vlakno) void nactiVlakno(otevrena, vlakno);
+        }
+        return;
+      }
+
+      if (data.typ !== 'otevri-konverzaci' || typeof data.konverzace !== 'string') return;
       setZadanaKonverzace(data.konverzace);
       otevriDok('chat');
     }
     navigator.serviceWorker.addEventListener('message', prijmi);
     return () => navigator.serviceWorker.removeEventListener('message', prijmi);
-  }, [otevriDok]);
+  }, [otevriDok, nactiKonverzace, nactiZpravy, nactiVlakno]);
 
   useEffect(() => {
     if (!zadanaKonverzace) return;
@@ -3203,6 +3232,30 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         const data = await res.json().catch(() => null);
         if (zivy && otevrenaRef.current === openId) {
           setPisou(Array.isArray(data?.pisou) ? data.pisou : []);
+
+          /*
+           * NOVÁ ZPRÁVA SE UKÁŽE HNED (zadání Petra Dratvy 21. 10. 2026:
+           * „správa na desktop app sa zobrazí asi 5-10 sekúnd neskôr, ako
+           * príde notifikácia na mobile").
+           *
+           * Server sem přibaluje značku poslední zprávy. Když se liší od té,
+           * kterou máme vypsanou, načteme rozhovor hned - místo čekání na
+           * seznam konverzací, který chodí po dvanácti vteřinách. Je to
+           * zadarmo: tenhle dotaz tu běží kvůli „kdo píše" tak jako tak.
+           */
+          const znacka = typeof data?.posledni === 'string' ? data.posledni : null;
+          if (znacka && znacka !== znackaPosledniRef.current) {
+            const prvni = znackaPosledniRef.current === null;
+            znackaPosledniRef.current = znacka;
+            // Hned po otevření rozhovoru se zprávy načítají tak jako tak -
+            // tehdy si značku jen zapamatujeme, ať to nejde dvakrát.
+            if (!prvni) {
+              void nactiZpravy(openId!, true);
+              void nactiKonverzace();
+              const vlakno = vlaknoRef.current;
+              if (vlakno) void nactiVlakno(openId!, vlakno);
+            }
+          }
         }
       } catch {
         // Kdo pise je ozdoba - chyba se nikde neukazuje.
@@ -3214,7 +3267,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       zivy = false;
       clearInterval(timer);
     };
-  }, [openId]);
+  }, [openId, nactiZpravy, nactiKonverzace, nactiVlakno]);
 
   /**
    * Ohlásí, že píšu. Volá se při psaní, ale posílá se nejvýš jednou za pár
