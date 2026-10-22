@@ -36,7 +36,20 @@ export const CHAT_TABS: { kind: ConversationKind; label: string }[] = [
  * každý den.
  */
 export const ZALOZKA_UKOLY = 'UKOLY' as const;
-export type ZalozkaChatu = ConversationKind | typeof ZALOZKA_UKOLY;
+
+/**
+ * HISTORIE UPOZORNĚNÍ (zadání 22. 10. 2026: „stává se, že mám třeba od někoho
+ * více zpráv a otevřu to na mobilu a nevím pak, kde jsem označený apod.
+ * abych měl prostě přehled o všech zprávách").
+ *
+ * Není to rozhovor, ale výpis přes všechny rozhovory - proto vlastní záložka
+ * vedle úkolů, ne další filtr v seznamu.
+ */
+export const ZALOZKA_UPOZORNENI = 'UPOZORNENI' as const;
+export type ZalozkaChatu =
+  | ConversationKind
+  | typeof ZALOZKA_UKOLY
+  | typeof ZALOZKA_UPOZORNENI;
 
 /**
  * DOTAZY KLIENTŮ MAJÍ VLASTNÍ ZÁLOŽKU ZPĚT (zadání 9. 10. 2026: „možná bych
@@ -52,6 +65,7 @@ export const CHAT_ZALOZKY: { klic: ZalozkaChatu; label: string }[] = [
   ...CHAT_TABS.map((t) => ({ klic: t.kind as ZalozkaChatu, label: t.label })),
   { klic: 'DOTAZ' as ZalozkaChatu, label: 'Dotazy klientů' },
   { klic: ZALOZKA_UKOLY, label: 'Úkoly' },
+  { klic: ZALOZKA_UPOZORNENI, label: 'Upozornění' },
 ];
 
 /**

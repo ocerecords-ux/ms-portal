@@ -22,6 +22,7 @@ import {
   CHAT_ZALOZKY,
   nazevZalozky,
   ZALOZKA_UKOLY,
+  ZALOZKA_UPOZORNENI,
   EMOJI,
   MAX_MESSAGE_LENGTH,
   RYCHLE_REAKCE,
@@ -2415,6 +2416,33 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     else setVlakno([]);
   }, [openId, vlaknoId, nactiVlakno]);
 
+  /**
+   * OTEVŘI KONKRÉTNÍ ZPRÁVU (22. 10. 2026) - z hledání i z historie
+   * upozornění. Vlákno se musí nasadit AŽ POTOM, co se přepne rozhovor:
+   * přepnutí rozhovoru vlákno samo zavírá, takže nasazené rovnou by zmizelo
+   * dřív, než se stihne vykreslit (a klepnutí na odpověď ve vlákně tak
+   * donedávna končilo v hlavním výpisu).
+   */
+  const [cekajiciVlakno, setCekajiciVlakno] = useState<string | null>(null);
+
+  const otevriZpravu = useCallback(
+    (konverzaceId: string, vlakno: string | null) => {
+      // Zaroven se prepne zalozka, kam rozhovor patri - jinak by na telefonu
+      // zustal seznam u upozorneni a rozhovor by se "neotevrel".
+      const kam = conversations.find((x) => x.id === konverzaceId);
+      if (kam) setTab(kam.kind);
+      setOpenId(konverzaceId);
+      setCekajiciVlakno(vlakno);
+    },
+    [conversations],
+  );
+
+  useEffect(() => {
+    if (!cekajiciVlakno || !openId) return;
+    setVlaknoId(cekajiciVlakno);
+    setCekajiciVlakno(null);
+  }, [cekajiciVlakno, openId]);
+
   // Kanaly se nabizeji rovnou podle aktivnich projektu (zprava uzivatele
   // 8. 9. 2026: "kanaly by se mely vytvorit z existujicich aktivnich
   // projektu"), takze se seznam nacita hned po otevreni zalozky.
@@ -2722,7 +2750,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     <span className={`${naStrance ? 'hidden sm:flex' : 'flex'} items-center gap-0.5`}>
       {CHAT_ZALOZKY.map((z) => {
         const jeTu = tab === z.klic;
-        const nove = z.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[z.klic] ?? 0;
+        const nove =
+          z.klic === ZALOZKA_UKOLY || z.klic === ZALOZKA_UPOZORNENI
+            ? 0
+            : neprectenePodleDruhu[z.klic] ?? 0;
         return (
           <button
             key={z.klic}
@@ -3891,7 +3922,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             {/* HLEDÁNÍ (19. 10. 2026) - přesně tam, kde si o něj Helča řekla,
                 pod statusem a nad seznamem. U Úkolů ne: to není seznam
                 konverzací a hledá se v něm jinak. */}
-            {tab !== ZALOZKA_UKOLY && (
+            {tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && (
               <div className="px-3 pb-2">
                 <div className="flex items-center gap-2 rounded-lg border border-line bg-field px-2.5 py-1.5 focus-within:border-brand-purple transition-colors">
                   <svg
@@ -3934,6 +3965,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   ale vlastní to-do list - proto vlastní komponenta a ne
                   seznam níž. */}
               {tab === ZALOZKA_UKOLY && <UkolyVChatu />}
+              {/* HISTORIE UPOZORNĚNÍ (22. 10. 2026) - výpis přes všechny
+                  rozhovory, ať je vidět, kde jsem označený. */}
+              {tab === ZALOZKA_UPOZORNENI && <PrehledUpozorneni onOtevri={otevriZpravu} />}
               {nicNesedi && nalezene.length === 0 && !hledaZpravy && (
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.hledaniPrazdno')}</p>
               )}
@@ -3954,8 +3988,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       key={z.id}
                       type="button"
                       onClick={() => {
-                        setOpenId(z.konverzaceId);
-                        setVlaknoId(z.vlaknoId);
+                        otevriZpravu(z.konverzaceId, z.vlaknoId);
                         setHledani('');
                       }}
                       className="text-left rounded-lg px-2.5 py-1.5 hover:bg-field"
@@ -4040,7 +4073,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   </button>
                 ))}
 
-              {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && vZalozce.length === 0 && !novy && hledanyVyraz.length === 0 && (
+              {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && vZalozce.length === 0 && !novy && hledanyVyraz.length === 0 && (
                 <p className="text-sm font-body text-muted m-0 px-1">
                   {tab === 'SOUKROMA' ? t('chat.zadneSoukrome') : t('chat.zadneSkupiny')}
                 </p>
@@ -4048,6 +4081,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               {tab !== 'PROJEKT' &&
                 tab !== 'DOTAZ' &&
                 tab !== ZALOZKA_UKOLY &&
+                tab !== ZALOZKA_UPOZORNENI &&
                 vZalozceVidi.map((c) => (
                   <RadekKonverzace
                     key={c.id}
@@ -4147,7 +4181,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
             {/* Kanaly k projektum se nezakladaji rucne - berou se z aktivnich
                 projektu, takze tlacitko dava smysl jen u zbylych dvou zalozek. */}
-            {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && (
+            {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && (
               <div className="border-t border-line p-2">
                 <button
                   type="button"
@@ -4705,7 +4739,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                * Číslo, ne tečka: na telefonu je lišta jediná navigace a člověk
                * chce vědět, jestli přišla jedna zpráva, nebo dvacet.
                */
-              const nove = z.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[z.klic] ?? 0;
+              const nove =
+          z.klic === ZALOZKA_UKOLY || z.klic === ZALOZKA_UPOZORNENI
+            ? 0
+            : neprectenePodleDruhu[z.klic] ?? 0;
               /**
                * Ťuknutí na druh s nepřečteným rovnou otevře tu konverzaci,
                * kde něco přibylo - to je ten „proklik". Když jich je víc,
@@ -4953,6 +4990,125 @@ function ListaUkolu({
   );
 }
 
+/**
+ * HISTORIE UPOZORNĚNÍ (zadání 22. 10. 2026: „stává se, že mám třeba od někoho
+ * více zpráv a otevřu to na mobilu a nevím pak, kde jsem označený apod.
+ * abych měl prostě přehled o všech zprávách").
+ *
+ * Výpis přes VŠECHNY rozhovory, ne jen přes ten otevřený: co mi za poslední
+ * měsíc přišlo, kdo to psal, odkud a jestli jsem v tom jmenovitě označený.
+ * Klepnutí otevře tu zprávu — i když visí ve vlákně.
+ *
+ * Skládá se ze zpráv samotných, ne z uložených upozornění (ta se nikam
+ * nezapisují, viz /api/chat/prehled), takže je tu i to, co přišlo dřív, než
+ * tahle obrazovka vznikla.
+ */
+function PrehledUpozorneni({ onOtevri }: { onOtevri: (konverzaceId: string, vlaknoId: string | null) => void }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  type Radek = {
+    id: string;
+    konverzaceId: string;
+    konverzace: string;
+    vlaknoId: string | null;
+    autor: string | null;
+    text: string;
+    kdy: string;
+    zminka: boolean;
+    neprectene: boolean;
+  };
+  const FILTRY = [
+    { klic: 'vse', popis: 'chat.prehledVse' },
+    { klic: 'zminky', popis: 'chat.prehledZminky' },
+    { klic: 'neprectene', popis: 'chat.prehledNeprectene' },
+  ] as const;
+
+  const [filtr, setFiltr] = useState<'vse' | 'zminky' | 'neprectene'>('vse');
+  const [radky, setRadky] = useState<Radek[] | null>(null);
+
+  useEffect(() => {
+    let zivy = true;
+    setRadky(null);
+    fetch(`/api/chat/prehled?filtr=${filtr}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (zivy) setRadky(Array.isArray(d?.zpravy) ? d.zpravy : []);
+      })
+      .catch(() => {
+        if (zivy) setRadky([]);
+      });
+    return () => {
+      zivy = false;
+    };
+  }, [filtr]);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1 px-1">
+        {FILTRY.map((f) => (
+          <button
+            key={f.klic}
+            type="button"
+            onClick={() => setFiltr(f.klic)}
+            aria-pressed={filtr === f.klic}
+            className={`font-heading text-[11px] font-semibold rounded-full px-2.5 py-1 transition-colors ${
+              filtr === f.klic
+                ? 'bg-brand-purple text-white'
+                : 'border border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+            }`}
+          >
+            {t(f.popis)}
+          </button>
+        ))}
+      </div>
+
+      {radky === null && <p className="text-sm font-body text-muted m-0 px-1">{t('obecne.nacitam')}</p>}
+      {radky !== null && radky.length === 0 && (
+        <p className="text-sm font-body text-muted m-0 px-1">{t('chat.prehledPrazdno')}</p>
+      )}
+
+      {radky !== null && radky.length > 0 && (
+        <p className="text-[11px] font-body text-muted m-0 px-1">{t('chat.prehledPopis')}</p>
+      )}
+
+      <div className="flex flex-col gap-0.5">
+        {(radky ?? []).map((z) => (
+          <button
+            key={z.id}
+            type="button"
+            onClick={() => onOtevri(z.konverzaceId, z.vlaknoId)}
+            className={`text-left rounded-lg px-2.5 py-1.5 hover:bg-field ${
+              z.zminka ? 'border-l-2 border-brand-green' : ''
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="block text-[11px] font-heading font-semibold text-brand-purple truncate">
+                {z.konverzace}
+                {z.autor ? ` · ${z.autor}` : ''}
+              </span>
+              {z.zminka && (
+                <span className="shrink-0 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold uppercase tracking-wide px-1.5 py-[1px]">
+                  {t('chat.zminkaStitek')}
+                </span>
+              )}
+              {z.neprectene && (
+                <span
+                  aria-hidden="true"
+                  className="shrink-0 w-1.5 h-1.5 rounded-full bg-brand-purple"
+                />
+              )}
+            </span>
+            <span className="block text-xs font-body text-ink break-words">{z.text}</span>
+            <span className="block text-[10px] font-body text-muted tabular-nums">
+              {formatFullTime(z.kdy, jazyk)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function UkolyVChatu() {
   const t = usePreklad();
   type Ukol = {
@@ -5186,6 +5342,15 @@ function IkonaZalozky({ kind }: { kind: ZalozkaChatu }) {
         <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
         <path d="M9.6 8.6a2.4 2.4 0 1 1 3.3 2.2c-.6.3-.9.8-.9 1.4v.3" />
         <path d="M12 15.1h.01" />
+      </svg>
+    );
+  }
+  if (kind === ZALOZKA_UPOZORNENI) {
+    // Zvonek - tentyz znak, jaky ma upozorneni v liste portalu.
+    return (
+      <svg {...spolecne}>
+        <path d="M18 15.6v-4a6 6 0 0 0-12 0v4L4.6 17v.7h14.8V17z" />
+        <path d="M10.2 20.4a2 2 0 0 0 3.6 0" />
       </svg>
     );
   }

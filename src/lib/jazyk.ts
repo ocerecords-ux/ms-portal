@@ -6132,6 +6132,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.zalozka.SKUPINA': { cs: 'Skupiny', en: 'Groups' },
   'chat.zalozka.DOTAZ': { cs: 'Dotazy klientů', en: 'Client questions' },
   'chat.zalozka.UKOLY': { cs: 'Úkoly', en: 'Tasks' },
+  'chat.zalozka.UPOZORNENI': { cs: 'Upozornění', en: 'Notifications' },
+  'chat.prehledVse': { cs: 'Vše', en: 'All' },
+  'chat.prehledZminky': { cs: 'Zmínky', en: 'Mentions' },
+  'chat.prehledNeprectene': { cs: 'Nepřečtené', en: 'Unread' },
+  'chat.prehledPrazdno': { cs: 'Zatím tu nic není.', en: 'Nothing here yet.' },
+  'chat.prehledPopis': {
+    cs: 'Co vám přišlo za posledních 30 dnů.',
+    en: 'What came in over the last 30 days.',
+  },
+  'chat.zminkaStitek': { cs: 'zmínka', en: 'mention' },
   'chat.zadneDotazy': { cs: 'Zatím se nikdo na nic neptá.', en: 'No one has asked anything yet.' },
 
   // Oddělovač dnů a čas u zprávy (lib/chat.ts).
@@ -11922,6 +11932,90 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chybaApi.diskNeniNastaveny': {
     cs: 'Napojení na Disk není nastavené.',
     en: 'The Drive connection is not set up.',
+  },
+  // CHYBY Z ROUT CHATU (dávka 7r, 21. 10. 2026). Vzor z dávek 7o-7q: routa
+  // pošle vedle české věty KLÍČ a ChatDock si ji přeloží (`hlaskaChyby`).
+  'chybaApi.prilohyBezUloziste': {
+    cs: 'Přílohy zatím nejdou - portál nemá nastavené úložiště souborů.',
+    en: 'Attachments are not available yet — the portal has no file storage set up.',
+  },
+  'chybaApi.neplatnaPriloha': { cs: 'Neplatná příloha.', en: 'Invalid attachment.' },
+  'chybaApi.prilohaNepripravena': {
+    cs: 'Přílohu se nepodařilo připravit.',
+    en: 'The attachment could not be prepared.',
+  },
+  'chybaApi.prilohaNenalezena': { cs: 'Příloha nenalezena.', en: 'Attachment not found.' },
+  'chybaApi.prilohaNenactena': {
+    cs: 'Přílohu se nepodařilo načíst.',
+    en: 'The attachment could not be loaded.',
+  },
+  'chybaApi.prilohaNenahrana': {
+    cs: 'Přílohu se nepodařilo nahrát.',
+    en: 'The attachment could not be uploaded.',
+  },
+  'chybaApi.poradiNeulozeno': {
+    cs: 'Pořadí se nepodařilo uložit.',
+    en: 'The order could not be saved.',
+  },
+  'chybaApi.chatSamSeSebou': {
+    cs: 'Sám se sebou si psát nemusíte.',
+    en: 'There is no need to message yourself.',
+  },
+  'chybaApi.clenTymuNeznamy': {
+    cs: 'Takového člena týmu nemáme.',
+    en: 'There is no such team member.',
+  },
+  'chybaApi.zalozeniNezdarilo': {
+    cs: 'Založení se nezdařilo.',
+    en: 'Creating it did not work.',
+  },
+  'chybaApi.konverzaceNenalezena': {
+    cs: 'Konverzace nenalezena.',
+    en: 'Conversation not found.',
+  },
+  'chybaApi.zpravyNenactene': {
+    cs: 'Zprávy se nepodařilo načíst.',
+    en: 'The messages could not be loaded.',
+  },
+  'chybaApi.vlaknoNenalezeno': {
+    cs: 'Vlákno se nenašlo.',
+    en: 'The thread was not found.',
+  },
+  'chybaApi.zpravaNeodeslana': {
+    cs: 'Zprávu se nepodařilo odeslat.',
+    en: 'The message could not be sent.',
+  },
+  'chybaApi.skupinaNenalezena': { cs: 'Skupina nenalezena.', en: 'Group not found.' },
+  'chybaApi.skupinaCelyTymClenove': {
+    cs: 'Do téhle skupiny patří celý tým, členy v ní měnit nejde.',
+    en: 'This group has the whole team in it, so its members cannot be changed.',
+  },
+  'chybaApi.skupinaCelyTymOdchod': {
+    cs: 'Z téhle skupiny odejít nejde — je v ní celý tým. Můžete si ji ztlumit.',
+    en: 'You cannot leave this group — it has the whole team in it. You can mute it instead.',
+  },
+  'chybaApi.ulozeniNezdarilo': { cs: 'Uložení se nezdařilo.', en: 'Saving did not work.' },
+  'chybaApi.odchodNezdaril': {
+    cs: 'Odchod se nezdařil.',
+    en: 'Leaving the group did not work.',
+  },
+  'chybaApi.zpravaNenalezena': { cs: 'Zpráva nenalezena.', en: 'Message not found.' },
+  'chybaApi.zpravaNeupravena': {
+    cs: 'Zprávu se nepodařilo upravit.',
+    en: 'The message could not be edited.',
+  },
+  'chybaApi.zpravaMaOdpovedi': {
+    cs: 'Pod zprávou visí odpovědi — smazat by je vzalo s sebou. Můžete ji upravit.',
+    en: 'This message has replies under it — deleting it would take them too. You can edit it instead.',
+  },
+  'chybaApi.zpravaNesmazana': {
+    cs: 'Zprávu se nepodařilo smazat.',
+    en: 'The message could not be deleted.',
+  },
+  'chybaApi.neznamySmajlik': { cs: 'Neznámý smajlík.', en: 'Unknown emoji.' },
+  'chybaApi.reakceNeulozena': {
+    cs: 'Reakci se nepodařilo uložit.',
+    en: 'The reaction could not be saved.',
   },
   // CHYBY Z ROUT PŘEPOSLECHU (dávka 7p, 19. 10. 2026). Záznam chyby
   // v AudioTaggeru je podle slovníčku „tag".
