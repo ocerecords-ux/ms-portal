@@ -155,6 +155,55 @@ const KRESBY: Record<string, ReactNode> = {
       <path {...obrys} d="M10 13.5h4" />
     </>
   ),
+  /**
+   * PROCESY (22. 10. 2026) - vývojový diagram: dva kroky obrysem a třetí
+   * plný, tedy ten, u kterého zrovna jsme.
+   */
+  '/procesy': (
+    <>
+      <rect {...obrys} x="3.2" y="3.6" width="7" height="5.2" rx="1.6" />
+      <rect {...obrys} x="13.8" y="3.6" width="7" height="5.2" rx="1.6" />
+      <path {...obrys} d="M10.2 6.2h3.6M6.7 8.8v3.4h10.6V8.8M12 12.2v3" />
+      <rect {...akcent} x="8.4" y="15.2" width="7.2" height="5.2" rx="1.8" />
+    </>
+  ),
+  // HUDBA (22. 10. 2026) - nota, plná je hlavička.
+  '/hudba-audioknihy': (
+    <>
+      <path {...obrys} d="M9.5 17.5V5.2l10-2v12.1" />
+      <path {...obrys} d="M9.5 8.6l10-2" />
+      <circle {...akcent} cx="6.8" cy="17.6" r="3.2" />
+      <circle {...akcent} cx="16.8" cy="15.3" r="2.8" />
+    </>
+  ),
+  // NOVINKY (22. 10. 2026) - noviny se složeným rohem, plný je titulek.
+  '/novinky': (
+    <>
+      <path {...obrys} d="M4 5.5a1.5 1.5 0 0 1 1.5-1.5h10A1.5 1.5 0 0 1 17 5.5v13H5.5A1.5 1.5 0 0 1 4 17z" />
+      <path {...obrys} d="M17 8.5h2.5A1.5 1.5 0 0 1 21 10v7a1.5 1.5 0 0 1-1.5 1.5H17" />
+      <rect {...akcent} x="6.8" y="7" width="7.4" height="2.4" rx="1.2" />
+      <path {...obrys} d="M6.8 12.2h7.4M6.8 15.2h5" />
+    </>
+  ),
+  // TECHNIKA (22. 10. 2026) - mikrofonní pavouk, plná je kapsle. Studia mají
+  // mikrofon na stojánku, tohle je jeden KUS techniky v závěsu.
+  '/admin/technika': (
+    <>
+      <rect {...akcent} x="9.6" y="7.4" width="4.8" height="8.4" rx="2.4" />
+      <path {...obrys} d="M5.4 5.2h13.2M12 5.2v2.2" />
+      <path {...obrys} d="M7.2 11.6c0 2.6 2.1 4.8 4.8 4.8s4.8-2.2 4.8-4.8" />
+      <path {...obrys} d="M12 16.4v4.2" />
+    </>
+  ),
+  // PŘÍBĚHY NA SÍTĚ (22. 10. 2026) - telefon na výšku, plný je kroužek
+  // příběhu nahoře.
+  '/site/pribehy': (
+    <>
+      <rect {...obrys} x="6.2" y="2.6" width="11.6" height="18.8" rx="2.6" />
+      <path {...obrys} d="M10.4 18.6h3.2" />
+      <circle {...akcent} cx="12" cy="9.4" r="3.2" />
+    </>
+  ),
   // Můj účet - jeden člověk, plná hlava.
   '/muj-ucet': (
     <>
