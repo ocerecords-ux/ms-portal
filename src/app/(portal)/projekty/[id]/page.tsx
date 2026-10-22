@@ -515,6 +515,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             jmeno: true,
             poznamka: true,
             autorJmeno: true,
+            odeslanoKlientoviAt: true,
+            vybranoAt: true,
+            vybralKdo: true,
             user: { select: { name: true, email: true } },
           },
         })
@@ -525,6 +528,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         jmeno: string | null;
         poznamka: string | null;
         autorJmeno: string | null;
+        odeslanoKlientoviAt: Date | null;
+        vybranoAt: Date | null;
+        vybralKdo: string | null;
         user: { name: string | null; email: string } | null;
       }[])
     : [];
@@ -569,7 +575,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         }))}
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
         herci={herciUctu.map((h) => ({ id: h.id, label: rozlis(h.id, bezTitulu(h.name) || h.email) }))}
-        navrhyHercu={navrhyHercu}
+        navrhyHercu={navrhyHercu.map((n) => ({
+          ...n,
+          odeslanoKlientoviAt: n.odeslanoKlientoviAt ? n.odeslanoKlientoviAt.toISOString() : null,
+          vybranoAt: n.vybranoAt ? n.vybranoAt.toISOString() : null,
+        }))}
         smiNavrhy={canEdit}
         dotoceniHercu={dotoceniPodleHerce}
         normostranyHercu={normostranyPodleHerce}

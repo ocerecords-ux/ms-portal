@@ -5636,6 +5636,18 @@ model NavrhHerce {
   /// Kdo navrh zapsal - at je po mesici poznat, ci napad to byl.
   autorJmeno      String?
 
+  /// VYBER KLIENTEM (zadani 22. 10. 2026: „udelame tlacitko odeslat navrhy na
+  /// klienta a muze kliknout na vybrat. Kdyz vybere, tak nam to zahlasi zvonek
+  /// a zustane tam jen ten navrh v okne navrhu").
+  ///
+  /// Klient chodi pres token projektu na /navrhy/<token>; vidi jen jmena,
+  /// nase poznamky ne. Vyber nic neprepina v obsazeni - herce si pridame
+  /// rucne, tohle je jen vzkaz, koho si klient preje.
+  odeslanoKlientoviAt DateTime?
+  vybranoAt           DateTime?
+  /// Jmeno nebo mail toho, kdo vybral - at je v karte videt, kdo rozhodl.
+  vybralKdo           String?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

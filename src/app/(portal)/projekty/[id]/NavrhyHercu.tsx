@@ -30,6 +30,11 @@ export type NavrhHerce = {
   poznamka: string | null;
   autorJmeno: string | null;
   user: { name: string | null; email: string } | null;
+  /** Odesláno klientovi k výběru (22. 10. 2026) - ISO, nebo prázdno. */
+  odeslanoKlientoviAt: string | null;
+  vybranoAt: string | null;
+  /** Jméno nebo mail toho, kdo z klientské strany vybral. */
+  vybralKdo: string | null;
 };
 
 const TEXTY = {
@@ -47,6 +52,12 @@ const TEXTY = {
     ulozit: 'Uložit',
     zrusit: 'Zrušit',
     chyba: 'Nepodařilo se to uložit.',
+    odeslatKlientovi: 'Odeslat návrhy klientovi',
+    odesilam: 'Odesílám…',
+    odeslano: 'odesláno klientovi',
+    odeslanoHlaska: 'Odesláno — klient si vybere a dáme vědět zvonkem.',
+    vybralKlient: (kdo: string) => `vybral klient · ${kdo}`,
+    vybranoHlaska: 'Herce si přidejte do obsazení ručně — výběr nic nepřeklápí.',
   },
   en: {
     nadpis: 'Suggested actors',
@@ -62,6 +73,12 @@ const TEXTY = {
     ulozit: 'Save',
     zrusit: 'Cancel',
     chyba: 'Saving failed.',
+    odeslatKlientovi: 'Send the suggestions to the client',
+    odesilam: 'Sending…',
+    odeslano: 'sent to the client',
+    odeslanoHlaska: 'Sent - the client picks and the bell tells us.',
+    vybralKlient: (kdo: string) => `picked by the client · ${kdo}`,
+    vybranoHlaska: 'Add the actor to the cast by hand - picking changes nothing on its own.',
   },
 };
 
@@ -91,6 +108,7 @@ export function NavrhyHercu({
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [hlaska, setHlaska] = useState<string | null>(null);
+  const [odesilam, setOdesilam] = useState(false);
 
   const zaklad = `/api/projekty/${encodeURIComponent(caflouProjectId)}/navrhy-hercu`;
 
@@ -142,6 +160,32 @@ export function NavrhyHercu({
     await fetch(`${zaklad}/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => undefined);
   }
 
+  /**
+   * ODESLÁNÍ KLIENTOVI (22. 10. 2026). Klientovi odejde mail jen se jmény
+   * a odkazem; výběrem nám zazvoní zvonek a v kartě zůstane jen ten jeden
+   * návrh - viz /api/projekty/[id]/navrhy-hercu/odeslat.
+   */
+  async function odesliKlientovi() {
+    if (odesilam) return;
+    setOdesilam(true);
+    setChyba(null);
+    setHlaska(null);
+    try {
+      const res = await fetch(`${zaklad}/odeslat`, { method: 'POST' });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        setChyba(data?.error || t.chyba);
+        return;
+      }
+      setHlaska(t.odeslanoHlaska);
+      await nacti();
+    } catch {
+      setChyba(t.chyba);
+    } finally {
+      setOdesilam(false);
+    }
+  }
+
   async function preklop(navrh: NavrhHerce) {
     if (!navrh.userId) return;
     onDoObsazeni(navrh.userId);
@@ -182,6 +226,16 @@ export function NavrhyHercu({
               {n.poznamka && (
                 <span className="text-xs font-body text-muted truncate">· {n.poznamka}</span>
               )}
+              {/* Vybraný návrh je jediný, který v kartě zůstane - zelený, ať
+                  je na první pohled vidět, na čem jsme (22. 10. 2026). */}
+              {n.vybranoAt && (
+                <span className="shrink-0 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold uppercase tracking-wide px-1.5 py-[1px]">
+                  {t.vybralKlient(n.vybralKdo || '—')}
+                </span>
+              )}
+              {!n.vybranoAt && n.odeslanoKlientoviAt && (
+                <span className="shrink-0 text-[10px] font-body text-muted">{t.odeslano}</span>
+              )}
               <span className="ml-auto shrink-0 flex items-center gap-2.5">
                 {n.userId && !obsazeni.includes(n.userId) && (
                   <button
@@ -210,6 +264,11 @@ export function NavrhyHercu({
       )}
 
       {hlaska && <p className="text-[11px] font-body text-brand-purple m-0">{hlaska}</p>}
+
+      {/* Klient vybral - herce si pridavame rucne, viz routa vybrat. */}
+      {navrhy.some((n) => n.vybranoAt) && (
+        <p className="text-[11px] font-body text-muted m-0">{t.vybranoHlaska}</p>
+      )}
 
       {pridavam ? (
         <div className="flex flex-col gap-2 pt-1">
@@ -254,16 +313,29 @@ export function NavrhyHercu({
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setPridavam(true);
-            setHlaska(null);
-          }}
-          className="self-start rounded-lg border border-dashed border-line text-muted hover:text-brand-purple hover:border-brand-purple font-heading font-semibold text-[11px] px-3 py-1.5 transition-colors"
-        >
-          {t.pridat}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setPridavam(true);
+              setHlaska(null);
+            }}
+            className="rounded-lg border border-dashed border-line text-muted hover:text-brand-purple hover:border-brand-purple font-heading font-semibold text-[11px] px-3 py-1.5 transition-colors"
+          >
+            {t.pridat}
+          </button>
+          {/* Dokud si klient nevybral, da se nabidka poslat (i znovu). */}
+          {navrhy.length > 0 && !navrhy.some((n) => n.vybranoAt) && (
+            <button
+              type="button"
+              onClick={() => void odesliKlientovi()}
+              disabled={odesilam}
+              className="rounded-lg border border-line bg-surface text-brand-purple hover:border-brand-purple font-heading font-semibold text-[11px] px-3 py-1.5 transition-colors disabled:opacity-50"
+            >
+              {odesilam ? t.odesilam : t.odeslatKlientovi}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

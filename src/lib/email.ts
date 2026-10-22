@@ -4058,6 +4058,95 @@ export function buildZapracovaniPripominekHtml(input: ZapracovaniPripominekInput
   });
 }
 
+export type NavrhyHercuInput = {
+  prijemci: string[];
+  skrytaKopie?: string[];
+  jmenoKlienta: string | null;
+  nazevProjektu: string;
+  /** Jen jména - naše poznámky ke klientovi nejdou (zadání 22. 10. 2026). */
+  jmena: string[];
+  odkaz: string;
+  jazyk?: Jazyk;
+};
+
+/**
+ * NÁVRHY HERCŮ KLIENTOVI (zadání 22. 10. 2026: „uděláme tlačítko odeslat
+ * návrhy na klienta a může kliknout na vybrat").
+ *
+ * V mailu jsou JEN JMÉNA a jedno tlačítko. Vybírá se až na stránce - odkaz
+ * z mailu si otevře kdejaký antivir a výběr herce není nic, co má odklepnout
+ * robot (stejné pravidlo jako u schvalování spotu).
+ */
+export function buildNavrhyHercuHtml(input: NavrhyHercuInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  const radky = input.jmena
+    .map(
+      (jmeno, i) => `
+      <tr>
+        <td class="label" style="white-space:nowrap;">${i + 1}.</td>
+        <td class="value regular">${escapeHtml(jmeno)}</td>
+      </tr>`,
+    )
+    .join('');
+
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.navrhyHercu.stitek'),
+    preheader: prelozitEmail(jazyk, 'mail.navrhyHercu.preheader'),
+    body: `
+    <h2>${prelozitEmail(jazyk, 'mail.navrhyHercu.nadpis')}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoKlienta ?? ''))}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.navrhyHercu.uvod', {
+      projekt: `<strong>${escapeHtml(input.nazevProjektu)}</strong>`,
+    })}</p>
+
+    <p class="small" style="margin-bottom:6px;"><strong>${prelozitEmail(
+      jazyk,
+      'mail.navrhyHercu.seznamNadpis',
+    )}</strong></p>
+    <table role="presentation" class="field-table">${radky}</table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.navrhyHercu.tlacitko')}</a>
+    </div>
+
+    <p class="small">${prelozitEmail(jazyk, 'mail.navrhyHercu.patka')}</p>
+  `,
+  });
+}
+
+export async function sendNavrhyHercuEmail(input: NavrhyHercuInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
+  const predmet = prelozitEmailS(jazyk, 'mail.navrhyHercu.predmet', { projekt: input.nazevProjektu });
+  const telo = buildNavrhyHercuHtml(input);
+
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.prijemci.join(', '),
+    bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
+    subject: predmet,
+    text: [
+      pozdravPosty(jazyk, input.jmenoKlienta ?? ''),
+      '',
+      prelozitEmailS(jazyk, 'mail.navrhyHercu.textUvod', { projekt: input.nazevProjektu }),
+      ...input.jmena.map((j, i) => `${i + 1}. ${j}`),
+      '',
+      prelozitEmail(jazyk, 'mail.navrhyHercu.textOdkaz'),
+      input.odkaz,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: telo,
+  });
+
+  return { ...overOdeslani(vysledekPosty, 'sendNavrhyHercuEmail'), predmet, telo };
+}
+
 export async function sendZapracovaniPripominekEmail(input: ZapracovaniPripominekInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };

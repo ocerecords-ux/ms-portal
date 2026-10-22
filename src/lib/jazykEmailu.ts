@@ -1109,6 +1109,34 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     en: 'there is a new version of {projekt}. You will find it in the project folder.',
   },
   'mail.zapracovani.verze': { cs: 'Verze {verze}', en: 'Version {verze}' },
+
+  // NAVRHY HERCU KLIENTOVI (zadani 22. 10. 2026). Klient dostane seznam jmen
+  // a u kazdeho tlacitko Vybrat; nase interni poznamky v mailu nejsou.
+  'mail.navrhyHercu.stitek': { cs: 'MS Portal - vyber herce', en: 'MS Portal - casting' },
+  'mail.navrhyHercu.predmet': {
+    cs: '{projekt} - vyberte prosim herce',
+    en: '{projekt} - please pick a voice',
+  },
+  'mail.navrhyHercu.preheader': {
+    cs: 'Pripravili jsme nekolik hlasu, stacil klik.',
+    en: 'We have lined up a few voices - one click is enough.',
+  },
+  'mail.navrhyHercu.nadpis': { cs: 'Koho do toho obsadime?', en: 'Who should we cast?' },
+  'mail.navrhyHercu.uvod': {
+    cs: 'k projektu {projekt} jsme vybrali herce, kteri by podle nas sedli. Kliknete prosim na toho, ktereho chcete - dal uz se o to postarame.',
+    en: 'for {projekt} we have picked a few actors we think fit. Click the one you want and we will take it from there.',
+  },
+  'mail.navrhyHercu.seznamNadpis': { cs: 'Nase navrhy', en: 'Our suggestions' },
+  'mail.navrhyHercu.tlacitko': { cs: 'Vybrat herce', en: 'Pick an actor' },
+  'mail.navrhyHercu.patka': {
+    cs: 'Vyber neni zavazny - kdyby vam nesedel nikdo, napiste nam a pripravime dalsi.',
+    en: 'Nothing is binding - if none of them fits, tell us and we will line up more.',
+  },
+  'mail.navrhyHercu.textUvod': {
+    cs: 'k projektu {projekt} jsme vybrali herce, kteri by podle nas sedli:',
+    en: 'for {projekt} we have picked a few actors we think fit:',
+  },
+  'mail.navrhyHercu.textOdkaz': { cs: 'Vybrat herce:', en: 'Pick an actor:' },
   'mail.zapracovani.textOdkaz': { cs: 'Poslechnout a pripominkovat:', en: 'Listen and comment:' },
 };
 
