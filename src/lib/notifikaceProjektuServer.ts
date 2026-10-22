@@ -11,7 +11,7 @@ import { pozdrav } from '@/lib/osloveni';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail, buildStavProjektuHtml } from '@/lib/email';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
-import { zajistiOdkaz, urlNahravek, urlPreposlechu } from '@/lib/preposlechOdkaz';
+import { zajistiOdkaz, urlNahravek, urlPreposlechu, urlPripominek } from '@/lib/preposlechOdkaz';
 import { nazevSeSerii } from '@/lib/serie';
 
 /**
@@ -241,9 +241,19 @@ export async function posliNotifikaciKeStavu(
      *
      * Odkaz vede na stránku s nahrávkami; samotné otevření nic nepřeklápí.
      */
+    /**
+     * U REKLAMY SE OTEVÍRÁ JEN JEDNO OKNO (zadání 22. 10. 2026: „v podstatě
+     * u klientů reklam se může otevřít jen tohle okno… i když jde ten mail
+     * poprvé ve stavu dokončeno, ke schválení").
+     *
+     * Do 22. 10. 2026 vedl první mail do složky s nahrávkami a až zpráva
+     * o zapracovaných připomínkách do připomínkování - klient tak podle
+     * pořadí mailů viděl pokaždé něco jiného. Teď vede obojí do téhož okna:
+     * je v něm spot, schvalovací karta, připomínky i stažení.
+     */
     const odkazNaSchvaleni =
       druh === 'REKLAMA' && token && stav === 'Dokončeno - ke schválení'
-        ? `${urlNahravek(token)}?schvalit=1`
+        ? `${urlPripominek(token)}?schvalit=1`
         : null;
 
     let odkazNaPreposlech: string | null = null;
@@ -283,7 +293,9 @@ export async function posliNotifikaciKeStavu(
       predmet: dosadPromenne(vzor.predmet, hodnoty),
       nadpis: dosadPromenne(vzor.nadpis, hodnoty),
       text: dosadPromenne(vzor.text, hodnoty),
-      odkazNaDisk,
+      // U reklamy ke schválení vede i hlavní tlačítko do připomínkování -
+      // viz odkazNaSchvaleni výš.
+      odkazNaDisk: odkazNaSchvaleni ?? odkazNaDisk,
       odkazNaPreposlech,
       odkazNaSchvaleni,
       /**
@@ -410,9 +422,10 @@ export async function sestavNahledZpravy(
     const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
     const vzor = await vzorProStav(stav, druh);
 
+    // Náhled musí ukazovat totéž co odeslaná zpráva - viz odesílání výš.
     const odkazNaSchvaleni =
       druh === 'REKLAMA' && token && stav === 'Dokončeno - ke schválení'
-        ? `${urlNahravek(token)}?schvalit=1`
+        ? `${urlPripominek(token)}?schvalit=1`
         : null;
     const odkazNaPreposlech = vzor.audiotagger && token ? urlPreposlechu(token) : null;
 
@@ -435,7 +448,7 @@ export async function sestavNahledZpravy(
       predmet: dosadPromenne(vzor.predmet, hodnoty),
       nadpis: dosadPromenne(vzor.nadpis, hodnoty),
       text: dosadPromenne(vzor.text, hodnoty),
-      odkazNaDisk,
+      odkazNaDisk: odkazNaSchvaleni ?? odkazNaDisk,
       odkazNaPreposlech,
       odkazNaSchvaleni,
       popisekOdkazu: druh === 'REKLAMA' ? 'Otevřít' : null,

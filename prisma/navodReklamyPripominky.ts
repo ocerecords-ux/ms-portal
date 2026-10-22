@@ -81,6 +81,8 @@ Tlačítko **Schválit** je na třech místech a všechna dělají totéž:
 
 **Odkaz pro klienta** v záložce Připomínky vede u reklamy rovnou do taggeru spotu (adresa /pripominkovat/…) — tam klient píše připomínky k času a má tlačítko Schválit.
 
+**U reklamy se klientovi otevírá jen jedno okno** (22. 10. 2026). Dřív vedl první mail ve stavu „Dokončeno - ke schválení" do složky s nahrávkami a až zpráva o zapracovaných připomínkách do taggeru — klient tak podle pořadí mailů viděl pokaždé něco jiného. Teď vede obojí do taggeru spotu: je v něm spot, schvalovací karta, připomínky i **tlačítko Stáhnout** vedle ovládání přehrávání. Soubor se stáhne přesně pod tím jménem, jaké má na Disku. Platí to i pro odkazy, které klient dostal dřív — adresa zůstává stejná, mění se jen to, co se na ní vykreslí.
+
 **Schvaluje se celý projekt, ne jednotlivá nahrávka.** Ať klient klikne kdekoliv, schvaluje tutéž zakázku.
 
 Co se stane po kliknutí:

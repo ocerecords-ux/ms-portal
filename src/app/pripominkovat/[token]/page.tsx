@@ -54,7 +54,8 @@ export default async function PripominkovatPage({
   searchParams,
 }: {
   params: { token: string };
-  searchParams?: { soubor?: string };
+  /** `?schvalit=1` z mailu „Dokončeno - ke schválení" - karta se zvýrazní. */
+  searchParams?: { soubor?: string; schvalit?: string };
 }) {
   const jazyk = nactiJazyk();
   const zadano = searchParams?.soubor?.trim();
@@ -135,7 +136,11 @@ export default async function PripominkovatPage({
         </div>
 
         {schvaleni.lzeSchvalit && (
-          <SchvalitSpot token={params.token} schvalenoAt={schvaleni.schvalenoAt} />
+          <SchvalitSpot
+            token={params.token}
+            schvalenoAt={schvaleni.schvalenoAt}
+            zvyraznit={searchParams?.schvalit === '1'}
+          />
         )}
 
         <SpotTagger
