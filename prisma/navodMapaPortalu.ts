@@ -48,7 +48,7 @@ Vedle názvu zakázky svítí dvě malé značky s tím, **jaké doklady u ní v
 
 **Firmy** jsou klienti a dodavatelé. U klienta se kromě adresy a fakturačních údajů nastavuje i to, **které zprávy mu portál posílá** — na kartě firmy je záložka Notifikace a co tam není zapnuté, se neodešle. Nová firma má vypnuté všechno. U každého stavu se vedle volby komu (neposílat / klientovi / jen nám interně) dá rozkliknout **Komu z nás u tohohle stavu** (12. 10. 2026) — vybraní lidé platí jen pro ten stav a NAHRAZUJÍ seznam u celé firmy, takže u některých stavů může okruh být užší než u zbytku. Nic nevybraného = platí firemní seznam, a když není ani ten, výchozí dvojice. Ve stejném okně se u stavů, které chodí klientovi, vypisují i **adresy u klienta** (20. 10. 2026) — vyplněné nahrazují klienta vedeného u projektu, a je to kvůli stavu „Dokončeno - ke schválení", kde schvaluje někdo jiný než kdo objednával. Na kartě firmy jsou vedle sebe i **maily na zasílání cenových nabídek** a **maily na zasílání faktur**; vyplněné nahrazují kontaktní e-mail firmy, prázdné nechávají všechno po staru.
 
-**Uživatelé** jsou lidé. Kromě role se u účtu zaškrtává, co ten člověk smí a co mu chodí: jestli může být manažerem projektu, jestli podepisuje smlouvy za Mediaspace, jestli vidí sekci Banka, jestli spravuje technické parametry, komu chodí objednávky. Je to schválně **u účtu, ne v kódu** — lidi se mění a portál o tom jinak neví.
+**Uživatelé** jsou lidé. Kromě role se u účtu zaškrtává, co ten člověk smí a co mu chodí: jestli může být manažerem projektu, jestli podepisuje smlouvy za Mediaspace, jestli vidí sekci Banka nebo Pokladna, jestli spravuje technické parametry, komu chodí objednávky. Je to schválně **u účtu, ne v kódu** — lidi se mění a portál o tom jinak neví.
 
 U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích točí. Kdo jezdí do Brna I i Brna II, má zaškrtnutá obě. Projeví se to na dvou místech: v seznamu uživatelů je to vidět ve sloupci Lokace a v kalendáři jde k události vybrat **jen zvukaře z toho studia** — na brněnskou frekvenci pražského nezapíšete, a naopak. Hlídá to i server, ne jen nabídka ve formuláři. Dokud u nikoho v daném studiu není nic zaškrtnuté, nabízejí se všichni, ať jde frekvence zapsat; kdo je u starší události napsaný, v ní zůstane. Zaškrtávátka jsou ze skutečných studií, takže nově založené studio v nabídce přibude samo.
 
@@ -62,7 +62,13 @@ Kdo má jinou roli (třeba Žůžo-labůžo) a občas dělá i zvukaře, má na 
 
 **Ceníky** jsou dvě věci najednou: ceny služeb a zároveň seznam typů projektu. U projektu jde vybrat jen takový typ, který je v ceníku — proto se nové typy přidávají tady.
 
-**Doklady** jsou peníze: nabídky, faktury, upomínky, přijaté výdaje, smlouvy, banka a „Moje firmy" (za kterou firmu doklad vystavujeme, číselné řady, bankovní účty, podpis na faktury). U výdaje se nahraje PDF nebo fotka dokladu (i víc souborů) — údaje se z něj přečtou samy; přílohy i údaje jde kdykoli později doplnit v detailu výdaje. Co se platí **na vícekrát** (smlouva, velká faktura), se v detailu výdaje zapisuje po částech — karta **Úhrady**: kolik odešlo a kdy. Portál z toho drží **kolik je uhrazeno a kolik zbývá doplatit**, v seznamu svítí odznak „Částečně" a QR platba se kreslí už jen na zbytek. Uhrazeno se doklad označí sám, jakmile se částka dorovná.
+**Doklady** jsou peníze: nabídky, faktury, upomínky, přijaté výdaje, banka, pokladna, smlouvy a „Moje firmy" (za kterou firmu doklad vystavujeme, číselné řady, bankovní účty, podpis na faktury). U výdaje se nahraje PDF nebo fotka dokladu (i víc souborů) — údaje se z něj přečtou samy; přílohy i údaje jde kdykoli později doplnit v detailu výdaje. Co se platí **na vícekrát** (smlouva, velká faktura), se v detailu výdaje zapisuje po částech — karta **Úhrady**: kolik odešlo a kdy. Portál z toho drží **kolik je uhrazeno a kolik zbývá doplatit**, v seznamu svítí odznak „Částečně" a QR platba se kreslí už jen na zbytek. Uhrazeno se doklad označí sám, jakmile se částka dorovná.
+
+**Pokladna (23. 10. 2026)** je hotovostní pokladní kniha — **jedna na každou naši firmu**, v její výchozí měně; která to je, říká přepínač v liště. Nahoře zůstatek, pod ním **Příjem** a **Výdej**; každý doklad dostane číslo z vlastní řady (příjmové a výdajové se číslují zvlášť) a u každého řádku je vidět průběžný zůstatek, takže je snadné najít den, od kterého to přestalo sedět s krabicí. **Počáteční stav** (kolik v pokladně bylo, než se začala vést v portálu) se zadává v Nastavení pokladny dole.
+
+**Hotově zaplacený výdaj se do pokladny přenese sám.** Účtenka se zadává jednou — ve Výdajích — a jakmile je u ní úhrada se způsobem *hotově* (nebo je celý doklad označený jako uhrazený hotově), spadne do pokladny jako výdajový doklad s odkazem zpátky na výdaj. Tam se taky opravuje: v pokladně se takový řádek nepřepisuje ani nemaže, jinak by jedna stokoruna měla dvě pravdy. Hotovostní výdaj v **jiné měně, než je pokladna**, se nepřenáší — zapíše se ručně.
+
+**Pokladnu vidí jen ten, kdo to má u účtu zaškrtnuté** (Admin ▸ Uživatelé → *Vidí sekci Pokladna*), stejně jako Banku — ani ostatní Žůžo-labůžo ne.
 
 **Víc našich firem v jednom portálu (12. 10. 2026).** Účetnictví je oddělené, řízení práce ne: projekty, kalendář, natáčecí plány, chat i úkoly jsou pro všechny naše firmy jedny a tytéž. Dělí se to **podle klienta** — na kartě klienta (Firmy → karta firmy → Údaje) je pole **Naše firma** a všechno, co se tomu klientovi vystaví a co se u jeho zakázek utratí, jde pod ni. Klient bez vyplněného pole spadne pod firmu označenou jako výchozí, takže u stávajících zakázek se nic nemění. Vystavuje-li se doklad ručně, firma se předvyplní podle odběratele; když odběratel ještě vybraný není, vezme se ta z přepínače.
 
@@ -207,7 +213,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 - **Zvukař** — projekty, kde pracuje, své výkazy a kalendář ke čtení. Nevidí rozpočty, doklady ani projekty v přípravě.
 - **Produkce** — plánování, rozpočty, pozvánky herců. Nevidí doklady ani ceny objednávek.
 - **Žůžo-labůžo (admin)** — všechno, včetně administrace.
-- **Banka** je navíc: vidí ji jen ten, kdo to má u účtu zaškrtnuté, ani ostatní admini ne.
+- **Banka** a **Pokladna** jsou navíc: vidí je jen ten, kdo to má u účtu zaškrtnuté, ani ostatní admini ne. Jsou to dvě samostatná práva — hotovost a bankovní účet se můžou rozejít.
 - **Nápověda** je naše: návod bez zaškrtnuté role vidí jen tým (Žůžo-labůžo, Produkce, Zvukař). Herec nebo klient uvidí jen návod, u kterého je v Adminu ▸ Návody ▸ „Komu se ukáže" zaškrtnutá jeho role — a jen tehdy se mu v liště objeví otazník.
 
 # Co portál dělá sám
@@ -238,6 +244,7 @@ Portál běží na Vercelu, data jsou v databázi. Nahrávky bydlí na **Google 
 - **Co jsme klientovi poslali?** Historie u projektu.
 - **Kolik jsme fakturovali?** Doklady u projektu, nebo sekce Doklady.
 - **Přišly peníze?** Doklady → Banka (kdo na ni má právo). Uhrazené faktury se označují samy, obvykle do pár minut od připsání.
+- **Kolik máme v kase?** Doklady → Pokladna (kdo na ni má právo). Zůstatek je nahoře, hotově zaplacené výdaje do ní padají samy.
 - **Proč klientovi nic nepřišlo?** Firmy → karta firmy → Notifikace.
 - **Kde jsou naše složky na Disku?** Nahrávky — vedle složky klienta se tam od 30. 9. 2026 nabízejí i naše vlastní složky (Klientská zóna, Dokumenty, Marketing). Každý vidí jen ty, které má na kartě účtu zaškrtnuté; kdo složku nemá, tomu se v přepínači vůbec neukáže. Zakládají se v Administraci → Složky na Disku. Pozor: rozhoduje to jen o tom, co ukáže portál — kdo si Disk otevře přímo v Googlu, uvidí všechno, co má jeho účet nasdílené.
 - **Jak něco udělat?** Otazník v liště — tahle Nápověda.`,

@@ -3867,6 +3867,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'doklady.zalozkaSmlouvy': { cs: 'Smlouvy', en: 'Contracts' },
   'doklady.zalozkaMojeFirmy': { cs: 'Moje firmy', en: 'My companies' },
   'doklady.zalozkaBanka': { cs: 'Banka', en: 'Bank' },
+  'doklady.zalozkaPokladna': { cs: 'Pokladna', en: 'Cash box' },
 
   // --- doklady: živý náhled dokladu ---
   'doklady.nahled': { cs: 'Náhled', en: 'Preview' },
@@ -4488,6 +4489,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'they are in every channel a customer opens with the Ask a question button',
   },
   'uzivatel.pravoVidiBanku': { cs: 'Vidí sekci Banka', en: 'Can see the Bank section' },
+  'uzivatel.pravoVidiPokladnu': { cs: 'Vidí sekci Pokladna', en: 'Can see the Cash box section' },
   // Přístup do sekcí zaškrtávátky (28. 9. 2026). Vidí to jen superadmin.
   'uzivatel.pristupySekce': { cs: 'Přístup do sekcí', en: 'Access to sections' },
   'uzivatel.pristupyPopis': {
@@ -4514,6 +4516,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.pravoVidiBankuPopis': {
     cs: 'pohyby na účtu, párování plateb a napojení účtu v Dokladech',
     en: 'account movements, payment matching and the account connection in Invoicing',
+  },
+  'uzivatel.pravoVidiPokladnuPopis': {
+    cs: 'hotovostní pokladní kniha a zůstatek v Dokladech',
+    en: 'the cash book and its balance in Invoicing',
   },
   'uzivatel.pravoTechParametry': {
     cs: 'Spravuje technické parametry',

@@ -15,6 +15,8 @@ export const ZALOZKY_DOKLADU: { klic: string; href: string; preklad: string }[] 
   { klic: 'vydaje', href: '/admin/doklady/vydaje', preklad: 'doklady.zalozkaVydaje' },
   // Banku vidi jen ten, kdo na ni ma pravo (17. 9. 2026).
   { klic: 'banka', href: '/admin/doklady/banka', preklad: 'doklady.zalozkaBanka' },
+  // Pokladnu taky - stejne pravo u uctu, jen jine (23. 10. 2026).
+  { klic: 'pokladna', href: '/admin/doklady/pokladna', preklad: 'doklady.zalozkaPokladna' },
   // Smlouvy s elektronickym podpisem (zadani 8. 9. 2026).
   { klic: 'smlouvy', href: '/admin/doklady/smlouvy', preklad: 'doklady.zalozkaSmlouvy' },
   { klic: 'moje-firmy', href: '/admin/doklady/moje-firmy', preklad: 'doklady.zalozkaMojeFirmy' },

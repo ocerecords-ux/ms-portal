@@ -64,6 +64,7 @@ type EditableUser = {
   fakturaceProjektu: boolean;
   /** Vidí sekci Banka (zadání 17. 9. 2026). */
   vidiBanku: boolean;
+  vidiPokladnu: boolean;
   /** Spravuje technické parametry výroby (zadání 27. 9. 2026). */
   spravujeTechParametry: boolean;
   /** Do kterých sekcí smí - klíče ze SEKCE v lib/pristupy.ts (28. 9. 2026). */
@@ -168,6 +169,7 @@ export function UserEditForm({
    */
   const [fakturaceProjektu, setFakturaceProjektu] = useState(user.fakturaceProjektu);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
+  const [vidiPokladnu, setVidiPokladnu] = useState(user.vidiPokladnu);
   const [spravujeTechParametry, setSpravujeTechParametry] = useState(user.spravujeTechParametry);
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
@@ -305,6 +307,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('kopieNabidekTerminu', kopieNabidek ? '1' : '0');
         if (isMediaspace) fd.set('fakturaceProjektu', fakturaceProjektu ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
+        if (isMediaspace) fd.set('vidiPokladnu', vidiPokladnu ? '1' : '0');
         if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
         /**
          * Přístupy posílá jen superadmin - ostatním se zaškrtávátka
@@ -881,6 +884,28 @@ export function UserEditForm({
               <span className="text-sm font-body text-ink">
                 {t('uzivatel.pravoVidiBanku')}
                 <span className="block text-xs text-muted">{t('uzivatel.pravoVidiBankuPopis')}</span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Kdo vidi sekci Pokladna - hotovostni pokladni kniha
+            (zadani 23. 10. 2026). Vlastni pravo vedle Banky: hotovost
+            a bankovni ucet se muzou rozejit. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={vidiPokladnu}
+                onChange={(e) => setVidiPokladnu(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.pravoVidiPokladnu')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.pravoVidiPokladnuPopis')}
+                </span>
               </span>
             </label>
           </div>

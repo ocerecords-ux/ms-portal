@@ -6,6 +6,7 @@ import { dostupneFirmy, vybranaFirma } from '@/lib/naseFirmyServer';
 import { OzubeneKolo } from '@/components/OzubeneKolo';
 import { nastaveniSekce } from '@/lib/nastaveniSekci';
 import { smiDoBanky } from '@/lib/bankaPristup';
+import { smiDoPokladny } from '@/lib/pokladnaPristup';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 
@@ -16,6 +17,8 @@ export default async function DokladyLayout({ children }: { children: React.Reac
   const jazyk = nactiJazyk();
   // Zalozka Banka se ukazuje jen tomu, kdo na ni ma pravo (17. 9. 2026).
   const banka = await smiDoBanky();
+  // Pokladna ma vlastni pravo, viz lib/pokladnaPristup.ts (23. 10. 2026).
+  const pokladna = await smiDoPokladny();
   /**
    * PŘEPÍNAČ NAŠÍ FIRMY (12. 10. 2026) - účetnictví obou našich firem je
    * oddělené, řízení projektů a kalendáře zůstávají společné. Viz
@@ -45,7 +48,7 @@ export default async function DokladyLayout({ children }: { children: React.Reac
       </div>
 
       <div data-doklady-hlavicka>
-        <DokladyTabs banka={banka} />
+        <DokladyTabs banka={banka} pokladna={pokladna} />
       </div>
 
       {children}

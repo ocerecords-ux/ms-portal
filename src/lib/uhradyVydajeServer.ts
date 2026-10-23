@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { expenseTotalMinor, jeUhrazeno } from '@/lib/expenses';
+import { srovnejPokladnuVydaje } from '@/lib/pokladnaServer';
 
 /**
  * Dopočet příznaku `paid` z jednotlivých úhrad (zadání 25. 9. 2026: „potřebuji
@@ -41,6 +42,13 @@ export async function prepocitejUhradu(expenseId: string): Promise<{
       paidAt: paid ? doklad.uhrady[doklad.uhrady.length - 1].datum : null,
     },
   });
+
+  /**
+   * POKLADNA JDE S TÍM (23. 10. 2026). Úhrada zaplacená hotově patří do
+   * pokladní knihy; zruší-li se, doklad z knihy zase zmizí. Rozhoduje o tom
+   * lib/pokladnaServer.ts, tady je jen jedno místo, kudy to všechno projde.
+   */
+  await srovnejPokladnuVydaje(expenseId);
 
   return {
     celkemMinor,

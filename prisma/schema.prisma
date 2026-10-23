@@ -424,6 +424,12 @@ model User {
   /// nedovoli, ani ostatni Zuzo-labuzo.
   vidiBanku Boolean @default(false)
 
+  /// Vidi sekci Pokladna - hotovostni pokladni kniha (zadani 23. 10. 2026:
+  /// pokladnu ma videt jen Ondrej a Bara Siblova). Stejne pravidlo jako
+  /// u vidiBanku: priznak u uctu, ne seznam jmen v kodu. Pri nasazeni se
+  /// zaskrtne tem, kdo uz vidi Banku (seed), dal se nastavuje rucne.
+  vidiPokladnu Boolean @default(false)
+
   /// NAHLEDOVY UCET - portal na zkousku (zadani 18. 9. 2026: „vytvor mi jeste
   /// jeden profil pro uzivatele, ktery nemuze nic menit, jen si muze
   /// vyzkouset cely portal z ruznych roli. Herec, Tym, Klient").
@@ -1902,6 +1908,8 @@ model IssuerCompany {
   contracts    Contract[]
   /// Napojene ucty u GoCardless (17. 9. 2026).
   bankConnections BankConnection[]
+  /// Hotovostni pokladna firmy (23. 10. 2026) - jedna na firmu.
+  pokladna        Pokladna?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2272,6 +2280,10 @@ model Expense {
   /// Jednotlive uhrady, kdyz se doklad plati na vicekrat (25. 9. 2026).
   /// Prazdne = plati se postaru podle `paid`.
   uhrady UhradaVydaje[]
+
+  /// Pokladni doklady, ktere z tohoto vydaje vznikly, kdyz se platil
+  /// hotove (23. 10. 2026). Drzi si je portal sam, viz lib/pokladnaServer.ts.
+  pokladniDoklady PokladniDoklad[]
 
   /// DODATECNA FAKTURA KE SMLOUVE (zadani 25. 9. 2026: „my vytvorime herci
   /// smlouvu a na zaklade te smlouvy je platime. Akorat nekteri jeste poslou
@@ -5662,4 +5674,96 @@ model NavrhHerce {
   updatedAt       DateTime @updatedAt
 
   @@index([caflouProjectId])
+}
+
+/// POKLADNA (zadání 23. 10. 2026: „potřebuju někde udělat pokladnu").
+///
+/// Hotovostní pokladní kniha - jedna na každou naši firmu, v její výchozí
+/// měně. Účetnictví firem je oddělené (viz lib/naseFirmy.ts), takže oddělená
+/// musí být i hotovost; míchat libru z Londýna s korunami z Ostravy by
+/// znamenalo, že zůstatek nesedí ani jedné.
+///
+/// ZŮSTATEK SE NIKDE NEUKLÁDÁ. Vždycky je to počáteční stav plus příjmy minus
+/// výdeje - stejné pravidlo jako u úhrad výdajů. Uložené číslo by se dřív nebo
+/// později rozešlo s doklady a nikdo by nepoznal, které z nich je pravda.
+model Pokladna {
+  id              String        @id @default(cuid())
+  /// Jedna pokladna na firmu - proto unikát, ne jen index.
+  issuerCompanyId String        @unique
+  issuer          IssuerCompany @relation(fields: [issuerCompanyId], references: [id], onDelete: Cascade)
+
+  nazev String?
+  mena  Currency @default(CZK)
+
+  /// Hotovost, která v pokladně byla, když se začala vést v portálu.
+  /// Bez ní by kniha začínala nulou a zůstatek by nikdy neseděl s krabicí.
+  pocatecniStavMinor Int      @default(0)
+  pocatecniDatum     DateTime @default(now())
+
+  /// Číselné řady pokladních dokladů - stejné zástupné znaky jako u faktur
+  /// ({YYYY}, {YY}, {MM}, {NNN}). Příjmové a výdajové se číslují zvlášť,
+  /// jak je v pokladní knize zvykem.
+  radaPrijem  String @default("P{YYYY}{NNN}")
+  dalsiPrijem Int    @default(1)
+  radaVydej   String @default("V{YYYY}{NNN}")
+  dalsiVydej  Int    @default(1)
+
+  aktivni Boolean          @default(true)
+  doklady PokladniDoklad[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Příjem = peníze do pokladny, výdej = ven. Záporné částky se nikde
+/// nepoužívají: směr je vlastní pole, aby se v knize nedal přehlédnout.
+enum SmerPokladny {
+  PRIJEM
+  VYDEJ
+}
+
+/// JEDEN POKLADNÍ DOKLAD (23. 10. 2026).
+///
+/// Buď zapsaný rukou, nebo ZRCADLO HOTOVĚ ZAPLACENÉHO VÝDAJE: doklad
+/// s `expenseId` si portál drží sám (zadání: „jen výdaje"). Takový řádek se
+/// v pokladně needituje ani nemaže - mění se úhrada u výdaje a pokladna se
+/// srovná sama, viz lib/pokladnaServer.ts.
+model PokladniDoklad {
+  id         String   @id @default(cuid())
+  pokladnaId String
+  pokladna   Pokladna @relation(fields: [pokladnaId], references: [id], onDelete: Cascade)
+
+  cislo String
+  smer  SmerPokladny
+  datum DateTime
+
+  /// Vždy KLADNÁ částka v haléřích a v měně pokladny. Směr je vedle.
+  castkaMinor Int
+  /// Sazba DPH jen pro účetní; základ se z částky dopočítá v přehledu.
+  vatRate     Int @default(0)
+
+  /// Za co to bylo a komu/od koho - to, co se na papírovém dokladu píše
+  /// na řádek „Účel" a „Přijato od / Vyplaceno komu".
+  ucel        String
+  protistrana String?
+  poznamka    String?
+
+  /// Kdo doklad vystavil - u hotovosti se hodí vědět, koho se doptat.
+  kdoId    String?
+  kdoJmeno String?
+
+  /// ZRCADLO VÝDAJE. Smazáním výdaje zmizí i jeho pokladní doklad - hotovost,
+  /// která se nikdy nestala, nemá v knize co dělat.
+  expenseId String?
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  /// Konkrétní úhrada výdaje, když se platilo na vícekrát. Unikát drží
+  /// pravidlo „jedna úhrada = jeden doklad".
+  uhradaId  String?  @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pokladnaId, cislo])
+  @@index([pokladnaId, datum])
+  @@index([expenseId])
 }

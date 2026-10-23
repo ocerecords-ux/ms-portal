@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { resolveProject } from '@/lib/projectOptions';
 import { getRateForCurrency } from '@/lib/cnb';
 import { CURRENCIES } from '@/lib/doklady';
+import { srovnejPokladnuVydaje } from '@/lib/pokladnaServer';
 
 // Uprava a smazani prijateho dokladu. Prepinac uhrazeno/neuhrazeno jde taky
 // tudy - je to jen jedno pole navic.
@@ -98,6 +99,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     await prisma.expense.update({ where: { id: params.id }, data });
+
+    // Hotove zaplaceny vydaj patri do pokladni knihy; zmena castky, data
+    // i zpusobu uhrady se do ni musi promitnout (23. 10. 2026).
+    await srovnejPokladnuVydaje(params.id);
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PATCH /api/admin/expenses/[id] selhalo:', err);

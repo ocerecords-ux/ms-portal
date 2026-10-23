@@ -206,6 +206,7 @@ async function main() {
   await zalozHistoriiPortalu();
   await srovnejJmenaHercuVKalendari();
   await zalozKategorieTechniky();
+  await pokladnuVidiKdoBanku();
   await parametrySpravujiOndrejAPeter();
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
@@ -3590,6 +3591,33 @@ async function srovnejJmenaHercuVKalendari() {
     );
   } catch (err) {
     console.warn('  jmena v kalendari se nepodarilo srovnat:', err);
+  }
+}
+
+/**
+ * KDO VIDI POKLADNU (zadani 23. 10. 2026: pokladnu mam videt jen ja
+ * a Barbora Siblova).
+ *
+ * Jsou to titiz lide, kteri uz vidi Banku - at nikdo nic nedokliava. Priznak
+ * je dal samostatny: hotovost a bankovni ucet se muzou rozejit a pak se to
+ * nastavi v Adminu. Bezi jednou; kdo si pozdeji nekoho odskrtne, o to dalsim
+ * nasazenim neprijde.
+ */
+async function pokladnuVidiKdoBanku() {
+  const ZNAMKA = 'pokladna-vidi-kdo-banku';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const vysledek = await prisma.user.updateMany({
+      where: { vidiBanku: true },
+      data: { vidiPokladnu: true },
+    });
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  pokladna: pravo dostalo ${vysledek.count} uctu (podle Banky)`);
+  } catch (err) {
+    console.warn('  pravo na pokladnu se nepodarilo nastavit:', err);
   }
 }
 

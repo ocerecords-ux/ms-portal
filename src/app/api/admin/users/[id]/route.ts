@@ -49,6 +49,7 @@ const schema = z.object({
   /** Zpráva o schválení k fakturaci (12. 10. 2026). */
   fakturaceProjektu: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
+  vidiPokladnu: z.string().trim().optional(),
   spravujeTechParametry: z.string().trim().optional(),
   /** Sekce, do kterých člověk smí (28. 9. 2026). Mění je jen superadmin. */
   pristupy: z.array(z.string()).optional(),
@@ -113,6 +114,7 @@ function readFormData(formData: FormData) {
     kopieNabidekTerminu: has('kopieNabidekTerminu') ? formData.get('kopieNabidekTerminu') : undefined,
     fakturaceProjektu: has('fakturaceProjektu') ? formData.get('fakturaceProjektu') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
+    vidiPokladnu: has('vidiPokladnu') ? formData.get('vidiPokladnu') : undefined,
     spravujeTechParametry: has('spravujeTechParametry') ? formData.get('spravujeTechParametry') : undefined,
     sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
     jenNahled: has('jenNahled') ? formData.get('jenNahled') : undefined,
@@ -303,6 +305,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         : {}),
       ...(data.takyZvukar !== undefined ? { takyZvukar: data.takyZvukar === '1' } : {}),
       ...(data.vidiBanku !== undefined ? { vidiBanku: data.vidiBanku === '1' } : {}),
+      ...(data.vidiPokladnu !== undefined ? { vidiPokladnu: data.vidiPokladnu === '1' } : {}),
       /**
        * PŘÍSTUPY MĚNÍ JEN SUPERADMIN (zadání 28. 9. 2026). Kontrola je tady,
        * ne jen ve formuláři: kdyby seděla jen v rozhraní, stačilo by poslat
