@@ -6458,6 +6458,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'frekvence.prvniFrekvence': { cs: 'První frekvence {kdy}', en: 'First session {kdy}' },
   'frekvence.zacaloSe': { cs: 'Natáčení začalo {kdy}', en: 'Recording started {kdy}' },
+  // Fáze natáčení u ikony kalendáře (29. 10. 2026).
+  'frekvence.probiha': { cs: 'Natáčí se — další {kdy}', en: 'Recording — next {kdy}' },
+  'frekvence.dotoceno': { cs: 'Dotočeno — poslední {kdy}', en: 'Recorded — last {kdy}' },
   'frekvence.dnes': { cs: 'dnes', en: 'today' },
   'frekvence.zitra': { cs: 'zítra', en: 'tomorrow' },
   'frekvence.zaDny': { cs: 'za {pocet} dny', en: 'in {pocet} days' },

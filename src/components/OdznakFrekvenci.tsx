@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
-import { blizkost, popisTerminu, type BlizkostTerminu } from '@/lib/frekvenceProjektu';
+import { popisTerminu, stavNataceni, type StavNataceni } from '@/lib/frekvenceProjektu';
 import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import type { RozpisHerce } from '@/lib/frekvenceProjektuServer';
 
@@ -18,30 +18,34 @@ import type { RozpisHerce } from '@/lib/frekvenceProjektuServer';
  * sloupec už v tabulce není místo a ikona se vejde za název stejně jako
  * kolečko série - řádek se o ni nezvýší.
  *
- * MĚNÍ SE JEN BARVA: červená dnes a zítra, oranžová do týdne, šedá dál,
- * tmavá u projektu, který se už točí. Nejbližší termín tím na sebe upozorní
- * sám, aniž by se do řádku psalo cokoliv navíc. Přesný termín je v bublině,
- * takže kvůli jednomu datu není třeba nic rozklikávat.
+ * MĚNÍ SE JEN BARVA, a od 29. 10. 2026 podle FÁZE NATÁČENÍ („červená, když
+ * se teprve bude točit a jedno kolik dní; zelená, když to probíhá; šedá, když
+ * je dotočeno"). Dřív se barvilo podle počtu dní do nejbližší frekvence, takže
+ * se stejnému projektu měnila barva každé ráno, aniž by se na zakázce cokoli
+ * stalo. Přesný termín je dál v bublině, takže kvůli jednomu datu není třeba
+ * nic rozklikávat.
  *
  * ROZPIS SE NAČÍTÁ AŽ PŘI OTEVŘENÍ, stejně jako díly série - sedm set
  * projektů v seznamu znamená sedm set rozpisů, které si nikdo neotevře.
  */
-const BARVA: Record<BlizkostTerminu, string> = {
-  dnes: 'text-danger',
-  brzy: 'text-status-progress',
-  klid: 'text-muted',
-  minulost: 'text-line',
+const BARVA: Record<StavNataceni, string> = {
+  pred: 'text-danger',
+  probiha: 'text-status-done',
+  hotovo: 'text-muted',
 };
 
 export function OdznakFrekvenci({
   caflouProjectId,
   prvni,
+  zacatek,
   pocet,
   velky = false,
 }: {
   caflouProjectId: string;
   /** Nejbližší neodbytá frekvence v ISO; bez ní se odznak nevykresluje. */
   prvni: string;
+  /** Úplně první frekvence - podle ní se pozná, jestli se už začalo točit. */
+  zacatek?: string | null;
   pocet: number;
   velky?: boolean;
 }) {
@@ -93,11 +97,17 @@ export function OdznakFrekvenci({
   }, [otevreno]);
 
   const termin = new Date(prvni);
-  const jak = blizkost(termin) ?? 'klid';
+  // Starší volající `zacatek` neposílá - pak se bere nejbližší termín jako
+  // začátek, což u projektu, kde se ještě netočilo, vyjde nastejno.
+  const prvniVubec = zacatek ? new Date(zacatek) : termin;
+  const jak = stavNataceni(prvniVubec, termin) ?? 'pred';
+  const kdy = popisTerminu(termin, t, jazyk);
   const popis =
-    jak === 'minulost'
-      ? t('frekvence.zacaloSe', { kdy: popisTerminu(termin, t, jazyk) })
-      : t('frekvence.prvniFrekvence', { kdy: popisTerminu(termin, t, jazyk) });
+    jak === 'hotovo'
+      ? t('frekvence.dotoceno', { kdy })
+      : jak === 'probiha'
+        ? t('frekvence.probiha', { kdy })
+        : t('frekvence.prvniFrekvence', { kdy });
 
   /** Nejbližší termín napříč všemi herci - ten se v rozpisu podbarví. */
   const nejblizsi = rozpis

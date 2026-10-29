@@ -975,6 +975,7 @@ function bunkaSloupce(
               <OdznakFrekvenci
                 caflouProjectId={String(p.id)}
                 prvni={p.meta.frekvence.prvni}
+                zacatek={p.meta.frekvence.zacatek}
                 pocet={p.meta.frekvence.pocet}
               />
             )}
