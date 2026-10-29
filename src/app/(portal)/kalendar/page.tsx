@@ -311,22 +311,28 @@ export default async function KalendarPage({
     .filter((u) => u.role === 'ZVUKAR' || u.takyZvukar)
     /**
      * KDO SE NABÍZÍ VŠUDE (opraveno 1. 10. 2026: „a proč Matěj Suk nejde
-     * zapsat do kalendáře?").
+     * zapsat do kalendáře?", upřesněno 29. 10. 2026).
      *
-     * Do teď platilo „všude" jen pro toho, kdo NENÍ v roli zvukař (Peter
-     * Dratva). Zvukař bez zaškrtnutého studia tím vypadl ze všech studií
-     * naráz a nešel vybrat nikde - což potkalo Matěje Suka, který stříhá
-     * externě a v žádné místnosti nesedí.
+     * Do 1. 10. 2026 platilo „všude" jen pro toho, kdo NENÍ v roli zvukař
+     * (Peter Dratva). Zvukař bez zaškrtnutého studia tím vypadl ze všech
+     * studií naráz a nešel vybrat nikde - což potkalo Matěje Suka, který
+     * stříhá externě a v žádné místnosti nesedí.
      *
-     * Teď je to obráceně a dává to smysl: žádné zaškrtnuté studio znamená
-     * „nikam ho to neváže", ne „nikam nepatří". A kdo stříhá externě, se
-     * nabízí všude vždycky - jeho práce na místnosti nezávisí.
+     * Rozhoduje tedy jediná věc: PRÁZDNÝ SEZNAM STUDIÍ. Žádné zaškrtnuté
+     * studio znamená „nikam ho to neváže", ne „nikam nepatří".
+     *
+     * `strihaExterne` sem 29. 10. 2026 přestalo mluvit („v Brně I se objevuje
+     * v kalendáři Matěj Suk, i když má zaškrtlou jen Prahu"). Přebíjelo to
+     * zaškrtnutá studia, takže kdo stříhá externě, lezl do nabídky i tam, kam
+     * ho nikdo nepustil. Externí střih znamená „nezabírá místnost" - a to se
+     * řeší jinde (letadlo u události a konflikty studia), ne tím, kam ho jde
+     * zapsat. Kdo má mít Brno, dostane v kartě zaškrtnuté Brno.
      */
     .map((u) => ({
       id: u.id,
       label: u.name || u.email,
       studia: u.zvukarStudia.map((s) => s.id),
-      vsude: u.zvukarStudia.length === 0 || Boolean(u.strihaExterne),
+      vsude: u.zvukarStudia.length === 0,
     }));
 
   /**
