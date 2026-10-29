@@ -16,6 +16,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, formatDatumCas, kodJazyka, prelozitKolem, type Jazyk } from '@/lib/jazyk';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 type Expense = {
   id: string;
@@ -214,7 +215,7 @@ export function ExpenseEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('vydaj.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('vydaj.ulozeniSelhalo')));
         return;
       }
       setSaved(true);
@@ -264,7 +265,7 @@ export function ExpenseEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('vydaj.zarazeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('vydaj.zarazeniSelhalo')));
         return;
       }
       router.push('/admin/doklady/vydaje?tab=nezarazene');
@@ -287,7 +288,7 @@ export function ExpenseEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('vydaj.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('vydaj.ulozeniSelhalo')));
         return;
       }
       router.refresh();
@@ -305,7 +306,7 @@ export function ExpenseEditor({
       const res = await fetch(`/api/admin/expenses/${expense.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('mazani.nezdarilo'));
+        setError(hlaskaChyby(data, t, t('mazani.nezdarilo')));
         return;
       }
       router.push('/admin/doklady/vydaje');

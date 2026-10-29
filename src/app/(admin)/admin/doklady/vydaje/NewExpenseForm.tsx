@@ -13,6 +13,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Zadání přijatého dokladu. Schválně jedna obrazovka bez překlikávání —
@@ -119,7 +120,7 @@ export function NewExpenseForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('vydaj.kategoriiNelzePridat'));
+        setError(hlaskaChyby(data, t, t('vydaj.kategoriiNelzePridat')));
         return;
       }
       setKategorie((list) => [...list, { id: data.id, name: data.name }]);
@@ -205,7 +206,7 @@ export function NewExpenseForm({
       const res = await fetch('/api/admin/expenses/precti', { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setCteniZprava(data?.error || t('vydaj.cteniSelhalo'));
+        setCteniZprava(hlaskaChyby(data, t, t('vydaj.cteniSelhalo')));
         return;
       }
       predvyplnit(data as PrectenaUctenka);
@@ -248,7 +249,7 @@ export function NewExpenseForm({
       const res = await fetch('/api/admin/expenses', { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('vydaj.ulozeniDokladuSelhalo'));
+        setError(hlaskaChyby(data, t, t('vydaj.ulozeniDokladuSelhalo')));
         return;
       }
       // Po uložení zpátky na přehled (zadani 8. 9. 2026) - doklad je vidět

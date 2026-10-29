@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { prepocitejUhradu } from '@/lib/uhradyVydajeServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * Smazání jedné úhrady (25. 9. 2026). Překlep v částce se opravuje tak, že se
@@ -16,7 +17,7 @@ export async function DELETE(
 ) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     // Kontrola, ze uhrada patri k tomu dokladu - jinak by sla smazat cizi
     // podstrcenim ciziho id.
@@ -25,7 +26,7 @@ export async function DELETE(
       select: { id: true, expenseId: true },
     });
     if (!uhrada || uhrada.expenseId !== params.id) {
-      return NextResponse.json({ error: 'Úhrada neexistuje.' }, { status: 404 });
+      return odpovedChyby('chybaApi.uhradaNeexistuje', 404);
     }
 
     await prisma.uhradaVydaje.delete({ where: { id: params.uhradaId } });
@@ -34,6 +35,6 @@ export async function DELETE(
   } catch (err) {
     console.error('DELETE /api/admin/expenses/[id]/uhrady/[uhradaId] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Smazání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.smazaniNezdariloS', { zprava: message }, 500);
   }
 }

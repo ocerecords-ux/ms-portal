@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Kategorie výdajů. Sedí až pod seznamem, protože se do nich sahá jednou za
@@ -37,7 +38,7 @@ export function CategoryManager({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('vydaj.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('vydaj.ulozeniSelhalo')));
         return null;
       }
       router.refresh();

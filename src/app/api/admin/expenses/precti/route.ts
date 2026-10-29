@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
 import { MAX_FOTKA_BYTES } from '@/lib/uctenka';
 import { prectiUctenku } from '@/lib/uctenkaServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Přečtení vyfoceného dokladu (zadání 10. 9. 2026).
@@ -19,34 +20,31 @@ const POVOLENE_TYPY = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const formData = await req.formData().catch(() => null);
   const soubor = formData?.get('fotka');
   if (!(soubor instanceof File) || soubor.size === 0) {
-    return NextResponse.json({ error: 'Chybí fotka dokladu.' }, { status: 400 });
+    return odpovedChyby('chybaApi.chybiFotkaDokladu', 400);
   }
   if (soubor.size > MAX_FOTKA_BYTES) {
-    return NextResponse.json({ error: 'Fotka je moc velká.' }, { status: 400 });
+    return odpovedChyby('chybaApi.fotkaMocVelka', 400);
   }
 
   // HEIC z iPhonu model nepřečte; ať to formulář ví a řekne to rovnou,
   // místo aby čekal na odpověď, která stejně nic nenajde.
   const typ = soubor.type.toLowerCase();
   if (!POVOLENE_TYPY.includes(typ)) {
-    return NextResponse.json({ error: 'Tenhle formát číst neumíme - pošlete PDF nebo fotku.' }, { status: 400 });
+    return odpovedChyby('chybaApi.formatNejdeCist', 400);
   }
   if (typ === 'image/heic' || typ === 'image/heif') {
-    return NextResponse.json(
-      { error: 'Fotka je ve formátu HEIC. V nastavení fotoaparátu přepněte na „Nejkompatibilnější".' },
-      { status: 400 },
-    );
+    return odpovedChyby('chybaApi.fotkaHeic', 400);
   }
 
   const vysledek = await prectiUctenku(Buffer.from(await soubor.arrayBuffer()), typ);
 
   if (vysledek.stav === 'vypnuto') {
-    return NextResponse.json({ error: 'Čtení dokladů zatím není nastavené.' }, { status: 503 });
+    return odpovedChyby('chybaApi.cteniDokladuNeniNastavene', 503);
   }
   if (vysledek.stav === 'chyba') {
     return NextResponse.json({ error: vysledek.zprava }, { status: 502 });

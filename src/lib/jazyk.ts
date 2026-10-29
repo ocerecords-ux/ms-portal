@@ -12041,6 +12041,108 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Reakci se nepodařilo uložit.',
     en: 'The reaction could not be saved.',
   },
+  // CHYBY Z ROUT VÝDAJŮ V ADMINISTRACI (dávka 7s, 29. 10. 2026). Vzor z dávky
+  // 7o: routa pošle vedle české věty KLÍČ a obrazovka si ji přeloží. Klíče
+  // končící na `S` nesou značku {zprava} - technickou hlášku z výjimky, kterou
+  // routa jen podá dál (dosazuje ji `odpovedChybyS`, pravidlo 7).
+  'chybaApi.neplatneDatumDokladu': {
+    cs: 'Neplatné datum dokladu.',
+    en: 'Invalid document date.',
+  },
+  'chybaApi.neplatneDatumSplatnosti': {
+    cs: 'Neplatné datum splatnosti.',
+    en: 'Invalid due date.',
+  },
+  'chybaApi.neplatneDatumUhrady': {
+    cs: 'Neplatné datum úhrady.',
+    en: 'Invalid payment date.',
+  },
+  'chybaApi.chybiCastkaBezDph': {
+    cs: 'Vyplňte částku bez DPH.',
+    en: 'Fill in the amount excluding VAT.',
+  },
+  'chybaApi.ulozeniNezdariloS': {
+    cs: 'Uložení se nezdařilo ({zprava}).',
+    en: 'Saving did not work ({zprava}).',
+  },
+  'chybaApi.smazaniNezdariloS': {
+    cs: 'Smazání se nezdařilo ({zprava}).',
+    en: 'The deletion failed ({zprava}).',
+  },
+  'chybaApi.chybiFotkaDokladu': {
+    cs: 'Chybí fotka dokladu.',
+    en: 'The photo of the document is missing.',
+  },
+  'chybaApi.fotkaMocVelka': { cs: 'Fotka je moc velká.', en: 'The photo is too large.' },
+  'chybaApi.formatNejdeCist': {
+    cs: 'Tenhle formát číst neumíme - pošlete PDF nebo fotku.',
+    en: 'We cannot read this format — please send a PDF or a photo.',
+  },
+  'chybaApi.fotkaHeic': {
+    cs: 'Fotka je ve formátu HEIC. V nastavení fotoaparátu přepněte na „Nejkompatibilnější".',
+    en: 'The photo is in HEIC format. In your camera settings switch to ‘Most Compatible’.',
+  },
+  'chybaApi.cteniDokladuNeniNastavene': {
+    cs: 'Čtení dokladů zatím není nastavené.',
+    en: 'Reading documents is not set up yet.',
+  },
+  'chybaApi.dokladNenalezen': { cs: 'Doklad nenalezen.', en: 'Document not found.' },
+  'chybaApi.dokladNeexistuje': { cs: 'Doklad neexistuje.', en: 'The document does not exist.' },
+  'chybaApi.souborNeulozen': {
+    cs: 'Soubor se nepodařilo uložit.',
+    en: 'The file could not be saved.',
+  },
+  'chybaApi.prilohaNeulozena': {
+    cs: 'Přílohu se nepodařilo uložit.',
+    en: 'The attachment could not be saved.',
+  },
+  'chybaApi.chybiPriloha': { cs: 'Chybí příloha.', en: 'The attachment is missing.' },
+  'chybaApi.prilohaNeodebrana': {
+    cs: 'Přílohu se nepodařilo odebrat.',
+    en: 'The attachment could not be removed.',
+  },
+  'chybaApi.prilohaNevydana': {
+    cs: 'Přílohu se nepodařilo vydat.',
+    en: 'The attachment could not be served.',
+  },
+  'chybaApi.dokladBezPrilohy': {
+    cs: 'Doklad přílohu nemá.',
+    en: 'The document has no attachment.',
+  },
+  'chybaApi.uhradaNeexistuje': { cs: 'Úhrada neexistuje.', en: 'The payment does not exist.' },
+  'chybaApi.uhradaNezapsanaS': {
+    cs: 'Úhradu se nepodařilo zapsat ({zprava}).',
+    en: 'The payment could not be recorded ({zprava}).',
+  },
+  'chybaApi.chybiDokladSFakturou': {
+    cs: 'Chybí doklad s fakturou.',
+    en: 'The document with the invoice is missing.',
+  },
+  'chybaApi.dokladSamSeSebou': {
+    cs: 'Doklad nejde spojit sám se sebou.',
+    en: 'A document cannot be linked to itself.',
+  },
+  'chybaApi.dokladSFakturouNenalezen': {
+    cs: 'Doklad s fakturou nenalezen.',
+    en: 'The document with the invoice was not found.',
+  },
+  'chybaApi.fakturaMaUhrady': {
+    cs: 'Na faktuře jsou zapsané úhrady — nejdřív je přepište ke smlouvě, pak doklady spojte.',
+    en: 'Payments are recorded on the invoice — move them to the contract first, then link the documents.',
+  },
+  'chybaApi.chybiFaktura': { cs: 'Chybí faktura.', en: 'The invoice is missing.' },
+  'chybaApi.fakturaNepripojenaS': {
+    cs: 'Fakturu se nepodařilo připojit ({zprava}).',
+    en: 'The invoice could not be attached ({zprava}).',
+  },
+  'chybaApi.znackaNezrusena': {
+    cs: 'Značku se nepodařilo zrušit.',
+    en: 'The marker could not be removed.',
+  },
+  'chybaApi.kategorieUzExistuje': {
+    cs: 'Kategorie s tímhle názvem už existuje.',
+    en: 'A category with this name already exists.',
+  },
   // CHYBY Z ROUT PŘEPOSLECHU (dávka 7p, 19. 10. 2026). Záznam chyby
   // v AudioTaggeru je podle slovníčku „tag".
   'preposlechApi.posluchacNenalezen': {

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 export type DalsiPriloha = { id: string; nazev: string };
 
@@ -40,7 +41,7 @@ export function PrilohyVydaje({
       for (const s of soubory) body.append('soubor', s);
       const res = await fetch(`${zaklad}/prilohy`, { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t('vydaj.prilohaNahraniSelhalo'));
+      if (!res.ok) throw new Error(hlaskaChyby(data, t, t('vydaj.prilohaNahraniSelhalo')));
       router.refresh();
     } catch (e) {
       setChyba(e instanceof Error ? e.message : t('vydaj.prilohaNahraniSelhalo'));
@@ -57,7 +58,7 @@ export function PrilohyVydaje({
     try {
       const res = await fetch(`${zaklad}/prilohy?priloha=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t('vydaj.prilohaOdebraniSelhalo'));
+      if (!res.ok) throw new Error(hlaskaChyby(data, t, t('vydaj.prilohaOdebraniSelhalo')));
       router.refresh();
     } catch (e) {
       setChyba(e instanceof Error ? e.message : t('vydaj.prilohaOdebraniSelhalo'));

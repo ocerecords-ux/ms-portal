@@ -6,6 +6,7 @@ import { uploadExpenseAttachment } from '@/lib/storage';
 import { getRateForCurrency } from '@/lib/cnb';
 import { CURRENCIES, parseMoneyToMinor } from '@/lib/doklady';
 import { resolveProject } from '@/lib/projectOptions';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Zalozeni prijateho dokladu (zadani 6. 9. 2026). Posila se jako FormData,
 // protoze u dokladu byva priloha - PDF nebo foto uctenky.
@@ -64,7 +65,7 @@ function toDate(value?: string): Date | null {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const formData = await req.formData();
     const parsed = schema.safeParse(readForm(formData));
@@ -77,11 +78,11 @@ export async function POST(req: NextRequest) {
     // udaj") - u starsich dokladu zustava vyplneny a porad se zobrazuje.
 
     const issueDate = toDate(d.issueDate);
-    if (!issueDate) return NextResponse.json({ error: 'Neplatné datum dokladu.' }, { status: 400 });
+    if (!issueDate) return odpovedChyby('chybaApi.neplatneDatumDokladu', 400);
 
     const amountExVatMinor = parseMoneyToMinor(d.amount);
     if (amountExVatMinor <= 0) {
-      return NextResponse.json({ error: 'Vyplňte částku bez DPH.' }, { status: 400 });
+      return odpovedChyby('chybaApi.chybiCastkaBezDph', 400);
     }
 
     // Priloha - nepovinna. Kdyz se nevejde, radeji to rekneme rovnou, nez aby
@@ -148,6 +149,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('POST /api/admin/expenses selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
   }
 }

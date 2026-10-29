@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/doklady';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { prelozitKolem } from '@/lib/jazyk';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
@@ -65,7 +66,7 @@ export function FakturaKeSmlouve({
         body: JSON.stringify({ zdrojId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t('vydaj.spojeniSelhalo'));
+      if (!res.ok) throw new Error(hlaskaChyby(data, t, t('vydaj.spojeniSelhalo')));
       setZdrojId('');
       router.refresh();
     } catch (e) {
@@ -92,7 +93,7 @@ export function FakturaKeSmlouve({
       body.append('splatnost', splatnost);
       const res = await fetch(zaklad, { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t('vydaj.fakturaPripojeniSelhalo'));
+      if (!res.ok) throw new Error(hlaskaChyby(data, t, t('vydaj.fakturaPripojeniSelhalo')));
       setCislo('');
       setCastka('');
       setSplatnost('');

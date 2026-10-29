@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Kategorie vydaju - ciselnik, ktery si admin sam rozsiruje (zadani 8. 9. 2026).
 const schema = z.object({
@@ -11,7 +12,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const exists = await prisma.expenseCategory.findUnique({ where: { name: parsed.data.name } });
     if (exists) {
-      return NextResponse.json({ error: 'Kategorie s tímhle názvem už existuje.' }, { status: 409 });
+      return odpovedChyby('chybaApi.kategorieUzExistuje', 409);
     }
 
     const last = await prisma.expenseCategory.findFirst({
@@ -36,6 +37,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('POST /api/admin/expense-categories selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
   }
 }

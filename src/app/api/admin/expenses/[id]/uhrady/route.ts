@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { prepocitejUhradu } from '@/lib/uhradyVydajeServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * Úhrady jednoho výdaje (zadání 25. 9. 2026: „potřebuji u výdajů přidávat
@@ -32,7 +33,7 @@ function naDatum(value: string): Date | null {
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -40,10 +41,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const datum = naDatum(parsed.data.datum);
-    if (!datum) return NextResponse.json({ error: 'Neplatné datum úhrady.' }, { status: 400 });
+    if (!datum) return odpovedChyby('chybaApi.neplatneDatumUhrady', 400);
 
     const doklad = await prisma.expense.findUnique({ where: { id: params.id }, select: { id: true } });
-    if (!doklad) return NextResponse.json({ error: 'Doklad neexistuje.' }, { status: 404 });
+    if (!doklad) return odpovedChyby('chybaApi.dokladNeexistuje', 404);
 
     await prisma.uhradaVydaje.create({
       data: {
@@ -62,6 +63,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (err) {
     console.error('POST /api/admin/expenses/[id]/uhrady selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Úhradu se nepodařilo zapsat (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.uhradaNezapsanaS', { zprava: message }, 500);
   }
 }

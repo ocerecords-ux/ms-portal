@@ -93,6 +93,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7p | 19. 10. | Přeposlech a náhledová okna — hlášky devíti rout přeposlechu klíčem (vzor z 7o) a tři routy náhledu pod ikonou (přeposlech, doklad, klientský doklad), které posílají hotový text a jazyk si proto berou z cookie | [x] |
 | 7q | 19. 10. | Hlášky rout Sítí a Příběhů — `api/site/**` klíčem (vzor 7o/7p): příběhy, příspěvky, obrázky a popisek od Bruna. Nově `odpovedChybyS` pro větu se značkou | [x] |
 | 7r | 21.–22. 10. (nasazeno 29. 10.) | Hlášky rout chatu a PDF dokladu klienta klíčem (15 rout v `api/chat/**` + `api/klient/doklady/pdf`); nově `odpovedChybyVJazyce` pro routy, na které se chodí odkazem v novém okně | [x] |
+| 7s | 29. 10. | Hlášky rout výdajů v administraci klíčem — `api/admin/expenses/**` a `api/admin/expense-categories/**` (10 rout, 6 obrazovek); první kus z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1759,6 +1760,57 @@ které se schválně nedělá bez dohledu.
 ale v repozitáři verzovaný je (commit „Update prisma-client.d.ts"), takže ho
 každé přegenerování ukazuje v `git status` jako změněný. Build ho nebere —
 `tsconfig.json` má `stubs` v `exclude` — proto se do commitů dávek nedává.
+
+### Dávka 7s je HOTOVÁ (29. 10. 2026)
+
+**První kus z `api/admin/**`: výdaje.** Tabulka dávek byla po 7r celá
+zaškrtnutá, ale poznámka „co zbývá" u 7r jmenuje `api/admin/**` jako největší
+zbývající kus — 450 českých hlášek `error:` ve 110 routách. Na jeden večer se
+to vzít nedá, takže dávka bere jednu celou agendu: **výdaje**. Rozsah:
+**10 rout, 6 obrazovek, 82 přepsaných míst a slovník +29 klíčů
+(6 126 → 6 155)**.
+
+**Routy** (vzor z dávky 7o, `odpovedChyby(klíč, status)`):
+`api/admin/expenses` (nový doklad), `expenses/[id]` (úprava i smazání),
+`expenses/precti` (čtení účtenky z fotky), `expenses/[id]/prilohy`,
+`expenses/[id]/uhrady` i `uhrady/[uhradaId]`,
+`expenses/[id]/faktura-ke-smlouve`, `expenses/[id]/priloha`
+a obě routy `api/admin/expense-categories`.
+
+**Obrazovky** čtou chybu přes `hlaskaChyby(data, t, záloha)`:
+`NewExpenseForm`, `CategoryManager`, `ExpenseEditor`, `UhradyVydaje`,
+`PrilohyVydaje` a `FakturaKeSmlouve`.
+
+**Výdej přílohy jde vzorem z dávky 7r.** `expenses/[id]/priloha` se neotevírá
+fetchem — visí v `<img>`, v `<iframe>` a za odkazy Otevřít/Stáhnout v náhledu
+vedle dokladu — takže si jazyk bere z cookie přes `nactiJazyk()`
+a `odpovedChybyVJazyce` pošle větu hotovou. Klíč jde vedle ní dál.
+
+**Nové jsou čtyři klíče se značkou `{zprava}`** (`ulozeniNezdariloS`,
+`smazaniNezdariloS`, `uhradaNezapsanaS`, `fakturaNepripojenaS`): věty tvaru
+„Uložení se nezdařilo (…)" nesou v závorce technickou hlášku z výjimky.
+Ta se **nepřekládá** — je to text z databáze nebo z úložiště, routa ho jen
+podá dál. Záložní „Neznámá chyba." u výjimky, která není `Error`, zůstává
+schválně česky: je to provozní detail, ne věta pro klienta.
+
+**Co se NEDĚLALO (schválně):**
+
+1. **Hlášky ze `zod` schémat** — `parsed.error.issues[0]?.message` se objevuje
+   v pěti z deseti rout a zůstává česky, stejně jako od dávky 7o. Fallback
+   `'Neplatná data.'` je u nich schválně nechaný v routě: až se zod hlášky
+   přeloží vlastním úkolem, přepíšou se všechny naráz.
+2. **Hlášky, které routa jen podá dál** z `lib/storage.ts`
+   (`vysledek.error`), z `lib/uctenkaServer.ts` (`vysledek.zprava`)
+   a z `resolveProject` — provozní věty o nastavení, viz dávka 7o.
+3. `PostaTlacitko.tsx` čte chybu z `api/admin/posta`, a ta v téhle dávce
+   nebyla — zůstává na `data?.error`.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po výdajích ubylo 52 hlášek, zůstává jich
+kolem 398 — největší kusy jsou nabídky (31), smlouvy (31), faktury (29),
+uživatelé (26), banka (26), firmy (21) a studia (20). Jde to dávkovat po
+agendách přesně takhle, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

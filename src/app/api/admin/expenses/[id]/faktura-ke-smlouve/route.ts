@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { parseMoneyToMinor } from '@/lib/doklady';
 import { uploadExpenseAttachment } from '@/lib/storage';
 import { prepocitejUhradu } from '@/lib/uhradyVydajeServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * DODATEČNÁ FAKTURA KE SMLOUVĚ (zadání 25. 9. 2026: „my vytvoříme herci
@@ -39,14 +40,14 @@ function castkaZTextu(text: string | null): number | null {
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   try {
     const cil = await prisma.expense.findUnique({
       where: { id: params.id },
       select: { id: true, number: true, note: true, attachmentUrl: true, currency: true },
     });
-    if (!cil) return NextResponse.json({ error: 'Doklad nenalezen.' }, { status: 404 });
+    if (!cil) return odpovedChyby('chybaApi.dokladNenalezen', 404);
 
     const typ = req.headers.get('content-type') ?? '';
 
@@ -54,9 +55,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (typ.includes('application/json')) {
       const telo = (await req.json().catch(() => null)) as { zdrojId?: string } | null;
       const zdrojId = telo?.zdrojId?.trim();
-      if (!zdrojId) return NextResponse.json({ error: 'Chybí doklad s fakturou.' }, { status: 400 });
+      if (!zdrojId) return odpovedChyby('chybaApi.chybiDokladSFakturou', 400);
       if (zdrojId === cil.id) {
-        return NextResponse.json({ error: 'Doklad nejde spojit sám se sebou.' }, { status: 400 });
+        return odpovedChyby('chybaApi.dokladSamSeSebou', 400);
       }
 
       const zdroj = await prisma.expense.findUnique({
@@ -76,12 +77,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           uhrady: { select: { id: true } },
         },
       });
-      if (!zdroj) return NextResponse.json({ error: 'Doklad s fakturou nenalezen.' }, { status: 404 });
+      if (!zdroj) return odpovedChyby('chybaApi.dokladSFakturouNenalezen', 404);
       if (zdroj.uhrady.length > 0) {
-        return NextResponse.json(
-          { error: 'Na faktuře jsou zapsané úhrady — nejdřív je přepište ke smlouvě, pak doklady spojte.' },
-          { status: 409 },
-        );
+        return odpovedChyby('chybaApi.fakturaMaUhrady', 409);
       }
 
       await prisma.$transaction(async (tx) => {
@@ -141,13 +139,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const splatnost = String(formData.get('splatnost') ?? '').trim();
 
     if (soubory.length === 0 && !cislo && castka === null) {
-      return NextResponse.json({ error: 'Chybí faktura.' }, { status: 400 });
+      return odpovedChyby('chybaApi.chybiFaktura', 400);
     }
 
     let maHlavni = Boolean(cil.attachmentUrl);
     for (const soubor of soubory) {
       const vysledek = await uploadExpenseAttachment(soubor);
-      if (!vysledek) return NextResponse.json({ error: 'Soubor se nepodařilo uložit.' }, { status: 500 });
+      if (!vysledek) return odpovedChyby('chybaApi.souborNeulozen', 500);
       if ('error' in vysledek) return NextResponse.json({ error: vysledek.error }, { status: 400 });
 
       if (!maHlavni) {
@@ -181,14 +179,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (err) {
     console.error('POST /api/admin/expenses/[id]/faktura-ke-smlouve selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Fakturu se nepodařilo připojit (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.fakturaNepripojenaS', { zprava: message }, 500);
   }
 }
 
 /** Odznak faktury pryč - doklad zůstane, jen se přestane tvářit, že faktura dorazila. */
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   try {
     await prisma.expense.update({
@@ -198,6 +196,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/admin/expenses/[id]/faktura-ke-smlouve selhalo:', err);
-    return NextResponse.json({ error: 'Značku se nepodařilo zrušit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.znackaNezrusena', 500);
   }
 }

@@ -10,6 +10,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, type Jazyk } from '@/lib/jazyk';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * ÚHRADY DOKLADU NA VÍCEKRÁT (zadání 25. 9. 2026: „potřebuji u výdajů přidávat
@@ -90,7 +91,7 @@ export function UhradyVydaje({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('vydaj.uhradaZapisSelhal'));
+        setChyba(hlaskaChyby(data, t, t('vydaj.uhradaZapisSelhal')));
         return;
       }
       setPoznamka('');
@@ -110,7 +111,7 @@ export function UhradyVydaje({
       const res = await fetch(`/api/admin/expenses/${expenseId}/uhrady/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || t('mazani.nezdarilo'));
+        setChyba(hlaskaChyby(data, t, t('mazani.nezdarilo')));
         return;
       }
       setMazu(null);

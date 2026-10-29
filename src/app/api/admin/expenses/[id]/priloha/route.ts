@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
+import { odpovedChybyVJazyce } from '@/lib/chybyApi';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * VÝDEJ PŘÍLOHY DOKLADU (oprava 15. 9. 2026: „ten výdaj s QR nejde otevřít" -
@@ -19,8 +21,12 @@ import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  // Sem se nechodí fetchem, ale odkazem, obrázkem nebo iframem - chybu si
+  // nemá kdo přeložit, prohlížeč ukáže rovnou JSON. Jazyk tu ale k ruce je
+  // (vždycky klik z prohlížeče), takže věta odejde hotová (dávka 7r).
+  const jazyk = nactiJazyk();
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChybyVJazyce(jazyk, 'chybaApi.bezOpravneni', 403);
 
   try {
     // Dalsi priloha (21. 9. 2026) se vybira parametrem ?priloha=<id>,
@@ -35,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           select: { attachmentUrl: true, attachmentName: true },
         });
     if (!expense?.attachmentUrl) {
-      return NextResponse.json({ error: 'Doklad přílohu nemá.' }, { status: 404 });
+      return odpovedChybyVJazyce(jazyk, 'chybaApi.dokladBezPrilohy', 404);
     }
 
     const nazev = expense.attachmentName || 'priloha';
@@ -61,6 +67,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.redirect(odkaz ?? expense.attachmentUrl, { status: 307 });
   } catch (err) {
     console.error('GET /api/admin/expenses/[id]/priloha selhalo:', err);
-    return NextResponse.json({ error: 'Přílohu se nepodařilo vydat.' }, { status: 500 });
+    return odpovedChybyVJazyce(jazyk, 'chybaApi.prilohaNevydana', 500);
   }
 }

@@ -6,6 +6,7 @@ import { resolveProject } from '@/lib/projectOptions';
 import { getRateForCurrency } from '@/lib/cnb';
 import { CURRENCIES } from '@/lib/doklady';
 import { srovnejPokladnuVydaje } from '@/lib/pokladnaServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Uprava a smazani prijateho dokladu. Prepinac uhrazeno/neuhrazeno jde taky
 // tudy - je to jen jedno pole navic.
@@ -39,7 +40,7 @@ function toDate(value: string): Date | null {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -67,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         data.dueDate = null;
       } else {
         const date = toDate(d.dueDate);
-        if (!date) return NextResponse.json({ error: 'Neplatné datum splatnosti.' }, { status: 400 });
+        if (!date) return odpovedChyby('chybaApi.neplatneDatumSplatnosti', 400);
         data.dueDate = date;
       }
     }
@@ -82,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (d.issueDate !== undefined) {
       const date = toDate(d.issueDate);
-      if (!date) return NextResponse.json({ error: 'Neplatné datum dokladu.' }, { status: 400 });
+      if (!date) return odpovedChyby('chybaApi.neplatneDatumDokladu', 400);
       data.issueDate = date;
     }
 
@@ -108,20 +109,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (err) {
     console.error('PATCH /api/admin/expenses/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     await prisma.expense.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/admin/expenses/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Smazání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.smazaniNezdariloS', { zprava: message }, 500);
   }
 }
