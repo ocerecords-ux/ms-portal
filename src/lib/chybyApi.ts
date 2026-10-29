@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { prelozit, prelozitS } from '@/lib/jazyk';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * CHYBY Z ROUT V `api/**` (dávka 7o, 18. 10. 2026).
@@ -42,3 +42,18 @@ export type ChybaOdpovedi = {
   klic?: string;
   hodnoty?: Record<string, string | number>;
 };
+
+/**
+ * ROUTY, NA KTERÉ SE CHODÍ ODKAZEM (dávka 7r, 21. 10. 2026).
+ *
+ * Výdej přílohy z chatu a PDF dokladu se neotevírají fetchem, ale odkazem
+ * v novém okně - chybu si proto nemá kdo přeložit, prohlížeč ukáže rovnou
+ * ten JSON. Tady ale jazyk k ruce JE (chodí sem výhradně klik z prohlížeče,
+ * nikdy cron), takže si ho routa vezme z cookie přes `nactiJazyk()` a věta
+ * odejde hotová - stejné rozhodnutí jako u náhledových oken v dávce 7p.
+ * Klíč jde vedle ní dál: kdyby si na routu někdy sáhl fetch, obrazovka si
+ * poradí stejně jako u ostatních.
+ */
+export function odpovedChybyVJazyce(jazyk: Jazyk, klic: string, status: number): NextResponse {
+  return NextResponse.json({ error: prelozit(jazyk, klic), klic }, { status });
+}

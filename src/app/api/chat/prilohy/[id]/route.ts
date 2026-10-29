@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat } from '@/lib/chatServer';
 import { podepsanyOdkazNaPrilohu } from '@/lib/storage';
+import { odpovedChybyVJazyce } from '@/lib/chybyApi';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * Výdej přílohy z chatu (zadání 9. 9. 2026).
@@ -26,9 +28,12 @@ import { podepsanyOdkazNaPrilohu } from '@/lib/storage';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  // JAZYK Z COOKIE (dávka 7r). Na tuhle routu se chodí odkazem z chatu, ne
+  // fetchem - chybu by si nemělo kdo přeložit, prohlížeč ukáže rovnou JSON.
+  const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChybyVJazyce(jazyk, 'chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
   const jeTym = canUseChat(session.user.role);
@@ -56,14 +61,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         : kanal.kind === 'DOTAZ' && jeClen
       : false;
     if (!priloha || !smi) {
-      return NextResponse.json({ error: 'Příloha nenalezena.' }, { status: 404 });
+      return odpovedChybyVJazyce(jazyk, 'chybaApi.prilohaNenalezena', 404);
     }
 
     // ?stahnout=1 posle soubor rovnou do stazenych, jinak se otevre.
     const stahnout = req.nextUrl.searchParams.get('stahnout') === '1';
     const odkaz = await podepsanyOdkazNaPrilohu(priloha.key, priloha.name, stahnout);
     if (!odkaz) {
-      return NextResponse.json({ error: 'Úložiště souborů není dostupné.' }, { status: 503 });
+      return odpovedChybyVJazyce(jazyk, 'chybaApi.uloznisteNedostupne', 503);
     }
 
     // Přesměrování, ne proxy: soubor tak nejde přes funkci na Vercelu a jeho
@@ -71,6 +76,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.redirect(odkaz, { status: 307 });
   } catch (err) {
     console.error('GET /api/chat/prilohy/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Přílohu se nepodařilo načíst.' }, { status: 500 });
+    return odpovedChybyVJazyce(jazyk, 'chybaApi.prilohaNenactena', 500);
   }
 }

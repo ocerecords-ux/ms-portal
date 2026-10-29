@@ -8,6 +8,7 @@ import { klicDvojice } from '@/lib/chat';
 import { INTERNAL_ROLES, ROBOT_ROLES } from '@/lib/roles';
 import { zkusDatabazi } from '@/lib/dbZnovu';
 import { nactiStatusy } from '@/lib/statusyServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 // Seznam konverzaci + zalozeni nove (zadani 8. 9. 2026).
 export const dynamic = 'force-dynamic';
@@ -38,7 +39,7 @@ const schema = z.discriminatedUnion('kind', [
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   try {
     // JEDEN OPAKOVANY POKUS. Supabase pooler ma v session modu patnact mist
@@ -101,7 +102,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
@@ -149,7 +150,7 @@ export async function POST(req: NextRequest) {
 
     if (data.kind === 'SOUKROMA') {
       if (data.userId === me) {
-        return NextResponse.json({ error: 'Sám se sebou si psát nemusíte.' }, { status: 400 });
+        return odpovedChyby('chybaApi.chatSamSeSebou', 400);
       }
       // Druhy clovek musi byt z tymu - jinak by sla zalozit konverzace s
       // klientem nebo hercem, kteri chat vubec nemaji.
@@ -161,7 +162,7 @@ export async function POST(req: NextRequest) {
         where: { id: data.userId, active: true, role: { in: CLENOVE_CHATU } },
         select: { id: true },
       });
-      if (!druhy) return NextResponse.json({ error: 'Takového člena týmu nemáme.' }, { status: 400 });
+      if (!druhy) return odpovedChyby('chybaApi.clenTymuNeznamy', 400);
 
       /**
        * JEDEN ROZHOVOR NA DVOJICI (oprava 20. 10. 2026: „Peter má v chatu dvě
@@ -226,6 +227,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id: created.id }, { status: 201 });
   } catch (err) {
     console.error('POST /api/chat/konverzace selhalo:', err);
-    return NextResponse.json({ error: 'Založení se nezdařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.zalozeniNezdarilo', 500);
   }
 }

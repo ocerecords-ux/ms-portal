@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat, userLabel } from '@/lib/chatServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * HLEDÁNÍ VE ZPRÁVÁCH (připomínka Petra Drátvy 21. 10. 2026: „v chate pridať
@@ -26,7 +27,7 @@ const NEJVIC = 30;
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const dotaz = (req.nextUrl.searchParams.get('q') ?? '').trim();

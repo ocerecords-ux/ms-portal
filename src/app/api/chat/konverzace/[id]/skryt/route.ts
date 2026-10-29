@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat } from '@/lib/chatServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Uklizení rozhovoru ze seznamu (zadání 12. 9. 2026: „ty konverzace bych mazal
@@ -25,17 +26,17 @@ const schema = z.object({ skryto: z.boolean() });
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const konverzace = await prisma.conversation.findUnique({
     where: { id: params.id },
     select: { id: true },
   });
-  if (!konverzace) return NextResponse.json({ error: 'Konverzace nenalezena.' }, { status: 404 });
+  if (!konverzace) return odpovedChyby('chybaApi.konverzaceNenalezena', 404);
 
   const skrytoAt = parsed.data.skryto ? new Date() : null;
   await prisma.conversationMember.upsert({

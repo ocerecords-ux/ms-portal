@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { pdfDokladuKlienta } from '@/lib/dokladKlientaPdfServer';
+import { odpovedChybyVJazyce } from '@/lib/chybyApi';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * PDF DOKLADU PRO KLIENTA (zadání 1. 10. 2026: „tlačítko kde se otevře celý
@@ -19,16 +21,19 @@ import { pdfDokladuKlienta } from '@/lib/dokladKlientaPdfServer';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  // JAZYK Z COOKIE (dávka 7r) - tlačítko v klientském přehledu otevírá PDF
+  // odkazem, takže chybu nikdo nepřekládá a klient ji vidí tak, jak odejde.
+  const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+  if (!session?.user?.id) return odpovedChybyVJazyce(jazyk, 'chybaApi.neprihlaseno', 401);
   // Klic tenant izolace: companyId vyhradne ze session.
   const companyId = session.user.companyId;
-  if (!companyId) return NextResponse.json({ error: 'Účet nepatří pod firmu.' }, { status: 403 });
+  if (!companyId) return odpovedChybyVJazyce(jazyk, 'nahled.uceBezFirmy', 403);
 
   const druh = req.nextUrl.searchParams.get('druh');
   const id = req.nextUrl.searchParams.get('id');
   if (!id || (druh !== 'nabidka' && druh !== 'faktura' && druh !== 'objednavka')) {
-    return NextResponse.json({ error: 'Chybí doklad.' }, { status: 400 });
+    return odpovedChybyVJazyce(jazyk, 'nahled.chybiDoklad', 400);
   }
 
   const firma = await prisma.company

@@ -14,6 +14,7 @@ import { komuPoslatUpozorneni, zminenyTym } from '@/lib/chatUpozorneniServer';
 import { notify } from '@/lib/notifications';
 import { CHYBI_NAZEV, CHYBI_PRIJEMCE, jeUkol, nazevUkolu } from '@/lib/ukolyZChatu';
 import { CAS_UKOLU, popisTerminu } from '@/lib/terminUkolu';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -85,13 +86,13 @@ async function nactiPristupnou(conversationId: string, userId: string) {
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
   try {
     const conversation = await nactiPristupnou(params.id, me);
-    if (!conversation) return NextResponse.json({ error: 'Konverzace nenalezena.' }, { status: 404 });
+    if (!conversation) return odpovedChyby('chybaApi.konverzaceNenalezena', 404);
 
     // ?vlakno=<id> vrati zpravu a odpovedi pod ni; jinak hlavni proud, tedy
     // jen zpravy bez rodice (zadani 8. 9. 2026: odpovedi ve vlakne).
@@ -167,7 +168,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     });
   } catch (err) {
     console.error('GET /api/chat/konverzace/[id]/zpravy selhalo:', err);
-    return NextResponse.json({ error: 'Zprávy se nepodařilo načíst.' }, { status: 500 });
+    return odpovedChyby('chybaApi.zpravyNenactene', 500);
   }
 }
 
@@ -257,13 +258,13 @@ async function zalozUkolZeZpravy(vstup: {
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
   try {
     const conversation = await nactiPristupnou(params.id, me);
-    if (!conversation) return NextResponse.json({ error: 'Konverzace nenalezena.' }, { status: 404 });
+    if (!conversation) return odpovedChyby('chybaApi.konverzaceNenalezena', 404);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -278,7 +279,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         where: { id: parsed.data.parentId, conversationId: conversation.id, parentId: null },
         select: { id: true },
       });
-      if (!parent) return NextResponse.json({ error: 'Vlákno se nenašlo.' }, { status: 400 });
+      if (!parent) return odpovedChyby('chybaApi.vlaknoNenalezeno', 400);
       parentId = parent.id;
     }
 
@@ -303,7 +304,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     if (!parsed.data.body && prilohy.length === 0) {
-      return NextResponse.json({ error: 'Přílohu se nepodařilo nahrát.' }, { status: 400 });
+      return odpovedChyby('chybaApi.prilohaNenahrana', 400);
     }
 
     // VŠECHNO, CO NA SOBĚ NEZÁVISÍ, JDE DO DATABÁZE NAJEDNOU (oprava
@@ -476,6 +477,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
   } catch (err) {
     console.error('POST /api/chat/konverzace/[id]/zpravy selhalo:', err);
-    return NextResponse.json({ error: 'Zprávu se nepodařilo odeslat.' }, { status: 500 });
+    return odpovedChyby('chybaApi.zpravaNeodeslana', 500);
   }
 }

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat } from '@/lib/chatServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Správa skupiny v chatu (zadání 11. 9. 2026: „potřebuju založit na chatu
@@ -40,13 +41,13 @@ async function mojeSkupina(conversationId: string, userId: string) {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
   try {
     const skupina = await mojeSkupina(params.id, me);
-    if (!skupina) return NextResponse.json({ error: 'Skupina nenalezena.' }, { status: 404 });
+    if (!skupina) return odpovedChyby('chybaApi.skupinaNenalezena', 404);
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -63,10 +64,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // budou vzdy pridani vsichni"). Kdyby z ni sel nekoho vyhodit, pri
       // pristim otevreni chatu by se stejne vratil - lepsi to rict rovnou.
       if (skupina.vsichni) {
-        return NextResponse.json(
-          { error: 'Do téhle skupiny patří celý tým, členy v ní měnit nejde.' },
-          { status: 400 },
-        );
+        return odpovedChyby('chybaApi.skupinaCelyTymClenove', 400);
       }
       // Sam sebe ze skupiny takhle nevyhodim - na odchod je DELETE. Jinak by
       // staci preklik a clovek by se ze skupiny vyradil bez varovani.
@@ -99,7 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PATCH /api/chat/konverzace/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Uložení se nezdařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.ulozeniNezdarilo', 500);
   }
 }
 
@@ -110,19 +108,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
   try {
     const skupina = await mojeSkupina(params.id, me);
-    if (!skupina) return NextResponse.json({ error: 'Skupina nenalezena.' }, { status: 404 });
+    if (!skupina) return odpovedChyby('chybaApi.skupinaNenalezena', 404);
 
     if (skupina.vsichni) {
-      return NextResponse.json(
-        { error: 'Z téhle skupiny odejít nejde — je v ní celý tým. Můžete si ji ztlumit.' },
-        { status: 400 },
-      );
+      return odpovedChyby('chybaApi.skupinaCelyTymOdchod', 400);
     }
 
     if (skupina.members.length <= 1) {
@@ -136,6 +131,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ ok: true, smazano: false });
   } catch (err) {
     console.error('DELETE /api/chat/konverzace/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Odchod se nezdařil.' }, { status: 500 });
+    return odpovedChyby('chybaApi.odchodNezdaril', 500);
   }
 }

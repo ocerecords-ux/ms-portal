@@ -5,6 +5,7 @@ import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { canUseChat } from '@/lib/chatServer';
 import { vidiProjektyVPriprave } from '@/lib/roles';
 import { jeVPriprave } from '@/lib/stavyProjektu';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 // Rozpracovane projekty pro zalozku "Projekty" v chatu (zadani 8. 9. 2026).
 // Nacita se az na vyzadani, kdyz si nekdo zalozku otevre - v layoutu by to
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   try {

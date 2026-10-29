@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat } from '@/lib/chatServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Nastavení upozornění chatu — každý si ho spravuje sám (zadání 12. 9. 2026).
@@ -28,7 +29,7 @@ const schema = z.object({
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const ja = await prisma.user.findUnique({
@@ -54,11 +55,11 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const { zpravy, skupiny, kanaly, tichoOd, tichoDo } = parsed.data;
   const ulozeno = await prisma.user.update({

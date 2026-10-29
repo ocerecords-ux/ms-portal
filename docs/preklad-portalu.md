@@ -92,6 +92,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7o | 18. 10. | **Routy v `api/**` — rozhodnuto**: hlášky z rout chodí s KLÍČEM vedle české věty a obrazovka si je přeloží (`lib/chybyApi.ts` + `lib/chybaZOdpovedi.ts`). Udělaná celá hudba (19 rout) a k tomu číselníky Novinek (publika, druhy, názvy měsíců) | [x] |
 | 7p | 19. 10. | Přeposlech a náhledová okna — hlášky devíti rout přeposlechu klíčem (vzor z 7o) a tři routy náhledu pod ikonou (přeposlech, doklad, klientský doklad), které posílají hotový text a jazyk si proto berou z cookie | [x] |
 | 7q | 19. 10. | Hlášky rout Sítí a Příběhů — `api/site/**` klíčem (vzor 7o/7p): příběhy, příspěvky, obrázky a popisek od Bruna. Nově `odpovedChybyS` pro větu se značkou | [x] |
+| 7r | 21.–22. 10. (nasazeno 29. 10.) | Hlášky rout chatu a PDF dokladu klienta klíčem (15 rout v `api/chat/**` + `api/klient/doklady/pdf`); nově `odpovedChybyVJazyce` pro routy, na které se chodí odkazem v novém okně | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1712,6 +1713,52 @@ stavy projektu), překládá se podle KÓDU.
 **Kolik ještě zbývá v `api/**`:** z hrubého odhadu 1 025 hlášek ubyla hudba
 (7o), přeposlech (7p) a teď Sítě. Další na řadě jsou podle viditelnosti pro
 klienta `api/chat/*` (52) a `api/klient/*`, pak administrace (336).
+
+### Dávka 7r je HOTOVÁ (nasazeno 29. 10. 2026)
+
+**Práce ležela necommitnutá od 21.–22. 10.** Dávka byla napsaná tehdy, ale
+večerní běhy ji nedostaly na server: repozitář byl v iCloudu jako „dataless"
+zástupci, takže gitu i typové kontrole padalo čtení souborů
+(`Resource deadlock avoided`, `Bus error`) — podrobně v poznámce k 24. 10.
+Dnes je repozitář zase na disku, takže se dávka ověřila a nasadila.
+
+**Rozsah: 17 souborů, 30 klíčů, 2 obrazovky navíc.** 15 rout v
+`src/app/api/chat/**` (konverzace, zprávy, přílohy, upozornění, pořadí,
+hledání, přehled, reakce, projekty) a `src/app/api/klient/doklady/pdf`.
+Slovník se nerozšiřoval — všech 30 klíčů `chybaApi.*` se svezlo už
+23. 10. v commitu „Pokladna", takže je jen začal někdo volat.
+
+**Nově `odpovedChybyVJazyce(jazyk, klic, status)` v `lib/chybyApi.ts`.**
+Výdej přílohy z chatu a PDF dokladu se neotevírají fetchem, ale odkazem
+v novém okně — chybu si nemá kdo přeložit, prohlížeč ukáže rovnou JSON.
+Jazyk tam ale k ruce je (chodí sem výhradně klik z prohlížeče, nikdy cron),
+takže si ho routa vezme z cookie přes `nactiJazyk()` a věta odejde hotová;
+klíč jde vedle ní dál. Stejné rozhodnutí jako u náhledových oken v dávce 7p.
+
+**V `api/chat/**` ani `api/klient/**` nezbývá jediná česká hláška `error:`**
+(kontrolováno `grep -rn "error: ['\`]" --include=route.ts` plus diakritika).
+
+**Typová kontrola: vazby v prisma stubu jsou teď `any` — ubylo 7 známých
+hlášek.** `gen-prisma-stub.py` vazby do modelů vůbec nedával s odůvodněním,
+že je pokryje `[key: string]: any`. Nepokryje: index není vidět jako POVINNÁ
+vlastnost, takže `as { user: … }` nad výsledkem `include` padalo na TS2352
+a TS2345 — na HEADu z 29. 10. šest hlášek (hledání a přehled chatu, návrhy
+herců, veřejná stránka návrhů), žádná z nich naše. Generátor teď u vazby
+píše `pole: any;` (skalární seznamy `String[]` pokrývá index dál). Výsledek:
+**36 → 23 hlášek**, a to jen úbytkem — nic nového nepřibylo. Seznam
+v `docs/preklad-kontrola-zname-hlasky.txt` je proto přepsaný na 23 řádků
+a dávka proti němu vychází na řádek (ověřeno i na čisté kopii z
+`git archive`: pracovní kopie a HEAD dávají stejných 23 hlášek).
+
+**Co zbývá:** `api/admin/**` (~336 hlášek) je největší zbývající kus, dál
+hlášky ze `zod` schémat ve třech routách hudby, důvod nevyvěšení na Instagram
+(viz 7q) a druhá polovina dávky 6 — zapojení pošty a oznámení pod zvonkem,
+které se schválně nedělá bez dohledu.
+
+**Stará poznámka na okraj:** `stubs/prisma-client.d.ts` je v `.gitignore`,
+ale v repozitáři verzovaný je (commit „Update prisma-client.d.ts"), takže ho
+každé přegenerování ukazuje v `git status` jako změněný. Build ho nebere —
+`tsconfig.json` má `stubs` v `exclude` — proto se do commitů dávek nedává.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

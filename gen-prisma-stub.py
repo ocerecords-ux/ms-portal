@@ -246,10 +246,14 @@ def main() -> int:
             if not shoda:
                 continue
             pole, typ, seznam, volitelne = shoda.groups()
-            # Seznamy (vazby i `String[]`) do stubu nedavame - vazby si
-            # kazdy dotaz vybira sam pres `include`, a to `[key: string]: any`
-            # pokryje.
-            if seznam or typ in nazvy_modelu:
+            # VAZBY davame jako `any` (od 29. 10. 2026). `[key: string]: any`
+            # na ne nestaci: index neni videt jako POVINNA vlastnost, takze
+            # `as { user: ... }` nad vysledkem `include` padalo na TS2352/TS2345.
+            # Skalarni seznamy (`String[]`) pokryje index dal.
+            if typ in nazvy_modelu:
+                radky.append(f'    {pole}: any;')
+                continue
+            if seznam:
                 continue
             ts = SKALARY.get(typ) or (typ if typ in nazvy_enumu else None)
             if ts is None:

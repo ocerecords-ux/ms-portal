@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat } from '@/lib/chatServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Pořadí připnutých rozhovorů (zadání 12. 9. 2026: „a mělo by jít měnit
@@ -20,12 +21,12 @@ const schema = z.object({ ids: z.array(z.string().trim().min(1)).max(50) });
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   try {
     // Jedna transakce: buď se přerovná všechno, nebo nic. Půlka nového pořadí
@@ -41,6 +42,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PUT /api/chat/konverzace/poradi selhalo:', err);
-    return NextResponse.json({ error: 'Pořadí se nepodařilo uložit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.poradiNeulozeno', 500);
   }
 }

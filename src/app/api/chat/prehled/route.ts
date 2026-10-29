@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat, userLabel } from '@/lib/chatServer';
 import { jeZminen } from '@/lib/chatUpozorneniServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * HISTORIE UPOZORNĚNÍ V CHATU (zadání 22. 10. 2026: „stává se, že mám třeba
@@ -30,7 +31,7 @@ const DNU_ZPET = 30;
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const ja = session.user.id;
   const filtr = (req.nextUrl.searchParams.get('filtr') ?? 'vse').trim();

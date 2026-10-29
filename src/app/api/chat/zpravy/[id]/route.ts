@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { MAX_MESSAGE_LENGTH } from '@/lib/chat';
 import { canUseChat } from '@/lib/chatServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Uprava vlastni odeslane zpravy (zadani 9. 9. 2026: "bylo by super upravovat
@@ -31,7 +32,7 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
@@ -47,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       where: { id: params.id, userId: me },
       select: { id: true, body: true, editedAt: true },
     });
-    if (!zprava) return NextResponse.json({ error: 'Zpráva nenalezena.' }, { status: 404 });
+    if (!zprava) return odpovedChyby('chybaApi.zpravaNenalezena', 404);
 
     // Kdyz se text nezmenil, nema smysl zpravu znacit jako upravenou -
     // a hlavne se nesmi zahodit priznak z drivejsi upravy.
@@ -70,7 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
   } catch (err) {
     console.error('PATCH /api/chat/zpravy/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Zprávu se nepodařilo upravit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.zpravaNeupravena', 500);
   }
 }
 
@@ -95,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   const me = session.user.id;
 
@@ -104,19 +105,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       where: { id: params.id, userId: me },
       select: { id: true, conversationId: true, _count: { select: { replies: true } } },
     });
-    if (!zprava) return NextResponse.json({ error: 'Zpráva nenalezena.' }, { status: 404 });
+    if (!zprava) return odpovedChyby('chybaApi.zpravaNenalezena', 404);
 
     if (zprava._count.replies > 0) {
-      return NextResponse.json(
-        { error: 'Pod zprávou visí odpovědi — smazat by je vzalo s sebou. Můžete ji upravit.' },
-        { status: 409 },
-      );
+      return odpovedChyby('chybaApi.zpravaMaOdpovedi', 409);
     }
 
     await prisma.message.delete({ where: { id: zprava.id } });
     return NextResponse.json({ smazano: true });
   } catch (err) {
     console.error('DELETE /api/chat/zpravy/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Zprávu se nepodařilo smazat.' }, { status: 500 });
+    return odpovedChyby('chybaApi.zpravaNesmazana', 500);
   }
 }
