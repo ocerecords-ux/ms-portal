@@ -5,6 +5,9 @@ import { computeTotals, formatMoney } from '@/lib/doklady';
 import { NewInvoiceForm } from './NewInvoiceForm';
 import { StahnoutPrilohy } from '../StahnoutPrilohy';
 import { FakturyTabulka, type FakturaRadek } from './FakturyTabulka';
+import { NeodeslaneFaktury } from './NeodeslaneFaktury';
+import { neodeslaneFaktury } from '@/lib/neodeslaneFaktury';
+import { smiDoBanky } from '@/lib/bankaPristup';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit } from '@/lib/jazyk';
 import { stavyUpominek } from '@/lib/upominkyServer';
@@ -63,6 +66,14 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
   const session = await getServerSession(authOptions);
   const naseFirmy = await dostupneFirmy(session?.user?.id);
   const jenFirma = filtrFirmy(vybranaFirma(naseFirmy));
+
+  /**
+   * NEODESLANÉ FAKTURY (29. 10. 2026) - červený pruh nahoře, na každé
+   * záložce. Vidí ho jen ten, kdo má na kartě „Vidí Banku" - tatáž dvojice
+   * jako u značek dokladů u projektu, viz lib/neodeslaneFaktury.ts.
+   */
+  const vidiPenize = await smiDoBanky();
+  const uvazle = vidiPenize ? await neodeslaneFaktury(jenFirma) : [];
 
   const [invoices, issuers, counts] = await Promise.all([
     prisma.invoice.findMany({
@@ -147,6 +158,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
         </div>
       ) : (
         <>
+          <NeodeslaneFaktury faktury={uvazle} jazyk={jazyk} />
+
           <div className="flex items-end justify-between gap-3 sm:gap-4 flex-wrap">
             <div className="flex items-center gap-1 flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 w-[calc(100%+2rem)] sm:w-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {TABS.map((tab) => {

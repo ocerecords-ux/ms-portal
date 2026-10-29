@@ -5,6 +5,7 @@ import { pdfFaktury } from '@/lib/dokladNahledServer';
 import { rodnyListKFakture } from '@/lib/rodnyListServer';
 import { jeReklamaProjekt } from '@/lib/reklamniProjektServer';
 import { zavriPoFakture } from '@/lib/ukonceniPoFakture';
+import { zapisChybuOdeslani } from '@/lib/neodeslaneFaktury';
 
 /**
  * ODESLÁNÍ FAKTURY ODBĚRATELI (zadání 6. 9. 2026). Mail nese všechno, co
@@ -33,6 +34,14 @@ import { zavriPoFakture } from '@/lib/ukonceniPoFakture';
  * rodný list dělá. Když u projektu chybí údaje (typicky hudba, nebo
  * zaškrtnutí, že ve spotu žádná nebyla), faktura NEODEJDE a vrátí se hláška,
  * co doplnit - tohle je to „musí to zařvat" ze zadání.
+ *
+ * KDYŽ SE TO NEPOVEDE, ZŮSTANE TO VIDĚT (29. 10. 2026: „když se stane, že se
+ * neodešle z nějakého důvodu faktura, tak by to mělo nějak zařvat"). Důvod se
+ * zapíše k faktuře a ta pak svítí červeně v seznamu, v detailu i u projektu,
+ * dokud doopravdy neodejde - viz lib/neodeslaneFaktury.ts. Platí to pro
+ * všechny cesty odeslání: ruční tlačítko, automatiku u reklam i odeslání,
+ * které spustí klient schválením spotu. Právě u těch dvou posledních u toho
+ * nikdo od nás nestojí a hláška by jinak spadla do prázdna.
  */
 
 /**
@@ -80,6 +89,16 @@ export type OdeslaniFakturyVysledek =
 export async function odesliFakturu(
   vstup: OdeslaniFakturyVstup,
 ): Promise<OdeslaniFakturyVysledek> {
+  /**
+   * Jedno místo, kudy odchází každé „neodešlo". Vedle odpovědi volajícímu
+   * zapíše důvod k faktuře, takže zůstane vidět i tehdy, když odpověď nikdo
+   * nečte (automatika, schválení klientem).
+   */
+  const selhalo = async (status: number, error: string): Promise<OdeslaniFakturyVysledek> => {
+    await zapisChybuOdeslani(vstup.invoiceId, error);
+    return { ok: false, status, error };
+  };
+
   const invoice = await prisma.invoice.findUnique({
     where: { id: vstup.invoiceId },
     include: {
@@ -89,9 +108,10 @@ export async function odesliFakturu(
       items: { orderBy: { sortOrder: 'asc' } },
     },
   });
+  // Faktura, ktera neexistuje, nema kam chybu zapsat.
   if (!invoice) return { ok: false, status: 404, error: 'Faktura nenalezena.' };
   if (invoice.items.length === 0) {
-    return { ok: false, status: 400, error: 'Faktura nemá žádné položky.' };
+    return selhalo(400, 'Faktura nemá žádné položky.');
   }
 
   const chceFirmu = vstup.firme === undefined ? true : vstup.firme === true;
@@ -156,14 +176,13 @@ export async function odesliFakturu(
     if (chceFirmu && !mailFirmy) duvody.push(`firma „${invoice.company.name}" nemá kontaktní e-mail`);
     if (chceKlienta && !mailKlienta) duvody.push('projekt nemá klienta s e-mailem');
     if (duvody.length === 0) duvody.push('není vybraný žádný příjemce');
-    return { ok: false, status: 400, error: `Fakturu není komu poslat — ${duvody.join(' a ')}.` };
+    return selhalo(400, `Fakturu není komu poslat — ${duvody.join(' a ')}.`);
   }
   if (!invoice.bankAccount) {
-    return {
-      ok: false,
-      status: 400,
-      error: 'Faktura nemá vybraný bankovní účet — bez něj klient neví, kam platit.',
-    };
+    return selhalo(
+      400,
+      'Faktura nemá vybraný bankovní účet — bez něj klient neví, kam platit.',
+    );
   }
 
   // Rodny list PRED odeslanim - kdyz neco chybi, faktura nikam nejde.
@@ -176,7 +195,7 @@ export async function odesliFakturu(
       })
     : ({ potreba: false } as const);
   if (rodnyList.potreba && !rodnyList.ok) {
-    return { ok: false, status: 400, error: rodnyList.message };
+    return selhalo(400, rodnyList.message);
   }
 
   const totals = computeTotals(invoice.items, invoice);
@@ -216,16 +235,18 @@ export async function odesliFakturu(
   });
 
   if (!result.sent) {
-    return {
-      ok: false,
-      status: 503,
-      error: 'E-mail se nepodařilo odeslat — není nastavené SMTP.',
-    };
+    return selhalo(503, 'E-mail se nepodařilo odeslat — není nastavené SMTP.');
   }
 
   await prisma.invoice.update({
     where: { id: invoice.id },
-    data: { status: invoice.status === 'DRAFT' ? 'SENT' : invoice.status, sentAt: new Date() },
+    data: {
+      status: invoice.status === 'DRAFT' ? 'SENT' : invoice.status,
+      sentAt: new Date(),
+      // Faktura je u klienta - cervena u ni uz nema co delat (29. 10. 2026).
+      chybaOdeslani: null,
+      chybaOdeslaniAt: null,
+    },
   });
 
   /**

@@ -105,6 +105,8 @@ const schema = z.object({
   musicTitle: z.string().trim().max(300).optional(),
   musicAuthor: z.string().trim().max(300).optional(),
   noMusic: z.boolean().optional(),
+  /** Rodny list dela agentura - portal zadny nevyrabi (29. 10. 2026). */
+  rodnyListAgentura: z.boolean().optional(),
   /** YYYY-MM-DD z <input type="date">; prazdny retezec = smazat. */
   productionDate: z.string().trim().optional(),
 });
@@ -345,6 +347,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('musicTitle', data.musicTitle);
     text('musicAuthor', data.musicAuthor);
     if (data.noMusic !== undefined) values.noMusic = data.noMusic;
+    if (data.rodnyListAgentura !== undefined) values.rodnyListAgentura = data.rodnyListAgentura;
     if (pageCount !== undefined) values.pageCount = pageCount;
     if (spotLengthSeconds !== undefined) values.spotLengthSeconds = spotLengthSeconds;
     if (productionDate !== undefined) values.productionDate = productionDate;

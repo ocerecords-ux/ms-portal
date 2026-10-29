@@ -9,6 +9,7 @@ import { DrobeckyDokladu } from '@/components/DrobeckyDokladu';
 import { HlavickaProjektu } from '@/components/HlavickaProjektu';
 import { nactiKontextProjektu } from '@/lib/kontextProjektu';
 import { smiNaKartyFirem } from '@/lib/pristupyServer';
+import { formatDatumCas } from '@/lib/jazyk';
 
 // Detail faktury - stejny "vypada jako doklad" editor jako u nabidek.
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,22 @@ export default async function InvoiceDetailPage({
     <div className="flex flex-col gap-6">
       {/* Linka historie misto holeho „zpet" (pripominka 7. 10. 2026). */}
       {kontextProjektu && <HlavickaProjektu kontext={kontextProjektu} jazyk={jazyk} />}
+
+      {/* NEODESLANÁ FAKTURA (29. 10. 2026) - červeně a na prvním místě, aby
+          se tu nedalo klikat dál a nevšimnout si toho. Zmizí samo, jakmile
+          faktura odejde; viz lib/neodeslaneFaktury.ts. */}
+      {invoice.chybaOdeslani && (
+        <div className="bg-dangerTint border border-danger rounded-card px-5 py-4">
+          <p className="font-heading font-semibold text-danger text-sm m-0 uppercase tracking-wide">
+            {prelozit(jazyk, 'faktura.neodeslaNadpisJedna')}
+          </p>
+          <p className="text-sm font-body text-ink m-0 mt-1">{invoice.chybaOdeslani}</p>
+          <p className="text-xs font-body text-muted m-0 mt-1">
+            {invoice.chybaOdeslaniAt ? `${formatDatumCas(jazyk, invoice.chybaOdeslaniAt)} · ` : ''}
+            {prelozit(jazyk, 'faktura.neodeslaPoznamka')}
+          </p>
+        </div>
+      )}
 
       <DrobeckyDokladu
         zpetHref="/admin/doklady/faktury"

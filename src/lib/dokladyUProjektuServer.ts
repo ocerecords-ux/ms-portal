@@ -22,7 +22,15 @@ function lepsiNabidka(a: StavNabidkyDokladu, b: StavNabidkyDokladu): StavNabidky
 
 function lepsiFaktura(a: StavFakturyDokladu, b: StavFakturyDokladu): StavFakturyDokladu {
   // Nezaplacená faktura je důležitější než zaplacená - na tu se čeká.
-  const poradi: StavFakturyDokladu[] = ['ZADNA', 'ROZEPSANA', 'UHRAZENA', 'VYSTAVENA'];
+  // Neodeslaná je nade všemi (29. 10. 2026): zakázka, jejíž faktura nikam
+  // nedošla, na zaplacení čekat nebude.
+  const poradi: StavFakturyDokladu[] = [
+    'ZADNA',
+    'ROZEPSANA',
+    'UHRAZENA',
+    'VYSTAVENA',
+    'NEODESLANA',
+  ];
   return poradi.indexOf(a) >= poradi.indexOf(b) ? a : b;
 }
 
@@ -45,7 +53,14 @@ export async function dokladyUProjektu(
     prisma.invoice
       .findMany({
         where: { caflouProjectId: { in: ids }, status: { not: 'CANCELLED' } },
-        select: { id: true, caflouProjectId: true, number: true, status: true, interniCast: true },
+        select: {
+          id: true,
+          caflouProjectId: true,
+          number: true,
+          status: true,
+          interniCast: true,
+          chybaOdeslani: true,
+        },
       })
       .catch(() => []),
   ]);
@@ -53,7 +68,7 @@ export async function dokladyUProjektu(
   const dej = (id: string): DokladyProjektu => {
     const stavajici = vysledek.get(id);
     if (stavajici) return stavajici;
-    const novy = { ...PRAZDNE_DOKLADY, nabidkaCisla: [], fakturaCisla: [] };
+    const novy = { ...PRAZDNE_DOKLADY, nabidkaCisla: [], fakturaCisla: [], fakturaChyba: null };
     vysledek.set(id, novy);
     return novy;
   };
@@ -80,10 +95,16 @@ export async function dokladyUProjektu(
   for (const f of faktury) {
     if (!f.caflouProjectId) continue;
     const zaznam = dej(f.caflouProjectId);
-    const stav: StavFakturyDokladu =
-      f.status === 'PAID' ? 'UHRAZENA' : f.status === 'SENT' ? 'VYSTAVENA' : 'ROZEPSANA';
+    const stav: StavFakturyDokladu = f.chybaOdeslani
+      ? 'NEODESLANA'
+      : f.status === 'PAID'
+        ? 'UHRAZENA'
+        : f.status === 'SENT'
+          ? 'VYSTAVENA'
+          : 'ROZEPSANA';
     if (lepsiFaktura(zaznam.faktura, stav) !== zaznam.faktura || !zaznam.fakturaId) {
       zaznam.fakturaId = f.id;
+      zaznam.fakturaChyba = f.chybaOdeslani ?? null;
     }
     zaznam.faktura = lepsiFaktura(zaznam.faktura, stav);
     // U zakázky na dvě části je v bublince vidět, o kterou z nich jde

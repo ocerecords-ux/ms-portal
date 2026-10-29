@@ -919,6 +919,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       jeRadiovySpot={jeRadiovySpot}
       hudbaZKarty={hudbaZKarty}
       rlError={metaPoSync?.rlError ?? null}
+      rlAgentura={metaPoSync?.rodnyListAgentura ?? false}
       rodneListy={rodneListy.map((rl) => ({
         id: rl.id,
         version: rl.version,

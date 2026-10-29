@@ -62,7 +62,13 @@ export type ProjectStatusSnapshot = {
 };
 
 /** Proc se Rodny list nepovedlo vyrobit - stejne duvody u nahledu i naostro. */
-export type RodnyListFailure = 'NO_COMPANY' | 'NOT_RADIO_SPOT' | 'MISSING_FIELDS' | 'FAILED';
+export type RodnyListFailure =
+  | 'NO_COMPANY'
+  | 'NOT_RADIO_SPOT'
+  | 'MISSING_FIELDS'
+  | 'FAILED'
+  /** Rodný list k téhle zakázce dělá agentura - my žádný nevyrábíme (29. 10. 2026). */
+  | 'AGENTURA';
 
 export type RodnyListResult =
   | { ok: true; rodnyListId: string; version: number }
@@ -364,6 +370,24 @@ async function vytvorRodnyList(
 
   try {
     const meta = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
+
+    /**
+     * RODNÝ LIST DĚLÁ AGENTURA (zadání 29. 10. 2026: „někdy u nějakého
+     * projektu neděláme RL my, ale agentura. Takže se to zaškrtne v kartě RL
+     * a fakturu odešleme bez RL").
+     *
+     * Zastavuje se to tady, na jednom místě, kudy projde každá cesta - ruční
+     * tlačítko, sada výstupů i automatika u přechodu stavu. Nevyrobí se tedy
+     * nic, klientovi nic neodejde a zakázka se neoznačí jako vyžadující
+     * kontrolu: tady nic nechybí, jen to dělá někdo jiný.
+     */
+    if ((meta as { rodnyListAgentura?: boolean } | null)?.rodnyListAgentura) {
+      return {
+        ok: false,
+        reason: 'AGENTURA',
+        message: 'Rodný list k téhle zakázce dělá agentura — portál žádný nevyrábí.',
+      };
+    }
 
     // Podmínka ze zadání (upřesnění 9. 9. 2026): rozhoduje TYP PROJEKTU, ne
     // firma. Rodný list se dělá jen u rádiových spotů - tedy u typů, které
@@ -816,6 +840,19 @@ export async function rodnyListKFakture(input: {
   const { caflouProjectId, projectName } = input;
   try {
     const meta = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
+
+    /**
+     * RODNÝ LIST DĚLÁ AGENTURA (29. 10. 2026) - faktura odejde BEZ NĚJ a bez
+     * jediné zmínky. `potreba: false` znamená, že se nic nepřikládá a v mailu
+     * klientovi se o rodném listu nic nepíše (viz lib/email.ts, věta o příloze
+     * se skládá jen tehdy, když nějaký dokument je).
+     *
+     * Hlavně to ale znamená, že odeslání faktury nic neblokuje: do teď u
+     * rádiového spotu bez vyplněných údajů faktura prostě neodešla.
+     */
+    if ((meta as { rodnyListAgentura?: boolean } | null)?.rodnyListAgentura) {
+      return { potreba: false };
+    }
 
     const vystupy = await vystupySRodnymListem(caflouProjectId, meta?.projectType);
 

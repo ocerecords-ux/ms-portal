@@ -51,7 +51,7 @@ function SNahledem({
 }
 
 export type StavNabidkyDokladu = 'ZADNA' | 'ROZEPSANA' | 'CEKA' | 'SCHVALENA' | 'ODMITNUTA';
-export type StavFakturyDokladu = 'ZADNA' | 'ROZEPSANA' | 'VYSTAVENA' | 'UHRAZENA';
+export type StavFakturyDokladu = 'ZADNA' | 'ROZEPSANA' | 'NEODESLANA' | 'VYSTAVENA' | 'UHRAZENA';
 
 export type DokladyProjektu = {
   nabidka: StavNabidkyDokladu;
@@ -63,6 +63,11 @@ export type DokladyProjektu = {
    */
   nabidkaCisla: string[];
   fakturaCisla: string[];
+  /**
+   * Proč faktura neodešla (29. 10. 2026). Vyplněné = značka svítí červeně
+   * a důvod je v bublince; prázdné znamená, že je všechno v pořádku.
+   */
+  fakturaChyba?: string | null;
   /**
    * Doklad, který značku rozsvítil - klik na ikonu ukáže jeho náhled
    * (25. 9. 2026, upraveno 26. 9. 2026). Prázdné u projektu, kde doklad není.
@@ -78,6 +83,7 @@ export const PRAZDNE_DOKLADY: DokladyProjektu = {
   fakturaCisla: [],
   nabidkaId: null,
   fakturaId: null,
+  fakturaChyba: null,
 };
 
 /**
@@ -95,6 +101,9 @@ const POPIS_NABIDKY: Record<StavNabidkyDokladu, string> = {
 const POPIS_FAKTURY: Record<StavFakturyDokladu, string> = {
   ZADNA: '',
   ROZEPSANA: 'Faktura rozepsaná',
+  // Nejhlasitejsi stav: faktura existuje, ale ke klientovi se nedostala
+  // (29. 10. 2026). Duvod je v bublince hned za timhle textem.
+  NEODESLANA: 'FAKTURA NEODEŠLA',
   VYSTAVENA: 'Vyfakturováno — čeká na úhradu',
   UHRAZENA: 'Faktura uhrazená',
 };
@@ -110,6 +119,7 @@ const BARVA_NABIDKY: Record<StavNabidkyDokladu, string> = {
 const BARVA_FAKTURY: Record<StavFakturyDokladu, string> = {
   ZADNA: '#94a3b8',
   ROZEPSANA: '#94a3b8',
+  NEODESLANA: '#ef4444',
   VYSTAVENA: '#f59e0b',
   UHRAZENA: '#16a34a',
 };
@@ -194,7 +204,10 @@ export function ZnackyDokladu({
   const sNahledem = (popis: string) =>
     prelozitS(jazyk ?? 'cs', 'dokladyProjektu.klikNahled', { popis });
   const popisNabidky = popisNabidkyDokladu(nabidka, jazyk) + dodatek(doklady.nabidkaCisla);
-  const popisFaktury = popisFakturyDokladu(faktura, jazyk) + dodatek(doklady.fakturaCisla);
+  const popisFaktury =
+    popisFakturyDokladu(faktura, jazyk) +
+    dodatek(doklady.fakturaCisla) +
+    (doklady.fakturaChyba ? ` — ${doklady.fakturaChyba}` : '');
 
   return (
     <span className="inline-flex items-center gap-1 shrink-0">

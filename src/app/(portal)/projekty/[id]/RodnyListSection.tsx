@@ -63,6 +63,7 @@ export function RodnyListSection({
   jeRadiovySpot,
   hudbaZKarty,
   rlError,
+  rlAgentura,
   rodneListy,
   initial,
 }: {
@@ -81,6 +82,11 @@ export function RodnyListSection({
   hudbaZKarty: { nazev: string; autor: string } | null;
   /** Poslední zaznamenaná chyba generování (ProjectMeta.rlError). */
   rlError: string | null;
+  /**
+   * RODNÝ LIST DĚLÁ AGENTURA (29. 10. 2026). Zaškrtnuté = portál k téhle
+   * zakázce žádný RL nevyrábí a faktura odejde bez něj.
+   */
+  rlAgentura: boolean;
   rodneListy: RodnyListRow[];
   initial: RodnyListValues;
 }) {
@@ -88,6 +94,13 @@ export function RodnyListSection({
   const jazyk = useJazyk();
   const router = useRouter();
   const [values, setValues] = useState<RodnyListValues>(initial);
+  /**
+   * Rodný list dělá agentura (29. 10. 2026). Ukládá se hned při přepnutí,
+   * ne až tlačítkem Uložit: je to vypínač celé záložky a čekat u něj na
+   * uložení formuláře, jehož pole se tím stávají zbytečnými, nedává smysl.
+   */
+  const [agentura, setAgentura] = useState(rlAgentura);
+  const [agenturaUklada, setAgenturaUklada] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [mazany, setMazany] = useState<string | null>(null);
@@ -132,6 +145,32 @@ export function RodnyListSection({
         : [],
     [values, nazevFirmy, projectName, jeRadiovySpot, jazyk],
   );
+
+  async function prepniAgenturu(zapnuto: boolean) {
+    if (agenturaUklada) return;
+    setAgentura(zapnuto);
+    setAgenturaUklada(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/meta`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rodnyListAgentura: zapnuto }),
+      });
+      if (!res.ok) {
+        setAgentura(!zapnuto);
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || t('rodnyList.chybaUlozeni'));
+        return;
+      }
+      router.refresh();
+    } catch {
+      setAgentura(!zapnuto);
+      setError(t('rodnyList.chybaUlozeni'));
+    } finally {
+      setAgenturaUklada(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -212,7 +251,7 @@ export function RodnyListSection({
    * pomalejší starší odpověď přijde po novější a přebije ji.
    */
   useEffect(() => {
-    if (!jeRadiovySpot || !nahledOtevreny || chybi.length > 0) return;
+    if (!jeRadiovySpot || agentura || !nahledOtevreny || chybi.length > 0) return;
 
     const rizeni = new AbortController();
     const casovac = window.setTimeout(async () => {
@@ -252,7 +291,7 @@ export function RodnyListSection({
       window.clearTimeout(casovac);
       rizeni.abort();
     };
-  }, [values, chybi.length, jeRadiovySpot, nahledOtevreny, caflouProjectId, verzeNahledu]);
+  }, [values, chybi.length, jeRadiovySpot, agentura, nahledOtevreny, caflouProjectId, verzeNahledu]);
 
   // Poslední PDF pustíme z paměti, když se od projektu odchází.
   useEffect(() => () => {
@@ -396,10 +435,40 @@ export function RodnyListSection({
   // s jinym typem projektu uz nedostane. Puvodni varianta "jen hudba bez
   // Rodneho listu" tim odpadla.
 
+  /**
+   * RODNÝ LIST DĚLÁ AGENTURA (zadání 29. 10. 2026). Schválně nahoře nad vším
+   * ostatním: je to vypínač celé záložky a člověk, který sem přijde doplnit
+   * údaje, má hned vidět, že u téhle zakázky se žádné vyplňovat nemusí.
+   */
+  const prepinacAgentury = (
+    <div
+      className={`rounded-card border px-4 py-3 flex flex-col gap-1 ${
+        agentura ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
+      }`}
+    >
+      <label className="flex items-start gap-2.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={agentura}
+          disabled={!canEdit || agenturaUklada}
+          onChange={(e) => void prepniAgenturu(e.target.checked)}
+          className="w-4 h-4 mt-0.5 accent-brand-purple"
+        />
+        <span>
+          <span className="block text-sm font-heading font-semibold text-ink">
+            {t('rodnyList.agentura')}
+          </span>
+          <span className="block text-xs font-body text-muted">{t('rodnyList.agenturaPopis')}</span>
+        </span>
+      </label>
+    </div>
+  );
+
   // --- Rádiový spot: celý Rodný list ----------------------------------------
   return (
     <div className="flex flex-col gap-6">
-      {rlError && (
+      {prepinacAgentury}
+      {rlError && !agentura && (
         <div className="bg-dangerTint border border-danger/30 rounded-card px-4 py-3">
           <p className="text-sm font-heading font-semibold text-danger m-0">
             {t('rodnyList.vyzadujeKontrolu')}
@@ -412,7 +481,7 @@ export function RodnyListSection({
       {/* Ukazuje se VZDY, kdyz neco chybi (oprava 10. 9. 2026). Driv to bylo
           schovane, kdyz mel projekt zapsanou chybu generovani - takze clovek
           videl zasedla tlacitka a zadne vysvetleni proc. */}
-      {chybi.length > 0 && (
+      {chybi.length > 0 && !agentura && (
         <div className="bg-warnTint border border-line rounded-card px-4 py-3">
           <p className="text-sm font-heading font-semibold text-status-progress m-0">
             {t('rodnyList.chybiUdaje')}
@@ -599,8 +668,14 @@ export function RodnyListSection({
             <button
               type="button"
               onClick={vygenerovatZnovu}
-              disabled={generating || chybi.length > 0}
-              title={chybi.length > 0 ? t('rodnyList.nejdrivDoplnte') : undefined}
+              disabled={generating || agentura || chybi.length > 0}
+              title={
+                agentura
+                  ? t('rodnyList.agenturaPopis')
+                  : chybi.length > 0
+                    ? t('rodnyList.nejdrivDoplnte')
+                    : undefined
+              }
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
             >
               {generating

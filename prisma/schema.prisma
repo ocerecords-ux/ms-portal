@@ -1012,6 +1012,15 @@ model ProjectMeta {
   musicAuthor       String?
   /// Spot hudbu nemá - hudební pole se pak nevyžadují a RL neuvede nepravdu.
   noMusic           Boolean          @default(false)
+  /// RODNY LIST DELA AGENTURA (zadani 29. 10. 2026: „nekdy u nejakeho
+  /// projektu nedelame RL my, ale agentura. Takze se to zaskrtne v karte RL
+  /// a fakturu odesleme bez RL").
+  ///
+  /// Zaskrtnute = portal k teto zakazce zadny rodny list nevyrabi, klientovi
+  /// o nem nic neposila a faktura odejde bez nej - a bez jedine zminky, ze
+  /// nejaky RL existuje. Je to priznak u PROJEKTU: bud ho dela agentura, nebo
+  /// my, a mezi spoty jedne zakazky se to nemichá.
+  rodnyListAgentura Boolean          @default(false)
   productionDate    DateTime?
 
   /// Poslední stav projektu, který jsme v Caflou viděli. Caflou nám změnu
@@ -2138,6 +2147,19 @@ model Invoice {
   /// Komu a kdy faktura odesla (zadani 15. 9. 2026: „a zaznam nekde o tom,
   /// kdy a na koho ta faktura sla").
   odeslani OdeslaniFaktury[]
+
+  /// NEODESLANA FAKTURA MUSI ZARVAT (zadani 29. 10. 2026: „kdyz se stane, ze
+  /// se neodesle z nejakeho duvodu faktura, tak by to melo nejak zarvat").
+  ///
+  /// Duvod posledniho neuspesneho pokusu o odeslani. Dokud tu neco je,
+  /// faktura v portalu svitit cervene - v seznamu Faktur, v detailu
+  /// i u projektu. Uspesne odeslani pole vyprazdni; nic se nikde nemaze
+  /// rucne, aby cervena nezustala viset po fakture, ktera uz davno odesla.
+  ///
+  /// Proc u faktury a ne jen v logu: faktura, kterou si nikdo nevsiml,
+  /// znamena nezaplacenou zakazku. Zvonek se da prehlednout, tohle ne.
+  chybaOdeslani   String?   @db.Text
+  chybaOdeslaniAt DateTime?
 
   @@index([companyId])
   @@index([status])

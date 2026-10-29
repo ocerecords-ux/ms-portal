@@ -3054,6 +3054,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // --- seznam faktur: stránka ---
   'faktura.bezNazvu': { cs: 'Bez názvu', en: 'Untitled' },
   'faktura.neuhrazenoCelkem': { cs: 'Neuhrazeno celkem', en: 'Total outstanding' },
+  // NEODESLANA FAKTURA (29. 10. 2026) - cerveny pruh nad Fakturami i v detailu.
+  'faktura.neodeslaNadpisJedna': { cs: 'Faktura neodešla', en: 'An invoice did not go out' },
+  'faktura.neodeslaNadpis': { cs: '{pocet} faktury neodešly', en: '{pocet} invoices did not go out' },
+  'faktura.neodeslaPoznamka': {
+    cs: 'Zmizí samo, jakmile faktura odejde.',
+    en: 'This clears itself once the invoice goes out.',
+  },
   'faktura.novaFaktura': { cs: 'Nová faktura', en: 'New invoice' },
   'faktura.zadnaFirmaNadpis': {
     cs: 'Nejdřív si založte fakturační firmu',
@@ -6603,6 +6610,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'rodnyList.nahledTitulek': { cs: 'Náhled Rodného listu', en: 'Advert record preview' },
   'rodnyList.vygenerovaneNadpis': { cs: 'Vygenerované Rodné listy', en: 'Generated advert records' },
   'rodnyList.nejdrivDoplnte': { cs: 'Nejdřív doplňte chybějící údaje.', en: 'Fill in the missing details first.' },
+  // RODNY LIST DELA AGENTURA (29. 10. 2026).
+  'rodnyList.agentura': { cs: 'Rodný list dělá agentura', en: 'The agency issues the birth certificate' },
+  'rodnyList.agenturaPopis': {
+    cs: 'Portál k téhle zakázce žádný rodný list nevyrábí a faktura odejde bez něj.',
+    en: 'The portal issues no birth certificate for this job and the invoice goes out without one.',
+  },
   'rodnyList.generuji': { cs: 'Generuji…', en: 'Generating…' },
   'rodnyList.vygenerovat': { cs: 'Vygenerovat RL', en: 'Generate advert record' },
   'rodnyList.vygenerovatZnovu': { cs: 'Vygenerovat RL znovu', en: 'Generate advert record again' },
@@ -10903,6 +10916,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Invoiced — awaiting payment',
   },
   'dokladyProjektu.faktura.UHRAZENA': { cs: 'Faktura uhrazená', en: 'Invoice paid' },
+  'dokladyProjektu.faktura.NEODESLANA': { cs: 'FAKTURA NEODEŠLA', en: 'INVOICE DID NOT GO OUT' },
   'dokladyProjektu.klikNahled': {
     cs: '{popis} — klik ukáže náhled',
     en: '{popis} — click to see a preview',
