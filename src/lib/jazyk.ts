@@ -8319,6 +8319,23 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'No chapters were found in the text - the tracklist will have to be typed in by hand.',
   },
   'tracklist.cteniNeslo': { cs: 'Text se nepodařilo přečíst.', en: 'The text could not be read.' },
+  'tracklist.bruno': { cs: 'Bruno u tracklistu', en: 'Bruno at the tracklist' },
+  'tracklist.brunoPopis': {
+    cs: 'Napiš mu větou, co se má se seznamem stát - přepsat podle vzoru, přečíslovat, doplnit kapitoly, něco uklidit. Přepíše TABULKU, ne databázi; uloží se to až tlačítkem Uložit.',
+    en: 'Tell him in a sentence what should happen to the list - rewrite it to a pattern, renumber it, fill in the chapters, tidy something up. He rewrites the TABLE, not the database; it is stored only when you press Save.',
+  },
+  'tracklist.brunoPole': {
+    cs: 'Třeba: uber tečky na konci názvů kapitol',
+    en: 'For example: drop the full stops at the end of the chapter names',
+  },
+  'tracklist.brunoPoslat': { cs: 'Poslat', en: 'Send' },
+  'tracklist.brunoPremysli': { cs: 'Bruno přemýšlí…', en: 'Bruno is thinking…' },
+  'tracklist.brunoPrepsal': {
+    cs: 'Bruno přepsal tabulku ({pocet} tracků) - projdi to a ulož.',
+    en: 'Bruno rewrote the table ({pocet} tracks) - check it and save.',
+  },
+  'tracklist.brunoNeslo': { cs: 'Bruno se teď neozval.', en: 'Bruno did not answer just now.' },
+  'tracklist.ja': { cs: 'Já', en: 'Me' },
 
   /* Tagy finální nahrávky (14. 10. 2026). */
   'tagy.uvod': {

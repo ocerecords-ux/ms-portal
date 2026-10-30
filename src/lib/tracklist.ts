@@ -63,6 +63,28 @@ export function nazevTrackuSMezerami(text: string): string {
 }
 
 /**
+ * POŘADOVÉ ČÍSLO V NÁZVU DRŽÍ KROK S POŘADÍM (upřesnění 15. 10. 2026: „ten
+ * název tracku musí jít zkopírovat i s tím pořadovým číslem tracku. Zvukaři
+ * to takto kopírují do názvu tracku").
+ *
+ * Název stopy se kopíruje do DAW i do názvu souboru, takže v něm číslo být
+ * musí - a nesmí lhát. Po rozdělení, přidání nebo odebrání stopy se proto
+ * číslo na začátku názvu přepíše podle nového pořadí. Název, který číslem
+ * nezačíná, zůstane, jak je: do něj portál nemá co mluvit.
+ *
+ * Je to tu, a ne v obrazovce, protože totéž musí platit i pro seznam, který
+ * přepsal Bruno (viz lib/brunoTracklist.ts) - jedno pravidlo, dvě místa.
+ */
+export function precislujTracky<T extends { nazevTracku: string }>(seznam: T[]): T[] {
+  return seznam.map((radek, i) => {
+    // Bez vlajky /s - ta vyzaduje novejsi cil prekladu. [\s\S] delá totéž.
+    const shoda = /^\s*(\d{1,3})(_[\s\S]*)?$/.exec(radek.nazevTracku);
+    if (!shoda) return radek;
+    return { ...radek, nazevTracku: `${cisloTracku(i + 1)}${shoda[2] ?? ''}` };
+  });
+}
+
+/**
  * Který z těch dvou tvarů se u projektu použije. Rozhoduje příznak firmy
  * (Company.tracklistZTextu), ne obrazovka - stejné pravidlo musí platit
  * v prohlížeči i na serveru při ukládání.

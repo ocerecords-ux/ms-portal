@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
-import { cisloTracku, upravNazevTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
+import {
+  cisloTracku,
+  precislujTracky,
+  upravNazevTracku,
+  zakladKapitoly,
+  type Track,
+} from '@/lib/tracklist';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 import { navrhniTracky } from '@/lib/tracklistZTextu';
 
@@ -37,6 +43,12 @@ import { navrhniTracky } from '@/lib/tracklistZTextu';
  * z něj AudioTagger i počítadlo normostran) a server žádnou PDF knihovnu
  * nemá. Vygenerované řádky jen SPADNOU DO TABULKY - do databáze se nedostanou
  * dřív, než na to někdo klikne, takže je čas je projít.
+ *
+ * BRUNO POD TABULKOU (zadání 30. 10. 2026: „u těch tracklistů by mohl být
+ * Bruno, kterého bychom si vycvičili na to, když tam budeme chtít hromadnou
+ * změnu nebo to udělat podle nějakého vzoru. Normálně chatovací okno").
+ * Hromadná úprava se napíše větou a Bruno vrátí celý přepsaný seznam - taky
+ * jen do tabulky. Co umí a co ne, je v lib/brunoTracklist.ts.
  */
 type Radek = { nazevTracku: string; nazevKapitoly: string };
 
@@ -66,6 +78,10 @@ export function Tracklist({
   const [vlozeny, setVlozeny] = useState('');
   const [bezi, setBezi] = useState(false);
   const [ctuText, setCtuText] = useState(false);
+  /** Okno s Brunem pod tabulkou - drží se jen do odchodu ze stránky. */
+  const [zpravyBruna, setZpravyBruna] = useState<{ odBruna: boolean; text: string }[]>([]);
+  const [dotazBrunovi, setDotazBrunovi] = useState('');
+  const [brunoPremysli, setBrunoPremysli] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
 
@@ -93,12 +109,7 @@ export function Tracklist({
    * nekončí, zůstane, jak je: do něj portál nemá co mluvit.
    */
   function precisluj(seznam: Radek[]): Radek[] {
-    return seznam.map((radek, i) => {
-      // Bez vlajky /s - ta vyzaduje novejsi cil prekladu. [\s\S] delá totéž.
-      const shoda = /^\s*(\d{1,3})(_[\s\S]*)?$/.exec(radek.nazevTracku);
-      if (!shoda) return radek;
-      return { ...radek, nazevTracku: `${cisloTracku(i + 1)}${shoda[2] ?? ''}` };
-    });
+    return precislujTracky(seznam);
   }
 
   /** Název stopy do schránky - zvukař si ho lepí do DAW. */
@@ -186,6 +197,50 @@ export function Tracklist({
     } finally {
       if (adresa) URL.revokeObjectURL(adresa);
       setCtuText(false);
+    }
+  }
+
+  /**
+   * ZEPTÁ SE BRUNA NA HROMADNOU ÚPRAVU (30. 10. 2026).
+   *
+   * Posílá se TABULKA, jak je teď - i s neuloženými změnami: Bruno má
+   * pracovat s tím, co má člověk před sebou, ne s tím, co leží v databázi.
+   * Zpátky chodí celý nový seznam; ten se jen vloží do tabulky.
+   */
+  async function zeptejSeBruna() {
+    const text = dotazBrunovi.trim();
+    if (!text || brunoPremysli) return;
+    const historie = zpravyBruna;
+    setZpravyBruna([...historie, { odBruna: false, text }]);
+    setDotazBrunovi('');
+    setBrunoPremysli(true);
+    setChyba(null);
+    setHlaska(null);
+    try {
+      const res = await fetch(`${adresa}/bruno`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zprava: text, tracky, historie }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setZpravyBruna((z) => [...z, { odBruna: true, text: data?.error || t('tracklist.brunoNeslo') }]);
+        return;
+      }
+      setZpravyBruna((z) => [...z, { odBruna: true, text: String(data?.text || '') }]);
+      if (Array.isArray(data?.tracky)) {
+        const nove = (data.tracky as Radek[]).map((x) => ({
+          nazevTracku: x.nazevTracku ?? '',
+          nazevKapitoly: x.nazevKapitoly ?? '',
+        }));
+        setTracky(nove);
+        setHlaska(t('tracklist.brunoPrepsal', { pocet: nove.length }));
+      }
+    } catch (err) {
+      console.error('Bruno u tracklistu neodpovedel:', err);
+      setZpravyBruna((z) => [...z, { odBruna: true, text: t('tracklist.brunoNeslo') }]);
+    } finally {
+      setBrunoPremysli(false);
     }
   }
 
@@ -442,6 +497,58 @@ export function Tracklist({
         {zmeneno && <span className="text-xs font-body text-muted">{t('tracklist.neulozeno')}</span>}
         {hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>}
         {chyba && <span className="text-xs font-body text-danger">{chyba}</span>}
+      </div>
+
+      {/* BRUNO POD TABULKOU (30. 10. 2026) - hromadná úprava větou. */}
+      <div className="rounded-card border border-line bg-field p-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="font-heading font-semibold text-sm text-ink">{t('tracklist.bruno')}</span>
+          <span className="text-xs font-body text-muted">{t('tracklist.brunoPopis')}</span>
+        </div>
+
+        {zpravyBruna.length > 0 && (
+          <ul className="list-none m-0 p-0 flex flex-col gap-2 max-h-[280px] overflow-y-auto">
+            {zpravyBruna.map((z, i) => (
+              <li key={i} className="flex flex-col gap-0.5">
+                <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+                  {z.odBruna ? 'Bruno' : t('tracklist.ja')}
+                </span>
+                <span
+                  className={`text-sm font-body whitespace-pre-wrap rounded-lg px-3 py-2 ${
+                    z.odBruna ? 'bg-surface text-ink border border-line' : 'bg-tint text-ink'
+                  }`}
+                >
+                  {z.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex gap-2 items-end flex-wrap">
+          <textarea
+            value={dotazBrunovi}
+            onChange={(e) => setDotazBrunovi(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter odesílá, Shift+Enter dělá nový řádek - jako v chatu.
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void zeptejSeBruna();
+              }
+            }}
+            rows={2}
+            placeholder={t('tracklist.brunoPole')}
+            className={`${pole} flex-1 min-w-[240px] font-body resize-y`}
+          />
+          <button
+            type="button"
+            onClick={() => void zeptejSeBruna()}
+            disabled={brunoPremysli || !dotazBrunovi.trim()}
+            className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+          >
+            {brunoPremysli ? t('tracklist.brunoPremysli') : t('tracklist.brunoPoslat')}
+          </button>
+        </div>
       </div>
 
       {vkladani && (
