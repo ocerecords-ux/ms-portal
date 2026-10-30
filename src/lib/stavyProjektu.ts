@@ -416,3 +416,24 @@ export const STAV_OPRAVUJEME = 'Opravujeme';
 export function jeStavBezNotifikaci(nazev: string | null | undefined): boolean {
   return kodStavu(nazev) === 'OPRAVUJEME';
 }
+
+/**
+ * STAVY, VE KTERÝCH NA DISKU JEŠTĚ NIC NENÍ (zadání 30. 10. 2026: „u dotočeno
+ * ještě nemáme žádnou nahrávku, takže to tlačítko na složku je zbytečné
+ * a zavádějící").
+ *
+ * Neodvozuje se to z kódu někde ve zprávách, ale z toho, co o sobě stav sám
+ * říká výš: „S hercem dotočeno, na disku zatím není ani jeden track." Dokud
+ * tam nic není, nemá smysl zvát klienta do prázdné složky - klepne na zelené
+ * tlačítko a nenajde nic.
+ *
+ * `Dotočeno/stříháme` v seznamu schválně NENÍ: to je přesně ten stav, kdy už
+ * první tracky na disku jsou.
+ */
+const STAVY_BEZ_NAHRAVEK: KodStavu[] = ['V_PRIPRAVE', 'PLANUJEME', 'NATACIME', 'DOTOCENO'];
+
+/** Je u tohohle stavu co stahovat? Neznámý stav se bere, že ano. */
+export function stavMaNahravky(nazev: string | null | undefined): boolean {
+  const kod = kodStavu(nazev);
+  return kod ? !STAVY_BEZ_NAHRAVEK.includes(kod) : true;
+}

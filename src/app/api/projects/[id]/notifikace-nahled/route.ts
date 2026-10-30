@@ -8,6 +8,7 @@ import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { buildStavProjektuHtml } from '@/lib/email';
 import { pozdrav } from '@/lib/osloveni';
+import { stavMaNahravky } from '@/lib/stavyProjektu';
 import { urlNahravek, urlPreposlechu, zakladPortalu } from '@/lib/preposlechOdkaz';
 
 
@@ -75,11 +76,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .catch(() => null);
   const platnyToken = odkaz && !odkaz.zneplatnenoAt ? odkaz.token : null;
 
-  const odkazNaDisk = platnyToken
-    ? urlNahravek(platnyToken)
-    : projekt.companyId && slozka
-      ? `${zaklad}/nahravky/ukazkovy-odkaz`
-      : slozka;
+  // Ve stavech pred prvnim trackem se tlacitko do slozky nekresli vubec
+  // (30. 10. 2026) - nahled musi ukazovat totez co odeslana zprava.
+  const odkazNaDisk = !stavMaNahravky(stav)
+    ? null
+    : platnyToken
+      ? urlNahravek(platnyToken)
+      : projekt.companyId && slozka
+        ? `${zaklad}/nahravky/ukazkovy-odkaz`
+        : slozka;
 
   // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026).
   let odkazNaPreposlech: string | null = null;

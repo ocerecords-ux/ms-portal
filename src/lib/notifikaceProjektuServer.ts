@@ -6,7 +6,7 @@ import {
   STAV_PREPOSLECH_HOTOVO,
 } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
-import { jeStavBezNotifikaci } from '@/lib/stavyProjektu';
+import { jeStavBezNotifikaci, stavMaNahravky } from '@/lib/stavyProjektu';
 import { pozdrav } from '@/lib/osloveni';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail, buildStavProjektuHtml } from '@/lib/email';
@@ -207,11 +207,22 @@ export async function posliNotifikaciKeStavu(
     // Jeden token na projekt - pouziji ho obe tlacitka.
     const token = nastaveni.komu === 'INTERNE' ? null : await zajistiOdkaz(caflouProjectId, null);
 
-    const odkazNaDisk = token
-      ? urlNahravek(token)
-      : projekt.companyId && slozka
-        ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
-        : slozka;
+    /**
+     * TLAČÍTKO DO SLOŽKY JEN TAM, KDE UŽ NĚCO JE (zadání 30. 10. 2026: „u
+     * dotočeno ještě nemáme žádnou nahrávku, takže to tlačítko na složku je
+     * zbytečné a zavádějící").
+     *
+     * Rozhoduje stav, ne přítomnost souborů na Disku: ve stavech před prvním
+     * trackem se zelené tlačítko vůbec nevykreslí. Klient tak nedostane
+     * pozvánku do prázdné složky - viz stavMaNahravky v lib/stavyProjektu.ts.
+     */
+    const odkazNaDisk = !stavMaNahravky(stav)
+      ? null
+      : token
+        ? urlNahravek(token)
+        : projekt.companyId && slozka
+          ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
+          : slozka;
 
     /**
      * Znění zprávy se bere ze VZORU (zadání 11. 9. 2026), ne z kódu. Proměnné
@@ -411,11 +422,15 @@ export async function sestavNahledZpravy(
 
     const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
     const slozka = projekt.driveUrl || projekt.company?.driveFolderUrl || null;
-    const odkazNaDisk = token
-      ? urlNahravek(token)
-      : projekt.companyId && slozka
-        ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
-        : slozka;
+    // Náhled musí ukazovat totéž co odeslaná zpráva - i to prázdné místo po
+    // tlačítku do složky ve stavech před prvním trackem (30. 10. 2026).
+    const odkazNaDisk = !stavMaNahravky(stav)
+      ? null
+      : token
+        ? urlNahravek(token)
+        : projekt.companyId && slozka
+          ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
+          : slozka;
 
     const nazevProjektu =
       nazevSeSerii(projekt.name, projekt.serie, projekt.serieDil) || `Projekt ${caflouProjectId}`;
