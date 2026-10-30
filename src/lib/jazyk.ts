@@ -7618,6 +7618,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Klient si tracky pustí rovnou v prohlížeči a chyby označí v textu. Hodí se všude, kde už je co poslouchat — i když se všechny tracky odevzdávají najednou.',
     en: 'The customer plays the tracks straight in the browser and marks mistakes in the text. It is useful anywhere there is something to listen to — even when all the tracks are handed over at once.',
   },
+  // Stavy pred prvnim trackem (30. 10. 2026) - tlacitka do slozky ani do
+  // taggeru v nich nechodi, protoze by vedla do prazdna.
+  'vzory.bezNahravek': {
+    cs: 'V tomhle stavu ještě na disku nic není, takže do zprávy nechodí ani tlačítko do složky, ani AudioTagger.',
+    en: 'Nothing is on the drive in this state yet, so neither the folder button nor AudioTagger goes into the message.',
+  },
   'vzory.ulozitVzor': { cs: 'Uložit vzor', en: 'Save the template' },
   'vzory.ulozeno': { cs: 'Uloženo', en: 'Saved' },
   'vzory.obnovitVychozi': { cs: 'Obnovit výchozí znění', en: 'Restore the default wording' },

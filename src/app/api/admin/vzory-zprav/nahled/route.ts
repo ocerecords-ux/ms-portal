@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { buildStavProjektuHtml } from '@/lib/email';
 import { dosadPromenne, ukazkoveHodnoty } from '@/lib/vzoryZprav';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
+import { stavMaNahravky } from '@/lib/stavyProjektu';
 
 /**
  * Náhled ROZEPSANÉHO vzoru (zadání 11. 9. 2026). Nic neukládá a nic
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
 
   const hodnoty = ukazkoveHodnoty(stav);
   const zaklad = zakladPortalu();
+  const maNahravky = stavMaNahravky(stav);
 
   const html = buildStavProjektuHtml({
     prijemci: [],
@@ -40,10 +42,15 @@ export async function POST(req: NextRequest) {
     predmet: dosadPromenne(String(telo?.predmet ?? ''), hodnoty),
     nadpis: dosadPromenne(String(telo?.nadpis ?? ''), hodnoty),
     text: dosadPromenne(String(telo?.text ?? ''), hodnoty),
-    odkazNaDisk: `${zaklad}/nahravky`,
-    // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026) -
-    // nahled to musi ukazat stejne jako mail.
-    odkazNaPreposlech: telo?.audiotagger ? `${zaklad}/preposlech/ukazkovy-odkaz` : null,
+    /**
+     * Ve stavech pred prvnim trackem nechodi ani jedno tlacitko (30. 10.
+     * 2026) - nahled to musi ukazat stejne jako mail, jinak si clovek ve
+     * vzorech zaskrtne AudioTagger a bude cekat, ze dorazi.
+     */
+    odkazNaDisk: maNahravky ? `${zaklad}/nahravky` : null,
+    // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026).
+    odkazNaPreposlech:
+      telo?.audiotagger && maNahravky ? `${zaklad}/preposlech/ukazkovy-odkaz` : null,
     popisekOdkazu: jeReklama ? 'Otevřít' : null,
   });
 

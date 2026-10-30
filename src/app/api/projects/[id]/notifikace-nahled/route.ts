@@ -86,13 +86,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         ? `${zaklad}/nahravky/ukazkovy-odkaz`
         : slozka;
 
-  // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026).
+  // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026) -
+  // ale jen ve stavech, kde uz je co preposlouchavat (30. 10. 2026).
   let odkazNaPreposlech: string | null = null;
 
   const nazevProjektu = projekt.name || `Projekt ${params.id}`;
   const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
   const vzor = await vzorProStav(stav, druh);
-  if (vzor.audiotagger) {
+  if (vzor.audiotagger && stavMaNahravky(stav)) {
     odkazNaPreposlech = platnyToken ? urlPreposlechu(platnyToken) : `${zaklad}/preposlech/ukazkovy-odkaz`;
   }
   const hodnoty = {

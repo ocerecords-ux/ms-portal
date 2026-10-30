@@ -7,6 +7,7 @@ import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { prelozit } from '@/lib/jazyk';
 import { BARVY_TEXTU, VELIKOSTI_TEXTU } from '@/lib/formatovaniZpravy';
 import { PROMENNE, type Vzor } from '@/lib/vzoryZprav';
+import { stavMaNahravky } from '@/lib/stavyProjektu';
 
 /**
  * Úprava vzorů zpráv (zadání 11. 9. 2026).
@@ -177,18 +178,33 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
 
             {/* Zadani 14. 9. 2026: „muze se nekdy stat, ze vsechny tracky
                 posilame najednou" - pak je preposlech potreba i u stavu,
-                kde driv nechodil. */}
-            <label className="flex items-start gap-2.5 text-sm font-heading text-ink">
+                kde driv nechodil.
+
+                VE STAVECH PRED PRVNIM TRACKEM je zaskrtavatko zasedle
+                (30. 10. 2026: „ignorujeme i audiotagger"). Tlacitko by do
+                zpravy stejne neslo - prazdny tagger je stejne zavadejici
+                jako prazdna slozka - a zasedle pole to rekne rovnou tady,
+                misto aby si clovek myslel, ze odkaz dorazi. */}
+            <label
+              className={`flex items-start gap-2.5 text-sm font-heading text-ink ${
+                stavMaNahravky(vzor.stav) ? '' : 'opacity-60'
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={vzor.audiotagger}
+                disabled={!stavMaNahravky(vzor.stav)}
                 onChange={(e) => uprav({ audiotagger: e.target.checked })}
                 className="mt-0.5"
               />
               <span>
                 {t('vzory.pridatAudiotagger')}
                 <br />
-                <span className="text-xs font-body text-muted">{t('vzory.pridatAudiotaggerPopis')}</span>
+                <span className="text-xs font-body text-muted">
+                  {stavMaNahravky(vzor.stav)
+                    ? t('vzory.pridatAudiotaggerPopis')
+                    : t('vzory.bezNahravek')}
+                </span>
               </span>
             </label>
 

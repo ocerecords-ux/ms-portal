@@ -267,8 +267,14 @@ export async function posliNotifikaciKeStavu(
         ? `${urlPripominek(token)}?schvalit=1`
         : null;
 
+    /**
+     * AUDIOTAGGER SE ŘÍDÍ TÝMŽ PRAVIDLEM (30. 10. 2026: „ignorujeme
+     * i audiotagger"). Zaškrtávátko ve vzoru rozhoduje jen tam, kde je co
+     * přeposlouchávat; ve stavech před prvním trackem by klient otevřel
+     * prázdný tagger - a to je stejně zavádějící jako prázdná složka.
+     */
     let odkazNaPreposlech: string | null = null;
-    if (vzor.audiotagger && token) {
+    if (vzor.audiotagger && token && stavMaNahravky(stav)) {
       odkazNaPreposlech = urlPreposlechu(token);
     }
     const hodnoty = {
@@ -442,7 +448,8 @@ export async function sestavNahledZpravy(
       druh === 'REKLAMA' && token && stav === 'Dokončeno - ke schválení'
         ? `${urlPripominek(token)}?schvalit=1`
         : null;
-    const odkazNaPreposlech = vzor.audiotagger && token ? urlPreposlechu(token) : null;
+    const odkazNaPreposlech =
+      vzor.audiotagger && token && stavMaNahravky(stav) ? urlPreposlechu(token) : null;
 
     const hodnoty = {
       projekt: nazevProjektu,
