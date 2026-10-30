@@ -10,6 +10,7 @@ import { notify } from '@/lib/notifications';
 import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
 import { oznamKlientoviZmenuTerminu } from '@/lib/zmenaTerminuKlient';
+import { presunFrekvenciDoProjektu } from '@/lib/presunFrekvence';
 
 /**
  * ÚPRAVA POTVRZENÉ FREKVENCE PŘÍMO V KALENDÁŘI (zadání 19. 9. 2026: „když
@@ -20,7 +21,10 @@ import { oznamKlientoviZmenuTerminu } from '@/lib/zmenaTerminuKlient';
  * Do 19. 9. se termín z nabídky v kalendáři upravit nedal - posouval se jen
  * v nabídce. Teď se chová jako každá jiná událost:
  *  - NATACENI: frekvence zůstává frekvencí nabídky (počítá se herci, drží
- *    vazbu na projekt), mění se studio, čas, zvukař a poznámka,
+ *    vazbu na projekt), mění se studio, čas, zvukař, poznámka - a od
+ *    30. 10. 2026 i PROJEKT („nejde změnit v kalendáři projekt. Sice ho
+ *    změním, ale neuložím"). Do té doby se projekt z formuláře tiše zahodil;
+ *    jak se mění teď, je popsané v lib/presunFrekvence.ts,
  *  - jiný druh (STRIH, údržba…): frekvence se zruší (CANCELLED) a na jejím
  *    místě vznikne obyčejná událost kalendáře toho druhu,
  *  - DELETE: frekvence se zruší úplně.
@@ -59,7 +63,21 @@ async function nactiFrekvenci(id: string | null) {
     where: { id },
     include: {
       request: {
-        select: { id: true, projectName: true, actorName: true, actorUserId: true, caflouProjectId: true },
+        // Pole navic jsou pro presun frekvence pod jiny projekt - nova
+        // nabidka se z nich opisuje (viz lib/presunFrekvence.ts).
+        select: {
+          id: true,
+          projectName: true,
+          actorName: true,
+          actorUserId: true,
+          actorEmail: true,
+          caflouProjectId: true,
+          companyId: true,
+          studioId: true,
+          pageCount: true,
+          requiredSessions: true,
+          sessionMinutes: true,
+        },
       },
     },
   });
@@ -119,6 +137,21 @@ export async function PATCH(req: NextRequest) {
       const posun =
         slot.studioId !== d.studioId || slot.start.getTime() !== start.getTime() || slot.end.getTime() !== end.getTime();
 
+      /**
+       * ZMĚNA PROJEKTU (30. 10. 2026). Dělá se PŘED uložením zbytku - když
+       * se nepovede, nemá smysl měnit čas ani studio u frekvence, která
+       * zůstala viset pod špatnou zakázkou.
+       */
+      const presun = await presunFrekvenciDoProjektu({
+        slot,
+        caflouProjectId: d.caflouProjectId ?? '',
+        projectName: d.projectName ?? null,
+        kdo: { id: session.user.id, jmeno: kdo },
+      });
+      if (!presun.ok) return NextResponse.json({ error: presun.chyba }, { status: 500 });
+      /** Název projektu po případném přesunu - do historie i do oznámení. */
+      const nazevProjektu = presun.presunuto ? presun.projectName : slot.request.projectName;
+
       await prisma.recordingSlot.update({
         where: { id: slot.id },
         data: {
@@ -147,7 +180,7 @@ export async function PATCH(req: NextRequest) {
         poznamka: d.note || null,
         zvukarUserId: d.zvukarUserId || null,
         zvukarName: d.zvukarName || null,
-        nazevUdalosti: `${slot.request.projectName} · ${slot.request.actorName}`,
+        nazevUdalosti: `${nazevProjektu} · ${slot.request.actorName}`,
         zacatek: start,
         pasmo: studio?.timezone ?? 'Europe/Prague',
         kdo: { id: session.user.id, jmeno: kdo },
@@ -168,11 +201,15 @@ export async function PATCH(req: NextRequest) {
         typ: 'SLOT',
         akce: 'UPRAVA',
         zaznamId: slot.id,
-        nazev: `${slot.request.projectName} · ${slot.request.actorName}`,
+        nazev: `${nazevProjektu} · ${slot.request.actorName}`,
         start,
         end,
         kde: studio?.shortName ?? null,
-        podrobnosti: posun ? `Přesunuto z ${kdy(slot.start)}` : 'Upraveny údaje frekvence',
+        podrobnosti: presun.presunuto
+          ? `Přesunuto na projekt ${nazevProjektu}`
+          : posun
+            ? `Přesunuto z ${kdy(slot.start)}`
+            : 'Upraveny údaje frekvence',
         kdo: { id: session.user.id, jmeno: kdo },
       });
 
@@ -181,7 +218,7 @@ export async function PATCH(req: NextRequest) {
           userId: slot.request.actorUserId,
           kind: 'RECORDING_CHANGED',
           title: 'Změna natáčecího termínu',
-          body: `${slot.request.projectName} · ${kdy(slot.start)} → ${kdy(start)}`,
+          body: `${nazevProjektu} · ${kdy(slot.start)} → ${kdy(start)}`,
           url: '/moje-terminy',
         });
       }
@@ -192,8 +229,8 @@ export async function PATCH(req: NextRequest) {
        */
       if (posun) {
         await oznamKlientoviZmenuTerminu({
-          caflouProjectId: slot.request.caflouProjectId,
-          nazevProjektu: slot.request.projectName,
+          caflouProjectId: d.caflouProjectId || slot.request.caflouProjectId,
+          nazevProjektu,
           puvodne: kdy(slot.start),
           nove: kdy(start),
         });
