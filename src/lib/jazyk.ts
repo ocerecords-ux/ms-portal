@@ -7245,6 +7245,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'U projektů téhle firmy přibude záložka Tagy - vyplní se vlastnosti souboru a portál je zapíše do hotových MP3 ve složce projektu.',
     en: 'Projects of this company get a Tags tab - you fill in the file properties and the portal writes them into the finished MP3s in the project folder.',
   },
+  'firma.tracklistZTextu': { cs: 'Tracklist z textu', en: 'Tracklist from the text' },
+  'firma.tracklistZTextuVolba': {
+    cs: 'Tracklist se generuje z textu knihy',
+    en: 'Generate the tracklist from the book text',
+  },
+  'firma.tracklistZTextuPopis': {
+    cs: 'V záložce Tracklist u projektů téhle firmy přibude tlačítko Generovat tracklist: projde režijní text (PDF končící _RE) a vypíše tracky podle kapitol - 01_PROLOG, 02_1938 - KAPITOLA 1. a tak dál. Ruční založení naráz zůstává všem.',
+    en: "Projects of this company get a Generate tracklist button on the Tracklist tab: it goes through the director's text (the PDF ending in _RE) and lists the tracks by chapter - 01_PROLOG, 02_1938 - KAPITOLA 1. and so on. Creating them by hand stays available to everyone.",
+  },
   'firma.tagyVydavatel': { cs: 'Vydavatel do tagů', en: 'Publisher for the tags' },
   'firma.tagyVydavatelHint': {
     cs: 'Předvyplní se do tagů každého projektu téhle firmy, třeba „Voxi". U projektu jde přepsat.',
@@ -8295,6 +8304,21 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: '1. How the kitten woke up\n2. The journey to town\n3. Coming home',
   },
   'tracklist.nahraditSeznam': { cs: 'Doplnit kapitoly', en: 'Fill in the chapters' },
+  'tracklist.generovat': { cs: 'Generovat tracklist', en: 'Generate the tracklist' },
+  'tracklist.generuji': { cs: 'Čtu text…', en: 'Reading the text…' },
+  'tracklist.generovatPopis': {
+    cs: 'Projde text projektu (PDF končící _RE ze složky na Disku) a vypíše tracky podle kapitol - prolog, části knihy i čísla kapitol. Tabulku níž to PŘEPÍŠE; uloží se teprve tlačítkem Uložit, takže si návrh projdi.',
+    en: "Goes through the project's text (the PDF whose name ends in _RE in the Drive folder) and lists the tracks by chapter - prologue, book parts and chapter numbers. It OVERWRITES the table below; nothing is stored until you press Save, so check the suggestion first.",
+  },
+  'tracklist.vygenerovano': {
+    cs: 'Z textu vyšlo {pocet} tracků - projdi je a ulož.',
+    en: 'The text gave {pocet} tracks - check them and save.',
+  },
+  'tracklist.nicNenalezeno': {
+    cs: 'V textu se nenašly žádné kapitoly - tracklist bude potřeba vypsat ručně.',
+    en: 'No chapters were found in the text - the tracklist will have to be typed in by hand.',
+  },
+  'tracklist.cteniNeslo': { cs: 'Text se nepodařilo přečíst.', en: 'The text could not be read.' },
 
   /* Tagy finální nahrávky (14. 10. 2026). */
   'tagy.uvod': {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import { cisloTracku, upravNazevTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
@@ -37,33 +37,7 @@ import { navrhniTracky } from '@/lib/tracklistZTextu';
  * z něj AudioTagger i počítadlo normostran) a server žádnou PDF knihovnu
  * nemá. Vygenerované řádky jen SPADNOU DO TABULKY - do databáze se nedostanou
  * dřív, než na to někdo klikne, takže je čas je projít.
- *
- * Popisky generování jsou psané rovnou tady, ne přes `lib/jazyk.ts`: ten má
- * rozdělanou práci překladová dávka. Až bude volný, klíče se přesunou.
  */
-
-const TEXTY = {
-  cs: {
-    generovat: 'Generovat tracklist',
-    generuji: 'Čtu text…',
-    popis:
-      'Projde text projektu (PDF končící _RE ze složky na Disku) a vypíše stopy podle kapitol - prolog, části knihy i čísla kapitol. Tabulku níž to PŘEPÍŠE; uloží se teprve tlačítkem Uložit, takže si návrh projdi.',
-    hotovo: 'Z textu vyšlo {pocet} stop - projdi je a ulož.',
-    bezTextu: 'Ve složce projektu není text. Hledá se PDF, jehož název končí _RE.',
-    nicNenalezeno: 'V textu se nenašly žádné kapitoly - tracklist bude potřeba vypsat ručně.',
-    neslo: 'Text se nepodařilo přečíst.',
-  },
-  en: {
-    generovat: 'Generate tracklist',
-    generuji: 'Reading the text…',
-    popis:
-      "Goes through the project's text (the PDF whose name ends in _RE in the Drive folder) and lists the tracks by chapter - prologue, book parts and chapter numbers. It OVERWRITES the table below; nothing is stored until you press Save, so check the suggestion first.",
-    hotovo: 'The text gave {pocet} tracks - check them and save.',
-    bezTextu: 'There is no text in the project folder. We look for a PDF whose name ends in _RE.',
-    nicNenalezeno: 'No chapters were found in the text - the tracklist will have to be typed in by hand.',
-    neslo: 'The text could not be read.',
-  },
-};
 type Radek = { nazevTracku: string; nazevKapitoly: string };
 
 export function Tracklist({
@@ -79,8 +53,6 @@ export function Tracklist({
   zTextu?: boolean;
 }) {
   const t = usePreklad();
-  const jazyk = useJazyk();
-  const T = TEXTY[jazyk === 'en' ? 'en' : 'cs'];
   const router = useRouter();
   const adresa = `/api/projekty/${encodeURIComponent(caflouProjectId)}/tracklist`;
   const naRadky = (seznam: Track[]): Radek[] =>
@@ -184,7 +156,7 @@ export function Tracklist({
       const odpoved = await fetch(`/api/projekty/${encodeURIComponent(caflouProjectId)}/text`);
       const typ = odpoved.headers.get('content-type') ?? '';
       if (!odpoved.ok || !typ.includes('pdf')) {
-        setChyba(T.bezTextu);
+        setChyba(t('preposlech.bezTextu'));
         return;
       }
       adresa = URL.createObjectURL(await odpoved.blob());
@@ -203,14 +175,14 @@ export function Tracklist({
 
       const navrh = navrhniTracky(stranky);
       if (navrh.length === 0) {
-        setChyba(T.nicNenalezeno);
+        setChyba(t('tracklist.nicNenalezeno'));
         return;
       }
       setTracky(navrh);
-      setHlaska(T.hotovo.replace('{pocet}', String(navrh.length)));
+      setHlaska(t('tracklist.vygenerovano', { pocet: navrh.length }));
     } catch (err) {
       console.error('Generovani tracklistu z textu selhalo:', err);
-      setChyba(T.neslo);
+      setChyba(t('tracklist.cteniNeslo'));
     } finally {
       if (adresa) URL.revokeObjectURL(adresa);
       setCtuText(false);
@@ -347,9 +319,9 @@ export function Tracklist({
             disabled={ctuText}
             className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
           >
-            {ctuText ? T.generuji : T.generovat}
+            {ctuText ? t('tracklist.generuji') : t('tracklist.generovat')}
           </button>
-          <span className="basis-full text-xs font-body text-muted">{T.popis}</span>
+          <span className="basis-full text-xs font-body text-muted">{t('tracklist.generovatPopis')}</span>
         </div>
       )}
 
