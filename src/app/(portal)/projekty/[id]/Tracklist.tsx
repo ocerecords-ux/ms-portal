@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
-import { cisloTracku, nazevTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
+import { cisloTracku, upravNazevTracku, zakladKapitoly, type Track } from '@/lib/tracklist';
+import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
+import { navrhniTracky } from '@/lib/tracklistZTextu';
 
 /**
  * TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026: „vytvoř v detailu každého
@@ -24,19 +26,61 @@ import { cisloTracku, nazevTracku, zakladKapitoly, type Track } from '@/lib/trac
  *
  * NÁZEV KAPITOLY ZŮSTÁVÁ PRÁZDNÝ („jen je doplním") - ten se z ničeho
  * odvodit nedá a vypisuje se ručně z knihy.
+ *
+ * GENEROVÁNÍ Z TEXTU - JEN U FIREM, KTERÉ TO MAJÍ ZAPNUTÉ (zadání
+ * 30. 10. 2026: „tohle je model, který se dělá u firmy Audiotéka. Pojďme to
+ * implementovat, že dáme tlačítko generovat tracklist. Ale takto jen
+ * u Audiotéky"). Tlačítko projde režijní text projektu a vypíše stopy podle
+ * kapitol - viz lib/tracklistZTextu.ts, kde je celý model popsaný.
+ *
+ * TEXT SE ČTE V PROHLÍŽEČI, ne na serveru: pdf.js tu portál stejně má (čte
+ * z něj AudioTagger i počítadlo normostran) a server žádnou PDF knihovnu
+ * nemá. Vygenerované řádky jen SPADNOU DO TABULKY - do databáze se nedostanou
+ * dřív, než na to někdo klikne, takže je čas je projít.
+ *
+ * Popisky generování jsou psané rovnou tady, ne přes `lib/jazyk.ts`: ten má
+ * rozdělanou práci překladová dávka. Až bude volný, klíče se přesunou.
  */
+
+const TEXTY = {
+  cs: {
+    generovat: 'Generovat tracklist',
+    generuji: 'Čtu text…',
+    popis:
+      'Projde text projektu (PDF končící _RE ze složky na Disku) a vypíše stopy podle kapitol - prolog, části knihy i čísla kapitol. Tabulku níž to PŘEPÍŠE; uloží se teprve tlačítkem Uložit, takže si návrh projdi.',
+    hotovo: 'Z textu vyšlo {pocet} stop - projdi je a ulož.',
+    bezTextu: 'Ve složce projektu není text. Hledá se PDF, jehož název končí _RE.',
+    nicNenalezeno: 'V textu se nenašly žádné kapitoly - tracklist bude potřeba vypsat ručně.',
+    neslo: 'Text se nepodařilo přečíst.',
+  },
+  en: {
+    generovat: 'Generate tracklist',
+    generuji: 'Reading the text…',
+    popis:
+      "Goes through the project's text (the PDF whose name ends in _RE in the Drive folder) and lists the tracks by chapter - prologue, book parts and chapter numbers. It OVERWRITES the table below; nothing is stored until you press Save, so check the suggestion first.",
+    hotovo: 'The text gave {pocet} tracks - check them and save.',
+    bezTextu: 'There is no text in the project folder. We look for a PDF whose name ends in _RE.',
+    nicNenalezeno: 'No chapters were found in the text - the tracklist will have to be typed in by hand.',
+    neslo: 'The text could not be read.',
+  },
+};
 type Radek = { nazevTracku: string; nazevKapitoly: string };
 
 export function Tracklist({
   caflouProjectId,
   nazevProjektu,
   pocatecni,
+  zTextu = false,
 }: {
   caflouProjectId: string;
   nazevProjektu: string;
   pocatecni: Track[];
+  /** Firma má zapnuté generování z textu (Company.tracklistZTextu). */
+  zTextu?: boolean;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
+  const T = TEXTY[jazyk === 'en' ? 'en' : 'cs'];
   const router = useRouter();
   const adresa = `/api/projekty/${encodeURIComponent(caflouProjectId)}/tracklist`;
   const naRadky = (seznam: Track[]): Radek[] =>
@@ -49,6 +93,7 @@ export function Tracklist({
   const [vkladani, setVkladani] = useState(false);
   const [vlozeny, setVlozeny] = useState('');
   const [bezi, setBezi] = useState(false);
+  const [ctuText, setCtuText] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
 
@@ -98,7 +143,13 @@ export function Tracklist({
     const nove = [...tracky];
     // Z názvu tracku se stává název souboru: diakritika pryč a mezery na
     // pomlčky, rovnou při psaní (15. 10. 2026). Název kapitoly zůstává.
-    nove[i] = { ...nove[i], [co]: co === 'nazevTracku' ? nazevTracku(hodnota) : hodnota };
+    //
+    // U firmy, která má vlastní model (Audiotéka, 30. 10. 2026), MEZERY
+    // ZŮSTÁVAJÍ: pomlčka místo mezery je naše pravidlo, ne její.
+    nove[i] = {
+      ...nove[i],
+      [co]: co === 'nazevTracku' ? upravNazevTracku(hodnota, zTextu) : hodnota,
+    };
     setTracky(nove);
   }
 
@@ -110,7 +161,60 @@ export function Tracklist({
   function podleVzoru(poradi: number): string {
     const cislo = cisloTracku(poradi);
     const text = vzor.trim();
-    return text ? `${cislo}_${nazevTracku(text)}` : cislo;
+    return text ? `${cislo}_${upravNazevTracku(text, zTextu)}` : cislo;
+  }
+
+  /**
+   * VYPÍŠE STOPY Z TEXTU KNIHY (model Audiotéky, 30. 10. 2026).
+   *
+   * PDF si vyžádá přes portál (`api/projekty/[id]/text` - tatáž cesta, ze
+   * které text čte herec i AudioTagger), přečte ho pdf.js v prohlížeči
+   * a rozbor nadpisů udělá lib/tracklistZTextu.ts. Výsledek se jen vloží do
+   * tabulky; ULOŽENÍ ZŮSTÁVÁ NA ČLOVĚKU.
+   */
+  async function generujZTextu() {
+    setCtuText(true);
+    setChyba(null);
+    setHlaska(null);
+    // PDF se predava JAKO ADRESA (blob:), ne jako pole bajtu - stejne jako
+    // v pocitadle normostran, kde varianta s `data` v nekterych prohlizecich
+    // zlobila (viz lib/normostrany.ts).
+    let adresa: string | null = null;
+    try {
+      const odpoved = await fetch(`/api/projekty/${encodeURIComponent(caflouProjectId)}/text`);
+      const typ = odpoved.headers.get('content-type') ?? '';
+      if (!odpoved.ok || !typ.includes('pdf')) {
+        setChyba(T.bezTextu);
+        return;
+      }
+      adresa = URL.createObjectURL(await odpoved.blob());
+      const pdfjs = await nactiPdfJs();
+      await nastavPdfWorker(pdfjs);
+      const doc = await pdfjs.getDocument({ url: adresa }).promise;
+
+      const stranky: string[] = [];
+      for (let strana = 1; strana <= doc.numPages; strana += 1) {
+        const obsah = await (await doc.getPage(strana)).getTextContent();
+        const polozky: { str?: string }[] = obsah?.items ?? [];
+        // Mezera mezi kusy: nadpis bývá rozlámaný na „KAPITOLA" a „DRUHÁ"
+        // a bez ní by z toho bylo jedno slovo.
+        stranky.push(polozky.map((polozka) => polozka.str ?? '').join(' '));
+      }
+
+      const navrh = navrhniTracky(stranky);
+      if (navrh.length === 0) {
+        setChyba(T.nicNenalezeno);
+        return;
+      }
+      setTracky(navrh);
+      setHlaska(T.hotovo.replace('{pocet}', String(navrh.length)));
+    } catch (err) {
+      console.error('Generovani tracklistu z textu selhalo:', err);
+      setChyba(T.neslo);
+    } finally {
+      if (adresa) URL.revokeObjectURL(adresa);
+      setCtuText(false);
+    }
   }
 
   /**
@@ -232,6 +336,22 @@ export function Tracklist({
   return (
     <div className="flex flex-col gap-4 max-w-[900px]">
       <p className="text-sm font-body text-muted m-0">{t('tracklist.uvod')}</p>
+
+      {/* GENEROVÁNÍ Z TEXTU - jen u firem, které to mají na kartě zapnuté
+          (30. 10. 2026: „ale takto jen u Audiotéky"). */}
+      {zTextu && (
+        <div className="rounded-card border border-line bg-field p-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={generujZTextu}
+            disabled={ctuText}
+            className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+          >
+            {ctuText ? T.generuji : T.generovat}
+          </button>
+          <span className="basis-full text-xs font-body text-muted">{T.popis}</span>
+        </div>
+      )}
 
       {/* ZALOŽENÍ NARÁZ - padesát stop jedním kliknutím. */}
       <div className="rounded-card border border-line bg-field p-4 flex flex-wrap items-end gap-3">

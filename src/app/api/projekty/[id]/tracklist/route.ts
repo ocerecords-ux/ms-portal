@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
-import { nactiTracklist } from '@/lib/tracklistServer';
-import { nazevTracku } from '@/lib/tracklist';
+import { nactiTracklist, generovaniZTextuPovoleno } from '@/lib/tracklistServer';
+import { upravNazevTracku } from '@/lib/tracklist';
 
 /**
  * TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026).
@@ -52,13 +52,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
+  /**
+   * MODEL POJMENOVÁNÍ ROZHODUJE FIRMA, ne obrazovka (30. 10. 2026: „ještě
+   * jsem upravil vzor: 02_1938 - KAPITOLA 1."). U firmy, která má zapnuté
+   * generování z textu, mezery v názvu zůstávají; jinak se mění na pomlčky
+   * jako dosud. Bez tohohle řádku by server uloženému názvu mezery přepsal
+   * a vygenerovaný tracklist by se po uložení rozsypal.
+   */
+  const sMezerami = await generovaniZTextuPovoleno(params.id);
+
   // Úplně prázdné řádky se zahazují - vznikají klepnutím na „Přidat stopu"
   // navíc. Stačí ale vyplněný jeden ze dvou názvů, aby řádek zůstal.
   const tracky = parsed.data.tracky
     // Tvar názvu tracku se hlídá i tady, ne jen v prohlížeči - je to
     // pravidlo předpisu, ne vlastnost jednoho formuláře (15. 10. 2026).
     .map((t) => ({
-      nazevTracku: nazevTracku(t.nazevTracku),
+      nazevTracku: upravNazevTracku(t.nazevTracku, sMezerami),
       nazevKapitoly: t.nazevKapitoly.trim(),
     }))
     .filter((t) => t.nazevTracku || t.nazevKapitoly);

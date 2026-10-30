@@ -14,6 +14,28 @@ import { CURRENCIES, CURRENCY_LABELS, nazevMeny } from '@/lib/doklady';
 import type { Currency } from '@prisma/client';
 
 /**
+ * TRACKLIST Z TEXTU KNIHY (zadani 30. 10. 2026: „tohle je model, ktery se
+ * dela u firmy Audioteka… ale takto jen u Audioteky").
+ *
+ * Popisky jsou psane rovnou tady, ne pres `lib/jazyk.ts`: ten ma rozdelanou
+ * praci prekladova davka. Az bude volny, klice se presunou.
+ */
+const TRACKLIST_POPISKY = {
+  cs: {
+    label: 'Tracklist z textu',
+    volba: 'Tracklist se generuje z textu knihy',
+    popis:
+      'V záložce Tracklist u projektů této firmy přibude tlačítko Generovat tracklist: projde režijní text (PDF končící _RE) a vypíše stopy podle kapitol - 01_PROLOG, 02_1938-KAPITOLA-1. a tak dál. Ruční založení naráz zůstává všem.',
+  },
+  en: {
+    label: 'Tracklist from the text',
+    volba: 'Generate the tracklist from the book text',
+    popis:
+      "Projects of this client get a Generate tracklist button on the Tracklist tab: it goes through the director's text (the PDF ending in _RE) and lists the tracks by chapter - 01_PROLOG, 02_1938-KAPITOLA-1. and so on. Creating them by hand stays available to everyone.",
+  },
+};
+
+/**
  * Karta firmy (zadani 6. 9. 2026). Fakturacni udaje - IC, DIC, platce DPH,
  * adresa po castech a splatnost - vedeme nove u OBOU typu firem, drive je mel
  * jen dodavatel. Sazba za normostranu se ukazuje jen u klienta, ktery ma
@@ -39,6 +61,7 @@ export function CompanyForm({
   const router = useRouter();
   const t = usePreklad();
   const jazyk = useJazyk();
+  const popiskyTracklistu = TRACKLIST_POPISKY[jazyk === 'en' ? 'en' : 'cs'];
   /** Popisky psané rovnou v komponentě - viz komentář u pole s fakturami. */
   const jeAnglicky = jazyk === 'en';
   const isClient = company.type === 'KLIENT';
@@ -112,6 +135,16 @@ export function CompanyForm({
   );
   const [tagyVydavatel, setTagyVydavatel] = useState<string>(
     (company as { tagyVydavatel?: string | null }).tagyVydavatel ?? '',
+  );
+  /**
+   * TRACKLIST Z TEXTU KNIHY (zadání 30. 10. 2026: „ale takto jen
+   * u Audiotéky") - viz Company.tracklistZTextu a lib/tracklistZTextu.ts.
+   *
+   * Popisky jsou psané rovnou tady, ne přes `lib/jazyk.ts`: ten má rozdělanou
+   * práci překladová dávka. Až bude volný, klíče se přesunou.
+   */
+  const [tracklistZTextu, setTracklistZTextu] = useState<boolean>(
+    Boolean((company as { tracklistZTextu?: boolean }).tracklistZTextu),
   );
   const [mena, setMena] = useState<Currency>(
     ((company as { mena?: Currency }).mena ?? 'CZK') as Currency,
@@ -254,6 +287,7 @@ export function CompanyForm({
                 mena,
                 tagyPovoleny,
                 tagyVydavatel: tagyPovoleny ? tagyVydavatel : '',
+                tracklistZTextu: dealsAudiobooks ? tracklistZTextu : false,
                 nabidkyEmaily: nabidkyEmaily.map((e) => e.trim()).filter(Boolean),
                 fakturyEmaily: fakturyEmaily.map((e) => e.trim()).filter(Boolean),
               }
@@ -579,6 +613,19 @@ export function CompanyForm({
                 placeholder="Voxi"
                 className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple"
               />
+            </AdminField>
+          )}
+
+          {/* TRACKLIST Z TEXTU KNIHY (30. 10. 2026: „ale takto jen
+              u Audiotéky"). Jen u audioknih - u reklamy kapitoly nejsou. */}
+          {dealsAudiobooks && (
+            <AdminField label={popiskyTracklistu.label}>
+              <div className="flex flex-col gap-1.5">
+                <Volba vybrano={tracklistZTextu} onZmena={setTracklistZTextu}>
+                  {popiskyTracklistu.volba}
+                </Volba>
+                <span className="text-xs font-body text-muted">{popiskyTracklistu.popis}</span>
+              </div>
             </AdminField>
           )}
 

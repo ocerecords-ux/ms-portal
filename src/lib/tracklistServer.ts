@@ -23,6 +23,21 @@ import type { Track } from '@/lib/tracklist';
 export type { Track } from '@/lib/tracklist';
 export { cisloTracku } from '@/lib/tracklist';
 
+/**
+ * SMÍ SE U TOHOHLE PROJEKTU TRACKLIST GENEROVAT Z TEXTU? (zadání
+ * 30. 10. 2026: „ale takto jen u Audiotéky"). Rozhoduje PŘÍZNAK U FIRMY, ne
+ * název firmy v kódu - viz Company.tracklistZTextu a lib/tracklistZTextu.ts.
+ */
+export async function generovaniZTextuPovoleno(caflouProjectId: string): Promise<boolean> {
+  const meta = await prisma.projectMeta
+    .findUnique({
+      where: { caflouProjectId },
+      select: { company: { select: { tracklistZTextu: true } } },
+    })
+    .catch(() => null);
+  return meta?.company?.tracklistZTextu === true;
+}
+
 export async function nactiTracklist(caflouProjectId: string): Promise<Track[]> {
   const radky = await prisma.trackProjektu
     .findMany({ where: { caflouProjectId }, orderBy: { poradi: 'asc' } })

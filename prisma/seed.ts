@@ -211,6 +211,7 @@ async function main() {
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
   await albatrosCenuUrcujeSam();
+  await audiotekaTracklistZTextu();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1657,6 +1658,31 @@ async function klientAlbatrosu() {
  * nepocital. Oni totiz cenu navrhuji sami."). Priznak jde jinak zaskrtnout
  * i rucne na karte firmy.
  */
+/**
+ * AUDIOTÉKA: TRACKLIST Z TEXTU (zadání 30. 10. 2026: „tohle je model, který se
+ * dělá u firmy Audiotéka… ale takto jen u Audiotéky").
+ *
+ * Jednorázově, ať se nemusí doklikávat; dál se to přepíná na kartě firmy
+ * (Administrace → Firmy, pole Tracklist z textu). Viz Company.tracklistZTextu
+ * a src/lib/tracklistZTextu.ts.
+ */
+async function audiotekaTracklistZTextu() {
+  const ZNAMKA = 'audioteka-tracklist-z-textu';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.company.updateMany({
+      // Mala a velka pismena neresime - firma muze byt zapsana jakkoli.
+      where: { name: { contains: 'audiot', mode: 'insensitive' } },
+      data: { tracklistZTextu: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  Audioteka: tracklist se generuje z textu (${vysledek.count} firem)`);
+  } catch (err) {
+    console.warn('  priznak "tracklist z textu" se u Audioteky nepodarilo nastavit:', err);
+  }
+}
+
 async function albatrosCenuUrcujeSam() {
   const ZNAMKA = 'albatros-cenu-urcuje-klient';
   try {

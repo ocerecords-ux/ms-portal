@@ -48,3 +48,25 @@ export function bezDiakritiky(text: string): string {
 export function nazevTracku(text: string): string {
   return bezDiakritiky(text).trim().replace(/\s+/g, '-');
 }
+
+/**
+ * NÁZEV TRACKU U MODELU, KTERÝ MEZERY NECHÁVÁ (upřesnění 30. 10. 2026 ke vzoru
+ * Audiotéky: „ještě jsem upravil vzor: 02_1938 - KAPITOLA 1.").
+ *
+ * Pomlčka místo mezery je NAŠE pravidlo; klient, který si soubory pojmenovává
+ * jinak, je dostane tak, jak je chce - a to je celý rozdíl mezi touhle funkcí
+ * a `nazevTracku`. Diakritika jde pryč v obou případech: ta v názvech souborů
+ * dělá škodu bez ohledu na model.
+ */
+export function nazevTrackuSMezerami(text: string): string {
+  return bezDiakritiky(text).replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Který z těch dvou tvarů se u projektu použije. Rozhoduje příznak firmy
+ * (Company.tracklistZTextu), ne obrazovka - stejné pravidlo musí platit
+ * v prohlížeči i na serveru při ukládání.
+ */
+export function upravNazevTracku(text: string, sMezerami: boolean): string {
+  return sMezerami ? nazevTrackuSMezerami(text) : nazevTracku(text);
+}

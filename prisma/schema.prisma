@@ -273,6 +273,20 @@ model Company {
   /// tagů projektu, kde se dá přepsat.
   tagyVydavatel  String?
 
+  /// TRACKLIST SE GENERUJE Z TEXTU KNIHY - MODEL AUDIOTEKY (zadani
+  /// 30. 10. 2026: „tohle je model, ktery se dela u firmy Audioteka. Pojdme
+  /// to implementovat, ze dame tlacitko generovat tracklist. Ale takto jen
+  /// u Audioteky").
+  ///
+  /// Kdyz je zaskrtnuty, je v zalozce Tracklist tlacitko, ktere projde text
+  /// projektu (PDF koncici _RE ze slozky na Disku) a zalozi stopy podle
+  /// kapitol: `01_PROLOG`, `02_1938-KAPITOLA-1.`, … Kazdy klient chce tracky
+  /// pojmenovane jinak, takze je to PRIZNAK U KARTY FIRMY, ne jmeno v kodu -
+  /// stejne jako `tagyPovoleny` nebo `hudbuDodavaKlient`.
+  ///
+  /// Rucni zalozeni naraz zustava vsem; tohle je jen zkratka navic.
+  tracklistZTextu Boolean @default(false)
+
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

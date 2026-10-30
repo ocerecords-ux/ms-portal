@@ -43,7 +43,7 @@ import { stavVyzvy } from '@/lib/vyzvaHudbaServer';
 import { srovnejSerii } from '@/lib/hudbaSerieServer';
 import { firmaDodavaHudbu, vyzvaPujdeSama } from '@/lib/hudbaOdKlienta';
 import { dropboxNastaven } from '@/lib/dropbox';
-import { nactiTracklist } from '@/lib/tracklistServer';
+import { nactiTracklist, generovaniZTextuPovoleno } from '@/lib/tracklistServer';
 import { jeReklamaProjekt } from '@/lib/reklamniProjektServer';
 import { nactiTagy, tagovaniPovoleno } from '@/lib/tagyServer';
 import { NazevProjektu } from './NazevProjektu';
@@ -1293,6 +1293,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           caflouProjectId={caflouProjectId}
           nazevProjektu={metaPoSync?.name || project?.name || ''}
           pocatecni={await nactiTracklist(caflouProjectId)}
+          zTextu={await generovaniZTextuPovoleno(caflouProjectId)}
         />
       ),
     });

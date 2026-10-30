@@ -47,6 +47,8 @@ const schema = z.object({
   tagyPovoleny: z.boolean().optional(),
   /** Výchozí vydavatel do tagů (14. 10. 2026) - u Albatrosu „Voxi". */
   tagyVydavatel: z.string().trim().max(120).optional(),
+  /** Tracklist se generuje z textu knihy (30. 10. 2026) - jen u Audiotéky. */
+  tracklistZTextu: z.boolean().optional(),
   /** Měna klienta (12. 10. 2026) - sazba za normostranu a předběžná cena. */
   mena: z.enum(['CZK', 'EUR', 'USD', 'GBP']).optional(),
   /** Kam posílat cenové nabídky (12. 10. 2026) - prázdné pole = jako dosud. */
@@ -139,6 +141,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               ...(data.mena !== undefined ? { mena: data.mena } : {}),
               ...(data.tagyPovoleny !== undefined ? { tagyPovoleny: data.tagyPovoleny } : {}),
               ...(data.tagyVydavatel !== undefined ? { tagyVydavatel: data.tagyVydavatel || null } : {}),
+              ...(data.tracklistZTextu !== undefined ? { tracklistZTextu: data.tracklistZTextu } : {}),
               ...(data.nabidkyEmaily !== undefined
                 ? { nabidkyEmaily: data.nabidkyEmaily.map((e) => e.trim()).filter(Boolean) }
                 : {}),
