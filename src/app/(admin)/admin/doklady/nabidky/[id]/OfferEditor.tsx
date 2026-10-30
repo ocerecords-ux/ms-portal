@@ -24,6 +24,7 @@ import {
 import { formatDatumCas, prelozitKolem } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { DatumPole } from '@/components/DatumPole';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { VyberPole } from '@/components/VyberPole';
 
 type Item = {
@@ -321,7 +322,7 @@ export function OfferEditor({
           });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('nabidka.chybaUlozeni'));
+        setError(hlaskaChyby(data, t, t('nabidka.chybaUlozeni')));
         return false;
       }
       if (jesteNeulozena && data?.id) {
@@ -349,7 +350,7 @@ export function OfferEditor({
       const res = await fetch(`/api/admin/offers/${offer.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('nabidka.chybaOdeslani'));
+        setError(hlaskaChyby(data, t, t('nabidka.chybaOdeslani')));
         return;
       }
       setInfo(t('nabidka.odeslanoNa', { email: data.to }));
@@ -376,7 +377,7 @@ export function OfferEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('nabidka.chybaSchvaleni'));
+        setError(hlaskaChyby(data, t, t('nabidka.chybaSchvaleni')));
         return;
       }
       setSchvalovani(false);
@@ -397,7 +398,7 @@ export function OfferEditor({
       const res = await fetch(`/api/admin/offers/${offer.id}/schvaleni`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('nabidka.chybaZruseniSchvaleni'));
+        setError(hlaskaChyby(data, t, t('nabidka.chybaZruseniSchvaleni')));
         return;
       }
       setInfo(t('nabidka.schvaleniZruseno'));
@@ -436,7 +437,7 @@ export function OfferEditor({
       const res = await fetch(`/api/admin/offers/${offer.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('nabidka.chybaSmazani'));
+        setError(hlaskaChyby(data, t, t('nabidka.chybaSmazani')));
         return;
       }
       router.push('/admin/doklady/nabidky');

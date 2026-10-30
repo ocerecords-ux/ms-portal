@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { CURRENCIES, expandNumberFormat } from '@/lib/doklady';
 import { resolveProject } from '@/lib/projectOptions';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Zalozeni nabidky (zadani 6. 9. 2026). Cislo se bere z ciselne rady vlastni
 // firmy a rada se rovnou posune - v transakci, aby dve soubezne nabidky
@@ -47,7 +48,7 @@ function toDate(value: string | null | undefined): Date | null {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -57,10 +58,10 @@ export async function POST(req: NextRequest) {
     const { issuerCompanyId, companyId, subject } = input;
 
     const issuer = await prisma.issuerCompany.findUnique({ where: { id: issuerCompanyId } });
-    if (!issuer) return NextResponse.json({ error: 'Vlastní firma nenalezena.' }, { status: 404 });
+    if (!issuer) return odpovedChyby('chybaApi.vlastniFirmaNenalezena', 404);
 
     const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
-    if (!company) return NextResponse.json({ error: 'Odběratel nenalezen.' }, { status: 404 });
+    if (!company) return odpovedChyby('chybaApi.odberatelNenalezen', 404);
 
     const projekt = await resolveProject(input.caflouProjectId ?? null);
     const polozky = input.items ?? [];
@@ -120,13 +121,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!created) {
-      return NextResponse.json({ error: 'Nepodařilo se přidělit číslo nabídky.' }, { status: 409 });
+      return odpovedChyby('chybaApi.cisloNabidkyNeprideleno', 409);
     }
 
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
     console.error('POST /api/admin/offers selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Založení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.zalozeniNezdariloS', { zprava: message }, 500);
   }
 }

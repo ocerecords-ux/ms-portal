@@ -94,6 +94,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7q | 19. 10. | Hlášky rout Sítí a Příběhů — `api/site/**` klíčem (vzor 7o/7p): příběhy, příspěvky, obrázky a popisek od Bruna. Nově `odpovedChybyS` pro větu se značkou | [x] |
 | 7r | 21.–22. 10. (nasazeno 29. 10.) | Hlášky rout chatu a PDF dokladu klienta klíčem (15 rout v `api/chat/**` + `api/klient/doklady/pdf`); nově `odpovedChybyVJazyce` pro routy, na které se chodí odkazem v novém okně | [x] |
 | 7s | 29. 10. | Hlášky rout výdajů v administraci klíčem — `api/admin/expenses/**` a `api/admin/expense-categories/**` (10 rout, 6 obrazovek); první kus z `api/admin/**` | [x] |
+| 7t | 30. 10. | Hlášky rout nabídek v administraci klíčem — `api/admin/offers/**` (4 routy, 2 obrazovky); druhá agenda z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1811,6 +1812,46 @@ schválně česky: je to provozní detail, ne věta pro klienta.
 kolem 398 — největší kusy jsou nabídky (31), smlouvy (31), faktury (29),
 uživatelé (26), banka (26), firmy (21) a studia (20). Jde to dávkovat po
 agendách přesně takhle, jedna za večer.
+
+### Dávka 7t je HOTOVÁ (30. 10. 2026)
+
+**Druhá agenda z `api/admin/**`: nabídky.** Vzor je z dávky 7o
+(`odpovedChyby(klíč, status)`, věta se značkou přes `odpovedChybyS`), obrazovka
+čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **4 routy, 2 obrazovky,
+38 přepsaných míst a slovník +21 klíčů (6 197 → 6 218)**.
+
+**Routy:** `api/admin/offers` (založení nabídky), `offers/[id]` (úprava
+i smazání), `offers/[id]/send` (odeslání klientovi) a `offers/[id]/schvaleni`
+(ruční schválení i jeho zrušení).
+
+**Obrazovky:** `OfferEditor` (uložení, odeslání, schválení, zrušení schválení,
+smazání — pět míst) a `PridatNabidku` (nabídka z objednávky).
+
+**Tři věty se značkou.** Dvě „Nabídku není komu poslat…" (podle toho, jestli je
+nabídka navázaná na projekt) nesou `{firma}` a jedna „Z nabídky už je vystavená
+faktura {faktury}…" nese čísla faktur. Oboje je obsah z databáze, takže se
+**nepřekládá** — jde vedle klíče jako hodnota. Stejně tak `{zprava}`
+u `zalozeniNezdariloS` a `odeslaniNezdariloS` (technická hláška z výjimky).
+
+**Termíny podle slovníčku:** nabídka = quote, odběratel = customer, klient
+u firmy = customer. „Vlastní firma" je v angličtině „your own company" — v liště
+se sekce jmenuje My companies.
+
+**Co se NEDĚLALO (schválně):**
+
+1. **Hlášky ze `zod` schémat** — `parsed.error.issues[0]?.message` ve dvou
+   routách zůstává česky i s fallbackem `'Neplatná data.'`, stejně jako od
+   dávky 7o. Přepíšou se všechny naráz vlastním úkolem.
+2. **Veřejná routa `api/nabidka/[token]`** (schválení odkazem u klienta) do
+   `api/admin/**` nepatří a v téhle dávce nebyla.
+3. Hláška z `resolveProject` — provozní věta o nastavení, viz dávka 7o.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po nabídkách ubylo 26 hlášek, zůstává jich kolem
+372 — největší kusy jsou banka (25), uživatelé (22), faktury (19), smlouvy (19),
+wikipedie (15), technika (15), ukázky (14) a studia (14). Dál po agendách, jedna
+za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

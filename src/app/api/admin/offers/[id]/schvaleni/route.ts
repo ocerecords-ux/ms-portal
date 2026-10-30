@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // RUCNI SCHVALENI NABIDKY (zadani 14. 9. 2026: „potrebuji pridat moznost
 // rucne schvalit nabidku").
@@ -23,23 +24,23 @@ const schema = z.object({
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Neplatný požadavek.' }, { status: 400 });
+      return odpovedChyby('chybaApi.neplatnyPozadavek', 400);
     }
 
     const offer = await prisma.offer.findUnique({
       where: { id: params.id },
       select: { id: true, status: true, items: { select: { id: true }, take: 1 } },
     });
-    if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
+    if (!offer) return odpovedChyby('chybaApi.nabidkaNenalezena', 404);
     if (offer.status === 'APPROVED') {
-      return NextResponse.json({ error: 'Tahle nabídka už je schválená.' }, { status: 409 });
+      return odpovedChyby('chybaApi.nabidkaUzSchvalena', 409);
     }
     if (offer.items.length === 0) {
-      return NextResponse.json({ error: 'Nabídka nemá žádné položky — není co schvalovat.' }, { status: 400 });
+      return odpovedChyby('chybaApi.nabidkaBezPolozekSchvaleni', 400);
     }
 
     const updated = await prisma.offer.update({
@@ -56,14 +57,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ ok: true, offer: updated });
   } catch (err) {
     console.error('POST /api/admin/offers/[id]/schvaleni selhalo:', err);
-    return NextResponse.json({ error: 'Schválení se nepodařilo uložit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.schvaleniNeulozeno', 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const offer = await prisma.offer.findUnique({
       where: { id: params.id },
@@ -74,18 +75,18 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
         invoices: { select: { id: true, number: true }, orderBy: { createdAt: 'asc' } },
       },
     });
-    if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
+    if (!offer) return odpovedChyby('chybaApi.nabidkaNenalezena', 404);
     if (offer.status !== 'APPROVED') {
-      return NextResponse.json({ error: 'Tahle nabídka schválená není.' }, { status: 409 });
+      return odpovedChyby('chybaApi.nabidkaNeniSchvalena', 409);
     }
     // Kdyz uz z nabidky visi faktura, schvaleni je podklad k ni - zrusit ho
     // by znamenalo, ze fakturujeme neco, co nikdo neodsouhlasil.
     if (offer.invoices.length > 0) {
-      return NextResponse.json(
-        {
-          error: `Z nabídky už je vystavená faktura ${offer.invoices.map((f) => f.number).join(', ')} — schválení nejde vzít zpět.`,
-        },
-        { status: 409 },
+      // Cisla faktur jsou obsah z databaze - jdou vedle klice jako hodnota.
+      return odpovedChybyS(
+        'chybaApi.schvaleniNejdeVzitZpetS',
+        { faktury: offer.invoices.map((f) => f.number).join(', ') },
+        409,
       );
     }
 
@@ -102,6 +103,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ ok: true, offer: updated });
   } catch (err) {
     console.error('DELETE /api/admin/offers/[id]/schvaleni selhalo:', err);
-    return NextResponse.json({ error: 'Schválení se nepodařilo zrušit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.schvaleniNezruseno', 500);
   }
 }

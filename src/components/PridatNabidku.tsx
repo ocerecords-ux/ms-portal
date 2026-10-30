@@ -6,6 +6,7 @@ import type { NavrhNabidky } from '@/lib/nabidkaZObjednavky';
 import { formatMoney } from '@/lib/doklady';
 import { formatDatum } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * PŘEDVYPLNĚNÁ NABÍDKA Z OBJEDNÁVKY (zadání 18. 9. 2026: „aby tam zůstala
@@ -64,7 +65,7 @@ export function PridatNabidku({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('nabidka.nezalozena'));
+        setChyba(hlaskaChyby(data, t, t('nabidka.nezalozena')));
         setBezi(false);
         return;
       }

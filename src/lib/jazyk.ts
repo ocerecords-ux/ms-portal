@@ -12190,6 +12190,85 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Kategorie s tímhle názvem už existuje.',
     en: 'A category with this name already exists.',
   },
+  // CHYBY Z ROUT NABÍDEK V ADMINISTRACI (dávka 7t, 30. 10. 2026). Nabídka je
+  // podle slovníčku „quote", odběratel „customer". Věty se značkou posílá
+  // routa přes `odpovedChybyS` - název firmy ani čísla faktur se nepřekládají,
+  // je to obsah z databáze.
+  'chybaApi.vlastniFirmaNenalezena': {
+    cs: 'Vlastní firma nenalezena.',
+    en: 'Your own company was not found.',
+  },
+  'chybaApi.odberatelNenalezen': { cs: 'Odběratel nenalezen.', en: 'Customer not found.' },
+  'chybaApi.cisloNabidkyNeprideleno': {
+    cs: 'Nepodařilo se přidělit číslo nabídky.',
+    en: 'The quote number could not be assigned.',
+  },
+  'chybaApi.zalozeniNezdariloS': {
+    cs: 'Založení se nezdařilo ({zprava}).',
+    en: 'Creating it did not work ({zprava}).',
+  },
+  'chybaApi.nabidkaNenalezena': { cs: 'Nabídka nenalezena.', en: 'Quote not found.' },
+  'chybaApi.schvalenouNabidkuNejdeMenit': {
+    cs: 'Schválenou nabídku už nejde měnit — klient ji odsouhlasil v této podobě.',
+    en: 'An approved quote can no longer be changed — the customer agreed to it in this form.',
+  },
+  'chybaApi.neplatneDatumVystaveni': {
+    cs: 'Neplatné datum vystavení.',
+    en: 'Invalid issue date.',
+  },
+  'chybaApi.neplatnaPlatnostDo': {
+    cs: 'Neplatná platnost do.',
+    en: 'Invalid valid-until date.',
+  },
+  'chybaApi.schvalenouNabidkuNejdeSmazat': {
+    cs: 'Schválenou nabídku nelze smazat.',
+    en: 'An approved quote cannot be deleted.',
+  },
+  'chybaApi.nabidkaBezPolozek': {
+    cs: 'Nabídka nemá žádné položky.',
+    en: 'The quote has no items.',
+  },
+  'chybaApi.nabidkuNeniKomuPoslatProjektS': {
+    cs: 'Nabídku není komu poslat — projekt nemá vyplněného klienta s e-mailem a firma „{firma}" nemá ani adresy na nabídky, ani kontaktní e-mail.',
+    en: 'There is nobody to send the quote to — the project has no customer with an email address, and the company “{firma}” has neither quote addresses nor a contact email.',
+  },
+  'chybaApi.nabidkuNeniKomuPoslatBezProjektuS': {
+    cs: 'Nabídku není komu poslat — není navázaná na projekt a firma „{firma}" nemá ani adresy na nabídky, ani kontaktní e-mail.',
+    en: 'There is nobody to send the quote to — it is not linked to a project, and the company “{firma}” has neither quote addresses nor a contact email.',
+  },
+  'chybaApi.emailBezSmtp': {
+    cs: 'E-mail se nepodařilo odeslat — není nastavené SMTP.',
+    en: 'The email could not be sent — SMTP is not set up.',
+  },
+  'chybaApi.odeslaniNezdariloS': {
+    cs: 'Odeslání se nezdařilo ({zprava}).',
+    en: 'Sending did not work ({zprava}).',
+  },
+  'chybaApi.neplatnyPozadavek': { cs: 'Neplatný požadavek.', en: 'Invalid request.' },
+  'chybaApi.nabidkaUzSchvalena': {
+    cs: 'Tahle nabídka už je schválená.',
+    en: 'This quote has already been approved.',
+  },
+  'chybaApi.nabidkaBezPolozekSchvaleni': {
+    cs: 'Nabídka nemá žádné položky — není co schvalovat.',
+    en: 'The quote has no items — there is nothing to approve.',
+  },
+  'chybaApi.schvaleniNeulozeno': {
+    cs: 'Schválení se nepodařilo uložit.',
+    en: 'The approval could not be saved.',
+  },
+  'chybaApi.nabidkaNeniSchvalena': {
+    cs: 'Tahle nabídka schválená není.',
+    en: 'This quote is not approved.',
+  },
+  'chybaApi.schvaleniNejdeVzitZpetS': {
+    cs: 'Z nabídky už je vystavená faktura {faktury} — schválení nejde vzít zpět.',
+    en: 'Invoice {faktury} has already been issued from this quote — the approval cannot be taken back.',
+  },
+  'chybaApi.schvaleniNezruseno': {
+    cs: 'Schválení se nepodařilo zrušit.',
+    en: 'The approval could not be cancelled.',
+  },
   // CHYBY Z ROUT PŘEPOSLECHU (dávka 7p, 19. 10. 2026). Záznam chyby
   // v AudioTaggeru je podle slovníčku „tag".
   'preposlechApi.posluchacNenalezen': {

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { CURRENCIES } from '@/lib/doklady';
 import { resolveProject } from '@/lib/projectOptions';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Uprava nabidky (zadani 6. 9. 2026). Polozky se posilaji vzdy cele - editor
 // s nimi pracuje jako s jednim celkem, takze je jednodussi je prepsat nez
@@ -42,7 +43,7 @@ function toDate(value: string): Date | null {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -51,12 +52,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const d = parsed.data;
 
     const offer = await prisma.offer.findUnique({ where: { id: params.id }, select: { id: true, status: true } });
-    if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
+    if (!offer) return odpovedChyby('chybaApi.nabidkaNenalezena', 404);
     if (offer.status === 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Schválenou nabídku už nejde měnit — klient ji odsouhlasil v této podobě.' },
-        { status: 409 },
-      );
+      return odpovedChyby('chybaApi.schvalenouNabidkuNejdeMenit', 409);
     }
 
     const data: Record<string, unknown> = {};
@@ -77,7 +75,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (d.issueDate !== undefined) {
       const date = toDate(d.issueDate);
-      if (!date) return NextResponse.json({ error: 'Neplatné datum vystavení.' }, { status: 400 });
+      if (!date) return odpovedChyby('chybaApi.neplatneDatumVystaveni', 400);
       data.issueDate = date;
     }
     if (d.validUntil !== undefined) {
@@ -85,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         data.validUntil = null;
       } else {
         const date = toDate(d.validUntil);
-        if (!date) return NextResponse.json({ error: 'Neplatná platnost do.' }, { status: 400 });
+        if (!date) return odpovedChyby('chybaApi.neplatnaPlatnostDo', 400);
         data.validUntil = date;
       }
     }
@@ -114,19 +112,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (err) {
     console.error('PATCH /api/admin/offers/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const offer = await prisma.offer.findUnique({ where: { id: params.id }, select: { status: true } });
-    if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
+    if (!offer) return odpovedChyby('chybaApi.nabidkaNenalezena', 404);
     if (offer.status === 'APPROVED') {
-      return NextResponse.json({ error: 'Schválenou nabídku nelze smazat.' }, { status: 409 });
+      return odpovedChyby('chybaApi.schvalenouNabidkuNejdeSmazat', 409);
     }
 
     await prisma.offer.delete({ where: { id: params.id } });
@@ -134,6 +132,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   } catch (err) {
     console.error('DELETE /api/admin/offers/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Smazání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.smazaniNezdariloS', { zprava: message }, 500);
   }
 }

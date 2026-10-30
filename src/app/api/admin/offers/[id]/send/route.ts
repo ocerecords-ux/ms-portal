@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { sendOfferEmail } from '@/lib/email';
 import { computeTotals } from '@/lib/doklady';
 import { najdiPrijemceNabidky } from '@/lib/prijemceNabidky';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Odeslani nabidky klientovi (zadani 6. 9. 2026). Mail nese odkaz se
 // schvalovacim tokenem, aby klient nemusel byt prihlaseny.
@@ -14,16 +15,16 @@ import { najdiPrijemceNabidky } from '@/lib/prijemceNabidky';
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const offer = await prisma.offer.findUnique({
       where: { id: params.id },
       include: { issuer: true, company: true, items: { orderBy: { sortOrder: 'asc' } } },
     });
-    if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
+    if (!offer) return odpovedChyby('chybaApi.nabidkaNenalezena', 404);
 
     if (offer.items.length === 0) {
-      return NextResponse.json({ error: 'Nabídka nemá žádné položky.' }, { status: 400 });
+      return odpovedChyby('chybaApi.nabidkaBezPolozek', 400);
     }
 
     const prijemce = await najdiPrijemceNabidky({
@@ -31,13 +32,13 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       company: offer.company,
     });
     if (!prijemce) {
-      return NextResponse.json(
-        {
-          error: offer.caflouProjectId
-            ? `Nabídku není komu poslat — projekt nemá vyplněného klienta s e-mailem a firma „${offer.company.name}" nemá ani adresy na nabídky, ani kontaktní e-mail.`
-            : `Nabídku není komu poslat — není navázaná na projekt a firma „${offer.company.name}" nemá ani adresy na nabídky, ani kontaktní e-mail.`,
-        },
-        { status: 400 },
+      // Nazev firmy je obsah z databaze, takze jde vedle klice jako hodnota.
+      return odpovedChybyS(
+        offer.caflouProjectId
+          ? 'chybaApi.nabidkuNeniKomuPoslatProjektS'
+          : 'chybaApi.nabidkuNeniKomuPoslatBezProjektuS',
+        { firma: offer.company.name },
+        400,
       );
     }
     // Adres může být víc, když je firma má vyplněné zvlášť na nabídky (12. 10. 2026).
@@ -97,10 +98,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     });
 
     if (!result.sent) {
-      return NextResponse.json(
-        { error: 'E-mail se nepodařilo odeslat — není nastavené SMTP.' },
-        { status: 503 },
-      );
+      return odpovedChyby('chybaApi.emailBezSmtp', 503);
     }
 
     await prisma.offer.update({
@@ -118,6 +116,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   } catch (err) {
     console.error('POST /api/admin/offers/[id]/send selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Odeslání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.odeslaniNezdariloS', { zprava: message }, 500);
   }
 }
