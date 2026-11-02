@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { firmaDodavaHudbu, vyzvaPujdeSama } from '@/lib/hudbaOdKlienta';
 import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
+import { listTypyBezHudby } from '@/lib/priceList';
 import { stavJeDokonceny } from '@/lib/stavyProjektu';
 
 /**
@@ -242,9 +243,17 @@ export async function prvniFrekvence(idProjektu: string[]): Promise<Map<string, 
  * Reklamy se vynechávají (zadání 17. 10. 2026: „nastavme jen u audioknih") -
  * u spotu se hudba vede v Rodném listu, ne tady. Dokončené projekty taky:
  * doplňovat hudbu do hotové knihy nemá smysl.
+ *
+ * A VYNECHÁVAJÍ SE TYPY, U KTERÝCH SE HUDBA NEŘEŠÍ (zadání 2. 11. 2026: „když
+ * je to Náběr audioknihy jako u Umění vydávat peníze, tak hudbu neřešíme, ani
+ * ji nedodává klient"). Náběr je holý záznam hlasu - bez úvodu, znělky
+ * i podkresu. Tenhle jeden filtr vyřadí takový projekt naráz ze všech tří
+ * míst, která se ptají odsud: ze zvonečku, z výzvy klientovi i z přehledu
+ * dne. Rozhoduje příznak u položky ceníku, ne název typu v kódu - viz
+ * PriceListItem.bezHudby.
  */
 export async function projektyBezHudby(): Promise<ProjektBezHudby[]> {
-  const ciselnik = await nactiCiselnikReklam();
+  const [ciselnik, typyBezHudby] = await Promise.all([nactiCiselnikReklam(), listTypyBezHudby()]);
 
   const meta = (await prisma.projectMeta
     .findMany({
@@ -289,7 +298,10 @@ export async function projektyBezHudby(): Promise<ProjektBezHudby[]> {
   }[];
 
   const audioknihy = meta.filter(
-    (m) => !jeReklamaPodleMeta(m, ciselnik) && stavJeDokonceny(m.statusName) !== true,
+    (m) =>
+      !jeReklamaPodleMeta(m, ciselnik) &&
+      stavJeDokonceny(m.statusName) !== true &&
+      !typyBezHudby.includes((m.projectType ?? '').trim()),
   );
   if (audioknihy.length === 0) return [];
 

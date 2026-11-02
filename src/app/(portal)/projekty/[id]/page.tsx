@@ -42,6 +42,7 @@ import { nactiHudbu } from '@/lib/hudbaProjektuServer';
 import { stavVyzvy } from '@/lib/vyzvaHudbaServer';
 import { srovnejSerii } from '@/lib/hudbaSerieServer';
 import { firmaDodavaHudbu, vyzvaPujdeSama } from '@/lib/hudbaOdKlienta';
+import { jeTypBezHudby } from '@/lib/priceList';
 import { dropboxNastaven } from '@/lib/dropbox';
 import { nactiTracklist, generovaniZTextuPovoleno } from '@/lib/tracklistServer';
 import { jeReklamaProjekt } from '@/lib/reklamniProjektServer';
@@ -1306,8 +1307,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    * JEN NÁŠ TÝM (rozhodnuto 16. 10. 2026) - klient o kartě neví, stejně jako
    * o natáčecím plánu. Soubory leží v Dropboxu, ne v portálu: jeden WAV má
    * kolem padesáti megabajtů a přes Vercel by neprošel (viz lib/dropbox.ts).
+   *
+   * A U TYPŮ, KDE SE HUDBA NEŘEŠÍ, ZÁLOŽKA NENÍ (zadání 2. 11. 2026: „když je
+   * to Náběr audioknihy jako u Umění vydávat peníze, tak hudbu neřešíme, ani
+   * ji nedodává klient"). Prázdná karta s výzvou klientovi je u náběru jen
+   * návod, jak udělat chybu. Rozhoduje příznak u položky ceníku
+   * (PriceListItem.bezHudby), ne název typu v kódu.
    */
-  if (isInternalRole(session.user.role)) {
+  if (isInternalRole(session.user.role) && !(await jeTypBezHudby(meta?.projectType))) {
     /**
      * SÉRIE SE SROVNÁ SAMA (17. 10. 2026: „melo by to fungovat tak, ze kdyz to
      * vlozim k jedne knize a je soucasti, tak se to ukaze u knih v cele

@@ -17,10 +17,35 @@ type Item = {
   active: boolean;
   /** Rádiový spot - jen u něj se vyrábí Rodný list. */
   rodnyList: boolean;
+  /** Náběr audiknihy a spol. - u tohohle typu se hudba neřeší (2. 11. 2026). */
+  bezHudby: boolean;
   /** Typ, který dostane projekt založený z objednávky audioknihy. */
   proObjednavkyAudioknih: boolean;
   /** Ikona, která svítí před názvem projektu (zadání 10. 9. 2026). */
   ikona: string | null;
+};
+
+/**
+ * HUDBU U TOHOHLE TYPU NERESIME (zadani 2. 11. 2026: „kdyz je to Naber
+ * audioknihy jako u Umeni vydavat penize, tak hudbu neresime, ani ji nedodava
+ * klient").
+ *
+ * Popisky jsou psane rovnou tady, ne pres `lib/jazyk.ts`: ten ma rozdelanou
+ * praci prekladova davka. Az bude volny, klice se presunou.
+ */
+const BEZ_HUDBY_POPISKY = {
+  cs: {
+    sloupec: 'Bez hudby',
+    title: 'U projektů tohohle typu se hudba neřeší - nehlídá se, že chybí, a klientovi nechodí výzva, aby ji dodal.',
+    prepinac: 'Přepnout, jestli se u tohohle typu řeší hudba',
+    novaPolozka: 'Hudbu u tohohle typu neřešíme (náběr)',
+  },
+  en: {
+    sloupec: 'No music',
+    title: 'Projects of this type do not deal with music - nobody is warned that it is missing and the client gets no request to supply it.',
+    prepinac: 'Switch whether music is dealt with for this type',
+    novaPolozka: 'No music for this type (plain recording)',
+  },
 };
 
 // Cisla se formatuji podle jazyka listy (1 234 vs. 1,234), mena zustava Kc -
@@ -38,7 +63,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', priceExVat: '', priceIncVat: '' });
-  const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, ikona: '' });
+  const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, bezHudby: false, ikona: '' });
 
   /**
    * Typ projektu pro objednané audioknihy (zadání 15. 9. 2026). Je to výběr
@@ -47,6 +72,8 @@ export function PriceListEditor({ items }: { items: Item[] }) {
    * takže tu nemůžou vzniknout dva rovnocenné typy.
    */
   const proAudioknihy = items.find((i) => i.proObjednavkyAudioknih)?.id ?? '';
+
+  const popiskyBezHudby = BEZ_HUDBY_POPISKY[jazyk === 'en' ? 'en' : 'cs'];
 
   // Razeni kliknutim na nazev sloupce (zadani 9. 9. 2026). Vychozi je podle
   // nazvu - cenik se cte jako seznam, ne jako poradi.
@@ -58,6 +85,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
     // V nabidce napred pri vzestupnem razeni.
     vNabidce: (i) => (i.active ? 0 : 1),
     rodnyList: (i) => (i.rodnyList ? 0 : 1),
+    bezHudby: (i) => (i.bezHudby ? 0 : 1),
   });
 
   async function send(url: string, method: string, body?: unknown) {
@@ -88,7 +116,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   async function addItem(e: React.FormEvent) {
     e.preventDefault();
     const created = await send('/api/admin/pricelist', 'POST', newItem);
-    if (created) setNewItem({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, ikona: '' });
+    if (created) setNewItem({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, bezHudby: false, ikona: '' });
   }
 
   function startEdit(item: Item) {
@@ -187,13 +215,21 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                   title={t('cenik.sl.rodnyListTitle')}
                   jazyk={jazyk}
                 />
+                <ThRadit
+                  label={popiskyBezHudby.sloupec}
+                  sloupec="bezHudby"
+                  razeni={razeni}
+                  prepni={prepni}
+                  title={popiskyBezHudby.title}
+                  jazyk={jazyk}
+                />
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm font-body">
                     {t('cenik.prazdnyCenik')}
                   </td>
                 </tr>
@@ -236,6 +272,9 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                     </td>
                     <td className="px-4 py-3 text-sm font-heading text-muted">
                       {t(item.rodnyList ? 'obecne.ano' : 'obecne.ne')}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-heading text-muted">
+                      {t(item.bezHudby ? 'obecne.ano' : 'obecne.ne')}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <span className="inline-flex items-center gap-3">
@@ -303,6 +342,17 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         className={item.rodnyList ? 'text-brand-greenDeep' : 'text-muted'}
                       >
                         {t(item.rodnyList ? 'obecne.ano' : 'obecne.ne')}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading">
+                      <button
+                        type="button"
+                        onClick={() => send(`/api/admin/pricelist/${item.id}`, 'PATCH', { bezHudby: !item.bezHudby })}
+                        disabled={busy}
+                        title={popiskyBezHudby.prepinac}
+                        className={item.bezHudby ? 'text-brand-greenDeep' : 'text-muted'}
+                      >
+                        {t(item.bezHudby ? 'obecne.ano' : 'obecne.ne')}
                       </button>
                     </td>
                     {/* Tlacitko Upravit tu bylo zbytecne (zadani 9. 9. 2026) -
@@ -374,6 +424,14 @@ export function PriceListEditor({ items }: { items: Item[] }) {
             onChange={(e) => setNewItem({ ...newItem, rodnyList: e.target.checked })}
           />
           {t('cenik.radiovySpot')}
+        </label>
+        <label className="flex items-center gap-2 text-sm font-heading text-ink">
+          <input
+            type="checkbox"
+            checked={newItem.bezHudby}
+            onChange={(e) => setNewItem({ ...newItem, bezHudby: e.target.checked })}
+          />
+          {popiskyBezHudby.novaPolozka}
         </label>
         <div>
           <AddButton type="submit" disabled={busy}>

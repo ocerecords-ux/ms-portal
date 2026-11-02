@@ -11,6 +11,8 @@ const schema = z.object({
   priceIncVat: z.string().trim().optional(),
   active: z.boolean().optional(),
   rodnyList: z.boolean().optional(),
+  /** U tohohle typu se hudba neresi - naber audioknihy (2. 11. 2026). */
+  bezHudby: z.boolean().optional(),
   proObjednavkyAudioknih: z.boolean().optional(),
   /** Klic ikony z lib/ikonyTypu.tsx; prazdny retezec = zadna ikona. */
   ikona: z.string().trim().max(40).optional(),
@@ -68,6 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(priceIncVat !== undefined ? { priceIncVat } : {}),
         ...(data.active !== undefined ? { active: data.active } : {}),
         ...(data.rodnyList !== undefined ? { rodnyList: data.rodnyList } : {}),
+        ...(data.bezHudby !== undefined ? { bezHudby: data.bezHudby } : {}),
         ...(data.proObjednavkyAudioknih !== undefined
           ? { proObjednavkyAudioknih: data.proObjednavkyAudioknih }
           : {}),

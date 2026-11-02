@@ -1351,6 +1351,21 @@ model PriceListItem {
   /// platit. Zaskrtnuta smi byt jen jedna polozka - vyber je v Cenicich.
   proObjednavkyAudioknih Boolean @default(false)
 
+  /// HUDBU U TOHOHLE TYPU NERESIME (zadani 2. 11. 2026: „kdyz je to Naber
+  /// audioknihy jako u Umeni vydavat penize, tak hudbu neresime, ani ji
+  /// nedodava klient").
+  ///
+  /// Naber je holy zaznam hlasu - zadny uvod, zadna znelka, zadna podkresova
+  /// hudba. Dokud se to nerozlisovalo, portal takovou zakazku pocital mezi
+  /// audioknihy bez hudby: tri dny pred prvni frekvenci zazvonil zvonecek, ze
+  /// hudba chybi, a u firmy, ktera si hudbu dodava sama, odesla klientovi
+  /// vyzva, aby ji vlozil. Obe upozorneni byla plana.
+  ///
+  /// Priznak sedi na polozce ceniku ze stejneho duvodu jako `rodnyList`:
+  /// nazvy typu se meni a hadat podle slova „naber" by po prvnim prejmenovani
+  /// prestalo platit. Prepina se v administraci v Cenicich.
+  bezHudby    Boolean  @default(false)
+
   /// Ikona typu projektu (zadani 10. 9. 2026) - klic z lib/ikonyTypu.tsx.
   /// Sviti pred nazvem projektu v prehledu. Je to na polozce ceniku, ne
   /// v kodu: typy projektu si tym pridava sam a napevno zadana ikona by nove

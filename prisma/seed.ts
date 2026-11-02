@@ -212,6 +212,7 @@ async function main() {
   await matejStrihaExterne();
   await albatrosCenuUrcujeSam();
   await audiotekaTracklistZTextu();
+  await naberBezHudby();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1658,6 +1659,31 @@ async function klientAlbatrosu() {
  * nepocital. Oni totiz cenu navrhuji sami."). Priznak jde jinak zaskrtnout
  * i rucne na karte firmy.
  */
+/**
+ * NÁBĚR AUDIOKNIHY: HUDBU NEŘEŠÍME (zadání 2. 11. 2026: „když je to Náběr
+ * audioknihy jako u Umění vydávat peníze, tak hudbu neřešíme, ani ji nedodává
+ * klient").
+ *
+ * Jednorázově, ať se nemusí doklikávat; dál se to přepíná v Administraci →
+ * Ceníky, sloupec Bez hudby. Viz PriceListItem.bezHudby.
+ */
+async function naberBezHudby() {
+  const ZNAMKA = 'naber-audioknihy-bez-hudby';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.priceListItem.updateMany({
+      // Mala a velka pismena neresime - polozka muze byt zapsana jakkoli.
+      where: { name: { contains: 'náběr', mode: 'insensitive' } },
+      data: { bezHudby: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  naber audioknihy: hudbu neresime (${vysledek.count} polozek ceniku)`);
+  } catch (err) {
+    console.warn('  priznak "bez hudby" se u naberu nepodarilo nastavit:', err);
+  }
+}
+
 /**
  * AUDIOTÉKA: TRACKLIST Z TEXTU (zadání 30. 10. 2026: „tohle je model, který se
  * dělá u firmy Audiotéka… ale takto jen u Audiotéky").

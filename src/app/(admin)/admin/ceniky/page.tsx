@@ -38,6 +38,7 @@ export default async function PriceListPage() {
           priceIncVat: i.priceIncVat,
           active: i.active,
           rodnyList: i.rodnyList,
+          bezHudby: i.bezHudby,
           proObjednavkyAudioknih: i.proObjednavkyAudioknih,
           ikona: i.ikona,
         }))}

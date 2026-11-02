@@ -65,6 +65,44 @@ export async function nazevTypuAudioknihy(): Promise<string | null> {
   }
 }
 
+/**
+ * NAZVY TYPU PROJEKTU, U KTERYCH SE HUDBA NERESI (zadani 2. 11. 2026: „kdyz
+ * je to Naber audioknihy jako u Umeni vydavat penize, tak hudbu neresime, ani
+ * ji nedodava klient").
+ *
+ * Priznak je na polozce ceniku (PriceListItem.bezHudby) - stejny duvod jako
+ * u rodneho listu: nazvy typu se meni a hadat podle slova „naber" by
+ * po prvnim prejmenovani prestalo platit.
+ */
+export async function listTypyBezHudby(): Promise<string[]> {
+  try {
+    const items = await prisma.priceListItem.findMany({
+      where: { bezHudby: true },
+      select: { name: true },
+    });
+    return items.map((i) => i.name);
+  } catch (err) {
+    console.error('Nacteni typu projektu bez hudby selhalo:', err);
+    return [];
+  }
+}
+
+/** Resi se u tohohle typu projektu hudba? Pro jeden projekt, bez ciselniku. */
+export async function jeTypBezHudby(projectType: string | null | undefined): Promise<boolean> {
+  const typ = projectType?.trim();
+  if (!typ) return false;
+  try {
+    const item = await prisma.priceListItem.findUnique({
+      where: { name: typ },
+      select: { bezHudby: true },
+    });
+    return item?.bezHudby === true;
+  } catch (err) {
+    console.error('Overeni typu projektu bez hudby selhalo:', err);
+    return false;
+  }
+}
+
 /** Je tenhle typ projektu radiovy spot, ke kteremu se dela Rodny list? */
 export async function isRodnyListProjectType(projectType: string | null | undefined): Promise<boolean> {
   const typ = projectType?.trim();
