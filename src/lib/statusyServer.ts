@@ -114,9 +114,101 @@ async function zKalendare(
 }
 
 /**
- * Statusy pro seznam lidí. Jeden dotaz na účty, jeden na „Mimo studio";
- * kalendář se počítá jen těm, kdo to mají zapnuté (zatím jeden člověk).
+ * CO PRÁVĚ TEĎ TOČÍ ZVUKAŘI - JEDNÍM DOTAZEM ZA VŠECHNY (oprava 3. 11. 2026:
+ * „nejede chat").
+ *
+ * Do teď se tenhle status skládal přes `zKalendare`, tedy zvlášť pro každého
+ * zvukaře, a ke každému se šlo do databáze pro celý jeho den (sloty, blokace,
+ * porady, první frekvence, režie na dálku). Jeden dotaz navíc za jednoho
+ * člověka vypadá nevinně, jenže běží JEDEN PO DRUHÉM a zvukařů přibývá -
+ * s jedenáctým se seznam rozhovorů přestal stíhat načíst vůbec a chat zůstal
+ * prázdný. Každý další zvukař by to zhoršil.
+ *
+ * Tady se proto ptáme na jednu jedinou věc: co z natáčení, střihu a castingu
+ * PRÁVĚ TEĎ běží komukoliv z nich. Dva dotazy za celý tým místo pěti za
+ * každého člověka, a ze statusu se nic neztratí - jméno projektu a do kdy to
+ * jede je všechno, co se v chatu ukazuje.
  */
+async function statusyZeStudia(ids: string[], ted: Date): Promise<Record<string, StatusVChatu>> {
+  const vysledek: Record<string, StatusVChatu> = {};
+  if (ids.length === 0) return vysledek;
+
+  const [sloty, bloky] = await Promise.all([
+    prisma.recordingSlot
+      .findMany({
+        where: {
+          state: { in: ['SELECTED', 'CONFIRMED'] as never },
+          zvukarUserId: { in: ids },
+          start: { lte: ted },
+          end: { gt: ted },
+        },
+        select: { zvukarUserId: true, start: true, end: true, request: { select: { projectName: true } } },
+      })
+      .catch(() => []),
+    prisma.studioBlock
+      .findMany({
+        where: {
+          kind: { in: ['NATACENI', 'STRIH', 'CASTING'] as never },
+          zvukarUserId: { in: ids },
+          start: { lte: ted },
+          end: { gt: ted },
+        },
+        select: { zvukarUserId: true, start: true, end: true, kind: true, title: true },
+      })
+      .catch(() => []),
+  ]);
+
+  type Bezi = { kdo: string; konec: Date; nazev: string; ikona: string };
+  const vse: Bezi[] = [
+    ...(sloty as { zvukarUserId: string | null; end: Date; request: { projectName: string } }[])
+      .filter((s) => s.zvukarUserId)
+      .map((s) => ({
+        kdo: s.zvukarUserId as string,
+        konec: s.end,
+        nazev: s.request.projectName,
+        ikona: 'mikrofon-studio',
+      })),
+    ...(bloky as { zvukarUserId: string | null; end: Date; kind: string; title: string }[])
+      .filter((b) => b.zvukarUserId)
+      .map((b) => ({
+        kdo: b.zvukarUserId as string,
+        konec: b.end,
+        nazev: b.title,
+        ikona: b.kind === 'NATACENI' ? 'mikrofon-studio' : b.kind === 'STRIH' ? 'strih' : 'casting',
+      })),
+  ];
+
+  // Když jich běží víc, vyhrává ta, která končí dřív - o ní má smysl říct
+  // „do kdy" (stejné pravidlo jako v zKalendare).
+  for (const u of vse) {
+    const stavajici = vysledek[u.kdo];
+    if (stavajici?.doKdy && new Date(stavajici.doKdy) <= u.konec) continue;
+    vysledek[u.kdo] = {
+      text: `${nazevProjektu(u.nazev)} do ${casStatusu(u.konec)}`,
+      emoji: null,
+      ikona: u.ikona,
+      doKdy: u.konec.toISOString(),
+      rucni: false,
+    };
+  }
+
+  return vysledek;
+}
+
+/**
+ * Statusy pro seznam lidí. Jeden dotaz na účty, jeden na „Mimo studio",
+ * jeden za všechny zvukaře dohromady; den po dni se čte jen tomu, kdo má
+ * zapnuté schůzky z kalendáře (zatím jeden člověk).
+ */
+/**
+ * ČASOVÝ STROP (oprava 3. 11. 2026: „nejede chat"). Status je ozdoba - seznam
+ * rozhovorů na něj nesmí čekat. Když se počítání do téhle doby nestihne,
+ * vrátí se, co je hotové, a zbytek lidí zůstane bez statusu; za chvíli se
+ * chat ptá znovu. Bez toho visel celý dotaz na seznam rozhovorů donekonečna
+ * a chat zůstal prázdný.
+ */
+const LIMIT_MS = 4000;
+
 export async function nactiStatusy(userIds: string[]): Promise<Record<string, StatusVChatu>> {
   const vysledek: Record<string, StatusVChatu> = {};
   const ids = Array.from(new Set(userIds.filter(Boolean)));
@@ -124,76 +216,96 @@ export async function nactiStatusy(userIds: string[]): Promise<Record<string, St
 
   const ted = TED();
 
-  try {
-    const [lide, mimo] = await Promise.all([
-      prisma.user.findMany({
-        where: { id: { in: ids } },
-        select: {
-          id: true,
-          statusText: true,
-          statusEmoji: true,
-          statusDo: true,
-          statusZKalendare: true,
-          role: true,
-        },
-      }),
-      /**
-       * MIMO STUDIO PLATÍ VŠEM (zadání 25. 9. 2026: „a nám všem bych nastavil,
-       * když budeme mimo studio"). Celodenní záznam nemá čas, do kdy - tam se
-       * žádné „do" nepíše.
-       */
-      prisma.nepritomnost.findMany({
-        where: { userId: { in: ids }, start: { lte: ted }, end: { gt: ted } },
-        select: { userId: true, celyDen: true, end: true, poznamka: true },
-      }),
-    ]);
+  // Plní `vysledek` průběžně, takže i při doběhnutí stropu se to, co se
+  // stihlo spočítat, do chatu dostane.
+  async function spocitej(): Promise<void> {
+    try {
+      const [lide, mimo] = await Promise.all([
+        prisma.user.findMany({
+          where: { id: { in: ids } },
+          select: {
+            id: true,
+            statusText: true,
+            statusEmoji: true,
+            statusDo: true,
+            statusZKalendare: true,
+            role: true,
+          },
+        }),
+        /**
+         * MIMO STUDIO PLATÍ VŠEM (zadání 25. 9. 2026: „a nám všem bych nastavil,
+         * když budeme mimo studio"). Celodenní záznam nemá čas, do kdy - tam se
+         * žádné „do" nepíše.
+         */
+        prisma.nepritomnost.findMany({
+          where: { userId: { in: ids }, start: { lte: ted }, end: { gt: ted } },
+          select: { userId: true, celyDen: true, end: true, poznamka: true },
+        }),
+      ]);
 
-    const mimoPodleId = new Map(mimo.filter((m) => m.userId).map((m) => [m.userId as string, m]));
+      const mimoPodleId = new Map(mimo.filter((m) => m.userId).map((m) => [m.userId as string, m]));
 
-    for (const clovek of lide) {
-      // 1. Co si člověk napsal sám - dokud to platí.
-      const rucniPlati =
-        clovek.statusText && clovek.statusText.trim().length > 0 && (!clovek.statusDo || clovek.statusDo > ted);
-      if (rucniPlati) {
-        vysledek[clovek.id] = {
-          text: clovek.statusText!.trim(),
-          emoji: clovek.statusEmoji || null,
-          doKdy: clovek.statusDo ? clovek.statusDo.toISOString() : null,
-          rucni: true,
-        };
-        continue;
+      // Co zvukaři právě točí - jednou za všechny, viz statusyZeStudia.
+      const zeStudia = await statusyZeStudia(
+        lide.filter((c) => c.role === 'ZVUKAR' && !c.statusZKalendare).map((c) => c.id),
+        ted,
+      );
+
+      for (const clovek of lide) {
+        // 1. Co si člověk napsal sám - dokud to platí.
+        const rucniPlati =
+          clovek.statusText && clovek.statusText.trim().length > 0 && (!clovek.statusDo || clovek.statusDo > ted);
+        if (rucniPlati) {
+          vysledek[clovek.id] = {
+            text: clovek.statusText!.trim(),
+            emoji: clovek.statusEmoji || null,
+            doKdy: clovek.statusDo ? clovek.statusDo.toISOString() : null,
+            rucni: true,
+          };
+          continue;
+        }
+
+        // 2. Mimo studio - všem.
+        const pryc = mimoPodleId.get(clovek.id);
+        if (pryc) {
+          const doKdy = pryc.celyDen ? null : pryc.end;
+          vysledek[clovek.id] = {
+            text: doKdy ? `Mimo studio do ${casStatusu(doKdy)}` : 'Mimo studio',
+            emoji: '🚶',
+            doKdy: doKdy ? doKdy.toISOString() : null,
+            rucni: false,
+          };
+          continue;
+        }
+
+        /**
+         * 3. Kalendář. Schůzky, castingy a režii skládáme jen tomu, kdo to má
+         * zaškrtnuté („Tohle nastav jen mi"); natáčení a střih vidí u zvukaře
+         * každý - je to jeho práce, ne jeho program.
+         */
+        const studio = clovek.role === 'ZVUKAR';
+        if (!clovek.statusZKalendare && !studio) continue;
+        /**
+         * Kdo má zapnuté schůzky z kalendáře, potřebuje celý svůj den (porady,
+         * casting, režie na dálku) - těm se počítá po jednom, je to pár lidí.
+         * Zvukařům stačí to, co se právě točí, a to je spočítané dopředu
+         * jedním dotazem za všechny.
+         */
+        const zKal = clovek.statusZKalendare
+          ? await zKalendare(clovek.id, ted, { schuzky: true, studio }).catch(() => null)
+          : (zeStudia[clovek.id] ?? null);
+        if (zKal) vysledek[clovek.id] = zKal;
       }
-
-      // 2. Mimo studio - všem.
-      const pryc = mimoPodleId.get(clovek.id);
-      if (pryc) {
-        const doKdy = pryc.celyDen ? null : pryc.end;
-        vysledek[clovek.id] = {
-          text: doKdy ? `Mimo studio do ${casStatusu(doKdy)}` : 'Mimo studio',
-          emoji: '🚶',
-          doKdy: doKdy ? doKdy.toISOString() : null,
-          rucni: false,
-        };
-        continue;
-      }
-
-      /**
-       * 3. Kalendář. Schůzky, castingy a režii skládáme jen tomu, kdo to má
-       * zaškrtnuté („Tohle nastav jen mi"); natáčení a střih vidí u zvukaře
-       * každý - je to jeho práce, ne jeho program.
-       */
-      const studio = clovek.role === 'ZVUKAR';
-      if (!clovek.statusZKalendare && !studio) continue;
-      const zKal = await zKalendare(clovek.id, ted, {
-        schuzky: clovek.statusZKalendare,
-        studio,
-      }).catch(() => null);
-      if (zKal) vysledek[clovek.id] = zKal;
+    } catch (err) {
+      // Chat se kvůli statusům rozbít nesmí - v nejhorším nebude ani jeden.
+      console.error('Nacteni statusu selhalo:', err);
     }
-  } catch (err) {
-    // Chat se kvůli statusům rozbít nesmí - v nejhorším nebude ani jeden.
-    console.error('Nacteni statusu selhalo:', err);
   }
+
+  await Promise.race([
+    spocitej(),
+    new Promise<void>((hotovo) => setTimeout(hotovo, LIMIT_MS)),
+  ]);
 
   return vysledek;
 }
