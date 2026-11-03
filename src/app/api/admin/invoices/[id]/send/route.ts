@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
 import { odesliFakturu } from '@/lib/fakturaOdeslaniServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * Odeslani faktury odberateli (zadani 6. 9. 2026).
@@ -15,7 +16,7 @@ import { odesliFakturu } from '@/lib/fakturaOdeslaniServer';
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const volba = (await req.json().catch(() => null)) as
       | { firme?: unknown; klientovi?: unknown }
@@ -47,6 +48,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (err) {
     console.error('POST /api/admin/invoices/[id]/send selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Odeslání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.odeslaniNezdariloS', { zprava: message }, 500);
   }
 }

@@ -12269,6 +12269,38 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Schválení se nepodařilo zrušit.',
     en: 'The approval could not be cancelled.',
   },
+  // CHYBY Z ROUT FAKTUR V ADMINISTRACI (dávka 7u, 1. 11. 2026). Faktura je
+  // podle slovníčku „invoice", odběratel „customer", nabídka „quote".
+  // Vystavovatel = issuer, stejně jako na kartě vlastní firmy. Formulace
+  // u uhrazené a stornované faktury drží slova z `faktura.zamcenaUhrazena`
+  // a `faktura.hromadneMazaniPoznamka`, ať se obrazovka a hláška z routy neliší.
+  'chybaApi.fakturaNenalezena': { cs: 'Faktura nenalezena.', en: 'Invoice not found.' },
+  'chybaApi.neplatnaHodnota': { cs: 'Neplatná hodnota.', en: 'Invalid value.' },
+  'chybaApi.neplatneDatum': { cs: 'Neplatné datum.', en: 'Invalid date.' },
+  'chybaApi.uhrazenouFakturuNejdeMenit': {
+    cs: 'Uhrazenou fakturu už neměňte — nejdřív zrušte úhradu.',
+    en: 'A paid invoice should not be changed — undo the payment first.',
+  },
+  'chybaApi.nabidkuKlientOdmitl': {
+    cs: 'Tuhle nabídku klient odmítl.',
+    en: 'The customer rejected this quote.',
+  },
+  'chybaApi.chybiVystavovatelNeboOdberatel': {
+    cs: 'Chybí vystavovatel nebo odběratel.',
+    en: 'The issuer or the customer is missing.',
+  },
+  'chybaApi.cisloFakturyNeprideleno': {
+    cs: 'Nepodařilo se přidělit číslo faktury.',
+    en: 'The invoice number could not be assigned.',
+  },
+  'chybaApi.smazatJdeJenStornovanaFaktura': {
+    cs: 'Smazat jde jen stornovaná faktura — ostatní se musí nejdřív stornovat.',
+    en: 'Only a cancelled invoice can be deleted — the rest have to be cancelled first.',
+  },
+  'chybaApi.nenasliJsmeCoSmazat': {
+    cs: 'Nenašli jsme, co smazat.',
+    en: 'There was nothing to delete.',
+  },
   // CHYBY Z ROUT PŘEPOSLECHU (dávka 7p, 19. 10. 2026). Záznam chyby
   // v AudioTaggeru je podle slovníčku „tag".
   'preposlechApi.posluchacNenalezen': {

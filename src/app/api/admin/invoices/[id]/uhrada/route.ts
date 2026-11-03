@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Oznaceni faktury jako uhrazene, pripadne zruseni uhrady (zadani 6. 9. 2026).
 // Zatim rucne - az bude napojena Air Bank, bude se to parovat automaticky
@@ -15,16 +16,16 @@ const schema = z.object({
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+      return odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const d = parsed.data;
 
     const invoice = await prisma.invoice.findUnique({ where: { id: params.id }, select: { status: true } });
-    if (!invoice) return NextResponse.json({ error: 'Faktura nenalezena.' }, { status: 404 });
+    if (!invoice) return odpovedChyby('chybaApi.fakturaNenalezena', 404);
 
     if (!d.paid) {
       await prisma.invoice.update({
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (d.paidAt) {
       const parsedDate = new Date(`${d.paidAt}T00:00:00.000Z`);
       if (Number.isNaN(parsedDate.getTime())) {
-        return NextResponse.json({ error: 'Neplatné datum úhrady.' }, { status: 400 });
+        return odpovedChyby('chybaApi.neplatneDatumUhrady', 400);
       }
       paidAt = parsedDate;
     }
@@ -52,6 +53,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (err) {
     console.error('POST /api/admin/invoices/[id]/uhrada selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
   }
 }

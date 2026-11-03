@@ -6,6 +6,7 @@ import { expandNumberFormat } from '@/lib/doklady';
 import { CURRENCIES } from '@/lib/doklady';
 import { getRateForCurrency } from '@/lib/cnb';
 import { resolveProject } from '@/lib/projectOptions';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Uprava faktury (zadani 6. 9. 2026). Polozky se posilaji vzdy cele.
 const itemSchema = z.object({
@@ -47,7 +48,7 @@ function toDate(value: string): Date | null {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -56,9 +57,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const d = parsed.data;
 
     const invoice = await prisma.invoice.findUnique({ where: { id: params.id } });
-    if (!invoice) return NextResponse.json({ error: 'Faktura nenalezena.' }, { status: 404 });
+    if (!invoice) return odpovedChyby('chybaApi.fakturaNenalezena', 404);
     if (invoice.status === 'PAID') {
-      return NextResponse.json({ error: 'Uhrazenou fakturu už neměňte — nejdřív zrušte úhradu.' }, { status: 409 });
+      return odpovedChyby('chybaApi.uhrazenouFakturuNejdeMenit', 409);
     }
 
     const data: Record<string, unknown> = {};
@@ -82,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     let issueDate = invoice.issueDate;
     if (d.issueDate !== undefined) {
       const date = toDate(d.issueDate);
-      if (!date) return NextResponse.json({ error: 'Neplatné datum vystavení.' }, { status: 400 });
+      if (!date) return odpovedChyby('chybaApi.neplatneDatumVystaveni', 400);
       data.issueDate = date;
       issueDate = date;
     }
@@ -96,7 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         continue;
       }
       const date = toDate(value);
-      if (!date) return NextResponse.json({ error: 'Neplatné datum.' }, { status: 400 });
+      if (!date) return odpovedChyby('chybaApi.neplatneDatum', 400);
       data[key] = date;
     }
 
@@ -137,20 +138,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (err) {
     console.error('PATCH /api/admin/invoices/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: params.id },
       select: { status: true, number: true, issuerCompanyId: true },
     });
-    if (!invoice) return NextResponse.json({ error: 'Faktura nenalezena.' }, { status: 404 });
+    if (!invoice) return odpovedChyby('chybaApi.fakturaNenalezena', 404);
 
     // Odeslanou nebo uhrazenou fakturu nemazeme - ucetne musi zustat, jen se
     // stornuje, aby v ciselne rade nebyla díra.
@@ -194,6 +195,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   } catch (err) {
     console.error('DELETE /api/admin/invoices/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Smazání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.smazaniNezdariloS', { zprava: message }, 500);
   }
 }

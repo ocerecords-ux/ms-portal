@@ -95,6 +95,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7r | 21.–22. 10. (nasazeno 29. 10.) | Hlášky rout chatu a PDF dokladu klienta klíčem (15 rout v `api/chat/**` + `api/klient/doklady/pdf`); nově `odpovedChybyVJazyce` pro routy, na které se chodí odkazem v novém okně | [x] |
 | 7s | 29. 10. | Hlášky rout výdajů v administraci klíčem — `api/admin/expenses/**` a `api/admin/expense-categories/**` (10 rout, 6 obrazovek); první kus z `api/admin/**` | [x] |
 | 7t | 30. 10. | Hlášky rout nabídek v administraci klíčem — `api/admin/offers/**` (4 routy, 2 obrazovky); druhá agenda z `api/admin/**` | [x] |
+| 7u | 1. 11. (nasazeno 3. 11.) | Hlášky rout faktur v administraci klíčem — `api/admin/invoices/**` (6 rout, 3 obrazovky); třetí agenda z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1852,6 +1853,57 @@ se sekce jmenuje My companies.
 372 — největší kusy jsou banka (25), uživatelé (22), faktury (19), smlouvy (19),
 wikipedie (15), technika (15), ukázky (14) a studia (14). Dál po agendách, jedna
 za večer.
+
+### Dávka 7u je HOTOVÁ (3. 11. 2026)
+
+**Třetí agenda z `api/admin/**`: faktury.** Vzor je pořád z dávky 7o
+(`odpovedChyby(klíč, status)`, věta se značkou přes `odpovedChybyS`), obrazovka
+čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **6 rout, 3 obrazovky,
+34 přepsaných míst a slovník +9 klíčů (6 218 → 6 227)**.
+
+**Dva večery před tím dávka neprobehla — nebylo místo na disku.** 1. 11. začal Mac
+při zápisu druhého souboru hlásit `No space left on device` (disk na 100 %) a
+spadl i mount připojené složky; 2. 11. se na počítači nerozběhl žádný příkaz
+vůbec. V pracovní kopii po tom zůstal **nezacommitnutý blok 9 klíčů** ve
+slovníku (komentovaný `(dávka 7u, 1. 11. 2026)`); dnes se do něj už nesáhalo,
+jen se dopsaly routy a obrazovky, které ty klíče čekaly. Klíče
+`chybaApi.neplatnaData` a `chybaApi.neplatneDatumUhrady` ve slovníku už byly
+z dřívějších dávek, takže se nezakládaly znovu.
+
+**Routy:** `api/admin/invoices` (založení), `invoices/[id]` (úprava i mazání,
+kde první klik stornuje), `invoices/[id]/send` (odeslání),
+`invoices/[id]/uhrada` (úhrada a její zrušení), `invoices/[id]/cast`
+(interní značka části zákazky) a `invoices/hromadne-smazani`.
+
+**Obrazovky:** `InvoiceEditor` (uložení, odeslání, úhrada, smazání — čtyři
+místa; obslužuje i `faktury/nova`, kde se zakládá nový doklad) a `FakturyTabulka`
+přes sdílené `HromadneMazani`. **Oprava v `HromadneMazani` platí pro všechny
+agendy**, které ho používají, ne jen pro faktury — je to jedno místo a dřív tam
+chodila jen česká věta z odpovědi.
+
+**Hromadné mazání má dvě hlášky v jednom místě.** Routa rozhoduje podle toho,
+jestli se mezi vybranými našel jiný než stornovaný doklad, takže klíč se vybírá
+až ve volání (`jine > 0 ? ... : ...`) — věta zůstává jeden klíč (pravidlo 7).
+
+**Termíny podle slovníčku:** faktura = invoice, odběratel = customer, nabídka =
+quote. Vystavovatel je `issuer`, stejně jako na kartě vlastní firmy.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s/7t):**
+
+1. **Hlášky ze `zod` schémat** — `parsed.error.issues[0]?.message` ve třech
+   routách (založení, úprava, hromadné mazání) zůstává česky. Přepíšou se
+   všechny naráz vlastním úkolem.
+2. **`lib/fakturaOdeslaniServer.ts`** — jeho pět hlášek routa `send` jen podává
+   dál (`vysledek.error`) a navíc se **zapisují k faktuře do databáze**
+   (`zapisChybuOdeslani`), takže je to stejná třída problému jako oznámení pod
+   zvonkem: přeložit kód nestačí. Vlastní úkol.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po fakturách je `invoices/**` čistý a ve zbytku
+administrace zůstává kolem **322 českých hlášek** — největší kusy jsou
+uživatelé (26), banka (26), smlouvy (25), studia (19), firmy (18), wikipedie
+(15), technika (15) a ukázky (14). Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

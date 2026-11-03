@@ -22,6 +22,7 @@ import { NahledDokladu } from '../../NahledDokladu';
 import { SlevaPole } from '../../SlevaPole';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, formatDatumCas, kodJazyka, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 import { CASTI_FAKTURY, popisCasti, type CastFaktury } from '@/lib/fakturaCast';
@@ -300,7 +301,7 @@ export function InvoiceEditor({
           });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('faktura.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('faktura.ulozeniSelhalo')));
         return false;
       }
       if (jesteNeulozena && data?.id) {
@@ -334,7 +335,7 @@ export function InvoiceEditor({
       const res = await fetch(`/api/admin/invoices/${invoice.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('faktura.odeslaniSelhalo'));
+        setError(hlaskaChyby(data, t, t('faktura.odeslaniSelhalo')));
         return;
       }
       const kopie: string[] = Array.isArray(data.kopie) ? data.kopie : [];
@@ -396,7 +397,7 @@ export function InvoiceEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('faktura.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('faktura.ulozeniSelhalo')));
         return;
       }
       router.refresh();
@@ -414,7 +415,7 @@ export function InvoiceEditor({
       const res = await fetch(`/api/admin/invoices/${invoice.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('faktura.smazaniSelhalo'));
+        setError(hlaskaChyby(data, t, t('faktura.smazaniSelhalo')));
         return;
       }
       if (data.smazanoNatrvalo) {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * LIŠTA HROMADNÉHO MAZÁNÍ NAD TABULKOU (zadání 17. 9. 2026 - smlouvy, pak
@@ -68,7 +69,7 @@ export function HromadneMazani({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || t('mazani.nezdarilo'));
+        setChyba(hlaskaChyby(data, t, t('mazani.nezdarilo')));
         return;
       }
       onZmena(new Set());

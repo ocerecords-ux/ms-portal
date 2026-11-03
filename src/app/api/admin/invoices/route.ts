@@ -6,6 +6,7 @@ import { expandNumberFormat } from '@/lib/doklady';
 import { getRateForCurrency } from '@/lib/cnb';
 import { resolveProject } from '@/lib/projectOptions';
 import { castPodlePoradi } from '@/lib/fakturaCast';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Zalozeni faktury (zadani 6. 9. 2026). Cislo se bere z ciselne rady vlastni
 // firmy a rada se rovnou posune.
@@ -55,7 +56,7 @@ function toDate(value: string | null | undefined): Date | null {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -70,14 +71,14 @@ export async function POST(req: NextRequest) {
         where: { id: input.offerId },
         include: { items: { orderBy: { sortOrder: 'asc' } } },
       });
-      if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
+      if (!offer) return odpovedChyby('chybaApi.nabidkaNenalezena', 404);
       // Puvodne slo fakturovat jen z odsouhlasene nabidky. Schvalovani pres
       // odkaz je ale dobrovolne a casto se domlouva jinak (telefon, e-mail),
       // takze cekat na nej znamenalo, ze fakturu z nabidky nesel vystavit
       // vubec (zadani 8. 9. 2026: "potreboval bych, aby z nabidky sla
       // vytvorit faktura"). Brani se uz jen odmitnuta nabidka.
       if (offer.status === 'REJECTED') {
-        return NextResponse.json({ error: 'Tuhle nabídku klient odmítl.' }, { status: 409 });
+        return odpovedChyby('chybaApi.nabidkuKlientOdmitl', 409);
       }
       /**
        * Z JEDNE NABIDKY MUZE BYT VIC FAKTUR (zadani 15. 9. 2026: „kdyz bude
@@ -94,14 +95,14 @@ export async function POST(req: NextRequest) {
     const issuerCompanyId = offer?.issuerCompanyId ?? input.issuerCompanyId;
     const companyId = offer?.companyId ?? input.companyId;
     if (!issuerCompanyId || !companyId) {
-      return NextResponse.json({ error: 'Chybí vystavovatel nebo odběratel.' }, { status: 400 });
+      return odpovedChyby('chybaApi.chybiVystavovatelNeboOdberatel', 400);
     }
 
     const issuer = await prisma.issuerCompany.findUnique({ where: { id: issuerCompanyId } });
-    if (!issuer) return NextResponse.json({ error: 'Vlastní firma nenalezena.' }, { status: 404 });
+    if (!issuer) return odpovedChyby('chybaApi.vlastniFirmaNenalezena', 404);
 
     const company = await prisma.company.findUnique({ where: { id: companyId } });
-    if (!company) return NextResponse.json({ error: 'Odběratel nenalezen.' }, { status: 404 });
+    if (!company) return odpovedChyby('chybaApi.odberatelNenalezen', 404);
 
     /**
      * PRVNÍ, NEBO DRUHÁ ČÁST (zadání 29. 9. 2026). Jen předvyplnění podle
@@ -236,13 +237,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!created) {
-      return NextResponse.json({ error: 'Nepodařilo se přidělit číslo faktury.' }, { status: 409 });
+      return odpovedChyby('chybaApi.cisloFakturyNeprideleno', 409);
     }
 
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
     console.error('POST /api/admin/invoices selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Založení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.zalozeniNezdariloS', { zprava: message }, 500);
   }
 }
