@@ -67,12 +67,29 @@ export async function pozviKlientaStudia(
         },
       });
     } else {
-      if (!user.active) return { ok: false, chyba: 'Účet je vypnutý — nejdřív ho zapněte.', userId: user.id };
-      // Přepnutí do jiného studia je běžná věc (z Londýna do Brna), tak ať to
-      // jde pozvánkou a nikdo nemusí do karty uživatele.
+      /**
+       * NOVÁ POZVÁNKA ÚČET ZASE ZAPNE (oprava 3. 11. 2026: „Ned že nedostal
+       * email, tak jsem ho chtěl přidat znovu a tohle mi tam skáče").
+       *
+       * „Odebrat přístup" na stránce studia účet nemaže - jen ho odpojí od
+       * studia a VYPNE (viz DELETE v api/studio/sprava). Další pozvánka pak
+       * narazila na „Účet je vypnutý, nejdřív ho zapněte" a tím to skončilo:
+       * zapnout účet jde jen v Administraci → Uživatelé, kam vedoucí pobočky
+       * vůbec nesmí. Ze stejné obrazovky tedy šlo přístup vzít, ale ne vrátit.
+       *
+       * Pozvat někoho znovu JE to zapnutí - nic jiného tím člověk nemyslí.
+       * Týká se to jen účtů role BOOKING, u ostatních rolí se skončilo už výš.
+       *
+       * Přepnutí do jiného studia je běžná věc (z Londýna do Brna) a jede
+       * stejnou cestou, aby nikdo nemusel do karty uživatele.
+       */
       await prisma.user.update({
         where: { id: user.id },
-        data: { bookingStudioId: studio.id, ...(jmeno?.trim() ? { name: jmeno.trim() } : {}) },
+        data: {
+          bookingStudioId: studio.id,
+          ...(user.active ? {} : { active: true }),
+          ...(jmeno?.trim() ? { name: jmeno.trim() } : {}),
+        },
       });
     }
 
