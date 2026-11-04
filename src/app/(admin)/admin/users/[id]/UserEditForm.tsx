@@ -19,6 +19,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { prelozitKolem, textPristupu } from '@/lib/jazyk';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -252,7 +253,7 @@ export function UserEditForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError((data as { error?: string })?.error || t('uzivatel.prenosNezdaril'));
+        setError(hlaskaChyby(data, t, t('uzivatel.prenosNezdaril')));
         return;
       }
       setDodavatel((data as { firma?: typeof dodavatel })?.firma ?? null);
@@ -381,7 +382,7 @@ export function UserEditForm({
       const res = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH', body: fd });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || t('uzivatel.ulozeniNezdarilo'));
+        throw new Error(hlaskaChyby(body, t, t('uzivatel.ulozeniNezdarilo')));
       }
       setSaved(true);
       setNewPassword('');

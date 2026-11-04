@@ -16,6 +16,7 @@ import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -125,7 +126,7 @@ export function NewUserForm({
       const res = await fetch('/api/admin/users', { method: 'POST', body: fd });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || t('uzivatel.zalozeniNezdarilo'));
+        throw new Error(hlaskaChyby(body, t, t('uzivatel.zalozeniNezdarilo')));
       }
       setCreated(t('uzivatel.uctZalozen', { email }));
       setEmail('');

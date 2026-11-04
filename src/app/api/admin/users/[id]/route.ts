@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin, requireSpravuHercu } from '@/lib/adminGuard';
 import { uploadUserPhoto } from '@/lib/storage';
 import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 import { jeZpusobSmazani } from '@/lib/archiv';
 import { odstranUzivatele } from '@/lib/archivServer';
 import { pouzeZnameSekce } from '@/lib/pristupy';
@@ -181,7 +182,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
    * měnit nedá vůbec, jinak by si z herce šlo udělat cokoliv.
    */
   const pristup = await requireSpravuHercu();
-  if (!pristup?.session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!pristup?.session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const session = pristup.session;
   const jenHerci = pristup.jenHerci;
 
@@ -204,24 +205,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const existingUser = await prisma.user.findUnique({ where: { id: params.id } });
   if (!existingUser) {
-    return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
+    return odpovedChyby('chybaApi.uzivatelNenalezen', 404);
   }
 
   // Kdo má jen karty herců, sáhne jen na herce - a nepřepíše mu roli.
   if (jenHerci && (existingUser.role !== 'HEREC' || (data.role && data.role !== 'HEREC'))) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const nextRole = data.role ?? existingUser.role;
   const nextCompanyId = data.companyId !== undefined ? data.companyId : existingUser.companyId;
   if (COMPANY_REQUIRED_ROLES.includes(nextRole) && !nextCompanyId) {
-    return NextResponse.json({ error: 'Pro tuto roli musíte vybrat firmu.' }, { status: 400 });
+    return odpovedChyby('chybaApi.proRoliVyberteFirmu', 400);
   }
 
   if (data.email && data.email !== existingUser.email) {
     const emailTaken = await prisma.user.findUnique({ where: { email: data.email } });
     if (emailTaken) {
-      return NextResponse.json({ error: 'Uživatel s tímto e-mailem už existuje.' }, { status: 409 });
+      return odpovedChyby('chybaApi.uzivatelSEmailemExistuje', 409);
     }
   }
 
@@ -234,10 +235,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Driv se v tomhle pripade ulozil zbytek a fotka tise zmizela - ucet pak
     // vypadal, ze se fotka nahrala, a pritom v profilu nebylo nic.
     if (photoUrl === null) {
-      return NextResponse.json(
-        { error: 'Fotku se nepodařilo uložit - zkuste menší obrázek.' },
-        { status: 400 },
-      );
+      return odpovedChyby('chybaApi.fotkaNeulozenaZkusteMensi', 400);
     }
   } else if (data.removePhoto) {
     photoUrl = null;
@@ -428,7 +426,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  } catch (err) {
   console.error('PATCH /api/admin/users/[id] selhalo:', err);
   const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-  return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+  return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
  }
 }
 
@@ -450,16 +448,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   if (session.user.id === params.id) {
-    return NextResponse.json({ error: 'Vlastní účet smazat nejde.' }, { status: 400 });
+    return odpovedChyby('chybaApi.vlastniUcetNejdeSmazat', 400);
   }
 
   const uzivatel = await prisma.user.findUnique({
     where: { id: params.id },
     select: { name: true, email: true },
   });
-  if (!uzivatel) return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
+  if (!uzivatel) return odpovedChyby('chybaApi.uzivatelNenalezen', 404);
   const jmeno = uzivatel.name || uzivatel.email;
 
   const zpusob = req.nextUrl.searchParams.get('zpusob') ?? '';
@@ -491,9 +489,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ smazano: true, jmeno, ...vysledek });
   } catch (err) {
     console.error('Smazání uživatele selhalo:', err);
-    return NextResponse.json(
-      { error: 'Smazání se nepodařilo dokončit, takže se nic nesmazalo.' },
-      { status: 409 },
-    );
+    return odpovedChyby('chybaApi.smazaniNedokonceno', 409);
   }
 }

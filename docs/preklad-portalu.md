@@ -96,6 +96,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7s | 29. 10. | Hlášky rout výdajů v administraci klíčem — `api/admin/expenses/**` a `api/admin/expense-categories/**` (10 rout, 6 obrazovek); první kus z `api/admin/**` | [x] |
 | 7t | 30. 10. | Hlášky rout nabídek v administraci klíčem — `api/admin/offers/**` (4 routy, 2 obrazovky); druhá agenda z `api/admin/**` | [x] |
 | 7u | 1. 11. (nasazeno 3. 11.) | Hlášky rout faktur v administraci klíčem — `api/admin/invoices/**` (6 rout, 3 obrazovky); třetí agenda z `api/admin/**` | [x] |
+| 7v | 4. 11. | Hlášky rout uživatelů v administraci klíčem — `api/admin/users/**` (4 routy, 4 obrazovky); první agenda z `api/admin/**`, která není doklad | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1904,6 +1905,56 @@ quote. Vystavovatel je `issuer`, stejně jako na kartě vlastní firmy.
 administrace zůstává kolem **322 českých hlášek** — největší kusy jsou
 uživatelé (26), banka (26), smlouvy (25), studia (19), firmy (18), wikipedie
 (15), technika (15) a ukázky (14). Dál po agendách, jedna za večer.
+
+### Dávka 7v je HOTOVÁ (4. 11. 2026)
+
+**Čtvrtá agenda z `api/admin/**`: uživatelé** — a první, která není doklad.
+Vzor je pořád z dávky 7o (`odpovedChyby(klíč, status)`, věta se značkou přes
+`odpovedChybyS`), obrazovka čte chybu přes `hlaskaChyby(data, t, záloha)`.
+Rozsah: **4 routy, 4 obrazovky, 29 přepsaných míst a slovník +13 klíčů
+(6 227 → 6 240)**. Klíče `chybaApi.bezOpravneni` a `chybaApi.ulozeniNezdariloS`
+ve slovníku už byly z dřívějších dávek, takže se nezakládaly znovu.
+
+**Routy:** `api/admin/users` (založení účtu), `users/[id]` (úprava i mazání, kde
+se podle `?zpusob=` řeší i navázané věci), `users/[id]/invite` (pozvánka
+s odkazem na nastavení hesla) a `users/[id]/dodavatel` (přenos herce do
+dodavatelů).
+
+**Obrazovky:** `NewUserForm` (založení), `UserEditForm` (uložení karty a přenos
+do dodavatelů — dvě místa), `InviteButton` (pozvánka) a sdílené
+`SmazatSPrekazkami`. **Oprava v `SmazatSPrekazkami` platí pro všechny agendy**,
+které ho používají (firmy, projekty, uživatelé), ne jen pro uživatele — je to
+jedno místo a dřív tam chodila jen česká věta z odpovědi.
+
+**Pozvánka bez SMTP si odpověď skládá sama.** Vedle chyby nese routa
+`inviteUrl`, aby admin mohl odkaz předat ručně, a `odpovedChyby` posílá jen
+chybu — takže se `NextResponse.json` nechal a klíč
+(`chybaApi.pozvankaBezSmtp`) jde v něm vedle české věty z `prelozit('cs', …)`.
+Stejný ústupek jako u rout, které vedle hlášky vracejí data.
+
+**Termíny podle slovníčku:** herec = narrator, dodavatel = supplier,
+firma u klienta = company. „Vyřadit" (retire) je v portálu něco jiného než
+smazat, takže hláška o neaktivním účtu mluví o aktivaci, ne o vyřazení.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s/7t/7u):**
+
+1. **Hlášky ze `zod` schémat** — `parsed.error.issues[0]?.message` v založení
+   i úpravě zůstává česky i s fallbackem `'Neplatná data.'`. Přepíšou se
+   všechny naráz vlastním úkolem.
+2. **Věta „{jméno} nejde rovnou smazat, visí na něm: …"** v `DELETE` zůstává
+   česky **a je to v pořádku: na obrazovku nejde**. `SmazatSPrekazkami` si
+   u stavu 409 s `prekazky` skládá vlastní přeloženou větu
+   (`mazani.nejdeRovnouSmazat` + klíče překážek z dávky 7j) a `error` z routy
+   si nečte. Česká věta tím zůstává zdrojem pravdy pro log.
+3. **`lib/mazani.ts` a `lib/archivServer.ts`** — `popisPrekazek` se zapisuje do
+   archivu a do logu, ne na obrazovku; klíče překážek jsou hotové od dávky 7j.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po uživatelích zůstává kolem **293 českých
+hlášek** — největší kusy jsou banka (26), smlouvy (25), studia (19), wikipedie
+(15), technika (15), firmy (15), ukázky (14) a pokladna (12). Dál po agendách,
+jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

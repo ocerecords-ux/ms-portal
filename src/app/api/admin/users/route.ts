@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { nextCode, codePrefixForRole } from '@/lib/codes';
 import { uploadUserPhoto } from '@/lib/storage';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT', 'TABULE'] as const;
 // Tyto role jsou vazane na klientskou firmu - viz src/lib/roles.ts (COMPANY_ROLES).
@@ -93,7 +94,7 @@ function readFormData(formData: FormData) {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const formData = await req.formData();
     const parsed = schema.safeParse(readFormData(formData));
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) {
-      return NextResponse.json({ error: 'Uživatel s tímto e-mailem už existuje.' }, { status: 409 });
+      return odpovedChyby('chybaApi.uzivatelSEmailemExistuje', 409);
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -116,10 +117,7 @@ export async function POST(req: NextRequest) {
       // Driv se ucet zalozil a fotka tise zmizela - stejna oprava jako
       // u „Muj ucet" a u karty uzivatele (20. 9. 2026).
       if (photoUrl === null) {
-        return NextResponse.json(
-          { error: 'Fotku se nepodařilo uložit - zkuste menší obrázek.' },
-          { status: 400 },
-        );
+        return odpovedChyby('chybaApi.fotkaNeulozenaZkusteMensi', 400);
       }
     }
 
@@ -176,6 +174,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('POST /api/admin/users selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Účet se nepodařilo založit (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ucetNezalozenS', { zprava: message }, 500);
   }
 }

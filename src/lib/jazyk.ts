@@ -12301,6 +12301,60 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Nenašli jsme, co smazat.',
     en: 'There was nothing to delete.',
   },
+  // CHYBY Z ROUT UŽIVATELŮ V ADMINISTRACI (dávka 7v, 4. 11. 2026). Herec je
+  // podle slovníčku „narrator", dodavatel „supplier" - formulace drží slova
+  // z `uzivatel.prenestDoDodavatelu` a `smlouva.zadnyDodavatel`, ať se karta
+  // uživatele a hláška z routy neliší. „Vyřadit" (retire) je něco jiného než
+  // smazat, takže hláška o neaktivním účtu mluví o aktivaci, ne o vyřazení.
+  'chybaApi.uzivatelNenalezen': { cs: 'Uživatel nenalezen.', en: 'User not found.' },
+  'chybaApi.uzivatelSEmailemExistuje': {
+    cs: 'Uživatel s tímto e-mailem už existuje.',
+    en: 'A user with this email address already exists.',
+  },
+  'chybaApi.proRoliVyberteFirmu': {
+    cs: 'Pro tuto roli musíte vybrat firmu.',
+    en: 'You have to choose a company for this role.',
+  },
+  'chybaApi.fotkaNeulozenaZkusteMensi': {
+    cs: 'Fotku se nepodařilo uložit - zkuste menší obrázek.',
+    en: 'The photo could not be saved — try a smaller image.',
+  },
+  'chybaApi.ucetNezalozenS': {
+    cs: 'Účet se nepodařilo založit ({zprava}).',
+    en: 'The account could not be created ({zprava}).',
+  },
+  'chybaApi.doDodavateluJenHerci': {
+    cs: 'Do dodavatelů se přenášejí jen herci.',
+    en: 'Only narrators can be moved into the suppliers.',
+  },
+  'chybaApi.prenosDoDodavateluNezdaril': {
+    cs: 'Přenos do dodavatelů se nezdařil.',
+    en: 'Moving into the suppliers failed.',
+  },
+  'chybaApi.uzivatelNeaktivni': {
+    cs: 'Uživatel je neaktivní - nejdřív ho aktivujte.',
+    en: 'The user is inactive — activate them first.',
+  },
+  'chybaApi.ucetBezEmailu': {
+    cs: 'Tenhle účet nemá e-mailovou adresu — heslo mu nastavte přímo na jeho kartě.',
+    en: 'This account has no email address — set the password directly on their card.',
+  },
+  'chybaApi.pozvankaBezSmtp': {
+    cs: 'E-mail se nepodařilo odeslat (SMTP zatím není nastavené). Odkaz můžete poslat ručně.',
+    en: 'The email could not be sent (SMTP is not set up yet). You can send the link manually.',
+  },
+  'chybaApi.pozvankaNeodeslanaS': {
+    cs: 'Odeslání pozvánky se nezdařilo ({zprava}).',
+    en: 'Sending the invitation did not work ({zprava}).',
+  },
+  'chybaApi.vlastniUcetNejdeSmazat': {
+    cs: 'Vlastní účet smazat nejde.',
+    en: 'You cannot delete your own account.',
+  },
+  'chybaApi.smazaniNedokonceno': {
+    cs: 'Smazání se nepodařilo dokončit, takže se nic nesmazalo.',
+    en: 'The deletion could not be completed, so nothing was deleted.',
+  },
   // CHYBY Z ROUT PŘEPOSLECHU (dávka 7p, 19. 10. 2026). Záznam chyby
   // v AudioTaggeru je podle slovníčku „tag".
   'preposlechApi.posluchacNenalezen': {

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { nextCode } from '@/lib/codes';
 import { bezTitulu } from '@/lib/jmena';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * PŘENÉST HERCE DO DODAVATELŮ (zadání 16. 9. 2026: „někdy se nám stane, že
@@ -27,7 +28,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const herec = await prisma.user.findUnique({
       where: { id: params.id },
@@ -50,9 +51,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       },
     });
 
-    if (!herec) return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
+    if (!herec) return odpovedChyby('chybaApi.uzivatelNenalezen', 404);
     if (herec.role !== 'HEREC') {
-      return NextResponse.json({ error: 'Do dodavatelů se přenášejí jen herci.' }, { status: 400 });
+      return odpovedChyby('chybaApi.doDodavateluJenHerci', 400);
     }
     if (herec.dodavatelCompany) {
       return NextResponse.json({
@@ -100,6 +101,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true, uzExistovala: false, firma });
   } catch (err) {
     console.error('POST /api/admin/users/[id]/dodavatel selhalo:', err);
-    return NextResponse.json({ error: 'Přenos do dodavatelů se nezdařil.' }, { status: 500 });
+    return odpovedChyby('chybaApi.prenosDoDodavateluNezdaril', 500);
   }
 }

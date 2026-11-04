@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Prekazka } from '@/lib/mazani';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Smazání firmy / uživatele / projektu, na kterém něco visí (zadání
@@ -52,7 +53,7 @@ export function SmazatSPrekazkami({
         return;
       }
       if (!res.ok) {
-        setChyba(data?.error || t('mazani.nezdarilo'));
+        setChyba(hlaskaChyby(data, t, t('mazani.nezdarilo')));
         setPtaSe(false);
         return;
       }

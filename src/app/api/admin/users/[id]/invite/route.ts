@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { sendInviteEmail, type InviteAudience } from '@/lib/email';
 import { jeEmail } from '@/lib/prihlasovaciJmeno';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
+import { prelozit } from '@/lib/jazyk';
 
 // Odeslani pozvanky uzivateli (zadani 5. 9. 2026): vygeneruje jednorazovy
 // token, ulozi ho k uzivateli a posle mu e-mail s odkazem, kde si sam
@@ -14,12 +16,12 @@ const INVITE_VALID_DAYS = 7;
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const user = await prisma.user.findUnique({ where: { id: params.id } });
-    if (!user) return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
+    if (!user) return odpovedChyby('chybaApi.uzivatelNenalezen', 404);
     if (!user.active) {
-      return NextResponse.json({ error: 'Uživatel je neaktivní - nejdřív ho aktivujte.' }, { status: 400 });
+      return odpovedChyby('chybaApi.uzivatelNeaktivni', 400);
     }
     /**
      * Účet se od 29. 9. 2026 může přihlašovat i jménem bez zavináče (tabule
@@ -27,10 +29,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
      * než vyrobit token, který nikdo nedostane.
      */
     if (!jeEmail(user.email)) {
-      return NextResponse.json(
-        { error: 'Tenhle účet nemá e-mailovou adresu — heslo mu nastavte přímo na jeho kartě.' },
-        { status: 400 },
-      );
+      return odpovedChyby('chybaApi.ucetBezEmailu', 400);
     }
 
     const token = randomBytes(32).toString('hex');
@@ -60,9 +59,12 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     if (!result.sent) {
       // Token je ulozeny, jen se ho nepodarilo odeslat - admin muze odkaz
       // predat rucne, aby uzivatel nezustal viset.
+      // Vedle klice jde dal i odkaz, ktery si admin predava rucne - proto se
+      // odpoved sklada tady a ne pres `odpovedChyby` (to posila jen chybu).
       return NextResponse.json(
         {
-          error: 'E-mail se nepodařilo odeslat (SMTP zatím není nastavené). Odkaz můžete poslat ručně.',
+          error: prelozit('cs', 'chybaApi.pozvankaBezSmtp'),
+          klic: 'chybaApi.pozvankaBezSmtp',
           inviteUrl,
         },
         { status: 502 },
@@ -73,6 +75,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   } catch (err) {
     console.error('POST /api/admin/users/[id]/invite selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Odeslání pozvánky se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.pozvankaNeodeslanaS', { zprava: message }, 500);
   }
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Odeslani pozvanky uzivateli (zadani 5. 9. 2026) - uzivateli prijde e-mail
@@ -33,7 +34,7 @@ export function InviteButton({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setState('error');
-        setMessage(data?.error || t('uzivatel.pozvankaNezdarila'));
+        setMessage(hlaskaChyby(data, t, t('uzivatel.pozvankaNezdarila')));
         if (data?.inviteUrl) setFallbackUrl(data.inviteUrl);
         return;
       }
