@@ -389,14 +389,20 @@ export async function sesynchronizujBanku(): Promise<VysledekSynchronizace> {
   return celkem;
 }
 
-/** Ruční spárování nebo odložení jednoho pohybu (tlačítka v přehledu). */
+/**
+ * Ruční spárování nebo odložení jednoho pohybu (tlačítka v přehledu).
+ *
+ * Co se nepovede, vrací KLÍČ do slovníku, ne hotovou větu (dávka 7w): tyhle
+ * hlášky jdou rovnou na obrazovku a ta si je přeloží sama. Český text zůstává
+ * zdrojem pravdy ve slovníku (pravidlo 1).
+ */
 export async function rozhodniOPohybu(
   id: string,
   akce: 'sparovat' | 'ignorovat' | 'odparovat',
   invoiceId?: string | null,
-): Promise<{ ok: true } | { error: string }> {
+): Promise<{ ok: true } | { klic: string }> {
   const pohyb = await prisma.bankTransaction.findUnique({ where: { id } });
-  if (!pohyb) return { error: 'Pohyb nenalezen.' };
+  if (!pohyb) return { klic: 'chybaApi.pohybNenalezen' };
 
   if (akce === 'ignorovat') {
     await prisma.bankTransaction.update({
@@ -420,11 +426,11 @@ export async function rozhodniOPohybu(
   }
 
   const cil = invoiceId || pohyb.navrhInvoiceId;
-  if (!cil) return { error: 'Vyberte fakturu, ke které platba patří.' };
+  if (!cil) return { klic: 'chybaApi.vyberteFakturuKPlatbe' };
 
   const faktura = await prisma.invoice.findUnique({ where: { id: cil }, select: { id: true, status: true } });
-  if (!faktura) return { error: 'Faktura nenalezena.' };
-  if (faktura.status === 'CANCELLED') return { error: 'Stornovaná faktura se párovat nedá.' };
+  if (!faktura) return { klic: 'chybaApi.fakturaNenalezena' };
+  if (faktura.status === 'CANCELLED') return { klic: 'chybaApi.stornovanouFakturuNejdeParovat' };
 
   await prisma.invoice.update({
     where: { id: cil },

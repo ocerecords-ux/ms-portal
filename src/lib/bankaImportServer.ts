@@ -6,6 +6,7 @@ import {
   type PohybKUlozeni,
   type VysledekSynchronizace,
 } from '@/lib/bankaServer';
+import { prelozit } from '@/lib/jazyk';
 import type { Currency } from '@prisma/client';
 
 /**
@@ -56,6 +57,23 @@ function naZaznam(ucet: string, p: AboPohyb): PohybKUlozeni {
 }
 
 /**
+ * CHYBA VÝPISU, KTERÁ VÍ, CO SE MÁ UKÁZAT (dávka 7w).
+ *
+ * Routa si od ní vezme klíč a stav - obrazovka pak hlášku přeloží jako
+ * u ostatních rout (vzor z dávky 7o). České znění zůstává ve `message`,
+ * takže v logu stojí celá věta, ne klíč.
+ */
+export class ChybaVypisu extends Error {
+  constructor(
+    readonly klic: string,
+    readonly status: number,
+  ) {
+    super(prelozit('cs', klic));
+    this.name = 'ChybaVypisu';
+  }
+}
+
+/**
  * Přečte nahraný výpis a uloží z něj, co portál ještě nezná.
  *
  * Tentýž soubor se dá nahrát vícekrát - pohyb se pozná podle účtu, data,
@@ -64,11 +82,7 @@ function naZaznam(ucet: string, p: AboPohyb): PohybKUlozeni {
  */
 export async function importujAboVypis(obsah: string): Promise<VysledekImportu> {
   const vypis = rozeberAbo(obsah);
-  if (!vypis) {
-    throw new Error(
-      'Tohle nevypadá jako výpis ve formátu ABO. V internetovém bankovnictví vyberte u výpisu formát ABO (GPC).',
-    );
-  }
+  if (!vypis) throw new ChybaVypisu('chybaApi.vypisNeniAbo', 400);
 
   const napojeni = await napojeniProUcet(vypis.ucet, vypis.nazevUctu, ZDROJ);
   const zaznamy = vypis.pohyby.map((p) => naZaznam(vypis.ucet, p));

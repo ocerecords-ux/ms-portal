@@ -12481,6 +12481,67 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'nahled.stavFaktury.PAID': { cs: 'Uhrazená', en: 'Paid' },
   'nahled.stavFaktury.CANCELLED': { cs: 'Stornovaná', en: 'Cancelled' },
+  // Hlasky rout banky (davka 7w) - api/admin/banka/**
+  'chybaApi.bankaBezKlicu': {
+    cs: 'Klíče GoCardless nejsou nastavené.',
+    en: 'The GoCardless keys are not configured.',
+  },
+  'chybaApi.napojeniNeniNastavene': {
+    cs: 'Napojení na banku zatím není nastavené - chybí klíče GoCardless.',
+    en: 'The bank connection is not set up yet — the GoCardless keys are missing.',
+  },
+  'chybaApi.seznamBankNenacten': {
+    cs: 'Seznam bank se nepodařilo načíst.',
+    en: 'The list of banks could not be loaded.',
+  },
+  'chybaApi.napojeniNepodarilo': {
+    cs: 'Napojení se nepodařilo.',
+    en: 'Connecting the account failed.',
+  },
+  'chybaApi.napojeniNepodariloS': {
+    cs: 'Napojení se nepodařilo ({chyba}).',
+    en: 'Connecting the account failed ({chyba}).',
+  },
+  'chybaApi.chybiIdNapojeni': {
+    cs: 'Chybí id napojení.',
+    en: 'The connection id is missing.',
+  },
+  'chybaApi.napojeniNenalezeno': {
+    cs: 'Napojení nenalezeno.',
+    en: 'Connection not found.',
+  },
+  'chybaApi.stazeniPohybuNepodarilo': {
+    cs: 'Stažení pohybů se nepodařilo.',
+    en: 'The transactions could not be downloaded.',
+  },
+  'chybaApi.nepriselZadnySoubor': {
+    cs: 'Nepřišel žádný soubor.',
+    en: 'No file arrived.',
+  },
+  'chybaApi.vypisMocVelky': {
+    cs: 'Soubor je moc velký - nahrajte výpis po měsících.',
+    en: 'The file is too big — upload the statement month by month.',
+  },
+  'chybaApi.vypisNeniAbo': {
+    cs: 'Tohle nevypadá jako výpis ve formátu ABO. V internetovém bankovnictví vyberte u výpisu formát ABO (GPC).',
+    en: 'This does not look like a statement in the ABO format. In your internet banking, choose the ABO (GPC) format for the statement.',
+  },
+  'chybaApi.vypisNenacten': {
+    cs: 'Výpis se nepodařilo načíst.',
+    en: 'The statement could not be read.',
+  },
+  'chybaApi.pohybNenalezen': {
+    cs: 'Pohyb nenalezen.',
+    en: 'Transaction not found.',
+  },
+  'chybaApi.vyberteFakturuKPlatbe': {
+    cs: 'Vyberte fakturu, ke které platba patří.',
+    en: 'Select the invoice the payment belongs to.',
+  },
+  'chybaApi.stornovanouFakturuNejdeParovat': {
+    cs: 'Stornovaná faktura se párovat nedá.',
+    en: 'A cancelled invoice cannot be matched.',
+  },
 };
 
 /**

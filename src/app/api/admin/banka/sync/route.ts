@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby } from '@/lib/chybyApi';
 import { smiDoBanky } from '@/lib/bankaPristup';
 import { sesynchronizujBanku } from '@/lib/bankaServer';
 import { bankaNastavena } from '@/lib/gocardless';
@@ -10,16 +11,16 @@ export const maxDuration = 120;
 
 export async function POST() {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   // Do banky smi jen ten, kdo to ma dovolene u uctu (17. 9. 2026).
-  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
-  if (!bankaNastavena()) return NextResponse.json({ error: 'Klíče GoCardless nejsou nastavené.' }, { status: 503 });
+  if (!(await smiDoBanky())) return odpovedChyby('chybaApi.bezOpravneni', 403);
+  if (!bankaNastavena()) return odpovedChyby('chybaApi.bankaBezKlicu', 503);
 
   try {
     const vysledek = await sesynchronizujBanku();
     return NextResponse.json(vysledek);
   } catch (err) {
     console.error('Stažení pohybů selhalo:', err);
-    return NextResponse.json({ error: 'Stažení pohybů se nepodařilo.' }, { status: 502 });
+    return odpovedChyby('chybaApi.stazeniPohybuNepodarilo', 502);
   }
 }

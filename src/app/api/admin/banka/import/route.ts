@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
 import { smiDoBanky } from '@/lib/bankaPristup';
-import { importujAboVypis } from '@/lib/bankaImportServer';
+import { ChybaVypisu, importujAboVypis } from '@/lib/bankaImportServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * NAHRÁNÍ VÝPISU Z ÚČTU (29. 9. 2026).
@@ -33,26 +34,29 @@ function naText(buffer: Buffer): string {
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
-  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
+  if (!(await smiDoBanky())) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const formData = await req.formData().catch(() => null);
   const soubor = formData?.get('vypis');
   if (!(soubor instanceof File) || soubor.size === 0) {
-    return NextResponse.json({ error: 'Nepřišel žádný soubor.' }, { status: 400 });
+    return odpovedChyby('chybaApi.nepriselZadnySoubor', 400);
   }
   if (soubor.size > MAX_BAJTU) {
-    return NextResponse.json({ error: 'Soubor je moc velký - nahrajte výpis po měsících.' }, { status: 400 });
+    return odpovedChyby('chybaApi.vypisMocVelky', 400);
   }
 
   try {
     const vysledek = await importujAboVypis(naText(Buffer.from(await soubor.arrayBuffer())));
     return NextResponse.json(vysledek);
   } catch (err) {
-    const zprava = err instanceof Error ? err.message : 'Výpis se nepodařilo načíst.';
     console.error('Import výpisu selhal:', err);
-    // Hláška o špatném formátu je pro člověka, ne chyba serveru - proto 400.
-    const format = zprava.includes('ABO');
-    return NextResponse.json({ error: zprava }, { status: format ? 400 : 500 });
+    /**
+     * Hláška o špatném formátu je pro člověka, ne chyba serveru - proto 400.
+     * Od dávky 7w si stav i klíč nese sama chyba (`ChybaVypisu`), takže se
+     * formát nepozná hádáním podle slova „ABO" ve větě.
+     */
+    if (err instanceof ChybaVypisu) return odpovedChyby(err.klic, err.status);
+    return odpovedChyby('chybaApi.vypisNenacten', 500);
   }
 }

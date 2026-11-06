@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
@@ -114,7 +115,7 @@ export function BankaKlient({
       const res = await fetch('/api/admin/banka/import', { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('banka.vypisNepodarilo'));
+        setChyba(hlaskaChyby(data, t, t('banka.vypisNepodarilo')));
         return;
       }
       // Každá část je svůj klíč se značkou (pravidlo 7) - není to jedna
@@ -176,7 +177,7 @@ export function BankaKlient({
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.link) {
-        setChyba(data?.error || t('banka.napojeniSelhalo'));
+        setChyba(hlaskaChyby(data, t, t('banka.napojeniSelhalo')));
         return;
       }
       // Odsud se jde do internetového bankovnictví; zpátky to pustí samo.
@@ -194,7 +195,7 @@ export function BankaKlient({
       const res = await fetch('/api/admin/banka/sync', { method: 'POST' });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || t('banka.stazeniSelhalo'));
+        setChyba(hlaskaChyby(data, t, t('banka.stazeniSelhalo')));
         return;
       }
       const chyby: string[] = data?.chyby ?? [];
@@ -223,7 +224,7 @@ export function BankaKlient({
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || t('banka.ulozeniSelhalo'));
+        setChyba(hlaskaChyby(data, t, t('banka.ulozeniSelhalo')));
         return;
       }
       router.refresh();

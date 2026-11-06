@@ -97,6 +97,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7t | 30. 10. | Hlášky rout nabídek v administraci klíčem — `api/admin/offers/**` (4 routy, 2 obrazovky); druhá agenda z `api/admin/**` | [x] |
 | 7u | 1. 11. (nasazeno 3. 11.) | Hlášky rout faktur v administraci klíčem — `api/admin/invoices/**` (6 rout, 3 obrazovky); třetí agenda z `api/admin/**` | [x] |
 | 7v | 4. 11. | Hlášky rout uživatelů v administraci klíčem — `api/admin/users/**` (4 routy, 4 obrazovky); první agenda z `api/admin/**`, která není doklad | [x] |
+| 7w | 6. 11. | Hlášky rout banky klíčem — `api/admin/banka/**` (5 rout, 1 obrazovka) a k tomu důvody z `lib/bankaServer.ts` a `lib/bankaImportServer.ts`, které chodily na obrazovku hotové česky | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -1955,6 +1956,70 @@ smazat, takže hláška o neaktivním účtu mluví o aktivaci, ne o vyřazení.
 hlášek** — největší kusy jsou banka (26), smlouvy (25), studia (19), wikipedie
 (15), technika (15), firmy (15), ukázky (14) a pokladna (12). Dál po agendách,
 jedna za večer.
+
+### Dávka 7w je HOTOVÁ (6. 11. 2026)
+
+**Pátá agenda z `api/admin/**`: banka** — a první, kde hlášky nevznikají jen
+v routě, ale přitékají do ní z knihovny. Vzor je pořád z dávky 7o
+(`odpovedChyby(klíč, status)`, věta se značkou přes `odpovedChybyS`),
+obrazovka čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **5 rout,
+1 obrazovka, 2 knihovny, 37 přepsaných míst a slovník +15 klíčů
+(6 240 → 6 255)**. Klíče `chybaApi.bezOpravneni`, `chybaApi.neplatnaData`
+a `chybaApi.fakturaNenalezena` ve slovníku už byly, takže se nezakládaly znovu.
+
+**Routy:** `banka/napojeni` (seznam bank, založení souhlasu i odpojení účtu —
+sama o sobě devět míst), `banka/dokoncit` (doťuknutí po návratu z banky),
+`banka/sync` (stažení pohybů na kliknutí), `banka/import` (nahrání výpisu ABO)
+a `banka/pohyb/[id]` (ruční spárování, ignorování, odpárování).
+
+**Obrazovka:** `BankaKlient.tsx` — čtyři místa, kde se chyba brala jako
+`data?.error || t(…)`. Klíče `banka.*` se zálohami tam byly z dávky 4, teď
+před ně nastoupil `hlaskaChyby`, takže věta z routy přijde přeložená a česká
+záloha zůstane jen pro výpadek sítě.
+
+**Dvě knihovny, protože hláška vzniká tam, ne v routě:**
+
+- `lib/bankaServer.ts` — `rozhodniOPohybu()` vracel `{ error: 'Pohyb
+  nenalezen.' }` a routa to posílala ven, jak to přišlo. Teď vrací
+  `{ klic }` a routa z něj udělá `odpovedChyby(…, 409)`. Čtyři důvody
+  (pohyb, nevybraná faktura, neznámá faktura, stornovaná faktura).
+- `lib/bankaImportServer.ts` — nová `ChybaVypisu` nese klíč I STAV. Routa
+  dřív poznávala špatný formát podle toho, že ve VĚTĚ je slovo „ABO"
+  (`zprava.includes('ABO')`), a vybírala podle toho 400 nebo 500 —
+  s překladem by to tichounce přestalo platit. České znění zůstává ve
+  `message`, takže v logu stojí dál celá věta.
+
+**Hláška od GoCardless jde jako hodnota do značky.** `Napojení se nepodařilo
+({chyba})` je jeden klíč (pravidlo 7) a text od cizí služby se do něj dosadí;
+když chyba není `Error`, odejde kratší věta bez dovětku, místo aby v ní
+svítila česká záloha „Neznámá chyba.".
+
+**Termíny podle slovníčku:** pohyb = transaction, faktura = invoice, souhlas
+u banky = authorisation (jako v `banka.souhlasPlatiDo` z dávky 4), napojení =
+connection (hláška o jeho založení mluví o „connecting the account", stejně
+jako `banka.napojeniSelhalo`).
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7v):**
+
+1. **Hlášky ze `zod` schémat** — `banka/pohyb` i `banka/napojeni` mají
+   `safeParse` a jeho vlastní hlášky zůstávají česky. Samostatné
+   `'Neplatná data.'` klíč dostalo (`chybaApi.neplatnaData`), protože žádnou
+   hlášku ze `zod` nenese.
+2. **Chyby jednotlivých napojení ze stahování** — `chyby[]` z
+   `sesynchronizujBanku()` zůstává česky **a je to v pořádku: je to datová
+   hodnota, ne hláška rozhraní**. Totéž pole se ukládá do
+   `BankConnection.lastSyncError` a obrazovka ho vypisuje přes
+   `banka.posledniStazeni` se značkou `{chyba}`, tedy jako text z databáze.
+   Většina těch vět navíc přichází od GoCardless, takže je slovník nemá z čeho
+   přeložit; jediná naše (`'Souhlas v bance ještě není potvrzený.'`) by se
+   přeložila jen v půlce míst, kde se čte.
+3. **`api/cron/banka`** — noční úloha, její hlášky na obrazovku nejdou.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po bance zůstává kolem **267 českých hlášek** —
+největší kusy jsou smlouvy (25), studia (19), wikipedie (15), technika (15),
+firmy (15), ukázky (14) a pokladna (12). Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 
