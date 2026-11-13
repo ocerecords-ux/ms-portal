@@ -27,7 +27,7 @@ declare module '@prisma/client' {
   export type RecordingStatus = 'DRAFT' | 'PREPARING' | 'SENT' | 'PICKING' | 'SUBMITTED' | 'RETURNED' | 'REJECTED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
   export type SlotState = 'OFFERED' | 'SELECTED' | 'CONFIRMED' | 'RELEASED' | 'CANCELLED';
   export type FeedScope = 'MINE' | 'STUDIO' | 'ALL' | 'MIMO' | 'PORADY' | 'SCHUZKY';
-  export type StavBonusu = 'NAVRZENO' | 'SCHVALENO' | 'ZAMITNUTO';
+  export type StavBonusu = 'NAVRZENO' | 'SCHVALENO' | 'ZAMITNUTO' | 'STORNOVANO';
   export type StavPripominky = 'NOVA' | 'HOTOVA';
   export type PozvankaDruh = 'HEREC' | 'FIRMA';
   export type PozvankaStav = 'CEKA' | 'VYPLNENA' | 'HOTOVA' | 'ZRUSENA';
@@ -35,12 +35,14 @@ declare module '@prisma/client' {
   export type StavNavrhu = 'CEKA' | 'ZAPSANO' | 'ODMITNUTO';
   export type OpakovaniPorady = 'NE' | 'DENNE' | 'PRACOVNI_DNY' | 'TYDNE' | 'KAZDE_DVA_TYDNY' | 'MESICNE';
   export type DruhPorady = 'PORADA' | 'SCHUZKA';
+  export type SmerPokladny = 'PRIJEM' | 'VYDEJ';
   export type Company = {
     id: string;
     code: string | null;
     type: CompanyType;
     name: string;
     ratePerPage: number | null;
+    mena: Currency;
     caflouCompanyId: string | null;
     driveFolderUrl: string | null;
     dealsAudiobooks: boolean;
@@ -48,6 +50,10 @@ declare module '@prisma/client' {
     audioknihyNaKlic: boolean;
     cenuUrcujeKlient: boolean;
     fakturujeNaCasti: boolean;
+    hudbuDodavaKlient: boolean;
+    hudbaPredstihDni: number;
+    hudbaKlientOd: Date | null;
+    hudbaSerii: any;
     contactName: string | null;
     fakturyKlientovi: boolean;
     contactEmail: string | null;
@@ -62,9 +68,30 @@ declare module '@prisma/client' {
     addressZip: string | null;
     addressCountry: string | null;
     paymentTermDays: number | null;
+    rezieKlientaUserId: string | null;
+    rezieKlienta: any;
+    vydavatelId: string | null;
+    vydavatel: any;
+    tagyPovoleny: boolean;
+    tagyVydavatel: string | null;
+    tracklistZTextu: boolean;
     active: boolean;
     createdAt: Date;
     updatedAt: Date;
+    users: any;
+    herciDodavatele: any;
+    projekty: any;
+    notifikace: any;
+    orders: any;
+    projects: any;
+    offers: any;
+    invoices: any;
+    expenses: any;
+    contracts: any;
+    recordingRequests: any;
+    rodneListy: any;
+    pozvankyUdaju: any;
+    technickeProfily: any;
     [key: string]: any;
   };
   export type User = {
@@ -76,6 +103,7 @@ declare module '@prisma/client' {
     phone: string | null;
     role: Role;
     companyId: string | null;
+    company: any;
     active: boolean;
     createdAt: Date;
     jazyk: string;
@@ -83,11 +111,17 @@ declare module '@prisma/client' {
     photoUrl: string | null;
     maFotku: boolean;
     hourlyRate: number | null;
+    mzdyEmail: string | null;
+    podilNaObratu: number | null;
+    vychoziKalendareNastaveno: boolean;
     manazerProjektu: boolean;
     smlouvyPodepisuje: boolean;
     podpisSmluv: string | null;
     prijimaDotazyKlientu: boolean;
+    kopieNabidekTerminu: boolean;
+    fakturaceProjektu: boolean;
     vidiBanku: boolean;
+    vidiPokladnu: boolean;
     jenNahled: boolean;
     sledujeZmenyProjektu: boolean;
     chatUpozorneniZpravy: ChatUpozorneni;
@@ -98,6 +132,7 @@ declare module '@prisma/client' {
     dostavaDotoceno: boolean;
     dostavaDotocenoKlient: boolean;
     dostavaZmenuTerminuKlient: boolean;
+    dostavaVyberTerminu: boolean;
     ranniPrehled: boolean;
     vidiSite: boolean;
     spravujeTechParametry: boolean;
@@ -119,11 +154,26 @@ declare module '@prisma/client' {
     dostavaVyplneneUdaje: boolean;
     vychoziManazerAudioknih: boolean;
     dodavatelCompanyId: string | null;
+    dodavatelCompany: any;
+    dotoceniHerce: any;
+    normostranyHerce: any;
+    brunoNatoceno: any;
+    bonusy: any;
+    pripominky: any;
+    projektyJakoHerec: any;
+    vystupyJakoHerec: any;
+    zvukarStudia: any;
+    vedeStudia: any;
     bookingStudioId: string | null;
+    bookingStudio: any;
+    bookingRezervace: any;
     bookingMailPotvrzeni: boolean;
     bookingMailZmena: boolean;
     bookingMailPripominka: boolean;
     tabuleStudioId: string | null;
+    tabuleStudio: any;
+    tabulePristup: any;
+    slozkyDisku: any;
     birthNumber: string | null;
     ic: string | null;
     dic: string | null;
@@ -138,15 +188,60 @@ declare module '@prisma/client' {
     inviteTokenExpires: Date | null;
     invitedAt: Date | null;
     passwordSetAt: Date | null;
+    orders: any;
+    managedProjects: any;
+    odeslaneNabidky: any;
+    timesheets: any;
+    navrhyVykazu: any;
+    tasks: any;
+    menuItems: any;
+    nastaveniSloupcu: any;
+    poradiZalozek: any;
+    quickActions: any;
+    conversationsCreated: any;
+    conversationMembers: any;
+    messages: any;
+    reactions: any;
+    pushOdbery: any;
+    actorOnProjects: any;
+    klientNaProjektech: any;
+    recordingRequests: any;
+    recordingsCreated: any;
+    recordingsDecided: any;
+    recordingEvents: any;
+    studioBlocks: any;
+    notifications: any;
+    calendarFeeds: any;
+    hudbaPridana: any;
+    hudbaSeriiPridana: any;
+    rezieUFirem: any;
+    pozvankyUdaju: any;
+    pozvankyUdajuVytvoril: any;
+    navody: any;
+    nepritomnosti: any;
+    poradyUcast: any;
+    socialniPrispevky: any;
+    socialniObrazky: any;
+    socialniPribehy: any;
+    pribehyVyrizene: any;
+    hudbaDoPribehu: any;
+    ukazkyJakoHerec: any;
+    nahraneUkazky: any;
+    vytvorenePrezentace: any;
+    navrhyHercu: any;
     [key: string]: any;
   };
   export type Order = {
     id: string;
     companyId: string;
+    company: any;
     createdByUserId: string;
+    createdBy: any;
     kind: OrderKind;
     title: string;
     pageCount: number | null;
+    serie: string | null;
+    serieDil: number | null;
     ratePerPageSnapshot: number | null;
     priceEstimate: number | null;
     deadline: Date | null;
@@ -155,6 +250,7 @@ declare module '@prisma/client' {
     vystupy: Prisma.JsonValue | null;
     attachmentUrl: string | null;
     attachmentName: string | null;
+    dalsiPrilohy: any;
     autorKnihy: string | null;
     prekladatelKnihy: string | null;
     nakladatelstviKnihy: string | null;
@@ -167,6 +263,7 @@ declare module '@prisma/client' {
     caflouProjectId: string | null;
     caflouSyncStatus: CaflouSyncStatus;
     caflouSyncError: string | null;
+    project: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -174,7 +271,9 @@ declare module '@prisma/client' {
   export type Project = {
     id: string;
     companyId: string;
+    company: any;
     orderId: string | null;
+    order: any;
     name: string;
     status: string | null;
     narrator: string | null;
@@ -195,10 +294,14 @@ declare module '@prisma/client' {
     caflouProjectId: string;
     driveUrl: string | null;
     managerUserId: string | null;
+    manager: any;
     priority: ProjectPriority | null;
     projectType: string | null;
     actorUserId: string | null;
+    actor: any;
+    herci: any;
     klientUserId: string | null;
+    klient: any;
     klientName: string | null;
     oCemJe: string | null;
     oCemJeZdroj: string | null;
@@ -210,11 +313,23 @@ declare module '@prisma/client' {
     musicTitle: string | null;
     musicAuthor: string | null;
     noMusic: boolean;
+    rodnyListAgentura: boolean;
     productionDate: Date | null;
     lastCaflouStatus: string | null;
     rlError: string | null;
     name: string | null;
+    serie: string | null;
+    serieDil: number | null;
+    tagAutor: string | null;
+    tagAlbum: string | null;
+    tagInterpret: string | null;
+    tagRok: number | null;
+    tagZanr: string | null;
+    tagVydavatel: string | null;
+    tagyZapsanoAt: Date | null;
+    hudbaUpozornenoAt: Date | null;
     companyId: string | null;
+    company: any;
     companyName: string | null;
     statusName: string | null;
     finished: boolean;
@@ -227,6 +342,7 @@ declare module '@prisma/client' {
     licenceUziti: string | null;
     uvodKnihy: string | null;
     zaverKnihy: string | null;
+    licence: any;
     dotocenoStavPred: string | null;
     dotocenoStavPo: string | null;
     schvalenoKlientemAt: Date | null;
@@ -262,6 +378,8 @@ declare module '@prisma/client' {
     popis: string;
     predchozi: string | null;
     nova: string | null;
+    zpravaPredmet: string | null;
+    zpravaHtml: string | null;
     uzivatelId: string | null;
     uzivatelJmeno: string | null;
     createdAt: Date;
@@ -270,6 +388,7 @@ declare module '@prisma/client' {
   export type NotifikaceFirmy = {
     id: string;
     companyId: string;
+    company: any;
     stav: string;
     komu: KomuNotifikace;
     createdAt: Date;
@@ -292,6 +411,7 @@ declare module '@prisma/client' {
     active: boolean;
     rodnyList: boolean;
     proObjednavkyAudioknih: boolean;
+    bezHudby: boolean;
     ikona: string | null;
     sortOrder: number;
     createdAt: Date;
@@ -301,6 +421,7 @@ declare module '@prisma/client' {
   export type TimesheetEntry = {
     id: string;
     userId: string;
+    user: any;
     date: Date;
     startMinutes: number;
     endMinutes: number;
@@ -327,6 +448,7 @@ declare module '@prisma/client' {
   export type UserQuickAction = {
     id: string;
     userId: string;
+    user: any;
     actionKey: string;
     sortOrder: number;
     createdAt: Date;
@@ -335,6 +457,7 @@ declare module '@prisma/client' {
   export type UserMenuItem = {
     id: string;
     userId: string;
+    user: any;
     label: string;
     href: string;
     sortOrder: number;
@@ -346,6 +469,7 @@ declare module '@prisma/client' {
   export type UserColumnSetting = {
     id: string;
     userId: string;
+    user: any;
     tableKey: string;
     zarizeni: string;
     columnKey: string;
@@ -358,6 +482,7 @@ declare module '@prisma/client' {
   export type UserZalozky = {
     id: string;
     userId: string;
+    user: any;
     sekce: string;
     createdAt: Date;
     updatedAt: Date;
@@ -391,15 +516,21 @@ declare module '@prisma/client' {
     dotazCompanyId: string | null;
     uzavrenoAt: Date | null;
     vsichni: boolean;
+    parKlic: string | null;
     createdById: string;
+    createdBy: any;
     createdAt: Date;
     lastMessageAt: Date;
+    members: any;
+    messages: any;
     [key: string]: any;
   };
   export type ConversationMember = {
     id: string;
     conversationId: string;
+    conversation: any;
     userId: string;
+    user: any;
     lastReadAt: Date;
     ztlumeno: boolean;
     pripnuto: boolean;
@@ -413,16 +544,23 @@ declare module '@prisma/client' {
   export type Message = {
     id: string;
     conversationId: string;
+    conversation: any;
     userId: string;
+    user: any;
     body: string;
     createdAt: Date;
     editedAt: Date | null;
     parentId: string | null;
+    parent: any;
+    replies: any;
+    reactions: any;
+    attachments: any;
     [key: string]: any;
   };
   export type PushOdber = {
     id: string;
     userId: string;
+    user: any;
     endpoint: string;
     p256dh: string;
     auth: string;
@@ -433,6 +571,7 @@ declare module '@prisma/client' {
   export type MessageAttachment = {
     id: string;
     messageId: string;
+    message: any;
     key: string;
     name: string;
     mime: string;
@@ -443,7 +582,9 @@ declare module '@prisma/client' {
   export type MessageReaction = {
     id: string;
     messageId: string;
+    message: any;
     userId: string;
+    user: any;
     code: string;
     createdAt: Date;
     [key: string]: any;
@@ -457,6 +598,7 @@ declare module '@prisma/client' {
     zadalJmeno: string | null;
     taskId: string | null;
     userId: string | null;
+    odemknutoAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -464,6 +606,7 @@ declare module '@prisma/client' {
   export type Task = {
     id: string;
     userId: string;
+    user: any;
     title: string;
     done: boolean;
     dueDate: Date | null;
@@ -473,6 +616,7 @@ declare module '@prisma/client' {
     zdrojKonverzaceId: string | null;
     zadalId: string | null;
     splnenoAt: Date | null;
+    viditelnyOd: Date | null;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -498,8 +642,17 @@ declare module '@prisma/client' {
     contractNumberFormat: string;
     contractNextNumber: number;
     defaultCurrency: Currency;
+    defaultJazyk: JazykDokladu;
     isDefault: boolean;
     active: boolean;
+    bankAccounts: any;
+    klienti: any;
+    offers: any;
+    invoices: any;
+    expenses: any;
+    contracts: any;
+    bankConnections: any;
+    pokladna: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -507,6 +660,7 @@ declare module '@prisma/client' {
   export type BankAccount = {
     id: string;
     issuerCompanyId: string;
+    issuer: any;
     label: string;
     accountNumber: string | null;
     iban: string | null;
@@ -515,6 +669,7 @@ declare module '@prisma/client' {
     currency: Currency;
     isDefault: boolean;
     sortOrder: number;
+    invoices: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -523,7 +678,9 @@ declare module '@prisma/client' {
     id: string;
     number: string;
     issuerCompanyId: string;
+    issuer: any;
     companyId: string;
+    company: any;
     currency: Currency;
     issueDate: Date;
     validUntil: Date | null;
@@ -534,9 +691,13 @@ declare module '@prisma/client' {
     approvalToken: string;
     sentAt: Date | null;
     odeslalUserId: string | null;
+    odeslal: any;
     approvedAt: Date | null;
     approvedByName: string | null;
     rejectedAt: Date | null;
+    items: any;
+    prezentace: any;
+    invoices: any;
     caflouProjectId: string | null;
     projectName: string | null;
     slevaProcent: number;
@@ -549,6 +710,7 @@ declare module '@prisma/client' {
   export type OfferItem = {
     id: string;
     offerId: string;
+    offer: any;
     description: string;
     quantity: number;
     unit: string | null;
@@ -562,8 +724,11 @@ declare module '@prisma/client' {
     number: string;
     variableSymbol: string;
     issuerCompanyId: string;
+    issuer: any;
     companyId: string;
+    company: any;
     bankAccountId: string | null;
+    bankAccount: any;
     currency: Currency;
     exchangeRate: number;
     exchangeRateDate: Date | null;
@@ -579,6 +744,10 @@ declare module '@prisma/client' {
     paidAt: Date | null;
     paidAmountMinor: number | null;
     offerId: string | null;
+    offer: any;
+    items: any;
+    bankTransactions: any;
+    upominky: any;
     caflouProjectId: string | null;
     projectName: string | null;
     slevaProcent: number;
@@ -587,11 +756,15 @@ declare module '@prisma/client' {
     interniCast: string | null;
     createdAt: Date;
     updatedAt: Date;
+    odeslani: any;
+    chybaOdeslani: string | null;
+    chybaOdeslaniAt: Date | null;
     [key: string]: any;
   };
   export type OdeslaniFaktury = {
     id: string;
     invoiceId: string;
+    invoice: any;
     odeslalId: string | null;
     odeslalJmeno: string | null;
     sPrilohou: boolean;
@@ -602,6 +775,7 @@ declare module '@prisma/client' {
   export type InvoiceItem = {
     id: string;
     invoiceId: string;
+    invoice: any;
     description: string;
     quantity: number;
     unit: string | null;
@@ -615,6 +789,7 @@ declare module '@prisma/client' {
     name: string;
     sortOrder: number;
     active: boolean;
+    expenses: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -623,9 +798,12 @@ declare module '@prisma/client' {
     id: string;
     number: string | null;
     supplierCompanyId: string | null;
+    supplier: any;
     supplierName: string | null;
     categoryId: string | null;
+    category: any;
     issuerCompanyId: string | null;
+    issuer: any;
     currency: Currency;
     exchangeRate: number;
     exchangeRateDate: Date | null;
@@ -650,6 +828,9 @@ declare module '@prisma/client' {
     mailPredmet: string | null;
     mailPrijatoAt: Date | null;
     navrhJson: string | null;
+    prilohy: any;
+    uhrady: any;
+    pokladniDoklady: any;
     fakturaCislo: string | null;
     fakturaAt: Date | null;
     createdAt: Date;
@@ -659,6 +840,7 @@ declare module '@prisma/client' {
   export type UhradaVydaje = {
     id: string;
     expenseId: string;
+    expense: any;
     castkaMinor: number;
     datum: Date;
     zpusob: PaymentMethod;
@@ -671,6 +853,7 @@ declare module '@prisma/client' {
   export type PrilohaVydaje = {
     id: string;
     expenseId: string;
+    expense: any;
     url: string;
     nazev: string;
     createdAt: Date;
@@ -728,7 +911,9 @@ declare module '@prisma/client' {
     title: string;
     body: string;
     issuerCompanyId: string;
+    issuer: any;
     companyId: string | null;
+    company: any;
     signerName: string;
     signerEmail: string;
     caflouProjectId: string | null;
@@ -744,6 +929,7 @@ declare module '@prisma/client' {
     splatnostText: string | null;
     actorUserId: string | null;
     vydajId: string | null;
+    signatures: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -751,6 +937,7 @@ declare module '@prisma/client' {
   export type ContractSignature = {
     id: string;
     contractId: string;
+    contract: any;
     role: ContractSignerRole;
     name: string;
     email: string | null;
@@ -776,12 +963,30 @@ declare module '@prisma/client' {
     adresa: string | null;
     mapaUrl: string | null;
     parkovani: string | null;
+    parkovaniEn: string | null;
     parentStudioId: string | null;
+    parentStudio: any;
+    rooms: any;
+    hours: any;
+    presets: any;
+    blocks: any;
+    requests: any;
+    slots: any;
+    feeds: any;
+    zvukari: any;
+    vedouci: any;
+    tabuleLide: any;
+    tabuleUcty: any;
     tabuleKlic: string | null;
     tabuleInstagram: boolean;
+    tabulePoznamky: any;
+    tabuleChybi: any;
     bookingZapnuto: boolean;
     bookingMinMinut: number;
     bookingDniDopredu: number;
+    bookingUcty: any;
+    cenik: any;
+    technika: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -789,6 +994,7 @@ declare module '@prisma/client' {
   export type StudioCenik = {
     id: string;
     studioId: string;
+    studio: any;
     nadpis: string;
     podnadpis: string | null;
     platnostDo: Date | null;
@@ -798,6 +1004,7 @@ declare module '@prisma/client' {
     sloupec2: string | null;
     sloupec2Popis: string | null;
     poznamka: string | null;
+    radky: any;
     updatedAt: Date;
     upravilId: string | null;
     upravilJmeno: string | null;
@@ -806,6 +1013,7 @@ declare module '@prisma/client' {
   export type StudioCenikRadek = {
     id: string;
     cenikId: string;
+    cenik: any;
     popis: string;
     cena1Minor: number | null;
     cena2Minor: number | null;
@@ -817,6 +1025,7 @@ declare module '@prisma/client' {
   export type StudioPoznamka = {
     id: string;
     studioId: string;
+    studio: any;
     text: string;
     autor: string | null;
     createdAt: Date;
@@ -826,6 +1035,7 @@ declare module '@prisma/client' {
   export type StudioChybi = {
     id: string;
     studioId: string;
+    studio: any;
     polozka: string;
     nahlasenoAt: Date;
     doplnenoAt: Date | null;
@@ -834,6 +1044,7 @@ declare module '@prisma/client' {
   export type StudioHours = {
     id: string;
     studioId: string;
+    studio: any;
     weekday: number;
     startMinutes: number;
     endMinutes: number;
@@ -843,6 +1054,7 @@ declare module '@prisma/client' {
   export type StudioSlotPreset = {
     id: string;
     studioId: string;
+    studio: any;
     label: string;
     startMinutes: number;
     endMinutes: number;
@@ -852,6 +1064,7 @@ declare module '@prisma/client' {
   export type StudioBlock = {
     id: string;
     studioId: string;
+    studio: any;
     start: Date;
     end: Date;
     kind: StudioBlockKind;
@@ -862,14 +1075,20 @@ declare module '@prisma/client' {
     actorUserId: string | null;
     actorName: string | null;
     rezieOnline: boolean | null;
+    rezieKlienta: boolean | null;
     zvukarUserId: string | null;
     zvukarName: string | null;
     bookingUserId: string | null;
+    bookingUser: any;
     bookingName: string | null;
     bookingEmail: string | null;
     celyDen: boolean;
+    pultToken: string | null;
+    pultZpravy: any;
     hovorOdkaz: string | null;
+    hoste: any;
     createdById: string | null;
+    createdBy: any;
     importKlic: string | null;
     upravenoVPortalu: boolean;
     createdAt: Date;
@@ -879,15 +1098,101 @@ declare module '@prisma/client' {
   export type HostNataceni = {
     id: string;
     blockId: string;
+    block: any;
     jmeno: string | null;
     email: string;
     online: boolean;
     pozvankaAt: Date | null;
     pozvankaStart: Date | null;
     chybaOdeslani: string | null;
+    jazyk: string | null;
+    kalendarToken: string | null;
+    odeslane: any;
     createdById: string | null;
     createdAt: Date;
     updatedAt: Date;
+    [key: string]: any;
+  };
+  export type HudbaProjektu = {
+    id: string;
+    caflouProjectId: string;
+    nazev: string;
+    autor: string | null;
+    delkaS: number;
+    obalKlic: string | null;
+    metadataCtenaAt: Date | null;
+    poznamka: string | null;
+    usekOd: number | null;
+    usekDo: number | null;
+    puvod: string;
+    vlozilKlient: string | null;
+    cesta: string;
+    dropboxId: string | null;
+    velikost: number;
+    pridalId: string | null;
+    pridal: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type HudbaSerie = {
+    id: string;
+    serie: string;
+    companyId: string | null;
+    company: any;
+    nazev: string;
+    autor: string | null;
+    delkaS: number;
+    obalKlic: string | null;
+    poznamka: string | null;
+    usekOd: number | null;
+    usekDo: number | null;
+    cesta: string;
+    dropboxId: string | null;
+    velikost: number;
+    pridalId: string | null;
+    pridal: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type VyzvaHudba = {
+    id: string;
+    caflouProjectId: string;
+    token: string;
+    email: string;
+    jmeno: string | null;
+    odeslanoAt: Date | null;
+    vlozenoAt: Date | null;
+    vlozilJmeno: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type PultZprava = {
+    id: string;
+    blockId: string;
+    block: any;
+    odKoho: string;
+    komu: string | null;
+    druh: string;
+    telo: string;
+    jmeno: string | null;
+    createdAt: Date;
+    [key: string]: any;
+  };
+  export type PozvankaHostaLog = {
+    id: string;
+    hostId: string;
+    host: any;
+    email: string;
+    odeslanoAt: Date;
+    start: Date;
+    jazyk: string | null;
+    zmena: boolean;
+    odeslalId: string | null;
+    messageId: string | null;
+    odpovedServeru: string | null;
     [key: string]: any;
   };
   export type SmazanyImport = {
@@ -900,10 +1205,13 @@ declare module '@prisma/client' {
     caflouProjectId: string;
     projectName: string;
     companyId: string | null;
+    company: any;
     actorUserId: string | null;
+    actor: any;
     actorName: string;
     actorEmail: string;
     studioId: string;
+    studio: any;
     pageCount: number | null;
     requiredSessions: number;
     sessionMinutes: number;
@@ -916,12 +1224,16 @@ declare module '@prisma/client' {
     accessToken: string;
     holdUntil: Date | null;
     createdById: string;
+    createdBy: any;
     sentAt: Date | null;
     openedAt: Date | null;
     submittedAt: Date | null;
     decidedAt: Date | null;
     decidedById: string | null;
+    decidedBy: any;
     completedAt: Date | null;
+    slots: any;
+    events: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -929,19 +1241,23 @@ declare module '@prisma/client' {
   export type RecordingSlot = {
     id: string;
     requestId: string;
+    request: any;
     studioId: string;
+    studio: any;
     start: Date;
     end: Date;
     state: SlotState;
     selectedAt: Date | null;
     note: string | null;
     rezieOnline: boolean | null;
+    rezieKlienta: boolean | null;
     zvukarUserId: string | null;
     zvukarName: string | null;
     prebookStart: Date | null;
     prebookEnd: Date | null;
     prebookStudioId: string | null;
     prebookAt: Date | null;
+    events: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -949,8 +1265,11 @@ declare module '@prisma/client' {
   export type RecordingEvent = {
     id: string;
     requestId: string;
+    request: any;
     slotId: string | null;
+    slot: any;
     userId: string | null;
+    user: any;
     actorLabel: string;
     type: string;
     fromStatus: string | null;
@@ -963,21 +1282,25 @@ declare module '@prisma/client' {
   export type Notification = {
     id: string;
     userId: string;
+    user: any;
     kind: string;
     title: string;
     body: string | null;
     url: string | null;
     readAt: Date | null;
     emailedAt: Date | null;
+    emailChyba: string | null;
     createdAt: Date;
     [key: string]: any;
   };
   export type CalendarFeed = {
     id: string;
     userId: string;
+    user: any;
     token: string;
     scope: FeedScope;
     studioId: string | null;
+    studio: any;
     revokedAt: Date | null;
     lastReadAt: Date | null;
     createdAt: Date;
@@ -995,6 +1318,7 @@ declare module '@prisma/client' {
   export type UpominkaOdeslana = {
     id: string;
     invoiceId: string;
+    invoice: any;
     poradi: number;
     komu: string;
     odeslanoAt: Date;
@@ -1006,7 +1330,9 @@ declare module '@prisma/client' {
     caflouProjectId: string;
     projectName: string;
     companyId: string | null;
+    company: any;
     vystupId: string | null;
+    vystup: any;
     vystupNazev: string | null;
     version: number;
     fileName: string;
@@ -1033,18 +1359,23 @@ declare module '@prisma/client' {
     typKlic: string | null;
     delkaSekund: number | null;
     odvozenoZId: string | null;
+    odvozenoZ: any;
+    downcuty: any;
+    herci: any;
     rezie: string | null;
     hudbaNazev: string | null;
     hudbaAutor: string | null;
     bezHudby: boolean;
     datumVyroby: Date | null;
     klientNaRL: string | null;
+    licence: any;
     licenceUziti: string | null;
     licenceOd: Date | null;
     licenceMesicu: number | null;
     hotovoAt: Date | null;
     potvrzenoAt: Date | null;
     text: string | null;
+    rodneListy: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -1069,6 +1400,7 @@ declare module '@prisma/client' {
     createdByUserId: string | null;
     createdByName: string | null;
     createdAt: Date;
+    interni: boolean;
     [key: string]: any;
   };
   export type ReklamaPripominka = {
@@ -1081,7 +1413,20 @@ declare module '@prisma/client' {
     autorJmeno: string | null;
     autorUserId: string | null;
     vyrizeno: boolean;
+    zapracovaniId: string | null;
+    zapracovani: any;
     odeslanoAt: Date | null;
+    createdAt: Date;
+    [key: string]: any;
+  };
+  export type ZapracovaniPripominek = {
+    id: string;
+    caflouProjectId: string;
+    poradi: number;
+    poznamka: string | null;
+    kdoJmeno: string | null;
+    odeslanoAt: Date | null;
+    pripominky: any;
     createdAt: Date;
     [key: string]: any;
   };
@@ -1090,6 +1435,12 @@ declare module '@prisma/client' {
     reviewed: boolean;
     reviewedAt: Date | null;
     reviewedByName: string | null;
+    uzamceno: boolean;
+    uzamcenoAt: Date | null;
+    uzamcenoKym: string | null;
+    interniReviewed: boolean;
+    interniReviewedAt: Date | null;
+    interniReviewedByName: string | null;
     pocetStop: number;
     stopyZjistenyAt: Date | null;
     textSouborId: string | null;
@@ -1109,6 +1460,8 @@ declare module '@prisma/client' {
     kdo: string | null;
     hotovoAt: Date | null;
     hotovoKdo: string | null;
+    hotovoInterniAt: Date | null;
+    hotovoInterniKdo: string | null;
     [key: string]: any;
   };
   export type PreposlechPosluchac = {
@@ -1135,6 +1488,7 @@ declare module '@prisma/client' {
     id: string;
     caflouProjectId: string;
     userId: string;
+    user: any;
     pageCount: number;
     createdAt: Date;
     updatedAt: Date;
@@ -1144,6 +1498,7 @@ declare module '@prisma/client' {
     id: string;
     caflouProjectId: string;
     userId: string;
+    user: any;
     dotocenoAt: Date;
     potvrdilUserId: string | null;
     potvrdilJmeno: string | null;
@@ -1211,6 +1566,7 @@ declare module '@prisma/client' {
     caflouProjectId: string;
     projectName: string | null;
     userId: string;
+    user: any;
     castka: number;
     podilProcent: number;
     minutZvukare: number;
@@ -1222,6 +1578,8 @@ declare module '@prisma/client' {
     rozhodlId: string | null;
     rozhodlJmeno: string | null;
     poznamka: string | null;
+    podilPoZmeneProcent: number | null;
+    narokPadlAt: Date | null;
     [key: string]: any;
   };
   export type ProjektNaklad = {
@@ -1250,6 +1608,7 @@ declare module '@prisma/client' {
     id: string;
     caflouProjectId: string;
     userId: string | null;
+    user: any;
     strana: number;
     zdrojMessageId: string | null;
     zapsalUserId: string | null;
@@ -1287,12 +1646,14 @@ declare module '@prisma/client' {
     chybaId: string | null;
     snimek: Prisma.JsonValue | null;
     vracenoAt: Date | null;
+    interni: boolean;
     createdAt: Date;
     [key: string]: any;
   };
   export type PripominkaPortalu = {
     id: string;
     userId: string;
+    user: any;
     text: string;
     odkud: string | null;
     stav: StavPripominky;
@@ -1301,12 +1662,14 @@ declare module '@prisma/client' {
     hotovoJmeno: string | null;
     poznamka: string | null;
     podobnaId: string | null;
+    prilohy: any;
     createdAt: Date;
     [key: string]: any;
   };
   export type PripominkaPriloha = {
     id: string;
     pripominkaId: string;
+    pripominka: any;
     url: string;
     nazev: string;
     createdAt: Date;
@@ -1318,11 +1681,14 @@ declare module '@prisma/client' {
     druh: PozvankaDruh;
     stav: PozvankaStav;
     userId: string | null;
+    user: any;
     companyId: string | null;
+    company: any;
     jmeno: string | null;
     email: string | null;
     platiDo: Date;
     vytvorilId: string | null;
+    vytvoril: any;
     createdAt: Date;
     odeslanoAt: Date | null;
     vyplnenoAt: Date | null;
@@ -1344,6 +1710,7 @@ declare module '@prisma/client' {
     poradi: number;
     zverejneno: boolean;
     autorId: string | null;
+    autor: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -1358,10 +1725,12 @@ declare module '@prisma/client' {
     iban: string | null;
     label: string | null;
     issuerCompanyId: string | null;
+    issuer: any;
     stav: string;
     consentExpiresAt: Date | null;
     lastSyncAt: Date | null;
     lastSyncError: string | null;
+    transactions: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -1369,6 +1738,7 @@ declare module '@prisma/client' {
   export type BankTransaction = {
     id: string;
     connectionId: string;
+    connection: any;
     externalId: string;
     bookedAt: Date;
     amountMinor: number;
@@ -1378,6 +1748,7 @@ declare module '@prisma/client' {
     counterpartyAccount: string | null;
     reference: string | null;
     invoiceId: string | null;
+    invoice: any;
     stav: string;
     navrhInvoiceId: string | null;
     navrhDuvod: string | null;
@@ -1391,6 +1762,8 @@ declare module '@prisma/client' {
     ikona: string | null;
     poradi: number;
     active: boolean;
+    projekty: any;
+    vystupy: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -1398,6 +1771,7 @@ declare module '@prisma/client' {
   export type Nepritomnost = {
     id: string;
     userId: string | null;
+    user: any;
     jmeno: string;
     druh: DruhNepritomnosti;
     celyDen: boolean;
@@ -1412,6 +1786,7 @@ declare module '@prisma/client' {
   export type NavrhVykazu = {
     id: string;
     userId: string;
+    user: any;
     zdroj: string;
     start: Date;
     end: Date;
@@ -1438,6 +1813,7 @@ declare module '@prisma/client' {
     odkazVideo: string | null;
     poznamka: string | null;
     zalozilId: string | null;
+    ucastnici: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -1492,7 +1868,9 @@ declare module '@prisma/client' {
   };
   export type PoradaUcastnik = {
     poradaId: string;
+    porada: any;
     userId: string;
+    user: any;
     [key: string]: any;
   };
   export type ZalohaTextu = {
@@ -1583,6 +1961,7 @@ declare module '@prisma/client' {
   export type SocialniPrispevek = {
     id: string;
     autorId: string;
+    autor: any;
     nazev: string;
     sit: string;
     format: string;
@@ -1599,9 +1978,47 @@ declare module '@prisma/client' {
     updatedAt: Date;
     [key: string]: any;
   };
+  export type SocialniPribeh = {
+    id: string;
+    autorId: string;
+    autor: any;
+    popisek: string;
+    url: string;
+    nazevSouboru: string;
+    typSouboru: string;
+    velikost: number;
+    stav: string;
+    textStyl: Prisma.JsonValue | null;
+    vyridilId: string | null;
+    vyridil: any;
+    vyrizenoAt: Date | null;
+    vzkaz: string | null;
+    externiId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type PribehHudba = {
+    id: string;
+    nazev: string;
+    autor: string;
+    url: string;
+    nazevSouboru: string;
+    typSouboru: string;
+    velikost: number;
+    delka: number;
+    aktivni: boolean;
+    poradi: number;
+    nahralId: string | null;
+    nahral: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
   export type SocialniObrazek = {
     id: string;
     autorId: string;
+    autor: any;
     nazev: string;
     url: string;
     sirka: number | null;
@@ -1618,6 +2035,7 @@ declare module '@prisma/client' {
     vychozi: boolean;
     aktivni: boolean;
     poradi: number;
+    firmy: any;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -1649,6 +2067,211 @@ declare module '@prisma/client' {
     popis: string | null;
     poradi: number;
     aktivni: boolean;
+    uzivatele: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type UkazkaNabidky = {
+    id: string;
+    druh: string;
+    nazev: string;
+    popis: string | null;
+    herecId: string | null;
+    herec: any;
+    url: string;
+    nazevSouboru: string;
+    typSouboru: string;
+    velikost: number;
+    delka: number;
+    stitky: string;
+    aktivni: boolean;
+    poradi: number;
+    nahralId: string | null;
+    nahral: any;
+    vPrezentacich: any;
+    vybranaV: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type VzorPrezentace = {
+    id: string;
+    nazev: string;
+    navrhReseni: string | null;
+    podminky: string | null;
+    active: boolean;
+    vychozi: boolean;
+    poradi: number;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type PrezentaceNabidky = {
+    id: string;
+    caflouProjectId: string;
+    projectName: string;
+    klientNazev: string;
+    token: string;
+    nadpis: string | null;
+    podtitul: string | null;
+    navrhReseni: string | null;
+    podminky: string | null;
+    offerId: string | null;
+    offer: any;
+    zverejneno: boolean;
+    lzeSchvalit: boolean;
+    prvniOtevreni: Date | null;
+    posledniOtevreni: Date | null;
+    pocetOtevreni: number;
+    schvalenoAt: Date | null;
+    schvalilJmeno: string | null;
+    odmitnutoAt: Date | null;
+    vybranyHerecId: string | null;
+    vybranyHerec: any;
+    vybranoAt: Date | null;
+    ukazky: any;
+    vytvorilId: string | null;
+    vytvoril: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type PrezentaceUkazka = {
+    id: string;
+    prezentaceId: string;
+    prezentace: any;
+    ukazkaId: string;
+    ukazka: any;
+    sekce: string;
+    poradi: number;
+    [key: string]: any;
+  };
+  export type TagStopa = {
+    id: string;
+    caflouProjectId: string;
+    driveFileId: string;
+    nazevSouboru: string;
+    cislo: number;
+    title: string;
+    zapsanoAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type TrackProjektu = {
+    id: string;
+    caflouProjectId: string;
+    poradi: number;
+    nazevTracku: string;
+    nazevKapitoly: string;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type DalsiPrilohaObjednavky = {
+    id: string;
+    orderId: string;
+    order: any;
+    url: string;
+    nazev: string;
+    createdAt: Date;
+    [key: string]: any;
+  };
+  export type NovinkaPortalu = {
+    id: string;
+    klic: string;
+    datum: Date;
+    nazev: string;
+    popis: string;
+    proNewsletter: string | null;
+    modul: string;
+    typ: string;
+    zverejneno: boolean;
+    odeslanoAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type TechnikaKategorie = {
+    id: string;
+    nazev: string;
+    poradi: number;
+    kusy: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type Technika = {
+    id: string;
+    nazev: string;
+    kategorieId: string | null;
+    kategorie: any;
+    vyrobce: string | null;
+    model: string | null;
+    serioveCislo: string | null;
+    studioId: string | null;
+    studio: any;
+    poznamka: string | null;
+    foto: string | null;
+    vyrazeno: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type NavrhHerce = {
+    id: string;
+    caflouProjectId: string;
+    poradi: number;
+    userId: string | null;
+    user: any;
+    jmeno: string | null;
+    poznamka: string | null;
+    autorJmeno: string | null;
+    preferovany: boolean;
+    odKlienta: boolean;
+    odeslanoKlientoviAt: Date | null;
+    vybranoAt: Date | null;
+    vybralKdo: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type Pokladna = {
+    id: string;
+    issuerCompanyId: string;
+    issuer: any;
+    nazev: string | null;
+    mena: Currency;
+    pocatecniStavMinor: number;
+    pocatecniDatum: Date;
+    radaPrijem: string;
+    dalsiPrijem: number;
+    radaVydej: string;
+    dalsiVydej: number;
+    aktivni: boolean;
+    doklady: any;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type PokladniDoklad = {
+    id: string;
+    pokladnaId: string;
+    pokladna: any;
+    cislo: string;
+    smer: SmerPokladny;
+    datum: Date;
+    castkaMinor: number;
+    vatRate: number;
+    ucel: string;
+    protistrana: string | null;
+    poznamka: string | null;
+    kdoId: string | null;
+    kdoJmeno: string | null;
+    expenseId: string | null;
+    expense: any;
+    uhradaId: string | null;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -2440,6 +3063,81 @@ declare module '@prisma/client' {
       groupBy(args?: any): Promise<any[]>;
       aggregate(args?: any): Promise<any>;
     };
+    hudbaProjektu: {
+      findUnique(args?: any): Promise<HudbaProjektu | null>;
+      findFirst(args?: any): Promise<HudbaProjektu | null>;
+      findMany(args?: any): Promise<HudbaProjektu[]>;
+      create(args?: any): Promise<HudbaProjektu>;
+      update(args?: any): Promise<HudbaProjektu>;
+      upsert(args?: any): Promise<HudbaProjektu>;
+      delete(args?: any): Promise<HudbaProjektu>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    hudbaSerie: {
+      findUnique(args?: any): Promise<HudbaSerie | null>;
+      findFirst(args?: any): Promise<HudbaSerie | null>;
+      findMany(args?: any): Promise<HudbaSerie[]>;
+      create(args?: any): Promise<HudbaSerie>;
+      update(args?: any): Promise<HudbaSerie>;
+      upsert(args?: any): Promise<HudbaSerie>;
+      delete(args?: any): Promise<HudbaSerie>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    vyzvaHudba: {
+      findUnique(args?: any): Promise<VyzvaHudba | null>;
+      findFirst(args?: any): Promise<VyzvaHudba | null>;
+      findMany(args?: any): Promise<VyzvaHudba[]>;
+      create(args?: any): Promise<VyzvaHudba>;
+      update(args?: any): Promise<VyzvaHudba>;
+      upsert(args?: any): Promise<VyzvaHudba>;
+      delete(args?: any): Promise<VyzvaHudba>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    pultZprava: {
+      findUnique(args?: any): Promise<PultZprava | null>;
+      findFirst(args?: any): Promise<PultZprava | null>;
+      findMany(args?: any): Promise<PultZprava[]>;
+      create(args?: any): Promise<PultZprava>;
+      update(args?: any): Promise<PultZprava>;
+      upsert(args?: any): Promise<PultZprava>;
+      delete(args?: any): Promise<PultZprava>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    pozvankaHostaLog: {
+      findUnique(args?: any): Promise<PozvankaHostaLog | null>;
+      findFirst(args?: any): Promise<PozvankaHostaLog | null>;
+      findMany(args?: any): Promise<PozvankaHostaLog[]>;
+      create(args?: any): Promise<PozvankaHostaLog>;
+      update(args?: any): Promise<PozvankaHostaLog>;
+      upsert(args?: any): Promise<PozvankaHostaLog>;
+      delete(args?: any): Promise<PozvankaHostaLog>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
     smazanyImport: {
       findUnique(args?: any): Promise<SmazanyImport | null>;
       findFirst(args?: any): Promise<SmazanyImport | null>;
@@ -2628,6 +3326,21 @@ declare module '@prisma/client' {
       update(args?: any): Promise<ReklamaPripominka>;
       upsert(args?: any): Promise<ReklamaPripominka>;
       delete(args?: any): Promise<ReklamaPripominka>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    zapracovaniPripominek: {
+      findUnique(args?: any): Promise<ZapracovaniPripominek | null>;
+      findFirst(args?: any): Promise<ZapracovaniPripominek | null>;
+      findMany(args?: any): Promise<ZapracovaniPripominek[]>;
+      create(args?: any): Promise<ZapracovaniPripominek>;
+      update(args?: any): Promise<ZapracovaniPripominek>;
+      upsert(args?: any): Promise<ZapracovaniPripominek>;
+      delete(args?: any): Promise<ZapracovaniPripominek>;
       deleteMany(args?: any): Promise<any>;
       createMany(args?: any): Promise<any>;
       updateMany(args?: any): Promise<any>;
@@ -3280,6 +3993,36 @@ declare module '@prisma/client' {
       groupBy(args?: any): Promise<any[]>;
       aggregate(args?: any): Promise<any>;
     };
+    socialniPribeh: {
+      findUnique(args?: any): Promise<SocialniPribeh | null>;
+      findFirst(args?: any): Promise<SocialniPribeh | null>;
+      findMany(args?: any): Promise<SocialniPribeh[]>;
+      create(args?: any): Promise<SocialniPribeh>;
+      update(args?: any): Promise<SocialniPribeh>;
+      upsert(args?: any): Promise<SocialniPribeh>;
+      delete(args?: any): Promise<SocialniPribeh>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    pribehHudba: {
+      findUnique(args?: any): Promise<PribehHudba | null>;
+      findFirst(args?: any): Promise<PribehHudba | null>;
+      findMany(args?: any): Promise<PribehHudba[]>;
+      create(args?: any): Promise<PribehHudba>;
+      update(args?: any): Promise<PribehHudba>;
+      upsert(args?: any): Promise<PribehHudba>;
+      delete(args?: any): Promise<PribehHudba>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
     socialniObrazek: {
       findUnique(args?: any): Promise<SocialniObrazek | null>;
       findFirst(args?: any): Promise<SocialniObrazek | null>;
@@ -3348,6 +4091,201 @@ declare module '@prisma/client' {
       update(args?: any): Promise<DiskovaSlozka>;
       upsert(args?: any): Promise<DiskovaSlozka>;
       delete(args?: any): Promise<DiskovaSlozka>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    ukazkaNabidky: {
+      findUnique(args?: any): Promise<UkazkaNabidky | null>;
+      findFirst(args?: any): Promise<UkazkaNabidky | null>;
+      findMany(args?: any): Promise<UkazkaNabidky[]>;
+      create(args?: any): Promise<UkazkaNabidky>;
+      update(args?: any): Promise<UkazkaNabidky>;
+      upsert(args?: any): Promise<UkazkaNabidky>;
+      delete(args?: any): Promise<UkazkaNabidky>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    vzorPrezentace: {
+      findUnique(args?: any): Promise<VzorPrezentace | null>;
+      findFirst(args?: any): Promise<VzorPrezentace | null>;
+      findMany(args?: any): Promise<VzorPrezentace[]>;
+      create(args?: any): Promise<VzorPrezentace>;
+      update(args?: any): Promise<VzorPrezentace>;
+      upsert(args?: any): Promise<VzorPrezentace>;
+      delete(args?: any): Promise<VzorPrezentace>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    prezentaceNabidky: {
+      findUnique(args?: any): Promise<PrezentaceNabidky | null>;
+      findFirst(args?: any): Promise<PrezentaceNabidky | null>;
+      findMany(args?: any): Promise<PrezentaceNabidky[]>;
+      create(args?: any): Promise<PrezentaceNabidky>;
+      update(args?: any): Promise<PrezentaceNabidky>;
+      upsert(args?: any): Promise<PrezentaceNabidky>;
+      delete(args?: any): Promise<PrezentaceNabidky>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    prezentaceUkazka: {
+      findUnique(args?: any): Promise<PrezentaceUkazka | null>;
+      findFirst(args?: any): Promise<PrezentaceUkazka | null>;
+      findMany(args?: any): Promise<PrezentaceUkazka[]>;
+      create(args?: any): Promise<PrezentaceUkazka>;
+      update(args?: any): Promise<PrezentaceUkazka>;
+      upsert(args?: any): Promise<PrezentaceUkazka>;
+      delete(args?: any): Promise<PrezentaceUkazka>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    tagStopa: {
+      findUnique(args?: any): Promise<TagStopa | null>;
+      findFirst(args?: any): Promise<TagStopa | null>;
+      findMany(args?: any): Promise<TagStopa[]>;
+      create(args?: any): Promise<TagStopa>;
+      update(args?: any): Promise<TagStopa>;
+      upsert(args?: any): Promise<TagStopa>;
+      delete(args?: any): Promise<TagStopa>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    trackProjektu: {
+      findUnique(args?: any): Promise<TrackProjektu | null>;
+      findFirst(args?: any): Promise<TrackProjektu | null>;
+      findMany(args?: any): Promise<TrackProjektu[]>;
+      create(args?: any): Promise<TrackProjektu>;
+      update(args?: any): Promise<TrackProjektu>;
+      upsert(args?: any): Promise<TrackProjektu>;
+      delete(args?: any): Promise<TrackProjektu>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    dalsiPrilohaObjednavky: {
+      findUnique(args?: any): Promise<DalsiPrilohaObjednavky | null>;
+      findFirst(args?: any): Promise<DalsiPrilohaObjednavky | null>;
+      findMany(args?: any): Promise<DalsiPrilohaObjednavky[]>;
+      create(args?: any): Promise<DalsiPrilohaObjednavky>;
+      update(args?: any): Promise<DalsiPrilohaObjednavky>;
+      upsert(args?: any): Promise<DalsiPrilohaObjednavky>;
+      delete(args?: any): Promise<DalsiPrilohaObjednavky>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    novinkaPortalu: {
+      findUnique(args?: any): Promise<NovinkaPortalu | null>;
+      findFirst(args?: any): Promise<NovinkaPortalu | null>;
+      findMany(args?: any): Promise<NovinkaPortalu[]>;
+      create(args?: any): Promise<NovinkaPortalu>;
+      update(args?: any): Promise<NovinkaPortalu>;
+      upsert(args?: any): Promise<NovinkaPortalu>;
+      delete(args?: any): Promise<NovinkaPortalu>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    technikaKategorie: {
+      findUnique(args?: any): Promise<TechnikaKategorie | null>;
+      findFirst(args?: any): Promise<TechnikaKategorie | null>;
+      findMany(args?: any): Promise<TechnikaKategorie[]>;
+      create(args?: any): Promise<TechnikaKategorie>;
+      update(args?: any): Promise<TechnikaKategorie>;
+      upsert(args?: any): Promise<TechnikaKategorie>;
+      delete(args?: any): Promise<TechnikaKategorie>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    technika: {
+      findUnique(args?: any): Promise<Technika | null>;
+      findFirst(args?: any): Promise<Technika | null>;
+      findMany(args?: any): Promise<Technika[]>;
+      create(args?: any): Promise<Technika>;
+      update(args?: any): Promise<Technika>;
+      upsert(args?: any): Promise<Technika>;
+      delete(args?: any): Promise<Technika>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    navrhHerce: {
+      findUnique(args?: any): Promise<NavrhHerce | null>;
+      findFirst(args?: any): Promise<NavrhHerce | null>;
+      findMany(args?: any): Promise<NavrhHerce[]>;
+      create(args?: any): Promise<NavrhHerce>;
+      update(args?: any): Promise<NavrhHerce>;
+      upsert(args?: any): Promise<NavrhHerce>;
+      delete(args?: any): Promise<NavrhHerce>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    pokladna: {
+      findUnique(args?: any): Promise<Pokladna | null>;
+      findFirst(args?: any): Promise<Pokladna | null>;
+      findMany(args?: any): Promise<Pokladna[]>;
+      create(args?: any): Promise<Pokladna>;
+      update(args?: any): Promise<Pokladna>;
+      upsert(args?: any): Promise<Pokladna>;
+      delete(args?: any): Promise<Pokladna>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    pokladniDoklad: {
+      findUnique(args?: any): Promise<PokladniDoklad | null>;
+      findFirst(args?: any): Promise<PokladniDoklad | null>;
+      findMany(args?: any): Promise<PokladniDoklad[]>;
+      create(args?: any): Promise<PokladniDoklad>;
+      update(args?: any): Promise<PokladniDoklad>;
+      upsert(args?: any): Promise<PokladniDoklad>;
+      delete(args?: any): Promise<PokladniDoklad>;
       deleteMany(args?: any): Promise<any>;
       createMany(args?: any): Promise<any>;
       updateMany(args?: any): Promise<any>;

@@ -917,6 +917,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'preposlech.kreslimKrivku': { cs: 'kreslím křivku…', en: 'drawing the waveform…' },
   /* Délky stop a kolik zbývá doposlechnout (25. 9. 2026). */
+  'preposlech.celkemStop': { cs: 'celkem', en: 'total' },
+  'preposlech.celkemStopTitle': {
+    cs: 'Součet délek všech nahraných stop ve složce projektu.',
+    en: 'The lengths of all recorded tracks in the project folder added up.',
+  },
   'preposlech.delkaStopy': { cs: 'Délka stopy', en: 'Track length' },
   'preposlech.zbyvaDoposlechnout': { cs: 'Zbývá doposlechnout', en: 'Left to listen' },
   'preposlech.zbyvaVse': { cs: 'Doposlechnuto vše', en: 'All listened' },
@@ -1342,6 +1347,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'objednavka.chybaPrilohaNahrat': {
     cs: 'Přílohu se nepodařilo nahrát. Zkuste to prosím znovu.',
     en: 'The attachment could not be uploaded. Please try again.',
+  },
+  'objednavka.chybaPrilohaSpojeni': {
+    cs: 'Přílohu „{nazev}" se nepodařilo nahrát — spojení se přerušilo. Zkuste to prosím znovu; u velkých souborů pomůže stabilnější připojení.',
+    en: 'The attachment "{nazev}" could not be uploaded — the connection dropped. Please try again; with large files a steadier connection helps.',
   },
 
   // výběr herců do objednávky

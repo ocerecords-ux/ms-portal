@@ -18,7 +18,7 @@ import { DatumPole } from '@/components/DatumPole';
 import { UpravaPdf } from './UpravaPdf';
 import { vygenerujUvod, vygenerujZaver, REZISER_UVODU } from '@/lib/uvodZaver';
 import { usePreklad, useJazyk } from '../components/JazykProvider';
-import { kodJazyka, prelozit, prelozitKolem, type Jazyk } from '@/lib/jazyk';
+import { kodJazyka, prelozit, prelozitKolem, prelozitS, type Jazyk } from '@/lib/jazyk';
 import { CURRENCY_LABELS } from '@/lib/doklady';
 import { minimalniCena, uplatniSpodniHranici } from '@/lib/price';
 import type { Currency } from '@prisma/client';
@@ -980,21 +980,51 @@ async function nahrajPrilohu(soubor: File, jazyk: Jazyk): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: soubor.name, mime: soubor.type, size: soubor.size }),
-  });
+  }).catch(() => null);
+  if (!podpis) {
+    throw new Error(prelozitS(jazyk, 'objednavka.chybaPrilohaSpojeni', { nazev: soubor.name }));
+  }
   const data = await podpis.json().catch(() => ({}));
   if (!podpis.ok || !data?.uploadUrl) {
     throw new Error(data?.error || prelozit(jazyk, 'objednavka.chybaPrilohaPripravit'));
   }
 
-  const nahrano = await fetch(data.uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': soubor.type || 'application/octet-stream' },
-    body: soubor,
-  });
-  if (!nahrano.ok) {
+  /**
+   * NAHRÁNÍ ZKUSÍME DVAKRÁT A ŘEKNEME, CO SE STALO (oprava 13. 11. 2026:
+   * „klient nemohl odeslat objednávku" - ve formuláři svítilo holé
+   * „Failed to fetch").
+   *
+   * Soubor jde rovnou do úložiště, tedy na CIZÍ ADRESU. Když se spojení
+   * během nahrávání přetrhne - a u stomegového rukopisu na mobilním
+   * připojení se to stává - prohlížeč z `fetch` vyhodí `TypeError: Failed to
+   * fetch` a nic víc. Ta věta se klientovi vypsala tak, jak je: anglicky,
+   * bez souvislosti s přílohou a bez rady, co dál.
+   *
+   * Rozlišujeme proto dvě věci: když se spojení přerušilo, zkusíme to ještě
+   * jednou a teprve pak řekneme lidsky, která příloha a proč. Když úložiště
+   * odpovědělo a odmítlo, opakování nepomůže - to je chyba na naší straně
+   * (podpis, práva) a patří do konzole, ne do dalšího pokusu.
+   */
+  for (let pokus = 1; pokus <= 2; pokus += 1) {
+    let nahrano: Response;
+    try {
+      nahrano = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': soubor.type || 'application/octet-stream' },
+        body: soubor,
+      });
+    } catch (err) {
+      console.error(`Příloha ${soubor.name}: spojení se přerušilo (pokus ${pokus}):`, err);
+      if (pokus === 2) {
+        throw new Error(prelozitS(jazyk, 'objednavka.chybaPrilohaSpojeni', { nazev: soubor.name }));
+      }
+      continue;
+    }
+    if (nahrano.ok) return data.key as string;
+    console.error(`Příloha ${soubor.name}: úložiště ji odmítlo (${nahrano.status}).`);
     throw new Error(prelozit(jazyk, 'objednavka.chybaPrilohaNahrat'));
   }
-  return data.key as string;
+  throw new Error(prelozit(jazyk, 'objednavka.chybaPrilohaNahrat'));
 }
 
 /** Jeden text (úvod nebo závěr) - automatický, dokud ho klient nepřepíše. */

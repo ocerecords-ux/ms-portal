@@ -654,6 +654,28 @@ export function Preposlech({
     return { sekundy, uplne: stopy.length > 0 && zname === stopy.length };
   }, [stopy, delkyStop, hotoveStopy, dosazeno]);
 
+  /**
+   * CELKOVÝ ČAS VŠECH STOP (zadání 13. 11. 2026: „potřeboval bych u
+   * AudioTaggeru někde vidět v přehrávači total time, kolik mají všechny
+   * nahrané tracky").
+   *
+   * Je to prostý součet toho, co leží ve složce projektu - na rozdíl od
+   * „zbývá doposlechnout" se neodečítá nic odposlechnutého ani odškrtnutého.
+   * Délky se zjišťují po jedné (viz delkaZvuku), takže než doběhnou, je číslo
+   * neúplné a píše se za ním tečkovník - stejně jako u zbývajícího času.
+   */
+  const celkem = useMemo(() => {
+    let sekundy = 0;
+    let zname = 0;
+    for (let i = 0; i < stopy.length; i += 1) {
+      const delkaStopy = delkyStop[i + 1];
+      if (!delkaStopy) continue;
+      zname += 1;
+      sekundy += delkaStopy;
+    }
+    return { sekundy, uplne: stopy.length > 0 && zname === stopy.length };
+  }, [stopy, delkyStop]);
+
   const prepniHotovo = useCallback(
     (index: number) => {
       const stopa = stopyRef.current[index];
@@ -2749,6 +2771,17 @@ export function Preposlech({
                         {!zbyva.uplne && <span className="text-muted">…</span>}
                       </>
                     )}
+                  </span>
+                )}
+                {/* Celkový čas všech stop (13. 11. 2026). */}
+                {stopy.length > 0 && celkem.sekundy > 0 && (
+                  <span
+                    title={t('preposlech.celkemStopTitle')}
+                    className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[11px] font-heading font-semibold bg-field text-ink"
+                  >
+                    <span className="font-normal text-muted">{t('preposlech.celkemStop')}</span>
+                    <span className="tabular-nums">{hms(celkem.sekundy)}</span>
+                    {!celkem.uplne && <span className="text-muted">…</span>}
                   </span>
                 )}
               </span>
