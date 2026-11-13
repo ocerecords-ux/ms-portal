@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { resolveProject } from '@/lib/projectOptions';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Uprava a smazani smlouvy. Podepsanou smlouvu uz nejde menit ani smazat -
 // jinak by prestaly sedet otisky u podpisu a dolozka by nemela cenu.
@@ -20,7 +21,7 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -32,13 +33,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       where: { id: params.id },
       include: { signatures: { select: { id: true } } },
     });
-    if (!contract) return NextResponse.json({ error: 'Smlouva nenalezena.' }, { status: 404 });
+    if (!contract) return odpovedChyby('chybaApi.smlouvaNenalezena', 404);
 
     if (contract.status === 'SIGNED') {
-      return NextResponse.json(
-        { error: 'Podepsanou smlouvu už nejde měnit — text nese otisk, kterým je podpis vázaný.' },
-        { status: 409 },
-      );
+      return odpovedChyby('chybaApi.podepsanouSmlouvuNejdeMenit', 409);
     }
 
     const data: Record<string, unknown> = {};
@@ -73,22 +71,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (err) {
     console.error('PATCH /api/admin/contracts/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const contract = await prisma.contract.findUnique({
       where: { id: params.id },
       select: { status: true },
     });
-    if (!contract) return NextResponse.json({ error: 'Smlouva nenalezena.' }, { status: 404 });
+    if (!contract) return odpovedChyby('chybaApi.smlouvaNenalezena', 404);
     if (contract.status === 'SIGNED') {
-      return NextResponse.json({ error: 'Podepsanou smlouvu nelze smazat.' }, { status: 409 });
+      return odpovedChyby('chybaApi.podepsanouSmlouvuNejdeSmazat', 409);
     }
 
     await prisma.contract.delete({ where: { id: params.id } });
@@ -96,6 +94,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   } catch (err) {
     console.error('DELETE /api/admin/contracts/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Smazání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.smazaniNezdariloS', { zprava: message }, 500);
   }
 }

@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { CONTRACT_PLACEHOLDERS, castkaDoSmlouvy, expandPlaceholders } from '@/lib/contracts';
 import { contractValues, newAccessToken, nextContractNumber } from '@/lib/contractsServer';
 import { resolveProject } from '@/lib/projectOptions';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Zalozeni smlouvy ze sablony (zadani 8. 9. 2026). Text se rovnou rozvine -
 // dal uz se s nim pracuje jako s obycejnym textem, takze pozdejsi zmena
@@ -33,7 +34,7 @@ const RUCNI_KLICE = new Set(CONTRACT_PLACEHOLDERS.filter((p) => p.rucne).map((p)
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     const d = parsed.data;
 
     const issuer = await prisma.issuerCompany.findUnique({ where: { id: d.issuerCompanyId }, select: { id: true } });
-    if (!issuer) return NextResponse.json({ error: 'Vlastní firma nenalezena.' }, { status: 404 });
+    if (!issuer) return odpovedChyby('chybaApi.vlastniFirmaNenalezena', 404);
 
     const projekt = await resolveProject(d.caflouProjectId);
 
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     // Cislo se pridava pred rozvinutim textu - sablony maji {{cislo_smlouvy}}
     // rovnou v zahlavi, stejne jako to maji papirove smlouvy.
     const number = await nextContractNumber(d.issuerCompanyId);
-    if (!number) return NextResponse.json({ error: 'Nepodařilo se přidělit číslo smlouvy.' }, { status: 409 });
+    if (!number) return odpovedChyby('chybaApi.cisloSmlouvyNeprideleno', 409);
 
     const values = await contractValues({
       issuerCompanyId: d.issuerCompanyId,
@@ -99,6 +100,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('POST /api/admin/contracts selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Založení se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.zalozeniNezdariloS', { zprava: message }, 500);
   }
 }

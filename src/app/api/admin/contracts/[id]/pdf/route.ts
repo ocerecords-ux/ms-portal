@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { documentHash } from '@/lib/contractsServer';
 import { nazevSouboruSmlouvy, smlouvaPdf } from '@/lib/smlouvaPdf';
+import { odpovedChybyVJazyce } from '@/lib/chybyApi';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 /**
  * Smlouva ke stažení jako PDF (zadání 14. 9. 2026: „u podepsaných smluv oboji.
@@ -15,14 +17,15 @@ import { nazevSouboruSmlouvy, smlouvaPdf } from '@/lib/smlouvaPdf';
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const jazyk = nactiJazyk();
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChybyVJazyce(jazyk, 'chybaApi.bezOpravneni', 403);
 
   const contract = await prisma.contract.findUnique({
     where: { id: params.id },
     include: { issuer: { select: { name: true } }, signatures: { orderBy: { signedAt: 'asc' } } },
   });
-  if (!contract) return NextResponse.json({ error: 'Smlouva nenalezena.' }, { status: 404 });
+  if (!contract) return odpovedChybyVJazyce(jazyk, 'chybaApi.smlouvaNenalezena', 404);
 
   const pdf = smlouvaPdf({
     number: contract.number,

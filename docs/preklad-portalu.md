@@ -98,6 +98,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7u | 1. 11. (nasazeno 3. 11.) | Hlášky rout faktur v administraci klíčem — `api/admin/invoices/**` (6 rout, 3 obrazovky); třetí agenda z `api/admin/**` | [x] |
 | 7v | 4. 11. | Hlášky rout uživatelů v administraci klíčem — `api/admin/users/**` (4 routy, 4 obrazovky); první agenda z `api/admin/**`, která není doklad | [x] |
 | 7w | 6. 11. | Hlášky rout banky klíčem — `api/admin/banka/**` (5 rout, 1 obrazovka) a k tomu důvody z `lib/bankaServer.ts` a `lib/bankaImportServer.ts`, které chodily na obrazovku hotové česky | [x] |
+| 7x | 13. 11. | Hlášky rout smluv klíčem — `api/admin/contracts/**` (7 rout, 3 obrazovky); šestá agenda z `api/admin/**` a první, kde chybu z routy čte i odkaz na PDF | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2020,6 +2021,69 @@ jako `banka.napojeniSelhalo`).
 **Co zbývá v `api/admin/**`:** po bance zůstává kolem **267 českých hlášek** —
 největší kusy jsou smlouvy (25), studia (19), wikipedie (15), technika (15),
 firmy (15), ukázky (14) a pokladna (12). Dál po agendách, jedna za večer.
+
+### Dávka 7x je HOTOVÁ (13. 11. 2026)
+
+**Šestá agenda z `api/admin/**`: smlouvy.** Vzor je pořád z dávky 7o
+(`odpovedChyby(klíč, status)`, věta se značkou přes `odpovedChybyS`),
+obrazovka čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **7 rout,
+3 obrazovky, 38 přepsaných míst a slovník +11 klíčů (6 258 → 6 269)**.
+Klíče `chybaApi.bezOpravneni`, `vlastniFirmaNenalezena`, `emailBezSmtp`,
+`nenasliJsmeCoSmazat` a čtyři věty se značkou (`ulozeniNezdariloS`,
+`smazaniNezdariloS`, `zalozeniNezdariloS`, `odeslaniNezdariloS`) ve slovníku
+už byly z dávek 7s–7u, takže se nezakládaly znovu.
+
+**Routy:** `contracts` (založení ze šablony), `contracts/[id]` (úprava,
+zrušení i smazání — osm míst), `contracts/[id]/send` (odeslání k podpisu),
+`contracts/[id]/podpis` (podpis za Mediaspace — sedm míst),
+`contracts/[id]/pdf` (smlouva ke stažení), `contracts/hromadne-smazani`
+(odmítnuté a zrušené) a `contracts/podklady` (co portál o projektu ví).
+
+**Obrazovky:** `ContractEditor.tsx` (pět míst — uložení, podpis, odeslání,
+zrušení, smazání), `NewContractForm.tsx` (založení). Třetí,
+`SmlouvyTabulka.tsx`, nepotřebovala nic: hromadné mazání jde přes sdílenou
+`components/HromadneMazani.tsx`, a ta `hlaskaChyby` umí od dávky 7s — stačilo
+dát klíče routě.
+
+**PDF se otevírá ODKAZEM, ne fetchem.** `ContractEditor` má na PDF obyčejný
+`href` do nového okna, takže chybu z routy by si neměl kdo přeložit — prohlížeč
+by ukázal rovnou JSON. Routa si proto bere jazyk z cookie přes `nactiJazyk()`
+a posílá větu hotovou (`odpovedChybyVJazyce`), stejně jako výdej přílohy
+z chatu v dávce 7r. Klíč jde vedle ní dál, kdyby si na routu někdy sáhl fetch.
+`nactiJazyk()` není `async` — čte cookie synchronně, takže před ním nestojí
+`await`.
+
+**Dvě větve v jedné hlášce.** Hromadné smazání rozlišuje „vybrali jste jen
+podepsané" od „nenašli jsme, co smazat" — a zůstává to tak i s klíči: podmínka
+teď vybírá KLÍČ a `odpovedChyby` ho pošle, místo aby se vybírala česká věta.
+
+**Termíny podle slovníčku:** smlouva = contract, podepisující = signer,
+otisk textu = fingerprint, protistrana se v anglické větě neobjevuje (věty
+mluví o „the contract", ne o stranách). „Za Mediaspace je smlouva už
+podepsaná" je v angličtině „signed for Mediaspace" — ne „on behalf of",
+to zní jako plná moc, a tady jen podepisuje náš člověk pod naší hlavičkou.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7w):**
+
+1. **Hlášky ze `zod` schémat** — `contracts` i `hromadne-smazani` mají vlastní
+   české věty u `min(1, …)` a `email(…)` („Vyplňte název smlouvy.",
+   „Nevybrali jste žádnou smlouvu.") a ty zůstávají česky. Záložní
+   `'Neplatná data.'` vedle nich klíč nedostalo: posílá se jen tehdy, když
+   `zod` žádnou svou hlášku nedal, a obě místa by jinak musela větvit odpověď
+   podle toho, odkud věta přišla.
+2. **`podklady` vrací při chybě prázdný seznam, ne hlášku** — formulář pak
+   jen nenabídne herce. Je to záměr z dávky 0 (co portál neví, nedoplňuje),
+   ne nepřeložená věta.
+3. **Text samotné smlouvy a šablony** — `contract.body` i `ContractTemplate`
+   jsou data uživatele (pravidlo 2). Šablony mají svou agendu
+   (`api/admin/contract-templates`, 7 hlášek) a přijdou na řadu zvlášť.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po smlouvách zůstává kolem **256 českých
+hlášek** — největší kusy jsou firmy (21), studia (20), wikipedie (16),
+technika (15), ukázky (14), pokladna (12) a vlastní firmy (12). Dál po
+agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

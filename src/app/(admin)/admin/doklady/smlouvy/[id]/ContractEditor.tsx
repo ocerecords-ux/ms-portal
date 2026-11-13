@@ -9,6 +9,7 @@ import { PodpisVyber } from '../PodpisVyber';
 import { ContractPaper, type PaperSignature } from '../ContractPaper';
 import { VyberPole } from '@/components/VyberPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /** Stav smlouvy do pilulky - viz stejná tabulka v přehledu smluv. */
 const KLICE_STAVU: Record<string, string> = {
@@ -95,7 +96,7 @@ export function ContractEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('smlouva.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('smlouva.ulozeniSelhalo')));
         return false;
       }
       setInfo(t('smlouva.ulozeno'));
@@ -128,7 +129,7 @@ export function ContractEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('smlouva.podpisSelhal'));
+        setError(hlaskaChyby(data, t, t('smlouva.podpisSelhal')));
         return;
       }
       setPodpis(null);
@@ -153,7 +154,7 @@ export function ContractEditor({
       const res = await fetch(`/api/admin/contracts/${contract.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('smlouva.odeslaniSelhalo'));
+        setError(hlaskaChyby(data, t, t('smlouva.odeslaniSelhalo')));
         return;
       }
       setInfo(t('smlouva.odkazOdeslan', { email: form.signerEmail }));
@@ -176,7 +177,7 @@ export function ContractEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('smlouva.zruseniSelhalo'));
+        setError(hlaskaChyby(data, t, t('smlouva.zruseniSelhalo')));
         return;
       }
       router.refresh();
@@ -194,7 +195,7 @@ export function ContractEditor({
       const res = await fetch(`/api/admin/contracts/${contract.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('smlouva.smazaniSelhalo'));
+        setError(hlaskaChyby(data, t, t('smlouva.smazaniSelhalo')));
         return;
       }
       router.push('/admin/doklady/smlouvy');

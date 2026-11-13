@@ -7,32 +7,33 @@ import {
   signatureContext,
   validSignatureImage,
 } from '@/lib/contractsServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Podpis za Mediaspace. Podepisuje prihlaseny clovek, takze jmeno bereme ze
 // session - nedava smysl ho psat rucne.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const telo = await req.json().catch(() => ({}));
     if (!validSignatureImage(telo?.imageData)) {
-      return NextResponse.json({ error: 'Chybí podpis — podepište se do rámečku.' }, { status: 400 });
+      return odpovedChyby('chybaApi.chybiPodpis', 400);
     }
 
     const contract = await prisma.contract.findUnique({
       where: { id: params.id },
       include: { signatures: true },
     });
-    if (!contract) return NextResponse.json({ error: 'Smlouva nenalezena.' }, { status: 404 });
+    if (!contract) return odpovedChyby('chybaApi.smlouvaNenalezena', 404);
     if (contract.status === 'CANCELLED' || contract.status === 'REJECTED') {
-      return NextResponse.json({ error: 'Tuhle smlouvu už nejde podepsat.' }, { status: 409 });
+      return odpovedChyby('chybaApi.smlouvuNejdePodepsat', 409);
     }
     if (!contract.body.trim()) {
-      return NextResponse.json({ error: 'Smlouva nemá žádný text.' }, { status: 400 });
+      return odpovedChyby('chybaApi.smlouvaBezTextu', 400);
     }
     if (contract.signatures.some((s) => s.role === 'MEDIASPACE')) {
-      return NextResponse.json({ error: 'Za Mediaspace je smlouva už podepsaná.' }, { status: 409 });
+      return odpovedChyby('chybaApi.smlouvaPodepsanaZaNas', 409);
     }
 
     const hash = documentHash(contract.body);
@@ -70,6 +71,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (err) {
     console.error('POST /api/admin/contracts/[id]/podpis selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Podpis se nepodařilo uložit (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.podpisNeulozenS', { zprava: message }, 500);
   }
 }

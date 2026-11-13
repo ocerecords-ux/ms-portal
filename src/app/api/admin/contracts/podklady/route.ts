@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { bezTitulu } from '@/lib/jmena';
 import { hercizRozpoctu } from '@/lib/nakladHerce';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Co portál o projektu ví, když se zakládá smlouva (zadání 13. 9. 2026:
@@ -25,7 +26,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const projekt = req.nextUrl.searchParams.get('projekt')?.trim();
     if (!projekt) return NextResponse.json({ herci: [], projekt: null, naklady: [] });

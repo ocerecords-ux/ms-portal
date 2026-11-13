@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * HROMADNÉ SMAZÁNÍ SMLUV (zadání 17. 9. 2026: „ve smlouvách bych potřeboval
@@ -26,7 +27,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -45,11 +46,9 @@ export async function POST(req: NextRequest) {
     const podepsane = smlouvy.length - keSmazani.length;
 
     if (keSmazani.length === 0) {
-      return NextResponse.json(
-        {
-          error: podepsane > 0 ? 'Podepsanou smlouvu nelze smazat.' : 'Nenašli jsme, co smazat.',
-        },
-        { status: 409 },
+      return odpovedChyby(
+        podepsane > 0 ? 'chybaApi.podepsanouSmlouvuNejdeSmazat' : 'chybaApi.nenasliJsmeCoSmazat',
+        409,
       );
     }
 
@@ -60,6 +59,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('POST /api/admin/contracts/hromadne-smazani selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Smazání se nezdařilo (${message}).` }, { status: 500 });
+    return odpovedChybyS('chybaApi.smazaniNezdariloS', { zprava: message }, 500);
   }
 }

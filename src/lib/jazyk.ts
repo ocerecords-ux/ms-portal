@@ -12551,6 +12551,48 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Stornovaná faktura se párovat nedá.',
     en: 'A cancelled invoice cannot be matched.',
   },
+  // Hlasky rout smluv (davka 7x) - api/admin/contracts/**
+  'chybaApi.smlouvaNenalezena': { cs: 'Smlouva nenalezena.', en: 'Contract not found.' },
+  'chybaApi.chybiPodpis': {
+    cs: 'Chybí podpis — podepište se do rámečku.',
+    en: 'The signature is missing — sign inside the box.',
+  },
+  'chybaApi.smlouvuNejdePodepsat': {
+    cs: 'Tuhle smlouvu už nejde podepsat.',
+    en: 'This contract can no longer be signed.',
+  },
+  'chybaApi.smlouvaBezTextu': {
+    cs: 'Smlouva nemá žádný text.',
+    en: 'The contract has no text.',
+  },
+  'chybaApi.smlouvaPodepsanaZaNas': {
+    cs: 'Za Mediaspace je smlouva už podepsaná.',
+    en: 'The contract has already been signed for Mediaspace.',
+  },
+  'chybaApi.podpisNeulozenS': {
+    cs: 'Podpis se nepodařilo uložit ({zprava}).',
+    en: 'The signature could not be saved ({zprava}).',
+  },
+  'chybaApi.podepsanouSmlouvuNejdeMenit': {
+    cs: 'Podepsanou smlouvu už nejde měnit — text nese otisk, kterým je podpis vázaný.',
+    en: 'A signed contract can no longer be changed — its text carries the fingerprint the signature is bound to.',
+  },
+  'chybaApi.podepsanouSmlouvuNejdeSmazat': {
+    cs: 'Podepsanou smlouvu nelze smazat.',
+    en: 'A signed contract cannot be deleted.',
+  },
+  'chybaApi.smlouvaUzPodepsana': {
+    cs: 'Smlouva je už podepsaná.',
+    en: 'The contract is already signed.',
+  },
+  'chybaApi.zrusenouSmlouvuNejdePoslat': {
+    cs: 'Zrušenou smlouvu nelze poslat.',
+    en: 'A cancelled contract cannot be sent.',
+  },
+  'chybaApi.cisloSmlouvyNeprideleno': {
+    cs: 'Nepodařilo se přidělit číslo smlouvy.',
+    en: 'The contract number could not be assigned.',
+  },
 };
 
 /**

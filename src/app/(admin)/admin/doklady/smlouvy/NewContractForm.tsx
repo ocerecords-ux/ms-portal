@@ -10,6 +10,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { najdiNakladHerce } from '@/lib/nakladHerce';
 import { DatumPole } from '@/components/DatumPole';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Založení smlouvy. Šablona se vybere, pole se předvyplní z databáze a text
@@ -374,7 +375,7 @@ export function NewContractForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('smlouva.zalozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('smlouva.zalozeniSelhalo')));
         return;
       }
       router.push(`/admin/doklady/smlouvy/${data.id}`);
