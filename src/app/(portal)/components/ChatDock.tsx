@@ -2306,16 +2306,39 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     }
   }, []);
 
-  // Seznam konverzaci drzime aktualni i zabaleny - jinak by na ikonce nebylo
-  // videt, ze prisla nova zprava.
+  /**
+   * Seznam konverzaci drzime aktualni i zabaleny - jinak by na ikonce nebylo
+   * videt, ze prisla nova zprava.
+   *
+   * NA POZADI SE NEPTAME (oprava 5. 11. 2026, prekroceny egress na Supabase).
+   * Portal mivaji lide otevreny cely den v zalozce, na kterou se koukaji
+   * jednou za hodinu - a tenhle dotaz pritom kazdych dvanact vterin natahl
+   * seznam rozhovoru a CELOU historii otevrene konverzace. Na zalozce, kam
+   * se nikdo nedivá, to nikomu nic nepřineslo a databazi to stalo nejvic ze
+   * vseho. Kdo pise uz se takhle chova od zacatku (viz PISE_MS niz).
+   *
+   * Po navratu na zalozku se obnovi hned, aby se necekalo dalsich dvanact
+   * vterin na to, co prislo mezitim.
+   */
   useEffect(() => {
-    void nactiKonverzace();
-    const timer = setInterval(() => {
+    function obnov() {
       void nactiKonverzace();
       if (openId) void nactiZpravy(openId, true);
       if (openId && vlaknoId) void nactiVlakno(openId, vlaknoId);
+    }
+    void nactiKonverzace();
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      obnov();
     }, REFRESH_MS);
-    return () => clearInterval(timer);
+    function priNavratu() {
+      if (document.visibilityState === 'visible') obnov();
+    }
+    document.addEventListener('visibilitychange', priNavratu);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', priNavratu);
+    };
   }, [nactiKonverzace, nactiZpravy, nactiVlakno, openId, vlaknoId]);
 
   /**

@@ -36,6 +36,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return new NextResponse(null, { status: 403 });
 
+  /**
+   * NEJDŘÍV SE ZEPTÁME, JESTLI FOTKA VŮBEC JE (oprava 5. 11. 2026, překročený
+   * egress na Supabase podruhé - viz Cache-Control níž).
+   *
+   * `maFotku` je obyčejný boolean, `photoUrl` je base64 obrázek o sedmdesáti
+   * kilobajtech. U člověka bez fotky nemá smysl tahat z databáze nic víc než
+   * ten příznak.
+   */
+  const ma = await prisma.user.findUnique({
+    where: { id: params.id },
+    select: { maFotku: true },
+  });
+  if (!ma?.maFotku) return new NextResponse(null, { status: 404 });
+
   const uzivatel = await prisma.user.findUnique({
     where: { id: params.id },
     select: { photoUrl: true },
@@ -84,9 +98,23 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     headers: {
       'Content-Type': obrazek.typ,
       ETag: otisk,
-      // Pět minut bez ptaní, pak se jen doptá na otisk - výměna fotky se tak
-      // projeví rychle a přitom se obrázek nepřenáší pořád dokola.
-      'Cache-Control': 'private, max-age=300, must-revalidate',
+      /**
+       * DEN BEZ PTANÍ (oprava 5. 11. 2026: „Restrictions are applied to your
+       * org Mediaspace" - 9,66 GB egressu z 5,5 GB za tři dny).
+       *
+       * Do teď to bylo pět minut a pak `must-revalidate`. Prohlížeč tedy
+       * každých pět minut poslal dotaz na otisk, a i když zpátky dostal
+       * „nic nového" (304) a žádný obrázek, SERVER si ten obrázek z databáze
+       * pokaždé vytáhl - jinak nebylo z čeho otisk spočítat. Patnáct lidí,
+       * patnáct fotek po sedmdesáti kilobajtech, každých pět minut, celý den:
+       * jen tohle dělalo kolem půldruhého gigabajtu denně, aniž by se po síti
+       * k prohlížeči přenesl jediný pixel.
+       *
+       * Den je u profilové fotky v pohodě - mění se jednou za rok. Cenou je,
+       * že nově nahranou fotku uvidí ostatní až do dne; až to bude někomu
+       * vadit, dá se do adresy přidat otisk a mezipaměť se tím zruší sama.
+       */
+      'Cache-Control': 'private, max-age=86400, must-revalidate',
     },
   });
 }
