@@ -11,6 +11,7 @@ import { nazevTypuFirmy } from '@/lib/roles';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { CURRENCIES, CURRENCY_LABELS, nazevMeny } from '@/lib/doklady';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import type { Currency } from '@prisma/client';
 
 /**
@@ -270,7 +271,7 @@ export function CompanyForm({
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.error || t('firma.ulozeniNezdarilo'));
+        throw new Error(hlaskaChyby(errBody, t, t('firma.ulozeniNezdarilo')));
       }
       setSaved(true);
       setAresNote(null);
@@ -306,7 +307,7 @@ export function CompanyForm({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('firma.zmenaNezdarila'));
+        setError(hlaskaChyby(data, t, t('firma.zmenaNezdarila')));
         return;
       }
       setAktivni(nove);

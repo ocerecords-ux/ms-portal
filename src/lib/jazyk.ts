@@ -12593,6 +12593,29 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Nepodařilo se přidělit číslo smlouvy.',
     en: 'The contract number could not be assigned.',
   },
+  // Hlasky rout firem (davka 7y) - api/admin/companies/**
+  'chybaApi.firmaNenalezena': { cs: 'Firma nenalezena.', en: 'Company not found.' },
+  'chybaApi.ulozeniNepodarilo': { cs: 'Uložení se nepodařilo.', en: 'Saving failed.' },
+  'chybaApi.nevypadaJakoEmailS': {
+    cs: '„{adresa}" nevypadá jako e-mail.',
+    en: '“{adresa}” does not look like an email address.',
+  },
+  'chybaApi.vyberteKontaktniOsobu': {
+    cs: 'Vyberte kontaktní osobu.',
+    en: 'Select a contact person.',
+  },
+  'chybaApi.ucetKFirmeNepatri': {
+    cs: 'Tenhle účet k firmě nepatří.',
+    en: 'This account does not belong to the company.',
+  },
+  'chybaApi.prirazeniNepodarilo': {
+    cs: 'Přiřazení se nepodařilo.',
+    en: 'The assignment failed.',
+  },
+  'chybaApi.smazaniFirmyNedokonceno': {
+    cs: 'Smazání se nepodařilo dokončit, takže se nic nesmazalo. Nejspíš některý z účtů firmy vystupuje ještě jinde v portálu — zkuste ho smazat zvlášť.',
+    en: 'The deletion could not be completed, so nothing was deleted. One of the company\'s accounts is probably still involved elsewhere in the portal — try deleting that account on its own.',
+  },
 };
 
 /**

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * ZAKÁZKY FIRMY: HEREC, NABÍDKA, FAKTURA (zadání 25. 9. 2026: „potřebuji
@@ -95,7 +96,7 @@ export function ZakazkyFirmyPanel({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('firma.ulozeniNepodarilo'));
+        setChyba(hlaskaChyby(data, t, t('firma.ulozeniNepodarilo')));
         return;
       }
       setHlaska(

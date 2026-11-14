@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * KONTAKTNÍ OSOBA KE VŠEM ZAKÁZKÁM FIRMY (zadání 24. 9. 2026: „potřebuju
@@ -28,10 +29,10 @@ const schema = z.object({
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Vyberte kontaktní osobu.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.vyberteKontaktniOsobu', 400);
 
   // Klient musí patřit k té firmě - jinak by se cizí člověk dostal k zakázkám,
   // které nejsou jeho.
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     prisma.company.findUnique({ where: { id: params.id }, select: { name: true } }),
   ]);
   if (!klient || !firma) {
-    return NextResponse.json({ error: 'Tenhle účet k firmě nepatří.' }, { status: 400 });
+    return odpovedChyby('chybaApi.ucetKFirmeNepatri', 400);
   }
 
   /**
@@ -82,6 +83,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
   } catch (err) {
     console.error('Hromadne prirazeni klienta selhalo:', err);
-    return NextResponse.json({ error: 'Přiřazení se nepodařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.prirazeniNepodarilo', 500);
   }
 }

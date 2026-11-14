@@ -17,6 +17,7 @@ import {
   type PrijemciStavu,
 } from '@/lib/notifikaceFirmy';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { prelozitKolem } from '@/lib/jazyk';
 import { vyjmenuj } from '@/lib/dotoceni';
 
@@ -164,7 +165,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || t('firma.ulozeniNezdarilo'));
+        setChyba(hlaskaChyby(data, t, t('firma.ulozeniNezdarilo')));
         return;
       }
       setUlozeno(true);

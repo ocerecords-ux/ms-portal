@@ -9,6 +9,7 @@ import {
   prazdneNastaveni,
   prazdniPrijemciStavu,
 } from '@/lib/notifikaceFirmy';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * Nastavení zpráv klientovi podle stavu projektu (zadání 10. 9. 2026).
@@ -38,7 +39,7 @@ const schema = z.object({
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const [radky, firma, ucty] = await Promise.all([
     prisma.notifikaceFirmy.findMany({
@@ -76,14 +77,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const firma = await prisma.company.findUnique({ where: { id: params.id }, select: { id: true } });
-  if (!firma) return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
+  if (!firma) return odpovedChyby('chybaApi.firmaNenalezena', 404);
 
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+    return odpovedChyby('chybaApi.neplatnaData', 400);
   }
 
   // Ulozi se jen stavy, ktere zname - cokoliv jineho by v tabulce zustalo
@@ -101,7 +102,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     );
     const spatny = ocistene.find((e) => !jeToEmail(e));
     if (spatny) {
-      return NextResponse.json({ error: `"${spatny}" nevypadá jako e-mail.` }, { status: 400 });
+      // Adresa je jazykove neutralni hodnota, takze jde do znacky (davka 7q).
+      return odpovedChybyS('chybaApi.nevypadaJakoEmailS', { adresa: spatny }, 400);
     }
     prijemci = ocistene;
   }
@@ -120,7 +122,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     );
     const spatny = ocistene.find((e) => !jeToEmail(e));
     if (spatny) {
-      return NextResponse.json({ error: `"${spatny}" nevypadá jako e-mail.` }, { status: 400 });
+      // Adresa je jazykove neutralni hodnota, takze jde do znacky (davka 7q).
+      return odpovedChybyS('chybaApi.nevypadaJakoEmailS', { adresa: spatny }, 400);
     }
     poStavech.set(stav, ocistene);
   }
@@ -135,7 +138,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     );
     const spatny = ocistene.find((e) => !jeToEmail(e));
     if (spatny) {
-      return NextResponse.json({ error: `"${spatny}" nevypadá jako e-mail.` }, { status: 400 });
+      // Adresa je jazykove neutralni hodnota, takze jde do znacky (davka 7q).
+      return odpovedChybyS('chybaApi.nevypadaJakoEmailS', { adresa: spatny }, 400);
     }
     klientiPoStavech.set(stav, ocistene);
   }

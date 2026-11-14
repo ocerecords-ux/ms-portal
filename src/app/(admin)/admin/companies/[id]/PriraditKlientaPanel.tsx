@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * KONTAKTNÍ OSOBA KE VŠEM ZAKÁZKÁM FIRMY (zadání 24. 9. 2026: „potřebuju
@@ -49,7 +50,7 @@ export function PriraditKlientaPanel({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('firma.prirazeniNepodarilo'));
+        setChyba(hlaskaChyby(data, t, t('firma.prirazeniNepodarilo')));
         return;
       }
       const pocet = Number(data?.pocet ?? 0);

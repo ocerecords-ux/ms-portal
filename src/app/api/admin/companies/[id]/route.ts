@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { popisPrekazek, prekazkyFirmy } from '@/lib/mazani';
 import { jeZpusobSmazani } from '@/lib/archiv';
 import { odstranFirmu } from '@/lib/archivServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Editace firmy. Typ (Klient/Dodavatel) se po zalozeni uz nemeni.
 //
@@ -70,11 +71,14 @@ function toIntOrNull(v?: string): number | null {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+      // Ceske vety ze `zod` schematu zustavaji cesky (davky 7s-7x).
+      const zod = parsed.error.issues[0]?.message;
+      if (zod) return NextResponse.json({ error: zod }, { status: 400 });
+      return odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const data = parsed.data;
 
@@ -172,8 +176,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json(company);
   } catch (err) {
     console.error('PATCH /api/admin/companies/[id] selhalo:', err);
-    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    // Technicka zprava z vyjimky jde do znacky jako hodnota (davka 7q);
+    // kdyz zadna neni, odejde veta bez ni - 'Neznama chyba.' ve znacce by
+    // zustala cesky i v anglicke vete.
+    const message = err instanceof Error ? err.message : '';
+    return message
+      ? odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500)
+      : odpovedChyby('chybaApi.ulozeniNezdarilo', 500);
   }
 }
 
@@ -197,10 +206,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const firma = await prisma.company.findUnique({ where: { id: params.id }, select: { name: true } });
-  if (!firma) return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
+  if (!firma) return odpovedChyby('chybaApi.firmaNenalezena', 404);
 
   const zpusob = req.nextUrl.searchParams.get('zpusob') ?? '';
   const prekazky = await prekazkyFirmy(params.id);
@@ -231,12 +240,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ smazano: true, ...vysledek });
   } catch (err) {
     console.error('Smazání firmy selhalo:', err);
-    return NextResponse.json(
-      {
-        error:
-          'Smazání se nepodařilo dokončit, takže se nic nesmazalo. Nejspíš některý z účtů firmy vystupuje ještě jinde v portálu — zkuste ho smazat zvlášť.',
-      },
-      { status: 409 },
-    );
+    return odpovedChyby('chybaApi.smazaniFirmyNedokonceno', 409);
   }
 }

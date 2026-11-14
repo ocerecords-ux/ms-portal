@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * DOPLNĚNÍ HERCE A DOKLADŮ K ZAKÁZKÁM FIRMY (zadání 25. 9. 2026: „mám tady
@@ -41,13 +42,13 @@ const schema = z.object({
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const firma = await prisma.company.findUnique({ where: { id: params.id }, select: { name: true } });
-  if (!firma) return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
+  if (!firma) return odpovedChyby('chybaApi.firmaNenalezena', 404);
 
   // Starší zakázky mívají u sebe jen název firmy - stejné pravidlo jako
   // u hromadného přiřazení klienta.
@@ -126,6 +127,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ ok: true, herci, typy, nabidky, faktury });
   } catch (err) {
     console.error('Doplneni k zakazkam firmy selhalo:', err);
-    return NextResponse.json({ error: 'Uložení se nepodařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.ulozeniNepodarilo', 500);
   }
 }

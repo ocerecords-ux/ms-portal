@@ -11,6 +11,7 @@ import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { CURRENCIES, CURRENCY_LABELS, nazevMeny } from '@/lib/doklady';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import type { Currency } from '@prisma/client';
 
 // Firmy se od 5. 9. 2026 deli na Klienty a Dodavatele (CompanyType) - typ se
@@ -149,7 +150,7 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.error || t('firmy.zalozeniSelhalo'));
+        throw new Error(hlaskaChyby(errBody, t, t('firmy.zalozeniSelhalo')));
       }
       resetFields();
       setOpen(false);

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { vychoziNotifikaceReklamy } from '@/lib/notifikaceReklamyServer';
 import { requireAdmin } from '@/lib/adminGuard';
 import { nextCode } from '@/lib/codes';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 // Firmy se od 5. 9. 2026 deli na Klienty a Dodavatele (viz CompanyType v
 // schema.prisma). Fakturacni udaje (IC, DIC, platce DPH, adresa po castech,
@@ -49,12 +50,16 @@ const schema = z.discriminatedUnion('type', [
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    // Vlastni ceske vety ze `zod` schematu zustavaji cesky (jako v davkach
+    // 7s-7x); zalozni hlaska uz chodi klicem.
+    const zod = parsed.error.issues[0]?.message;
+    if (zod) return NextResponse.json({ error: zod }, { status: 400 });
+    return odpovedChyby('chybaApi.neplatnaData', 400);
   }
 
   const code = await nextCode('F');

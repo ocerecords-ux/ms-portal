@@ -99,6 +99,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7v | 4. 11. | Hlášky rout uživatelů v administraci klíčem — `api/admin/users/**` (4 routy, 4 obrazovky); první agenda z `api/admin/**`, která není doklad | [x] |
 | 7w | 6. 11. | Hlášky rout banky klíčem — `api/admin/banka/**` (5 rout, 1 obrazovka) a k tomu důvody z `lib/bankaServer.ts` a `lib/bankaImportServer.ts`, které chodily na obrazovku hotové česky | [x] |
 | 7x | 13. 11. | Hlášky rout smluv klíčem — `api/admin/contracts/**` (7 rout, 3 obrazovky); šestá agenda z `api/admin/**` a první, kde chybu z routy čte i odkaz na PDF | [x] |
+| 7y | 14. 11. | Hlášky rout firem klíčem — `api/admin/companies/**` (5 rout, 5 obrazovek); sedmá agenda z `api/admin/**`, největší zbylý kus | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2084,6 +2085,63 @@ to zní jako plná moc, a tady jen podepisuje náš člověk pod naší hlavičk
 hlášek** — největší kusy jsou firmy (21), studia (20), wikipedie (16),
 technika (15), ukázky (14), pokladna (12) a vlastní firmy (12). Dál po
 agendách, jedna za večer.
+
+### Dávka 7y je HOTOVÁ (14. 11. 2026)
+
+**Sedmá agenda z `api/admin/**`: firmy.** Vzor je pořád z dávky 7o
+(`odpovedChyby(klíč, status)`, věta se značkou přes `odpovedChybyS`),
+obrazovka čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **5 rout,
+5 obrazovek, 30 přepsaných míst a slovník +7 klíčů (6 269 → 6 276)**.
+Klíče `chybaApi.bezOpravneni`, `neplatnaData`, `ulozeniNezdarilo`
+a `ulozeniNezdariloS` ve slovníku už byly z dávek 7o–7x, takže se
+nezakládaly znovu.
+
+**Routy:** `companies` (založení firmy), `companies/[id]` (editace, vyřazení
+i smazání — sedm míst), `companies/[id]/notifikace` (nastavení zpráv
+klientovi, sedm míst), `companies/[id]/prirad-klienta` (kontaktní osoba ke
+všem zakázkám firmy) a `companies/[id]/doplnit-k-zakazkam` (herec, nabídka
+a faktura po jedné zakázce).
+
+**Obrazovky:** `NewCompanyForm.tsx` (založení), `CompanyForm.tsx` (dvě místa —
+uložení karty a vyřazení/vrácení), `NotifikaceFirmyPanel.tsx` (uložení
+tabulky zpráv), `PriraditKlientaPanel.tsx` a `ZakazkyFirmyPanel.tsx`.
+Hledání v registru (`api/admin/ares`) zůstalo, jak bylo — je to jiná agenda
+a přijde na řadu s ní.
+
+**Adresa jde do značky, ne do věty.** Kontrola interních příjemců i příjemců
+u jednotlivých stavů hlásí `„{adresa}" nevypadá jako e-mail.` — tři místa
+v jedné routě, všechna přes `odpovedChybyS` s jednou hodnotou. Adresa je
+jazykově neutrální (pravidlo z dávky 7q), takže ji dosazuje až obrazovka do
+své verze věty. Táž věta už na obrazovce byla jako `firma.neniEmail`, tak má
+nový klíč `chybaApi.nevypadaJakoEmailS` stejné anglické znění.
+
+**„Neznámá chyba." ve značce by zůstala česky.** `PATCH` posílal
+`Uložení se nezdařilo (${message}).` a do značky dával buď zprávu z výjimky,
+nebo českou větu `'Neznámá chyba.'`. Hodnoty ve značkách se nepřekládají, tak
+by anglická věta nesla český konec. Routa teď větví: se zprávou jde
+`ulozeniNezdariloS`, bez ní prosté `ulozeniNezdarilo`.
+
+**Termíny podle slovníčku:** firma = company, kontaktní osoba = contact
+person, zakázka v hláškách nevystupuje (věty mluví o firmě a o účtu).
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7x):**
+
+1. **Hlášky ze `zod` schémat** — `Název firmy je povinný.` u obou rout
+   zůstává česky. Záložní `'Neplatná data.'` vedle ní klíč dostalo: routa
+   nejdřív pošle větu od `zod`, a až když žádná není, jde klíč.
+2. **„Firmu X nejde rovnou smazat, visí na ní: …"** zůstává česká věta —
+   stejné rozhodnutí jako u uživatelů v dávce 7v. Na obrazovku se nikdy
+   nedostane: `components/SmazatSPrekazkami.tsx` si při 409 vykreslí vlastní
+   seznam z pole `prekazky`, a jeho názvy chodí s klíčem už od dávky 7j.
+3. **Údaje firmy** — název, adresa, IČ, jména kontaktů jsou data uživatele
+   (pravidlo 4).
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po firmách zůstává kolem **236 českých
+hlášek** — největší kusy jsou studia (23), wikipedie (20), ukázky (17),
+technika (17), pokladna (16), pozvánky údajů (14) a vlastní firmy (14).
+Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 
