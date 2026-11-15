@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { smiNaStudia } from '@/lib/pristupyServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Zalozeni studia. Pracovni doba a presety se doplni rovnou, at nove studio
 // neni v kalendari mrtve.
@@ -19,17 +20,22 @@ export async function POST(req: NextRequest) {
     // Nastaveni studii smi i ten, kdo to ma zaskrtnute na karte (6. 10. 2026).
     const session = await requireAdmin();
     if (!session && !(await smiNaStudia())) {
-      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+      return odpovedChyby('chybaApi.bezOpravneni', 403);
     }
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+      // Hlasky ze `zod` zustavaji cesky (rozhodnuti z davky 7s); klic dostava
+      // jen zalozni veta, ktera chodi, kdyz `zod` zadnou svou nedal.
+      const zprava = parsed.error.issues[0]?.message;
+      return zprava
+        ? NextResponse.json({ error: zprava }, { status: 400 })
+        : odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const d = parsed.data;
 
     const exists = await prisma.studio.findUnique({ where: { name: d.name }, select: { id: true } });
-    if (exists) return NextResponse.json({ error: 'Studio s tímhle názvem už existuje.' }, { status: 409 });
+    if (exists) return odpovedChyby('chybaApi.studioStejnehoNazvu', 409);
 
     const last = await prisma.studio.findFirst({ orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } });
 
@@ -61,7 +67,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(studio, { status: 201 });
   } catch (err) {
     console.error('POST /api/admin/studia selhalo:', err);
-    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Založení se nezdařilo (${message}).` }, { status: 500 });
+    // Veta se znackou jen tehdy, kdyz zprava z vyjimky je - jinak by
+    // v anglicke vete svitila ceska 'Neznama chyba.' (vzor z davky 7y).
+    return err instanceof Error
+      ? odpovedChybyS('chybaApi.zalozeniNezdariloS', { zprava: err.message }, 500)
+      : odpovedChyby('chybaApi.zalozeniNezdarilo', 500);
   }
 }

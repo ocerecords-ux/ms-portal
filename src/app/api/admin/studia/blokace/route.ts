@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { loadOccupancy } from '@/lib/calendarServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Blokace studia - svatky, dovolene, udrzba. Do obsazenosti se pocitaji
 // stejne jako potvrzena rezervace, takze pres ne nejde nabidnout termin.
@@ -18,29 +19,33 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+      const zprava = parsed.error.issues[0]?.message;
+      return zprava
+        ? NextResponse.json({ error: zprava }, { status: 400 })
+        : odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const d = parsed.data;
 
     const start = new Date(d.start);
     const end = new Date(d.end);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-      return NextResponse.json({ error: 'Konec blokace musí být po začátku.' }, { status: 400 });
+      return odpovedChyby('chybaApi.konecBlokacePredZacatkem', 400);
     }
 
     // Pres uz potvrzenou rezervaci se blokace nedava - to by se muselo
     // nejdriv domluvit s hercem.
     const obsazeno = await loadOccupancy([d.studioId], start, end);
     if (obsazeno.slots.length > 0) {
-      return NextResponse.json(
-        {
-          error: `V tomhle čase už je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}. Nejdřív termín přesuňte.`,
-        },
-        { status: 409 },
+      // Nazvy obsazenych terminu jsou data uzivatele (pravidlo 4), takze jdou
+      // do znacky a dosadi je az obrazovka do sve jazykove verze vety.
+      return odpovedChybyS(
+        'chybaApi.vTomhleCaseJeNataceniS',
+        { nataceni: obsazeno.slots.map((s) => s.label).join(', ') },
+        409,
       );
     }
 
@@ -59,23 +64,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(block, { status: 201 });
   } catch (err) {
     console.error('POST /api/admin/studia/blokace selhalo:', err);
-    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return err instanceof Error
+      ? odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: err.message }, 500)
+      : odpovedChyby('chybaApi.ulozeniNezdarilo', 500);
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const id = new URL(req.url).searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'Chybí blokace.' }, { status: 400 });
+    if (!id) return odpovedChyby('chybaApi.chybiBlokace', 400);
 
     await prisma.studioBlock.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/admin/studia/blokace selhalo:', err);
-    return NextResponse.json({ error: 'Smazání se nezdařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.smazaniNezdarilo', 500);
   }
 }

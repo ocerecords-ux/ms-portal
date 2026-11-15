@@ -100,6 +100,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7w | 6. 11. | Hlášky rout banky klíčem — `api/admin/banka/**` (5 rout, 1 obrazovka) a k tomu důvody z `lib/bankaServer.ts` a `lib/bankaImportServer.ts`, které chodily na obrazovku hotové česky | [x] |
 | 7x | 13. 11. | Hlášky rout smluv klíčem — `api/admin/contracts/**` (7 rout, 3 obrazovky); šestá agenda z `api/admin/**` a první, kde chybu z routy čte i odkaz na PDF | [x] |
 | 7y | 14. 11. | Hlášky rout firem klíčem — `api/admin/companies/**` (5 rout, 5 obrazovek); sedmá agenda z `api/admin/**`, největší zbylý kus | [x] |
+| 7z | 15. 11. | Hlášky rout studií klíčem — `api/admin/studia/**` a k nim `api/studio/sprava` (6 rout, 4 obrazovky) a důvody odmítnuté pozvánky z `lib/pozvankaBooking.ts` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2142,6 +2143,98 @@ person, zakázka v hláškách nevystupuje (věty mluví o firmě a o účtu).
 hlášek** — největší kusy jsou studia (23), wikipedie (20), ukázky (17),
 technika (17), pokladna (16), pozvánky údajů (14) a vlastní firmy (14).
 Dál po agendách, jedna za večer.
+
+### Dávka 7z je HOTOVÁ (15. 11. 2026)
+
+**Osmá agenda z `api/admin/**`: studia.** Vzor je pořád z dávky 7o
+(`odpovedChyby(klíč, status)`, věta se značkou přes `odpovedChybyS`), obrazovka
+čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **6 rout, 1 knihovna,
+4 obrazovky, 45 přepsaných míst a slovník +18 klíčů (6 276 → 6 294)**.
+Klíče `chybaApi.bezOpravneni`, `neplatnaData`, `neprihlaseno`,
+`ulozeniNezdarilo(S)` a `zalozeniNezdarilo(S)` ve slovníku už byly
+z dávek 7o–7y, takže se nezakládaly znovu.
+
+**Routy:** `studia` (založení studia), `studia/[id]` (karta studia včetně
+pracovní doby), `studia/blokace` (svátky, dovolené, údržba — osm míst),
+`studia/[id]/tabule` (zapnutí tabule a výměna adresy),
+`studia/[id]/tabule/ucet` (účet počítače u displeje — šest míst)
+a `api/studio/sprava` (rezervace studia klienty — devět míst).
+
+**`api/studio/sprava` patří k této agendě, i když není v `api/admin`.**
+`api/admin/studia/booking` je od 25. 9. 2026 jen reexport té routy — o rezervacích
+pobočky rozhoduje i její vedoucí, a všechno pod `/api/admin` je vyhrazené
+Žůžo-labužo. Jedna obrazovka na ní visí v administraci (`RezervaceStudii`)
+a druhá u kalendáře studia (`SpravaStudia`), takže rozdělit to na dva večery
+by znamenalo dělat jednu agendu dvakrát.
+
+**Obrazovky:** `StudiosManager.tsx` (sdílené `posli()` — jedno místo za všech
+jedenáct volaní PATCH na kartě studia), `TabuleStudii.tsx` (založení účtu
+tabule), `RezervaceStudii.tsx` a `SpravaStudia.tsx` (obou se drží dvě místa —
+nastavení rezervací a pozvánka klienta).
+
+**Důvody odmítnuté pozvánky jdou klíčem z knihovny** — vzor z dávky 7w
+(`rozhodniOPohybu()` v `lib/bankaServer.ts`). `pozviKlientaStudia()`
+v `lib/pozvankaBooking.ts` vracela `{ ok: false, chyba }` s hotovou českou
+větou a routa to posílala ven, jak to přišlo; teď vrací `{ ok: false, klic }`
+a šest důvodů (neplatný e-mail, nenalezené studio, vypnuté rezervace, účet
+s jinou rolí, neodešlý e-mail s odkazem k ručnímu poslání a selhaná pozvánka)
+má klíč ve slovníku. Odpověď POST se ale **skládá v routě ručně, ne přes
+`odpovedChyby`**: vedle klíče jdou dál `userId` a `odkaz`, kterým obrazovka
+nabízí odeslání odkazu ručně.
+
+**Obsazený čas jde do značky, ne do věty.** Blokace přes potvrzený termín hlásí
+`V tomhle čase už je natáčení: {nataceni}. Nejdřív termín přesuňte.` — názvy
+obsazených termínů jsou data uživatele (pravidlo 4), takže je dosazuje až
+obrazovka do své jazykové verze věty. Stejně tak přihlašovací jméno
+v `Jméno „{login}" už používá jiný účet.`
+
+**„Neznámá chyba." ve značce by zůstala česky** — stejně jako v 7y. Tři catche
+(založení studia, karta studia, blokace) posílaly `Uložení se nezdařilo
+(${message})` a do značky dávaly buď zprávu z výjimky, nebo českou větu. Teď
+všechny tři větví: se zprávou jde `ulozeniNezdariloS` / `zalozeniNezdariloS`,
+bez ní prosté `ulozeniNezdarilo` / `zalozeniNezdarilo`.
+
+**Termíny podle slovníčku:** studio = studio, tabule = board (jako
+`studia.tabuleNadpis` z dávky 5), blokace = block (jako `kalendar.blokace`),
+rezervace klienta = booking, natáčení = recording session, pracovní doba studia =
+opening hours (tak už byla v `studia.pracovniDoba`), klient studia = studio
+customer.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7y):**
+
+1. **Hlášky ze `zod` schémat** — `Vyplňte název studia.`,
+   `Vyplňte, čeho se blokace týká.` a `Jméno jen z písmen bez diakritiky…`
+   zůstávají česky. Záložní `'Neplatná data.'` vedle nich klíč dostalo: routa
+   nejdřív pošle větu od `zod`, a až když žádná není, jde klíč.
+2. **Názvy předvolených frekvencí `Dopolední` a `Odpolední`**, které se novému
+   studiu zapíšou do databáze, zůstávají české — jsou to **data**, ne hláška
+   rozhraní (pravidlo 4), a jdou přepsat na kartě studia jako každá jiná zkratka.
+3. **`api/admin/studia/blokace` nemá na obrazovce volajícího** — blokace se
+   od 25. 9. 2026 zapisují v kalendáři (`api/kalendar/blokace`, kam smí
+   i Produkce). Klíče dostala přesto: je to táž agenda a routa dál žije.
+   Kalendářová dvojnice přijde na řadu s agendou kalendáře.
+4. **Údaje studia** — název, zkratka, adresa, parkování i odkaz na hovor jsou
+   data uživatele (pravidlo 4). `parkovaniEn` je dokonce anglická verze, kterou
+   píše člověk — slovník do ní nemá co mluvit.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po studiích zůstává **263 českých hlášek** —
+největší kusy jsou wikipedie (20), ukázky (17), technika (17), pokladna (16),
+vlastní firmy (14), pozvánky údajů (13), ceník (13) a návody (13). Dál po
+agendách, jedna za večer.
+
+> **Poznámka k počtu:** souhrn „kolem 236" v dávce 7y neodpovídal — počítáno
+> stejně jako jednotlivé agendy (řádky s `error:`, kde je český text, bez
+> komentářů a `console.error`) bylo na commitu dávky 7y v `api/admin/**`
+> 286 hlášek, ne 236. Čísla po agendách byla správně, jen celkový součet se mezi
+> dávkami přepisoval odhadem. Od téhle dávky je souhrn měřený:
+
+```bash
+grep -rn "error:" src/app/api/admin --include=*.ts \
+  | grep -E "[ěščřžýáíéúůňťďó]" | grep -vE "^[^:]+:[0-9]+:\s*(//|\*)" \
+  | grep -v "console\." | wc -l
+```
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

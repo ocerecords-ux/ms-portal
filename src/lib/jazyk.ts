@@ -12616,6 +12616,58 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Smazání se nepodařilo dokončit, takže se nic nesmazalo. Nejspíš některý z účtů firmy vystupuje ještě jinde v portálu — zkuste ho smazat zvlášť.',
     en: 'The deletion could not be completed, so nothing was deleted. One of the company\'s accounts is probably still involved elsewhere in the portal — try deleting that account on its own.',
   },
+  // Hlasky rout studii (davka 7z) - api/admin/studia/** a api/studio/sprava
+  'chybaApi.studioNenalezeno': { cs: 'Studio nenalezeno.', en: 'Studio not found.' },
+  'chybaApi.studioStejnehoNazvu': {
+    cs: 'Studio s tímhle názvem už existuje.',
+    en: 'A studio with this name already exists.',
+  },
+  'chybaApi.konecPracovniDobyPredZacatkem': {
+    cs: 'Konec pracovní doby musí být po začátku.',
+    en: 'The end of the opening hours must be after the start.',
+  },
+  'chybaApi.konecBlokacePredZacatkem': {
+    cs: 'Konec blokace musí být po začátku.',
+    en: 'The end of the block must be after the start.',
+  },
+  'chybaApi.vTomhleCaseJeNataceniS': {
+    cs: 'V tomhle čase už je natáčení: {nataceni}. Nejdřív termín přesuňte.',
+    en: 'There is already a recording session at this time: {nataceni}. Move the session first.',
+  },
+  'chybaApi.chybiBlokace': { cs: 'Chybí blokace.', en: 'The block is missing.' },
+  'chybaApi.smazaniNezdarilo': { cs: 'Smazání se nezdařilo.', en: 'The deletion failed.' },
+  'chybaApi.neplatnaAkce': { cs: 'Neplatná akce.', en: 'Invalid action.' },
+  'chybaApi.jmenoUzPouzivaJinyUcetS': {
+    cs: 'Jméno „{login}" už používá jiný účet.',
+    en: 'The username “{login}” is already used by another account.',
+  },
+  'chybaApi.ucetTabuleNenalezen': { cs: 'Účet tabule nenalezen.', en: 'Board account not found.' },
+  'chybaApi.zadejteEmail': { cs: 'Zadejte e-mail.', en: 'Enter an email address.' },
+  'chybaApi.chybiUzivatel': { cs: 'Chybí uživatel.', en: 'The user is missing.' },
+  'chybaApi.neniKlientStudia': {
+    cs: 'Tohle není klient studia.',
+    en: 'This is not a studio customer.',
+  },
+  'chybaApi.zadejtePlatnyEmail': {
+    cs: 'Zadejte platný e-mail.',
+    en: 'Enter a valid email address.',
+  },
+  'chybaApi.rezervaceNejsouZapnute': {
+    cs: 'U tohohle studia nejsou rezervace zapnuté.',
+    en: 'Bookings are not enabled for this studio.',
+  },
+  'chybaApi.emailMaUcetSJinouRoli': {
+    cs: 'Na tenhle e-mail už je v portálu účet s jinou rolí.',
+    en: 'There is already a portal account with a different role for this email address.',
+  },
+  'chybaApi.pozvankaNeodeslanaOdkazRucne': {
+    cs: 'E-mail se nepodařilo odeslat. Odkaz můžete poslat ručně.',
+    en: 'The email could not be sent. You can send the link manually.',
+  },
+  'chybaApi.pozvankaNeodeslana': {
+    cs: 'Pozvánku se nepodařilo odeslat.',
+    en: 'The invitation could not be sent.',
+  },
 };
 
 /**

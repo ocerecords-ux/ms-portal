@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { nextCode, codePrefixForRole } from '@/lib/codes';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * ÚČET TABULE PRO STUDIO (zadání 22. 9. 2026: „vytvořil bych pro každé studio
@@ -42,14 +43,18 @@ function loginZeStudia(zkratka: string): string {
 const VYCHOZI_HESLO_TABULE = '1111';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await requireAdmin())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    // Hlaska ze `zod` (prihlasovaci jmeno) zustava cesky - rozhodnuti z davky 7s.
+    const zprava = parsed.error.issues[0]?.message;
+    return zprava
+      ? NextResponse.json({ error: zprava }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
 
   const studio = await prisma.studio.findUnique({ where: { id: params.id }, select: { id: true, name: true, shortName: true } });
-  if (!studio) return NextResponse.json({ error: 'Studio nenalezeno.' }, { status: 404 });
+  if (!studio) return odpovedChyby('chybaApi.studioNenalezeno', 404);
 
   // Výchozí heslo tabulí je 1111 (22. 9. 2026: „heslo primárně nastav všude
   // u těch tabulí na 1111"). Účet nic nesmí, jen ukazuje tabuli svého studia.
@@ -69,7 +74,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const login = parsed.data.login || loginZeStudia(studio.shortName || studio.name);
   const obsazeny = await prisma.user.findUnique({ where: { email: login }, select: { id: true, role: true } });
   if (obsazeny && obsazeny.role !== 'TABULE') {
-    return NextResponse.json({ error: `Jméno „${login}" už používá jiný účet.` }, { status: 409 });
+    // Prihlasovaci jmeno je jazykove neutralni, takze jde do znacky (pravidlo 7).
+    return odpovedChybyS('chybaApi.jmenoUzPouzivaJinyUcetS', { login }, 409);
   }
   if (obsazeny) {
     await prisma.user.update({
@@ -95,11 +101,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
 /** Zrušení účtu tabule - vypne se (přihlášení přestane fungovat). */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await requireAdmin())) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const userId = req.nextUrl.searchParams.get('ucet') ?? '';
   const ucet = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, tabuleStudioId: true } });
   if (!ucet || ucet.role !== 'TABULE' || ucet.tabuleStudioId !== params.id) {
-    return NextResponse.json({ error: 'Účet tabule nenalezen.' }, { status: 404 });
+    return odpovedChyby('chybaApi.ucetTabuleNenalezen', 404);
   }
   await prisma.user.update({ where: { id: ucet.id }, data: { active: false } });
   return NextResponse.json({ ok: true });

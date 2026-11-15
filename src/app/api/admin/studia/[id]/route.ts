@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { smiNaStudia } from '@/lib/pristupyServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Uprava studia vcetne pracovni doby. Studio se nemaze - vyradi se, protoze
 // na nem visi rezervace a historie.
@@ -35,17 +36,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Nastaveni studii smi i ten, kdo to ma zaskrtnute na karte (6. 10. 2026).
     const session = await requireAdmin();
     if (!session && !(await smiNaStudia())) {
-      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+      return odpovedChyby('chybaApi.bezOpravneni', 403);
     }
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+      const zprava = parsed.error.issues[0]?.message;
+      return zprava
+        ? NextResponse.json({ error: zprava }, { status: 400 })
+        : odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const d = parsed.data;
 
     if (d.hours?.some((h) => h.endMinutes <= h.startMinutes)) {
-      return NextResponse.json({ error: 'Konec pracovní doby musí být po začátku.' }, { status: 400 });
+      return odpovedChyby('chybaApi.konecPracovniDobyPredZacatkem', 400);
     }
 
     const data: Record<string, unknown> = {};
@@ -83,7 +87,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PATCH /api/admin/studia/[id] selhalo:', err);
-    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    return err instanceof Error
+      ? odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: err.message }, 500)
+      : odpovedChyby('chybaApi.ulozeniNezdarilo', 500);
   }
 }

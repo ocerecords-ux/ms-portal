@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { prelozitKolem } from '@/lib/jazyk';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
@@ -93,7 +94,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
       });
       if (!res.ok) {
         const o = await res.json().catch(() => ({}));
-        setChyba(o?.error || t('studia.nastaveniSelhalo'));
+        setChyba(hlaskaChyby(o, t, t('studia.nastaveniSelhalo')));
         return;
       }
       router.refresh();
@@ -117,7 +118,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
       });
       const o = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(o?.error || t('studia.pozvankaSelhala'));
+        setChyba(hlaskaChyby(o, t, t('studia.pozvankaSelhala')));
         if (o?.odkaz) setOdkaz(o.odkaz);
         return;
       }

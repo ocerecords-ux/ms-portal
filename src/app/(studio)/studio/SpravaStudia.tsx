@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
@@ -60,7 +61,7 @@ export function SpravaStudia({
       });
       if (!res.ok) {
         const o = await res.json().catch(() => ({}));
-        setChyba(o?.error || t('booking.nastaveniNeulozeno'));
+        setChyba(hlaskaChyby(o, t, t('booking.nastaveniNeulozeno')));
         return;
       }
       router.refresh();
@@ -84,7 +85,7 @@ export function SpravaStudia({
       });
       const o = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(o?.error || t('booking.pozvankaNeodeslana'));
+        setChyba(hlaskaChyby(o, t, t('booking.pozvankaNeodeslana')));
         if (o?.odkaz) setOdkaz(o.odkaz);
         return;
       }

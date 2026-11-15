@@ -19,9 +19,14 @@ import { sendInviteEmail } from '@/lib/email';
 
 export const POZVANKA_PLATI_DNI = 14;
 
+/**
+ * DUVOD ODMITNUTI JDE KLICEM, NE VETOU (davka 7z) - stejne jako
+ * `rozhodniOPohybu()` v `lib/bankaServer.ts` z davky 7w. Hlaska vznika tady,
+ * ale preklada ji az obrazovka; ceska veta je ve slovniku pod klicem.
+ */
 export type VysledekPozvankyStudia =
   | { ok: true; userId: string; email: string }
-  | { ok: false; chyba: string; userId?: string; odkaz?: string };
+  | { ok: false; klic: string; userId?: string; odkaz?: string };
 
 export async function pozviKlientaStudia(
   email: string,
@@ -30,7 +35,7 @@ export async function pozviKlientaStudia(
 ): Promise<VysledekPozvankyStudia> {
   const adresa = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresa)) {
-    return { ok: false, chyba: 'Zadejte platný e-mail.' };
+    return { ok: false, klic: 'chybaApi.zadejtePlatnyEmail' };
   }
 
   try {
@@ -38,9 +43,9 @@ export async function pozviKlientaStudia(
       where: { id: studioId },
       select: { id: true, name: true, bookingZapnuto: true, active: true },
     });
-    if (!studio || !studio.active) return { ok: false, chyba: 'Studio nenalezeno.' };
+    if (!studio || !studio.active) return { ok: false, klic: 'chybaApi.studioNenalezeno' };
     if (!studio.bookingZapnuto) {
-      return { ok: false, chyba: 'U tohohle studia nejsou rezervace zapnuté.' };
+      return { ok: false, klic: 'chybaApi.rezervaceNejsouZapnute' };
     }
 
     let user = await prisma.user.findUnique({ where: { email: adresa } });
@@ -48,7 +53,7 @@ export async function pozviKlientaStudia(
     if (user && user.role !== 'BOOKING') {
       return {
         ok: false,
-        chyba: 'Na tenhle e-mail už je v portálu účet s jinou rolí.',
+        klic: 'chybaApi.emailMaUcetSJinouRoli',
         userId: user.id,
       };
     }
@@ -114,7 +119,7 @@ export async function pozviKlientaStudia(
     if (!vysledek.sent) {
       return {
         ok: false,
-        chyba: 'E-mail se nepodařilo odeslat. Odkaz můžete poslat ručně.',
+        klic: 'chybaApi.pozvankaNeodeslanaOdkazRucne',
         userId: user.id,
         odkaz,
       };
@@ -123,6 +128,6 @@ export async function pozviKlientaStudia(
     return { ok: true, userId: user.id, email: user.email };
   } catch (err) {
     console.error('Pozvanka klienta studia selhala:', err);
-    return { ok: false, chyba: 'Pozvánku se nepodařilo odeslat.' };
+    return { ok: false, klic: 'chybaApi.pozvankaNeodeslana' };
   }
 }

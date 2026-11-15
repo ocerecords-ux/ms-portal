@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { kdoJe } from '@/lib/kdoJe';
 import { smiSpravovatBooking } from '@/lib/bookingServer';
 import { pozviKlientaStudia } from '@/lib/pozvankaBooking';
+import { odpovedChyby } from '@/lib/chybyApi';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * SPRÁVA REZERVACÍ STUDIA (zadání 25. 9. 2026: „k té editaci by měl mít
@@ -29,16 +31,16 @@ const pozvanka = z.object({
   jmeno: z.string().trim().max(200).optional(),
 });
 
-const NELZE = NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+const NELZE = () => odpovedChyby('chybaApi.bezOpravneni', 403);
 
 export async function PATCH(req: NextRequest) {
   const ja = await kdoJe(req);
-  if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+  if (!ja) return odpovedChyby('chybaApi.neprihlaseno', 401);
 
   const parsed = nastaveni.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
   const d = parsed.data;
-  if (!(await smiSpravovatBooking(ja, d.studioId))) return NELZE;
+  if (!(await smiSpravovatBooking(ja, d.studioId))) return NELZE();
 
   await prisma.studio.update({
     where: { id: d.studioId },
@@ -53,11 +55,11 @@ export async function PATCH(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const ja = await kdoJe(req);
-  if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+  if (!ja) return odpovedChyby('chybaApi.neprihlaseno', 401);
 
   const parsed = pozvanka.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Zadejte e-mail.' }, { status: 400 });
-  if (!(await smiSpravovatBooking(ja, parsed.data.studioId))) return NELZE;
+  if (!parsed.success) return odpovedChyby('chybaApi.zadejteEmail', 400);
+  if (!(await smiSpravovatBooking(ja, parsed.data.studioId))) return NELZE();
 
   const vysledek = await pozviKlientaStudia(
     parsed.data.email,
@@ -65,8 +67,15 @@ export async function POST(req: NextRequest) {
     parsed.data.jmeno,
   );
   if (!vysledek.ok) {
+    // Vedle klice jde dal `userId` a `odkaz`, takze se odpoved sklada tady
+    // a ne pres `odpovedChyby` - veta je ale z tehoz slovniku.
     return NextResponse.json(
-      { error: vysledek.chyba, userId: vysledek.userId, odkaz: vysledek.odkaz },
+      {
+        error: prelozit('cs', vysledek.klic),
+        klic: vysledek.klic,
+        userId: vysledek.userId,
+        odkaz: vysledek.odkaz,
+      },
       { status: 400 },
     );
   }
@@ -79,19 +88,19 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   const ja = await kdoJe(req);
-  if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+  if (!ja) return odpovedChyby('chybaApi.neprihlaseno', 401);
 
   const userId = req.nextUrl.searchParams.get('userId');
-  if (!userId) return NextResponse.json({ error: 'Chybí uživatel.' }, { status: 400 });
+  if (!userId) return odpovedChyby('chybaApi.chybiUzivatel', 400);
 
   const ucet = await prisma.user.findUnique({
     where: { id: userId },
     select: { role: true, bookingStudioId: true },
   });
   if (!ucet || ucet.role !== 'BOOKING') {
-    return NextResponse.json({ error: 'Tohle není klient studia.' }, { status: 400 });
+    return odpovedChyby('chybaApi.neniKlientStudia', 400);
   }
-  if (!ucet.bookingStudioId || !(await smiSpravovatBooking(ja, ucet.bookingStudioId))) return NELZE;
+  if (!ucet.bookingStudioId || !(await smiSpravovatBooking(ja, ucet.bookingStudioId))) return NELZE();
 
   await prisma.user.update({
     where: { id: userId },

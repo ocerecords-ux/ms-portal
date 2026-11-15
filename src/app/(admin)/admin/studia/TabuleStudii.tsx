@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDatumCas, prelozitKolem } from '@/lib/jazyk';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type StudioTabule = {
@@ -61,7 +62,7 @@ export function TabuleStudii({
     const telo = res ? await res.json().catch(() => ({})) : {};
     setPracuji(null);
     if (!res?.ok) {
-      setChybaUctu(telo.error || t('studia.ucetSelhal'));
+      setChybaUctu(hlaskaChyby(telo, t, t('studia.ucetSelhal')));
       return;
     }
     setUdaje({ studioId, login: telo.login, heslo: telo.heslo });

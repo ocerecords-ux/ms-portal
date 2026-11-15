@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { minutesToTime } from '@/lib/calendar';
 import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
@@ -75,7 +76,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('studia.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('studia.ulozeniSelhalo')));
         return null;
       }
       router.refresh();
