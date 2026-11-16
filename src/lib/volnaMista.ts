@@ -26,9 +26,13 @@ import { svatkyVRoce, zemePodlePasma } from '@/lib/svatky';
  * - NE VE STÁTNÍ SVÁTEK (připomínka Heleny 22. 10. 2026: „nabídka termínů
  *   hercům nereflektuje Vánoce"). Svátky se berou podle země studia - česká
  *   pro Brno a Prahu, britská pro Londýn (viz lib/svatky.ts), takže
- *   24.–26. 12., 1. 1. ani Velký pátek se hercům vůbec nenabídnou. Dny mezi
- *   svátky (27.–31. 12.) svátky nejsou a nabízejí se dál - ty se z nabídky
- *   vyhazují ručně křížkem,
+ *   24.–26. 12., 1. 1. ani Velký pátek se hercům vůbec nenabídnou,
+ * - NE MEZI VÁNOCI A NOVÝM ROKEM (znovu Helena, 16. 11. 2026: „nereflektuje
+ *   Vánoce a nemohu je tam ani manuálně odebrat"). Dny 27.–31. 12. svátky
+ *   nejsou, ale česká studia jsou zavřená, takže se od teď nenabízejí taky -
+ *   dohromady se vynechá celý blok 24. 12. až 1. 1. Londýn to NEMÁ: v Británii
+ *   se mezi svátky běžně pracuje a náhradní volna za svátek padlý na víkend
+ *   už řeší lib/svatky.ts,
  * - v pracovní době studia, ale JEN VE VŠEDNÍ DEN (zadání 30. 9. 2026:
  *   „zkusme v plánovacím kalendáři vyhodit víkendy"). Do té doby se sobota
  *   a neděle nabízely s příznakem „po domluvě" (upřesnění 19. 9. 2026) -
@@ -58,6 +62,19 @@ export type VolneMisto = { studioId: string; start: Date; end: Date; poDomluve: 
  */
 export const POZNAMKA_VIKEND = 'Víkend – po domluvě';
 export const POZNAMKA_NAVRH_HERCE = 'Návrh herce';
+
+/**
+ * VÁNOČNÍ PAUZA (16. 11. 2026). Dny mezi Štědrým dnem a Novým rokem, které
+ * samy o sobě svátky nejsou - 27. až 31. 12. Dohromady se svátky z toho je
+ * souvislý blok 24. 12. až 1. 1., kdy česká studia stojí.
+ *
+ * Je to tu natvrdo, a ne nastavením u studia: zavřeno mezi svátky mají
+ * všechna naše česká studia stejně a každý rok. Kdyby se to mělo lišit,
+ * patří to na kartu studia, ne sem.
+ */
+export function jeVanocniPauza(mesic: number, den: number): boolean {
+  return mesic === 12 && den >= 27 && den <= 31;
+}
 
 /** Dny „YYYY-MM-DD" od `od` do `doo` včetně. Pojistka proti nekonečnu: rok. */
 export function dnyObdobi(od: string, doo: string): string[] {
@@ -128,6 +145,8 @@ export function spocitejVolnaMista(vstup: {
       if (jeVikend(denVTydnu)) continue;
       // Statni svatek se nenabizi - viz komentar nahore.
       if (svatky.has(den)) continue;
+      // Mezi Vanoci a Novym rokem se u nas netoci (16. 11. 2026).
+      if (zeme === 'CZ' && jeVanocniPauza(m, d)) continue;
       const pravidlo = studio.hours.find((h) => h.weekday === denVTydnu);
       // Zavreno - nic.
       if (!pravidlo) continue;

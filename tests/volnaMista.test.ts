@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DNU_NA_PRIPRAVU,
+  jeVanocniPauza,
   jeVikend,
   posledniDenFrekvence,
   prvniDenFrekvence,
@@ -92,6 +93,31 @@ describe('spocitejVolnaMista', () => {
     const mista = spocitejVolnaMista({ ...zaklad, studia: [{ ...brno, presets: [] }], doo: '2026-09-21' });
     // 8-12, 12-16 (16-20 uz se do 18:00 nevejde)
     expect(mista).toHaveLength(2);
+  });
+});
+
+describe('Vánoce', () => {
+  /**
+   * Připomínka Heleny (16. 11. 2026): „Nabídka termínů hercům nereflektuje
+   * Vánoce a nemohu je tam ani manuálně odebrat." Svátky 24.-26. 12. a 1. 1.
+   * vynechával výpočet už dřív; dny mezi nimi se nabízely dál.
+   */
+  it('mezi Vánoci a Novým rokem se v Česku nenabízí nic', () => {
+    const mista = spocitejVolnaMista({
+      ...zaklad,
+      od: '2026-12-21',
+      doo: '2027-01-04',
+      nejdrive: new Date('2026-12-20T00:00:00Z'),
+    });
+    const dny = Array.from(new Set(mista.map((m) => m.start.toISOString().slice(0, 10))));
+    expect(dny).toEqual(['2026-12-21', '2026-12-22', '2026-12-23', '2027-01-04']);
+  });
+
+  it('pozná dny vánoční pauzy', () => {
+    expect(jeVanocniPauza(12, 27)).toBe(true);
+    expect(jeVanocniPauza(12, 31)).toBe(true);
+    expect(jeVanocniPauza(12, 26)).toBe(false);
+    expect(jeVanocniPauza(1, 28)).toBe(false);
   });
 });
 
