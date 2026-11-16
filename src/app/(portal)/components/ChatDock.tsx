@@ -1854,6 +1854,24 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
  * „když to otevřu, otevřít poslední konverzaci"). Je to jen zvyk konkrétního
  * prohlížeče, ne nastavení účtu — proto localStorage a ne databáze.
  */
+/**
+ * VÝPIS ZPRÁV SE PRSTEM NEOZNAČUJE (připomínka Petra Dratvy 16. 11. 2026:
+ * „pri reagovaní na správu emotikonom keď kliknem na danú správu, tak mi vždy
+ * označí celú obrazovku a nad ikonami emotikonov sa ukáže kopírovať / vložiť /
+ * vystrihnúť… a na ikony sa ťažko trafiť").
+ *
+ * Samotná bublina měla výběr vypnutý už od 23. 9. 2026, jenže Android při
+ * podržení prstu sáhne po nejbližším předkovi, který se vybrat DÁ - a označí
+ * půl obrazovky i s okolními zprávami. Systémová lišta Kopírovat/Vložit pak
+ * stojí přesně nad naší nabídkou smajlíků.
+ *
+ * Proto je výběr vypnutý na celém výpisu. Myši se to netýká (`pointer: fine`):
+ * tam se text táhne jako kdekoli jinde. Na dotyku se kopíruje z nabídky, která
+ * se podržením otevře - má v sobě *Kopírovat* i *Vybrat text*.
+ */
+const VYPIS_BEZ_VYBERU =
+  'select-none [-webkit-user-select:none] [-webkit-touch-callout:none] [@media(pointer:fine)]:select-text [@media(pointer:fine)]:[-webkit-user-select:text]';
+
 const KLIC_POSLEDNI_KONVERZACE = 'msportal_chat_posledni';
 
 /**
@@ -2289,6 +2307,21 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       const data: any = await res.json().catch(() => ({}));
       const zpravy: ChatMessage[] = Array.isArray(data?.zpravy) ? data.zpravy : [];
       cacheZprav.current.set(conversationId, zpravy);
+      /**
+       * ODZNAK ZHASNE HNED (připomínka Petra Dratvy 16. 11. 2026: „při
+       * přečítání zprávy nezmizne odznak, že mám nepřečtené správy; vždy to
+       * zmizne až když kliknem inde a vrátím sa do chatu").
+       *
+       * Tenhle dotaz na serveru posouvá `lastReadAt` - přečteno tedy JE,
+       * jenže počet nepřečtených visí na seznamu rozhovorů a ten se tahá
+       * zvlášť, jednou za dvanáct vteřin. Do té doby odznak svítil dál, i když
+       * měl člověk zprávu před očima. Srovnáme si ho u sebe rovnou.
+       */
+      setConversations((soucasne) =>
+        soucasne.some((c) => c.id === conversationId && c.unread > 0)
+          ? soucasne.map((c) => (c.id === conversationId ? { ...c, unread: 0 } : c))
+          : soucasne,
+      );
       // Pomala odpoved na konverzaci, ze ktere uz clovek odesel, se zahodi -
       // jinak by prepsala vypis te otevrene.
       if (otevrenaRef.current === conversationId) {
@@ -2630,12 +2663,20 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * public/sw.js. Konverzace se otevře, až když je seznam načtený; do té doby
    * čeká v `zadanaKonverzace`.
    */
-  const [zadanaKonverzace, setZadanaKonverzace] = useState<string | null>(null);
+  const [zadanaKonverzace, setZadanaKonverzace] = useState<{
+    konverzace: string;
+    /** Odpověď ve vlákně otevře rovnou to vlákno (16. 11. 2026). */
+    vlakno: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
     function prijmi(e: MessageEvent) {
-      const data = e.data as { typ?: string; konverzace?: string | null } | null;
+      const data = e.data as {
+        typ?: string;
+        konverzace?: string | null;
+        vlakno?: string | null;
+      } | null;
       if (!data) return;
 
       /*
@@ -2655,7 +2696,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       }
 
       if (data.typ !== 'otevri-konverzaci' || typeof data.konverzace !== 'string') return;
-      setZadanaKonverzace(data.konverzace);
+      setZadanaKonverzace({
+        konverzace: data.konverzace,
+        vlakno: typeof data.vlakno === 'string' && data.vlakno ? data.vlakno : null,
+      });
       otevriDok('chat');
     }
     navigator.serviceWorker.addEventListener('message', prijmi);
@@ -2664,14 +2708,19 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
   useEffect(() => {
     if (!zadanaKonverzace) return;
-    const c = conversations.find((x) => x.id === zadanaKonverzace);
+    const c = conversations.find((x) => x.id === zadanaKonverzace.konverzace);
     // Seznam se teprve nacita - pockame si na nej, zadani nikam neutece.
     if (!c) return;
-    setTab(c.kind);
+    /**
+     * Jde přes `otevriZpravu`, ne přes setOpenId: vlákno se smí nasadit až
+     * potom, co se přepne rozhovor - přepnutí rozhovoru vlákno samo zavírá
+     * (viz `cekajiciVlakno` výš). Bez toho se otevřel jen rozhovor a odpověď
+     * ve vlákně zůstala schovaná pod rodičovskou zprávou.
+     */
     setVlaknoId(null);
-    setOpenId(c.id);
+    otevriZpravu(c.id, zadanaKonverzace.vlakno);
     setZadanaKonverzace(null);
-  }, [zadanaKonverzace, conversations]);
+  }, [zadanaKonverzace, conversations, otevriZpravu]);
 
   // Poslední otevřená konverzace si pamatuje sama sebe...
   useEffect(() => {
@@ -4414,7 +4463,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   <div
                     ref={nastavVypis}
                     onScroll={hlidejOdrolovani}
-                    className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft"
+                    className={`flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft ${VYPIS_BEZ_VYBERU}`}
                   >
                     {messages.length === 0 && (
                       <p className="text-sm font-body text-muted m-0">
@@ -4624,7 +4673,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
                     <div
                       ref={vlaknoPanelRef}
-                      className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 bg-surfaceSoft"
+                      className={`flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 bg-surfaceSoft ${VYPIS_BEZ_VYBERU}`}
                     >
                       {vlakno.map((m, index) => (
                         <div key={m.id} className={`flex items-start gap-2 ${index === 0 ? '' : 'pl-3'}`}>

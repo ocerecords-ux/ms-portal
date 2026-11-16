@@ -24,11 +24,30 @@ self.addEventListener('fetch', () => {
    Upozornění na nové zprávy
 -------------------------------------------------------------------------- */
 
+/** Z odkazu v upozorneni vytahne hodnotu jednoho parametru. */
+function parametrZOdkazu(odkaz, nazev) {
+  const hledam = nazev + '=';
+  const kde = String(odkaz || '').indexOf(hledam);
+  if (kde < 0) return null;
+  return decodeURIComponent(String(odkaz).slice(kde + hledam.length).split('&')[0]) || null;
+}
+
 /** Z odkazu v upozorneni vytahne, ktere konverzace se tyka. */
 function konverzaceZOdkazu(odkaz) {
-  const kde = String(odkaz || '').indexOf('konverzace=');
-  if (kde < 0) return null;
-  return decodeURIComponent(String(odkaz).slice(kde + 'konverzace='.length).split('&')[0]) || null;
+  return parametrZOdkazu(odkaz, 'konverzace');
+}
+
+/**
+ * A KTEREHO VLAKNA (oprava 16. 11. 2026, pripominka Petra Dratvy: „nikdy mi
+ * neotvori spravu na ktoru niekto reaguje vo vlakne").
+ *
+ * Server u odpovedi ve vlakne posila odkaz `/chat?konverzace=<id>&vlakno=<id>`
+ * uz od 6. 10. 2026, jenze service worker cetl jen konverzaci - a otevrenemu
+ * chatu tak rekl „ukaz rozhovor", nikoli „ukaz to vlakno". Odpoved pritom ve
+ * vypisu neni videt, je schovana pod rodicovskou zpravou.
+ */
+function vlaknoZOdkazu(odkaz) {
+  return parametrZOdkazu(odkaz, 'vlakno');
 }
 
 self.addEventListener('push', (event) => {
@@ -100,7 +119,7 @@ self.addEventListener('notificationclick', (event) => {
       // Chat uz je otevreny: staci mu rict, kterou konverzaci ukazat. Stranka
       // se nenacita znovu, takze rozepsana zprava zustane rozepsana.
       if (konverzace && okno.url.includes('/chat') && 'postMessage' in okno) {
-        okno.postMessage({ typ: 'otevri-konverzaci', konverzace });
+        okno.postMessage({ typ: 'otevri-konverzaci', konverzace, vlakno: vlaknoZOdkazu(odkaz) });
         return undefined;
       }
 
