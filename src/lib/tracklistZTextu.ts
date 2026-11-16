@@ -138,16 +138,19 @@ export function cisloKapitoly(slovo: string): number | null {
   return prvni;
 }
 
-/** „PROLOG" → „Prolog" - do názvu kapitoly, ne do názvu souboru. */
 /**
- * NÁZEV STOPY: pořadí, podtržítko a zbytek VELKÝMI PÍSMENY BEZ DIAKRITIKY
- * (zadání 16. 11. 2026: „u Audiotéky je to bez diakritiky a velkými
- * písmeny: 01_KAPITOLA 1 - NÁZEV KAPITOLY"). Mezery v názvu zůstávají.
+ * NÁZEV STOPY PODLE ODEVZDANÉ KNIHY (vzorek z 16. 11. 2026:
+ * `01 NEJVETSI PODVODNIK PRVNI REPUBLIKY, Cast 1.mp3`).
+ *
+ * Pořadí, MEZERA a zbytek VELKÝMI PÍSMENY BEZ DIAKRITIKY. Podtržítko za
+ * číslem je náš tvar (`01_NAZEV-KNIHY` u ručního založení), Audiotéka
+ * odevzdává s mezerou - přečíslování v lib/tracklist.ts zvládá obojí.
  */
-function velkyNazev(poradi: string, zbytek: string): string {
-  return `${poradi}_${nazevTrackuSMezerami(zbytek).toUpperCase()}`;
+function velkyNazev(poradi: string, zbytek: string, dil = ''): string {
+  return `${poradi} ${nazevTrackuSMezerami(zbytek).toUpperCase()}${dil}`;
 }
 
+/** „PROLOG" → „Prolog" - do názvu kapitoly, ne do názvu souboru. */
 function velkeNaMale(text: string): string {
   const cely = text.trim();
   return cely.slice(0, 1).toUpperCase() + cely.slice(1).toLowerCase();
@@ -329,13 +332,18 @@ export function navrhniTracky(stranky: string[], moznosti: MoznostiNavrhu = {}):
 
   return rozepsane.map((r, i) => {
     const poradi = cisloTracku(i + 1);
-    const dil = r.cast ? ` - ČÁST ${r.cast}` : '';
-    const dilSlovy = r.cast ? `, část ${r.cast}` : '';
+    /**
+     * DÍL SE PŘIPISUJE ČÁRKOU (vzorek: `…PRVNI REPUBLIKY, Cast 1`). „Cast"
+     * je velkým jen na začátku, i když zbytek názvu je verzálkami - tak to
+     * Audiotéka odevzdává, proto se nepřepisuje spolu s ním.
+     */
+    const dil = r.cast ? `, Cast ${r.cast}` : '';
+    const dilSlovy = r.cast ? `, Část ${r.cast}` : '';
 
     if (r.znacka.typ === 'mimo') {
       const nazev = r.znacka.titul ? ` - ${r.znacka.titul}` : '';
       return {
-        nazevTracku: velkyNazev(poradi, `${r.znacka.nadpis}${nazev}${dil}`),
+        nazevTracku: velkyNazev(poradi, `${r.znacka.nadpis}${nazev}`, dil),
         nazevKapitoly: [
           velkeNaMale(r.znacka.nadpis),
           r.znacka.titul ? ` - ${velkeNaMale(r.znacka.titul)}` : '',
@@ -347,7 +355,7 @@ export function navrhniTracky(stranky: string[], moznosti: MoznostiNavrhu = {}):
     const rok = r.znacka.cast ? `${r.znacka.cast} - ` : '';
     const titul = r.znacka.titul ? ` - ${r.znacka.titul}` : '';
     return {
-      nazevTracku: velkyNazev(poradi, `${rok}KAPITOLA ${r.znacka.cislo}${titul}${dil}`),
+      nazevTracku: velkyNazev(poradi, `${rok}KAPITOLA ${r.znacka.cislo}${titul}`, dil),
       nazevKapitoly: [
         r.znacka.cast ? `${r.znacka.cast}, ` : '',
         `Kapitola ${r.znacka.cislo}`,

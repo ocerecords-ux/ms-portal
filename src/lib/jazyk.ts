@@ -8341,8 +8341,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'tracklist.nejdelsiStopa': { cs: 'Nejdelší stopa (NS)', en: 'Longest track (pages)' },
   'tracklist.nejdelsiStopaPopis': {
-    cs: 'Kapitola delší než tolik normostran se rozdělí na víc stop - KAPITOLA 3 - ČÁST 1, ČÁST 2. Nula = nedělit.',
-    en: 'A chapter longer than this many standard pages is split into several tracks - KAPITOLA 3 - ČÁST 1, ČÁST 2. Zero = do not split.',
+    cs: 'Kapitola delší než tolik normostran se rozdělí na víc stop - KAPITOLA 3 - STREDA, Cast 1 a Cast 2. Nula = nedělit.',
+    en: 'A chapter longer than this many standard pages is split into several tracks - KAPITOLA 3 - STREDA, Cast 1 and Cast 2. Zero = do not split.',
   },
   'tracklist.vygenerovano': {
     cs: 'Z textu vyšlo {pocet} tracků - projdi je a ulož.',
