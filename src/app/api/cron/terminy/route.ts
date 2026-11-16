@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { smiSpustitUlohu } from '@/lib/cronGuard';
 import { posliUpozorneniNaTerminy } from '@/lib/terminyServer';
 import { dotocenoUReklam } from '@/lib/reklamaDotocenoServer';
+import { pripomenNepotvrzeneVybery } from '@/lib/nabidkyNaPotvrzeni';
 
 /**
  * Denní hlídání blížících se termínů dokončení (zadání 18. 9. 2026). Pouští to
@@ -29,7 +30,16 @@ async function spust(req: NextRequest) {
       console.error('Dotoceno u reklam selhalo:', err);
       return { oznaceno: 0, zvazeno: 0 };
     });
-    return NextResponse.json({ ok: true, ...vysledek, reklamy });
+    /**
+     * VÝBĚRY HERCŮ, KTERÉ DNES PROPADNOU (16. 11. 2026) - připomínka tomu,
+     * kdo nabídku založil, den před koncem držení. Viz
+     * lib/nabidkyNaPotvrzeni.ts; vlastní catch ze stejného důvodu jako výš.
+     */
+    const vybery = await pripomenNepotvrzeneVybery().catch((err) => {
+      console.error('Pripominka nepotvrzenych vyberu selhala:', err);
+      return { pripomenuto: 0 };
+    });
+    return NextResponse.json({ ok: true, ...vysledek, reklamy, vybery });
   } catch (err) {
     console.error('Cron terminy selhal:', err);
     return NextResponse.json({ error: 'Hlídání termínů se nepodařilo.' }, { status: 500 });

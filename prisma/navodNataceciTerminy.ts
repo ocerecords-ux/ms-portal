@@ -80,6 +80,8 @@ Oznámení vede na stránku nabídky. Nahoře vidíte, kolik frekvencí je potř
 
 Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a herec může vybírat znovu.
 
+**Aby to nepropadlo potichu** (16. 11. 2026): dokud výběr čeká na potvrzení, svítí **červený pruh nahoře v Kalendáři** — projekt, herec, kolik termínů vybral a do kdy se drží. Den před koncem držení přijde tomu, kdo nabídku založil, ještě připomínka pod zvoneček. A když to přesto propadne, pruh svítí dál, dokud nabídku nepošlete znovu nebo herec nevybere. Zavřít se nedá; zmizí sám. Vidí ho jen ten, kdo do kalendáře zapisuje.
+
 # 5. Kalendář
 
 **Štítky kalendářů** nad mřížkou (Brno I, Brno II, Praha, London, Mimo studio) mají dvě poloviny:

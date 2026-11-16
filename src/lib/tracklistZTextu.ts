@@ -35,6 +35,17 @@ import { bezDiakritiky, cisloTracku, nazevTrackuSMezerami } from '@/lib/tracklis
  * v nějaké knize spletl vždycky - na nadpisu, na obsahu na začátku - a
  * oprava před uložením je celý vtip.
  *
+ * DLOUHÁ KAPITOLA SE ROZDĚLÍ NA ČÁSTI (zadání 16. 11. 2026: „samozřejmě
+ * bude třeba i rozdělovat na části"). Kapitola delší než zadaný limit se
+ * rozpadne na tolik stop, aby se do limitu vešly, a ke jménu se připíše
+ * „- ČÁST 1.", „- ČÁST 2.". Dělí se na stejné díly - kde přesně se střihne,
+ * stejně rozhoduje zvukař u pultu; tracklist jen říká, kolik stop té
+ * kapitoly bude a jak se budou jmenovat.
+ *
+ * Měří se v normostranách (1 NS = 1800 znaků) z délky textu mezi dvěma
+ * nadpisy, protože v normostranách se v portálu počítá všechno ostatní.
+ * Limit 0 = nedělit.
+ *
  * Soubor je BEZ PRISMY A BEZ pdf.js: text stránek sem chodí hotový
  * z prohlížeče (viz projekty/[id]/Tracklist.tsx), takže se tohle dá přečíst
  * i bez PDF v ruce.
@@ -83,6 +94,20 @@ const VELKA = 'A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ';
  */
 const KAPITOLA = new RegExp(`KAPITOLA\\s+(\\d{1,3}|[${VELKA}]{3,}(?:\\s+[${VELKA}]{3,})?)`, 'g');
 
+/**
+ * OPAČNÉ POŘADÍ - „1. KAPITOLA", „PRVNÍ KAPITOLA". Takhle je sázená třeba
+ * předloha Kluků jako my; bez tohohle vzoru by generátor v celé knize
+ * nenašel ani jednu kapitolu.
+ *
+ * ČÍSLICE TU MUSÍ MÍT TEČKU („1. KAPITOLA"). Bez ní by se vzor chytil na
+ * číslo stránky, které v PDF často stojí těsně před nadpisem - a z „106
+ * KAPITOLA PRVNÍ" by byla kapitola 106.
+ */
+const KAPITOLA_PRED = new RegExp(
+  `(\\d{1,3}\\.|[${VELKA}]{3,}(?:\\s+[${VELKA}]{3,})?)\\s+KAPITOLA`,
+  'g',
+);
+
 /** Části knihy, které kapitola nejsou a track mají (prolog, epilog…). */
 const MIMO_KAPITOLY = /\b(PROLOG|EPILOG|PŘEDMLUVA|PREDMLUVA|DOSLOV|PROLOGUE|EPILOGUE)\b/g;
 
@@ -114,14 +139,93 @@ export function cisloKapitoly(slovo: string): number | null {
 }
 
 /** „PROLOG" → „Prolog" - do názvu kapitoly, ne do názvu souboru. */
+/**
+ * NÁZEV STOPY: pořadí, podtržítko a zbytek VELKÝMI PÍSMENY BEZ DIAKRITIKY
+ * (zadání 16. 11. 2026: „u Audiotéky je to bez diakritiky a velkými
+ * písmeny: 01_KAPITOLA 1 - NÁZEV KAPITOLY"). Mezery v názvu zůstávají.
+ */
+function velkyNazev(poradi: string, zbytek: string): string {
+  return `${poradi}_${nazevTrackuSMezerami(zbytek).toUpperCase()}`;
+}
+
 function velkeNaMale(text: string): string {
   const cely = text.trim();
   return cely.slice(0, 1).toUpperCase() + cely.slice(1).toLowerCase();
 }
 
+/** Jedna normostrana. Stejné měřítko jako jinde v portálu. */
+const ZNAKU_NA_NORMOSTRANU = 1800;
+
+/** Když se limit nezadá: kapitola nad patnáct normostran se dělí. */
+export const VYCHOZI_LIMIT_NORMOSTRAN = 15;
+
+export type MoznostiNavrhu = {
+  /**
+   * Nejdelší stopa v normostranách. 0 (nebo záporné) = nedělit, každá
+   * kapitola zůstane jednou stopou, ať je jakkoli dlouhá.
+   */
+  maxNormostran?: number;
+};
+
 type Znacka =
-  | { typ: 'mimo'; nadpis: string }
-  | { typ: 'kapitola'; cislo: number; cast: string | null };
+  | { typ: 'mimo'; nadpis: string; titul: string | null; poz: number }
+  | { typ: 'kapitola'; cislo: number; cast: string | null; titul: string | null; poz: number };
+
+/**
+ * NÁZEV KAPITOLY ZA NADPISEM (zadání 16. 11. 2026: „u Audiotéky je to bez
+ * diakritiky a velkými písmeny: 01_KAPITOLA 1 - NÁZEV KAPITOLY").
+ *
+ * Kapitola mívá pod číslem ještě vlastní název - u Kluků jako my je to den
+ * v týdnu („1. KAPITOLA / PONDĚLÍ"). Sází se verzálkami, takže se bere jen
+ * to, co hned za nadpisem pokračuje VELKÝMI PÍSMENY; první slovo psané
+ * normálně je už text kapitoly a tam se čtení zastaví.
+ *
+ * KDO ČTE SE NEBERE (upřesnění z téhož dne: „kdo co čte do tracklistu
+ * nepatří") - řádek „ČTE HYNEK" je verzálkami taky, a kdyby stál za
+ * nadpisem, spletl by se s názvem.
+ */
+const TITUL = new RegExp(`^\\s*((?:[${VELKA}]{2,}\\s+){0,3}[${VELKA}]{2,})(?![${VELKA}])`);
+
+function titulKapitoly(text: string, od: number): string | null {
+  const shoda = TITUL.exec(text.slice(od, od + 80));
+  const nalezeny = shoda?.[1]?.trim();
+  if (!nalezeny) return null;
+  if (/^(ČTE|CTE|KAPITOLA)\b/u.test(nalezeny)) return null;
+  return nalezeny;
+}
+
+/** Na kolik stop se nadpis dlouhý `znaku` rozpadne. */
+function pocetCasti(znaku: number, maxNormostran: number): number {
+  if (maxNormostran <= 0) return 1;
+  const limit = maxNormostran * ZNAKU_NA_NORMOSTRANU;
+  if (!Number.isFinite(znaku) || znaku <= limit) return 1;
+  return Math.ceil(znaku / limit);
+}
+
+type Nalez = { poz: number; konec: number; nadpis: string | null; cislo: number | null };
+
+/**
+ * TÝŽ NADPIS NAJDOU OBA VZORY. „1. KAPITOLA PONDĚLÍ" sedí na KAPITOLA_PRED
+ * (číslo před slovem) a zároveň na KAPITOLA, která si za slovem přečte
+ * „PONDĚLÍ" - a z názvu kapitoly by se tak stala další kapitola navíc.
+ *
+ * Z překrývajících se nálezů proto zůstane JEN JEDEN: ten, u kterého se dá
+ * číslo opravdu přečíst. Když se to nepovede ani u jednoho, zůstane první -
+ * číslo se pak dopočítá z pořadí, jak to bylo i dřív.
+ */
+function bezPrekryvu(nalezy: Nalez[]): Nalez[] {
+  const jiste = (n: Nalez) => n.nadpis !== null || n.cislo !== null;
+  const vybrane: Nalez[] = [];
+  for (const nalez of nalezy) {
+    const predchozi = vybrane[vybrane.length - 1];
+    if (predchozi && nalez.poz < predchozi.konec) {
+      if (!jiste(predchozi) && jiste(nalez)) vybrane[vybrane.length - 1] = nalez;
+      continue;
+    }
+    vybrane.push(nalez);
+  }
+  return vybrane;
+}
 
 /**
  * NÁVRH TRACKŮ Z TEXTU STRÁNEK. Na vstupu je text knihy po stránkách
@@ -132,26 +236,46 @@ type Znacka =
  * nadpisy podruhé; druhý výskyt téže kapitoly v téže části se proto zahodí.
  * Když nadpis kapitole chybí nebo je napsaný tak, že se číslo nedá přečíst,
  * pokračuje se od posledního čísla - lepší než vynechaná stopa.
+ *
+ * KDO CO ČTE SE NEBERE (upřesnění 16. 11. 2026: „kdo co čte do tracklistu
+ * nepatří"). Předlohy pro dva herce mají nad nadpisy řádky „ČTE HYNEK",
+ * „ČTE JOSEF"; generátor si jich nevšímá a tracky číslu je průběžně celou
+ * knihou, bez ohledu na to, kdo kterou kapitolu čte.
  */
-export function navrhniTracky(stranky: string[]): NavrhTracku[] {
+export function navrhniTracky(stranky: string[], moznosti: MoznostiNavrhu = {}): NavrhTracku[] {
+  const maxNormostran = moznosti.maxNormostran ?? VYCHOZI_LIMIT_NORMOSTRAN;
   const znacky: Znacka[] = [];
   const videne = new Set<string>();
   let cast: string | null = null;
   let posledni = 0;
+  /** Kolik znaků knihy už je za námi - kvůli délce kapitoly. */
+  let zacatek = 0;
 
   for (const strana of stranky) {
     const text = (strana || '').replace(/\s+/g, ' ');
-    if (!text.trim()) continue;
+    if (!text.trim()) {
+      zacatek += 1;
+      continue;
+    }
 
     const roky = Array.from(text.matchAll(ROK)).map((m) => ({ poz: m.index ?? 0, rok: m[1] }));
-    const nalezy: { poz: number; slovo: string | null; nadpis: string | null }[] = [];
+    const vsechny: Nalez[] = [];
     for (const m of text.matchAll(MIMO_KAPITOLY)) {
-      nalezy.push({ poz: m.index ?? 0, slovo: null, nadpis: m[1] });
+      const poz = m.index ?? 0;
+      vsechny.push({ poz, konec: poz + m[0].length, nadpis: m[1] ?? null, cislo: null });
     }
     for (const m of text.matchAll(KAPITOLA)) {
-      nalezy.push({ poz: m.index ?? 0, slovo: m[1], nadpis: null });
+      const poz = m.index ?? 0;
+      vsechny.push({ poz, konec: poz + m[0].length, nadpis: null, cislo: cisloKapitoly(m[1] ?? '') });
     }
-    nalezy.sort((a, b) => a.poz - b.poz);
+    for (const m of text.matchAll(KAPITOLA_PRED)) {
+      const poz = m.index ?? 0;
+      // Tečka za číslicí je jen oddělovač, do čísla kapitoly nepatří.
+      const slovo = (m[1] ?? '').replace(/\.$/, '');
+      vsechny.push({ poz, konec: poz + m[0].length, nadpis: null, cislo: cisloKapitoly(slovo) });
+    }
+    vsechny.sort((a, b) => a.poz - b.poz);
+    const nalezy = bezPrekryvu(vsechny);
 
     for (const nalez of nalezy) {
       // Rok těsně před nadpisem = nová část knihy. Platí pak i pro další
@@ -163,36 +287,73 @@ export function navrhniTracky(stranky: string[]): NavrhTracku[] {
         posledni = 0;
       }
 
+      const poz = zacatek + nalez.poz;
+
       if (nalez.nadpis) {
         const klic = `mimo|${bezDiakritiky(nalez.nadpis).toUpperCase()}`;
         if (videne.has(klic)) continue;
         videne.add(klic);
-        znacky.push({ typ: 'mimo', nadpis: nalez.nadpis });
+        znacky.push({
+          typ: 'mimo',
+          nadpis: nalez.nadpis,
+          titul: titulKapitoly(text, nalez.konec),
+          poz,
+        });
         continue;
       }
 
-      const cislo = cisloKapitoly(nalez.slovo ?? '') ?? posledni + 1;
+      const cislo = nalez.cislo ?? posledni + 1;
       const klic = `kap|${cast ?? ''}|${cislo}`;
       if (videne.has(klic)) continue;
       videne.add(klic);
       posledni = cislo;
-      znacky.push({ typ: 'kapitola', cislo, cast });
+      znacky.push({ typ: 'kapitola', cislo, cast, titul: titulKapitoly(text, nalez.konec), poz });
     }
+
+    zacatek += text.length + 1;
   }
 
-  return znacky.map((z, i) => {
+  /**
+   * DÉLKA JEDNOHO NADPISU = text až k dalšímu nadpisu. Oba vzory kapitol
+   * můžou najít tentýž nadpis dvakrát; druhý výskyt už je zahozený výš,
+   * takže pozice jdou po sobě.
+   */
+  const rozepsane = znacky.flatMap((z, i) => {
+    const konec = i + 1 < znacky.length ? znacky[i + 1]!.poz : zacatek;
+    const casti = pocetCasti(konec - z.poz, maxNormostran);
+    return Array.from({ length: casti }, (_, k) => ({
+      znacka: z,
+      cast: casti > 1 ? k + 1 : null,
+    }));
+  });
+
+  return rozepsane.map((r, i) => {
     const poradi = cisloTracku(i + 1);
-    if (z.typ === 'mimo') {
+    const dil = r.cast ? ` - ČÁST ${r.cast}` : '';
+    const dilSlovy = r.cast ? `, část ${r.cast}` : '';
+
+    if (r.znacka.typ === 'mimo') {
+      const nazev = r.znacka.titul ? ` - ${r.znacka.titul}` : '';
       return {
-        nazevTracku: `${poradi}_${nazevTrackuSMezerami(z.nadpis)}`,
-        nazevKapitoly: velkeNaMale(z.nadpis),
+        nazevTracku: velkyNazev(poradi, `${r.znacka.nadpis}${nazev}${dil}`),
+        nazevKapitoly: [
+          velkeNaMale(r.znacka.nadpis),
+          r.znacka.titul ? ` - ${velkeNaMale(r.znacka.titul)}` : '',
+          dilSlovy,
+        ].join(''),
       };
     }
-    const cast = z.cast ? `${z.cast} - ` : '';
+
+    const rok = r.znacka.cast ? `${r.znacka.cast} - ` : '';
+    const titul = r.znacka.titul ? ` - ${r.znacka.titul}` : '';
     return {
-      // Tečka na konci je ze vzoru Audiotéky („…KAPITOLA 1.").
-      nazevTracku: `${poradi}_${nazevTrackuSMezerami(`${cast}KAPITOLA ${z.cislo}.`)}`,
-      nazevKapitoly: z.cast ? `${z.cast}, Kapitola ${z.cislo}.` : `Kapitola ${z.cislo}.`,
+      nazevTracku: velkyNazev(poradi, `${rok}KAPITOLA ${r.znacka.cislo}${titul}${dil}`),
+      nazevKapitoly: [
+        r.znacka.cast ? `${r.znacka.cast}, ` : '',
+        `Kapitola ${r.znacka.cislo}`,
+        r.znacka.titul ? ` - ${velkeNaMale(r.znacka.titul)}` : '',
+        dilSlovy,
+      ].join(''),
     };
   });
 }

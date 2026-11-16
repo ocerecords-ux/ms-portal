@@ -18,6 +18,8 @@ import {
   type CalendarView,
 } from '@/lib/calendar';
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
+import { NabidkyKPotvrzeni } from './NabidkyKPotvrzeni';
+import { nabidkyKPotvrzeni } from '@/lib/nabidkyNaPotvrzeni';
 import { KALENDAR_MIMO, KALENDAR_PORADY, KALENDAR_SCHUZKY } from '@/lib/vychoziKalendare';
 import { bezTitulu } from '@/lib/jmena';
 import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
@@ -606,7 +608,16 @@ export default async function KalendarPage({
     })),
   ];
 
+  /**
+   * VÝBĚRY HERCŮ, KTERÉ ČEKAJÍ NA NÁS (16. 11. 2026). Červený pruh nad
+   * kalendářem - viz lib/nabidkyNaPotvrzeni.ts. Jen pro ty, kdo do kalendáře
+   * zapisují; zvukař s tím nic nenadělá.
+   */
+  const cekajiciNabidky = muzeZapisovat ? await nabidkyKPotvrzeni() : [];
+
   return (
+    <div className="flex flex-col gap-4">
+      <NabidkyKPotvrzeni nabidky={cekajiciNabidky} jazyk={jazyk} />
     <CalendarBrowser
       studios={studios.map((s) => ({
         id: s.id,
@@ -644,5 +655,6 @@ export default async function KalendarPage({
       ja={{ id: session.user.id, label: session.user.name || session.user.email }}
       lidiTymu={lidiTymu.map((u) => ({ id: u.id, label: u.name || u.email }))}
     />
+    </div>
   );
 }

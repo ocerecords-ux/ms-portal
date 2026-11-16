@@ -12,7 +12,7 @@ import {
   type Track,
 } from '@/lib/tracklist';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
-import { navrhniTracky } from '@/lib/tracklistZTextu';
+import { navrhniTracky, VYCHOZI_LIMIT_NORMOSTRAN } from '@/lib/tracklistZTextu';
 
 /**
  * TRACKLIST AUDIOKNIHY (zadání 15. 10. 2026: „vytvoř v detailu každého
@@ -78,6 +78,12 @@ export function Tracklist({
   const [vlozeny, setVlozeny] = useState('');
   const [bezi, setBezi] = useState(false);
   const [ctuText, setCtuText] = useState(false);
+  /**
+   * NEJDELŠÍ STOPA (16. 11. 2026: „samozřejmě bude třeba i rozdělovat na
+   * části"). Kapitola delší než tolik normostran se rozpadne na víc stop.
+   * Prázdno nebo nula = nedělit.
+   */
+  const [maxNormostran, setMaxNormostran] = useState(String(VYCHOZI_LIMIT_NORMOSTRAN));
   /** Okno s Brunem pod tabulkou - drží se jen do odchodu ze stránky. */
   const [zpravyBruna, setZpravyBruna] = useState<{ odBruna: boolean; text: string }[]>([]);
   const [dotazBrunovi, setDotazBrunovi] = useState('');
@@ -184,7 +190,7 @@ export function Tracklist({
         stranky.push(polozky.map((polozka) => polozka.str ?? '').join(' '));
       }
 
-      const navrh = navrhniTracky(stranky);
+      const navrh = navrhniTracky(stranky, { maxNormostran: Number(maxNormostran) || 0 });
       if (navrh.length === 0) {
         setChyba(t('tracklist.nicNenalezeno'));
         return;
@@ -376,7 +382,21 @@ export function Tracklist({
           >
             {ctuText ? t('tracklist.generuji') : t('tracklist.generovat')}
           </button>
+          <label className="flex flex-col gap-1.5 w-[150px]">
+            <span className="text-xs font-heading font-semibold text-muted uppercase tracking-wide">
+              {t('tracklist.nejdelsiStopa')}
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={200}
+              value={maxNormostran}
+              onChange={(e) => setMaxNormostran(e.target.value)}
+              className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-body text-ink"
+            />
+          </label>
           <span className="basis-full text-xs font-body text-muted">{t('tracklist.generovatPopis')}</span>
+          <span className="basis-full text-xs font-body text-muted">{t('tracklist.nejdelsiStopaPopis')}</span>
         </div>
       )}
 

@@ -5857,6 +5857,26 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Vybráno {vybrano} z {potreba}',
     en: '{vybrano} of {potreba} chosen',
   },
+  'nabidkaTerminu.cekaNadpisJedna': {
+    cs: 'Výběr herce čeká na potvrzení',
+    en: 'An actor\u2019s picks are waiting for confirmation',
+  },
+  'nabidkaTerminu.cekaNadpis': {
+    cs: '{pocet} výběrů herců čeká na potvrzení',
+    en: '{pocet} actors\u2019 picks are waiting for confirmation',
+  },
+  'nabidkaTerminu.cekaDrzeno': {
+    cs: '— vybráno {vybrano} z {potreba}, držíme do {kdy} (zbývá {hodin} h)',
+    en: '\u2014 {vybrano} of {potreba} chosen, held until {kdy} ({hodin} h left)',
+  },
+  'nabidkaTerminu.cekaPropadlo': {
+    cs: '— výběr propadl {kdy}, termíny se vrátily do nabídky',
+    en: '\u2014 the picks expired on {kdy}, the slots went back into the offer',
+  },
+  'nabidkaTerminu.cekaPoznamka': {
+    cs: 'Zmizí samo, jakmile termíny potvrdíte nebo herec vybere znovu. Zavřít to nejde.',
+    en: 'It clears itself once you confirm the slots or the actor picks again. It cannot be dismissed.',
+  },
   'nabidkaTerminu.vybral': { cs: 'Vybral', en: 'Chosen' },
   'nabidkaTerminu.nevybral': { cs: 'Nevybral', en: 'Not chosen' },
   'nabidkaTerminu.vzalVsechny': {
@@ -8318,6 +8338,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.generovatPopis': {
     cs: 'Projde text projektu (PDF končící _RE ze složky na Disku) a vypíše tracky podle kapitol - prolog, části knihy i čísla kapitol. Tabulku níž to PŘEPÍŠE; uloží se teprve tlačítkem Uložit, takže si návrh projdi.',
     en: "Goes through the project's text (the PDF whose name ends in _RE in the Drive folder) and lists the tracks by chapter - prologue, book parts and chapter numbers. It OVERWRITES the table below; nothing is stored until you press Save, so check the suggestion first.",
+  },
+  'tracklist.nejdelsiStopa': { cs: 'Nejdelší stopa (NS)', en: 'Longest track (pages)' },
+  'tracklist.nejdelsiStopaPopis': {
+    cs: 'Kapitola delší než tolik normostran se rozdělí na víc stop - KAPITOLA 3 - ČÁST 1, ČÁST 2. Nula = nedělit.',
+    en: 'A chapter longer than this many standard pages is split into several tracks - KAPITOLA 3 - ČÁST 1, ČÁST 2. Zero = do not split.',
   },
   'tracklist.vygenerovano': {
     cs: 'Z textu vyšlo {pocet} tracků - projdi je a ulož.',
