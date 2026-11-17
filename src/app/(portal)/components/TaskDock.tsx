@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
+import { usePravoNaPotreby } from './PotrebujemeDock';
 import { DatumPole } from '@/components/DatumPole';
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
 import { UpravaMehoUkolu } from './UpravaMehoUkolu';
@@ -93,6 +94,8 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   const [dueDate, setDueDate] = useState(dnesVPraze());
   const [dueTime, setDueTime] = useState('');
   const [busy, setBusy] = useState(false);
+  // Treti zalozka panelu (17. 11. 2026) - jen kdo na seznam ma pravo.
+  const smiPotreby = usePravoNaPotreby();
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
   /** Který úkol se zrovna upravuje (25. 9. 2026) - vždycky nejvýš jeden. */
@@ -260,7 +263,14 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
       <div className="w-[360px] max-w-[86vw] bg-surface border border-r-0 border-line shadow-xl flex flex-col min-h-0">
       {/* Fialova hlavicka se zelenym napisem - stejne jako horni lista a jako
           MS chat. Ted v ni jsou zalozky Ukoly / MS chat. */}
-      <ZalozkyDoku aktivni="ukoly" otevri={otevriDok} pocetUkolu={open.length} neprectene={pocty.chat} />
+      <ZalozkyDoku
+        aktivni="ukoly"
+        otevri={otevriDok}
+        pocetUkolu={open.length}
+        neprectene={pocty.chat}
+        maPotrebujeme={smiPotreby}
+        pocetPotreb={pocty.potrebujeme}
+      />
 
       {/* Roluje se jen obsah, hlavicka se zalozkami zustava na miste. */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">

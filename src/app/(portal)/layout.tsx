@@ -12,6 +12,7 @@ import { QuickDock } from './components/QuickDock';
 import { SiteDock } from './components/SiteDock';
 import { PribehNaTelefonu } from './components/PribehNaTelefonu';
 import { ChatDock } from './components/ChatDock';
+import { PotrebujemeDock } from './components/PotrebujemeDock';
 import { PrehledDne } from './components/PrehledDne';
 import { PoutkoDoku } from './components/PoutkoDoku';
 import { NeprecteneVedleDoku } from './components/NeprecteneVedleDoku';
@@ -319,6 +320,9 @@ export default async function PortalLayout({ children }: { children: React.React
         {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
             (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}
         {internal && <ChatDock />}
+        {/* Treti panel na prave hrane - co je potreba ve studiich
+            (17. 11. 2026). Vykresli se jen tomu, kdo na seznam ma pravo. */}
+        {internal && <PotrebujemeDock />}
         {/* Poutko na prave hrane, kterym se panel otevira. Vykresluje ho layout,
             ne nektery z panelu - oprava 11. 9. 2026, viz PoutkoDoku.tsx. */}
         {internal && <PoutkoDoku />}

@@ -6,6 +6,7 @@ import { RozdeleneOkno } from '@/app/(portal)/components/RozdeleneOkno';
 import { TaskDock } from '@/app/(portal)/components/TaskDock';
 import { QuickDock } from '@/app/(portal)/components/QuickDock';
 import { ChatDock } from '@/app/(portal)/components/ChatDock';
+import { PotrebujemeDock } from '@/app/(portal)/components/PotrebujemeDock';
 import { PoutkoDoku } from '@/app/(portal)/components/PoutkoDoku';
 import { NeprecteneVedleDoku } from '@/app/(portal)/components/NeprecteneVedleDoku';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
@@ -100,6 +101,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <TaskDock tasks={tasks} />
         {/* Chat týmu - stejný panel u spodní hrany (zadani 8. 9. 2026). */}
         <ChatDock />
+        <PotrebujemeDock />
         {/* Poutko na prave hrane - vykresluje ho layout, viz PoutkoDoku.tsx. */}
         <PoutkoDoku />
         <NeprecteneVedleDoku />

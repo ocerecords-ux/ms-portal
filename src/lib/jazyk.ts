@@ -2310,6 +2310,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- pravý panel: záložky, poutko, nepřečtené (dávka 3) ---
   'dok.zalozkaUkoly': { cs: 'Úkoly', en: 'Tasks' },
+  'dok.zalozkaPotrebujeme': { cs: 'Potřebujeme', en: 'We need' },
   'dok.skrytPanel': { cs: 'Skrýt panel', en: 'Hide the panel' },
   'dok.zobrazitChatAUkoly': {
     cs: 'Zobrazit MS chat a úkoly',
@@ -6243,7 +6244,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.zalozka.DOTAZ': { cs: 'Dotazy klientů', en: 'Client questions' },
   'chat.zalozka.UKOLY': { cs: 'Úkoly', en: 'Tasks' },
   'chat.zalozka.UPOZORNENI': { cs: 'Upozornění', en: 'Notifications' },
-  'chat.zalozka.POTREBUJEME': { cs: 'Co je potřeba', en: 'What we need' },
   'chat.prehledVse': { cs: 'Vše', en: 'All' },
   'chat.prehledZminky': { cs: 'Zmínky', en: 'Mentions' },
   'chat.prehledNeprectene': { cs: 'Nepřečtené', en: 'Unread' },

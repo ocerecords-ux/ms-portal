@@ -16,7 +16,12 @@ import { useCallback, useEffect, useState } from 'react';
  * samostatné komponenty vedle sebe v layoutu — jeden o druhém jinak neví.
  */
 
-export type OtevrenyDok = 'ukoly' | 'chat' | null;
+/**
+ * TŘETÍ ZÁLOŽKA: CO JE POTŘEBA VE STUDIÍCH (zadání 17. 11. 2026: „chci to jak
+ * další to do list… další záložku za chat a úkoly"). Je to druhý seznam
+ * k odškrtávání, ne část chatu - proto vlastní panel vedle Úkolů.
+ */
+export type OtevrenyDok = 'ukoly' | 'chat' | 'potrebujeme' | null;
 
 const KLIC = 'ms-portal-pravy-dok';
 const UDALOST = 'ms-portal-pravy-dok';
@@ -28,7 +33,7 @@ const STARY_KLIC_CHAT = 'ms-portal-chat-otevreno';
 function precti(): OtevrenyDok {
   try {
     const ulozene = window.localStorage.getItem(KLIC);
-    if (ulozene === 'ukoly' || ulozene === 'chat') return ulozene;
+    if (ulozene === 'ukoly' || ulozene === 'chat' || ulozene === 'potrebujeme') return ulozene;
     if (ulozene === 'nic') return null;
     // Prvni nacteni po zmene: kdo byl otevreny driv, ten zustane otevreny.
     if (window.localStorage.getItem(STARY_KLIC_CHAT) === '1') return 'chat';
@@ -74,7 +79,7 @@ export function usePravyDok(): [OtevrenyDok, (dok: OtevrenyDok) => void] {
 // z nich potřebuje ukázat i to číslo toho druhého. Posílají si je přes stejnou
 // událost, takže nikdo nemusí načítat data, která už má vedle něj někdo jiný.
 
-type PoctyDoku = { ukoly?: number; chat?: number; poTerminu?: number };
+type PoctyDoku = { ukoly?: number; chat?: number; poTerminu?: number; potrebujeme?: number };
 
 const UDALOST_POCTY = 'ms-portal-pravy-dok-pocty';
 

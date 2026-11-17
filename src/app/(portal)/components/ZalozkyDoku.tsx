@@ -14,12 +14,21 @@ export function ZalozkyDoku({
   otevri,
   pocetUkolu,
   neprectene,
+  maPotrebujeme,
+  pocetPotreb,
   vpravo,
 }: {
   aktivni: Exclude<OtevrenyDok, null>;
   otevri: (dok: OtevrenyDok) => void;
   pocetUkolu?: number;
   neprectene?: number;
+  /**
+   * Třetí záložka „Co je potřeba" (17. 11. 2026) - ukáže se jen tomu, kdo na
+   * ten seznam má právo (vedoucí pobočky a kdo má na kartě
+   * `vidiPozadavkyStudii`). Ostatním v panelu nepřibude nic.
+   */
+  maPotrebujeme?: boolean;
+  pocetPotreb?: number;
   /** Ovládání, které patří jen jednomu z panelů (u chatu upozornění). */
   vpravo?: React.ReactNode;
 }) {
@@ -39,6 +48,14 @@ export function ZalozkyDoku({
           label={t('dok.zalozkaUkoly')}
           pocet={pocetUkolu}
         />
+        {maPotrebujeme && (
+          <Zalozka
+            aktivni={aktivni === 'potrebujeme'}
+            onClick={() => otevri('potrebujeme')}
+            label={t('dok.zalozkaPotrebujeme')}
+            pocet={pocetPotreb}
+          />
+        )}
       </div>
       <span className="flex items-center gap-1.5 sm:gap-2 pr-0.5 min-w-0">
         {vpravo}

@@ -108,7 +108,7 @@ Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **ota
 
 **Co je potřeba ve studiích.** Na horní liště chatu je záložka **Co je potřeba** (košík): společný seznam věcí, které je potřeba ve studiu **koupit** nebo **udělat** — mikrofon do Brna I, opravená klika, cokoliv. Jedna záložka, dva druhy: u psaní se přepne Koupit/Udělat, v seznamu je druh vidět podle značky (košík / klíč). Spěchající položky mají červené kolečko s vykřičníkem a jsou nahoře.
 
-**Kdo co vidí:** **vedoucí pobočky** zadává a vidí jen studia, která vede (Administrace → Studia, pole Vedoucí), a svůj **nový** požadavek smí opravit i smazat — jakmile se ho někdo chytí, zamkne se. **Celý seznam přes všechna studia** vidí jen ten, kdo má na kartě uživatele zaškrtnuté *Vidí celý seznam „Co je potřeba"* (Ondřej a Peter) — ten taky přehazuje stavy **Nové → Zařizuje se → Hotovo**, případně **Zamítnuto**. Kdo není ani vedoucí pobočky, ani nemá zaškrtnutí, nemá v chatu tu záložku vůbec. Vyřízené položky se nemažou, jen spadnou pod čáru.
+**Kdo co vidí:** **vedoucí pobočky** zadává a vidí jen studia, která vede (Administrace → Studia, pole Vedoucí), a svůj **nový** požadavek smí opravit i smazat — jakmile se ho někdo chytí, zamkne se. **Celý seznam přes všechna studia** vidí jen ten, kdo má na kartě uživatele zaškrtnuté *Vidí celý seznam „Co je potřeba"* (Ondřej a Peter) — ten taky může odškrtnout a smazat cokoliv. Kdo není ani vedoucí pobočky, ani nemá zaškrtnutí, tomu se záložka vůbec neukáže. Odškrtnuté položky se nemažou, jen spadnou pod čáru.
 
 **Schválně tu nejsou ceny ani doklady** — je to seznam, ne účetnictví. Spotřební materiál (káva, toaleťák) sem nepatří, ten se hlásí ťuknutím na **tabuli** ve studiu.
 
