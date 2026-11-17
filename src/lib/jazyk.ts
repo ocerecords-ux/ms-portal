@@ -2707,9 +2707,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'At least one studio must stay selected',
   },
 
-  // priorita projektu (ikona tří sloupečků)
+  // priorita projektu (od 17. 11. 2026 jen dva stavy - normální a vysoká)
+  // „nizka" a „stredni" uz se nikde nekresli, zustavaji kvuli starym zaznamum.
   'priorita.nizka': { cs: 'Nízká', en: 'Low' },
   'priorita.stredni': { cs: 'Střední', en: 'Medium' },
+  'priorita.normalni': { cs: 'Normální', en: 'Normal' },
   'priorita.vysoka': { cs: 'Vysoká', en: 'High' },
   'priorita.bez': { cs: 'bez priority', en: 'no priority' },
   'priorita.bublina': { cs: 'Priorita: {stupen}', en: 'Priority: {stupen}' },
@@ -6451,8 +6453,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'novyProjekt.priorita': { cs: 'Priorita', en: 'Priority' },
   'novyProjekt.prioritaNapoveda': {
-    cs: 'Každé klepnutí přidá čárku, po třetí se vrátí na jednu.',
-    en: 'Each tap adds a bar; after the third it goes back to one.',
+    cs: 'Klepnutím přepnete mezi normální a vysokou — vysoká znamená, že spěchá.',
+    en: 'Tap to switch between normal and high — high means it is urgent.',
   },
   'novyProjekt.stav': { cs: 'Stav', en: 'Status' },
   'novyProjekt.zalozitSlozku': {
@@ -6960,8 +6962,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projektMeta.manazer': { cs: 'Manažer projektu', en: 'Project manager' },
   'projektMeta.priorita': { cs: 'Priorita', en: 'Priority' },
   'projektMeta.prioritaNapoveda': {
-    cs: 'Každé klepnutí přidá čárku, po třetí se vrátí na jednu.',
-    en: 'Each tap adds a bar; after the third it goes back to one.',
+    cs: 'Klepnutím přepnete mezi normální a vysokou — vysoká znamená, že spěchá.',
+    en: 'Tap to switch between normal and high — high means it is urgent.',
   },
   'projektMeta.typProjektu': { cs: 'Typ projektu', en: 'Project type' },
   'projektMeta.typMimoCenik': { cs: '{typ} (mimo ceník)', en: '{typ} (not on the price list)' },
@@ -10874,6 +10876,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Mail hned, jak herec odešle svůj výběr natáčecích termínů - u všech projektů, ne jen u těch vašich. Vybrané termíny se drží jen do konce lhůty, pak se místa ve studiu uvolní.',
     en: 'An email as soon as an actor submits their choice of recording sessions — for every project, not only yours. The chosen sessions are held only until the deadline, after which the studio slots are released.',
   },
+  'mujUcet.potvrzeniTerminu': {
+    cs: 'Chci kopii potvrzení, které jde herci',
+    en: 'Send me a copy of the confirmation the actor gets',
+  },
+  'mujUcet.potvrzeniTerminuPopis': {
+    cs: 'Tentýž mail, jaký dostane herec ve chvíli, kdy mu termíny potvrdíte - se stejným seznamem termínů i odkazem do kalendáře. Herec vás v adrese nevidí.',
+    en: 'The very email the actor receives once you confirm their sessions — same list of dates, same calendar link. The actor does not see you in the recipients.',
+  },
   'mujUcet.tymDotoceno': {
     cs: 'Chci vědět, když je herec dotočený',
     en: 'Tell me when an actor is finished recording',
@@ -10942,6 +10952,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.pravoDostavaVyberTerminuPopis': {
     cs: 'Mail, jak si herec naklikal natáčecí termíny. Přepnout si to umí i sám v Můj účet.',
     en: 'An email when an actor has picked their recording sessions. They can also switch it themselves in My account.',
+  },
+  'uzivatel.pravoDostavaPotvrzeniTerminu': {
+    cs: 'Dostává potvrzení termínů',
+    en: 'Receives session confirmations',
+  },
+  'uzivatel.pravoDostavaPotvrzeniTerminuPopis': {
+    cs: 'Skrytá kopie mailu, který herci odejde při potvrzení termínů. Přepnout si to umí i sám v Můj účet.',
+    en: 'A blind copy of the email sent to the actor when their sessions are confirmed. They can also switch it themselves in My account.',
   },
 
   // Spolecna lista zalozek (components/ZalozkyLista.tsx) - Doklady, Prehledy

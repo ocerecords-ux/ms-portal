@@ -138,6 +138,7 @@ export default async function MyAccountPage() {
           komu="TYM"
           initial={{
             tymVyberTerminu: user.dostavaVyberTerminu,
+            tymPotvrzeniTerminu: user.dostavaPotvrzeniTerminu,
             tymDotoceno: user.dostavaDotoceno,
           }}
         />

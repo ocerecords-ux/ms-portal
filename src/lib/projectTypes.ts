@@ -5,19 +5,25 @@ import type { ProjectPriority } from '@prisma/client';
  * schema.prisma) - zadani 5. 9. 2026.
  */
 
-export const PRIORITY_OPTIONS: ProjectPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
+/**
+ * DVE UROVNE, NE TRI (zadani 17. 11. 2026: "nazvime ty priority jako normalni
+ * a vysoka"). LOW uz se nikde nenabizi - zustava v ciselniku jen kvuli datum,
+ * ktera v databazi vznikla driv, a cte se jako normalni. Jednorazovy prevod
+ * starych hodnot dela seed (znacka "priorita-dve-urovne").
+ */
+export const PRIORITY_OPTIONS: ProjectPriority[] = ['MEDIUM', 'HIGH'];
 
 export const PRIORITY_LABELS: Record<ProjectPriority, string> = {
-  LOW: 'Nízká',
-  MEDIUM: 'Střední',
+  LOW: 'Normální',
+  MEDIUM: 'Normální',
   HIGH: 'Vysoká',
 };
 
 /** Barvy stitku priority v prehledu i na detailu projektu. */
 export const PRIORITY_CLASSES: Record<ProjectPriority, string> = {
-  LOW: 'bg-field text-muted',
-  MEDIUM: 'bg-warnTint text-status-progress',
-  HIGH: 'bg-[#FDE4E4] text-[#C22B2B]',
+  LOW: 'bg-okTint text-status-done',
+  MEDIUM: 'bg-okTint text-status-done',
+  HIGH: 'bg-dangerTint text-danger',
 };
 
 /**

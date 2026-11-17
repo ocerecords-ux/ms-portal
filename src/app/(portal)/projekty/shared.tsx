@@ -824,9 +824,12 @@ export function compareProjects(
  * Priorita se od 18. 9. 2026 nepíše slovem, ale kreslí - viz
  * components/IkonaPriority.tsx. Jméno komponenty zůstalo, aby se nemusela
  * přepisovat všechna místa, která ji používají.
+ *
+ * V PŘEHLEDU SE KRESLÍ JEN VYSOKÁ (zadání 17. 11. 2026) - u normální priority
+ * zůstane buňka prázdná, ať červená opravdu znamená „spěchá".
  */
 export function PriorityPill({ priority }: { priority: ProjectPriority | null }) {
-  return <IkonaPriority priorita={priority} />;
+  return <IkonaPriority priorita={priority} vPrehledu />;
 }
 
 function SortArrow({ dir }: { dir: 'asc' | 'desc' }) {

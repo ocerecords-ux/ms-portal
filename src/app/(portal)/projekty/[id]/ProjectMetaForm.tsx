@@ -62,13 +62,16 @@ function OdznakStavu({ stav, jazyk }: { stav: string; jazyk: Jazyk }) {
  * Slovo vedle ikony delalo z jedne informace dve a v prehledu projektu zadne
  * neni - karta pak vypadala jako jina aplikace. Cele slovo zustava v bublinove
  * napovede, takze se nic neztratilo.
+ *
+ * NA KARTE SE KRESLI OBE UROVNE, i normalni (zadani 17. 11. 2026). Prazdno
+ * zustava jen v tabulce projektu - viz components/IkonaPriority.tsx.
  */
 function OdznakPriority({ priorita }: { priorita: string }) {
   const klic = priorita as keyof typeof PRIORITY_LABELS;
-  if (!priorita || !PRIORITY_LABELS[klic]) {
-    return <span className="text-sm font-heading text-muted">—</span>;
-  }
-  return <IkonaPriority priorita={klic as ProjectPriority} velikost={18} />;
+  // Prazdna priorita uz nedela pomlcku: od 17. 11. 2026 jsou stavy jen dva a
+  // "nic vyplneneho" znamena, ze projekt nespecha - tedy normalni.
+  const hodnota = (PRIORITY_LABELS[klic] ? klic : 'MEDIUM') as ProjectPriority;
+  return <IkonaPriority priorita={hodnota} velikost={18} />;
 }
 
 function OdznakTypu({ typ, ikona }: { typ: string | null; ikona: string | null }) {
@@ -1153,10 +1156,10 @@ export function ProjectMetaForm({
               se tam ty carky budou pridavat a ubirat. Delal bych to napr
               klikanim na tu ikonu").
 
-              Je to tataz kresba jako v prehledu projektu i v nahledu karty -
-              klepnuti na sloupecek nastavi jeho stupen, klepnuti na uz
-              nastaveny stupen prioritu zrusi. Rozbalovatko se slovy tu bylo
-              jedine misto v portalu, kde se priorita psala textem. */}
+              Od 17. 11. 2026 jsou stavy dva, takze klepnuti prepina normalni
+              <-> vysoka. Je to tataz kresba jako v prehledu projektu i v
+              nahledu karty. Rozbalovatko se slovy tu bylo jedine misto v
+              portalu, kde se priorita psala textem. */}
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">{t('projektMeta.priorita')}</span>
             <span className="flex items-center gap-3 h-[34px]">

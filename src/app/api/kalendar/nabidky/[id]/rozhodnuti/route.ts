@@ -10,6 +10,7 @@ import { minutesInZone, minutesToTime } from '@/lib/calendar';
 import { sendRecordingDecisionEmail } from '@/lib/email';
 import { notify } from '@/lib/notifications';
 import { preklopReklamuPodlePlanu } from '@/lib/planReklamyServer';
+import { kopiePotvrzeniTerminu } from '@/lib/nabidkaTerminuServer';
 
 /**
  * Rozhodnutí produkce o výběru herce (zadani 8. 9. 2026).
@@ -260,6 +261,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       payload: { terminy: popisTerminu },
     });
 
+    // KOPIE POTVRZENI PRO TYM (Helena 16. 11. 2026) - skryta, aby herec v
+    // adrese videl jen sebe. Kdo ji chce, ma na karte uctu zaskrtnute
+    // "Dostava potvrzeni terminu"; kdyz to nema nikdo, mail jde jen herci.
     await sendRecordingDecisionEmail({
       to: request.actorEmail,
       actorName: request.actorName,
@@ -270,6 +274,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       slots: popisTerminu,
       offerUrl,
       calendarUrl: `${baseUrl}/api/terminy/${request.accessToken}/kalendar`,
+      kopie: await kopiePotvrzeniTerminu(),
     });
 
     if (request.actorUserId) {

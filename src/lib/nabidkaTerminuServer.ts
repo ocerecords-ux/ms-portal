@@ -212,6 +212,34 @@ export async function oznamProdukciVyberTerminu(requestId: string): Promise<void
 }
 
 /**
+ * KDO CHCE KOPII POTVRZENÍ, KTERÉ JDE HERCI (připomínka Heleny 16. 11. 2026:
+ * „může mi prosím chodit potvrzení termínů, které chodí hercům, když jim ty
+ * termíny schválí?").
+ *
+ * Příznak výš (`dostavaVyberTerminu`) hlásí, že si herec termíny NAKLIKAL.
+ * Tohle je krok za tím: mail, který herci odejde ve chvíli, kdy mu je produkce
+ * POTVRDÍ. Jsou to dvě různé věci a Helena chce obě, kdežto někdo jiný může
+ * chtít jen jednu - proto vlastní příznak, ne rozšíření toho starého.
+ *
+ * Vrací prázdné pole, když to nikdo zapnuté nemá - mail pak odejde jen herci,
+ * což je přesně stav před touhle změnou.
+ */
+export async function kopiePotvrzeniTerminu(): Promise<string[]> {
+  try {
+    const lide = await prisma.user.findMany({
+      where: { active: true, dostavaPotvrzeniTerminu: true, role: { in: INTERNAL_ROLES } },
+      select: { email: true },
+    });
+    return lide.map((u) => u.email).filter(Boolean);
+  } catch (err) {
+    // Posta se kvuli tomuhle nesmi zastavit - herec musi potvrzeni dostat tak
+    // jako tak.
+    console.error('Prijemce kopie potvrzeni terminu se nepodarilo nacist:', err);
+    return [];
+  }
+}
+
+/**
  * UPOMÍNKA HERCI, AŤ SI NAKLIKÁ TERMÍNY (připomínka Heleny 2. 10. 2026:
  * „tlačítko na upomenutí herce, aby si naklikal termíny").
  *

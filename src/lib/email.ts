@@ -2524,6 +2524,16 @@ type RecordingDecisionEmailInput = {
    * „tlačítko přidat do kalendáře a mu se to tam automaticky nasype").
    */
   calendarUrl?: string;
+  /**
+   * KOPIE PRO TÝM (zadání Heleny 16. 11. 2026: „může mi prosím chodit
+   * potvrzení termínů, které chodí hercům, když jim ty termíny schválí?").
+   *
+   * Schválně SKRYTÁ kopie: herec má v adrese vidět jen sebe, ne rozdělovník
+   * produkce. A schválně tentýž mail, ne shrnutí - Helena chce vidět přesně
+   * to, co dostal herec. Komu to jde, řídí příznak účtu
+   * `dostavaPotvrzeniTerminu`, ne adresy v kódu.
+   */
+  kopie?: string[];
 };
 
 // Klice do slovniku posty, ne hotove vety - text se sklada az podle jazyka
@@ -2596,6 +2606,7 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
   const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
+    ...(input.kopie?.length ? { bcc: input.kopie } : {}),
     subject: prelozitEmailS(jazyk, 'mail.rozhodnuti.predmet', {
       nadpis: prelozitEmail(jazyk, t.nadpis),
       projekt: input.projectName,

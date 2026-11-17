@@ -328,7 +328,8 @@ export function NovyProjektForm({
         </label>
 
         {/* Stejna ikona a stejne klikani jako v prehledu i v karte projektu
-            (upresneni 18. 9. 2026) - priorita se nikde v portalu nepise slovem. */}
+            (upresneni 18. 9. 2026) - priorita se nikde v portalu nepise slovem.
+            Novy projekt zacina na normalni; spech se zapne klepnutim. */}
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">{t('novyProjekt.priorita')}</span>
           <span className="flex items-center gap-3 h-[34px]">

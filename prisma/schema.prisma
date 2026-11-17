@@ -528,6 +528,19 @@ model User {
   /// Prepina se na karte uzivatele i v „Muj ucet".
   dostavaVyberTerminu Boolean @default(false)
 
+  /// KOPIE POTVRZENÍ, KTERÉ JDE HERCI (připomínka Heleny Rychlík
+  /// 16. 11. 2026: „může mi prosím chodit potvrzení termínů, které chodí
+  /// hercům, když jim ty termíny schválí?").
+  ///
+  /// `dostavaVyberTerminu` výš hlásí, že si herec termíny NAKLIKAL; tohle je
+  /// krok za tím - mail, který herci odejde, když mu je produkce POTVRDÍ.
+  /// Posílá se jako skrytá kopie téhož mailu, ne jako shrnutí: produkce chce
+  /// vidět přesně to, co dostal herec.
+  ///
+  /// Zase příznak u účtu, ne adresa v kódu. Přepíná se na kartě uživatele
+  /// i v „Můj účet → Upozornění".
+  dostavaPotvrzeniTerminu Boolean @default(false)
+
   /// RANNÍ PŘEHLED OD BRUNA (zadani 23. 9. 2026: „chtel bych, aby mi Bruno
   /// sesumiroval udalosti na danny den. Vzdycky at mi to posle v sedm rano
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").

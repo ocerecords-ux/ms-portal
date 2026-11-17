@@ -214,6 +214,7 @@ async function main() {
   await audiotekaTracklistZTextu();
   await naberBezHudby();
   await stavyProjektuTomasovi();
+  await prioritaDveUrovne();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1689,6 +1690,35 @@ async function stavyProjektuTomasovi() {
     console.log(`  stavy projektu smi prehazovat i Tomas Ilavsky (${vysledek.count} uctu)`);
   } catch (err) {
     console.warn('  pravo na stavy projektu se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * PRIORITA JEN VE DVOU ÚROVNÍCH (zadání 17. 11. 2026: „nazvěme ty priority
+ * jako normální a vysoká. A nastavme teď u všech projektů, které mají jednu
+ * nebo dvě čárky, prioritu normální a tam, kde jsou tři, tak vysokou").
+ *
+ * Jedna i dvě čárky (LOW, MEDIUM) jsou od teď „normální", tři (HIGH) zůstávají
+ * „vysoká". Převádí se jen LOW → MEDIUM; HIGH se nesahá, aby projekty, které
+ * opravdu spěchají, zůstaly červené.
+ *
+ * Hodnota LOW zůstává v číselníku schválně - kdyby se v databázi někde objevila
+ * (starý import), přečte se pořád jako normální. Viz lib/projectTypes.ts a
+ * components/IkonaPriority.tsx.
+ */
+async function prioritaDveUrovne() {
+  const ZNAMKA = 'priorita-dve-urovne';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.projectMeta.updateMany({
+      where: { priority: 'LOW' },
+      data: { priority: 'MEDIUM' },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  priorita jen normalni/vysoka (${vysledek.count} projektu prepsano z nizke)`);
+  } catch (err) {
+    console.warn('  priority se nepodarilo prevest na dve urovne:', err);
   }
 }
 

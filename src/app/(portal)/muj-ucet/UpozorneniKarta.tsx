@@ -26,7 +26,12 @@ import { usePreklad } from '../components/JazykProvider';
  * ukážou. Klientské nesou jen jeho projekty, týmové všechny.
  */
 
-type Klic = 'dotoceno' | 'zmenaTerminu' | 'tymVyberTerminu' | 'tymDotoceno';
+type Klic =
+  | 'dotoceno'
+  | 'zmenaTerminu'
+  | 'tymVyberTerminu'
+  | 'tymPotvrzeniTerminu'
+  | 'tymDotoceno';
 
 /** Komu přepínač patří - klientovi, nebo nám. */
 type Komu = 'KLIENT' | 'TYM';
@@ -53,6 +58,15 @@ const PREPINACE: { klic: Klic; komu: Komu; pole: string; nazev: string; popis: s
     pole: 'dostavaVyberTerminu',
     nazev: 'mujUcet.vyberTerminu',
     popis: 'mujUcet.vyberTerminuPopis',
+  },
+  {
+    // Krok ZA vyberem vyse: kopie potvrzeni, ktere odchazi herci (Helena
+    // 16. 11. 2026). Kdo chce obe, zaskrtne si obe.
+    klic: 'tymPotvrzeniTerminu',
+    komu: 'TYM',
+    pole: 'dostavaPotvrzeniTerminu',
+    nazev: 'mujUcet.potvrzeniTerminu',
+    popis: 'mujUcet.potvrzeniTerminuPopis',
   },
   {
     klic: 'tymDotoceno',

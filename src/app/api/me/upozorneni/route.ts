@@ -30,6 +30,8 @@ const schema = z.object({
   ranniPrehled: z.boolean().optional(),
   /** Herec si naklikal termíny (5. 10. 2026) - jen pro tým. */
   dostavaVyberTerminu: z.boolean().optional(),
+  /** Kopie potvrzení, které jde herci (Helena 16. 11. 2026) - jen pro tým. */
+  dostavaPotvrzeniTerminu: z.boolean().optional(),
   /** Dotočeno s hercem (11. 9. 2026) - jen pro tým. */
   dostavaDotoceno: z.boolean().optional(),
 });
@@ -53,12 +55,18 @@ export async function PATCH(req: NextRequest) {
     }
     if (parsed.data.ranniPrehled !== undefined) data.ranniPrehled = parsed.data.ranniPrehled;
 
-    const tymova = parsed.data.dostavaVyberTerminu !== undefined || parsed.data.dostavaDotoceno !== undefined;
+    const tymova =
+      parsed.data.dostavaVyberTerminu !== undefined ||
+      parsed.data.dostavaPotvrzeniTerminu !== undefined ||
+      parsed.data.dostavaDotoceno !== undefined;
     if (tymova && !isInternalRole(session.user.role)) {
       return NextResponse.json({ error: 'Tohle upozornění vám nepatří.' }, { status: 403 });
     }
     if (parsed.data.dostavaVyberTerminu !== undefined) {
       data.dostavaVyberTerminu = parsed.data.dostavaVyberTerminu;
+    }
+    if (parsed.data.dostavaPotvrzeniTerminu !== undefined) {
+      data.dostavaPotvrzeniTerminu = parsed.data.dostavaPotvrzeniTerminu;
     }
     if (parsed.data.dostavaDotoceno !== undefined) data.dostavaDotoceno = parsed.data.dostavaDotoceno;
 

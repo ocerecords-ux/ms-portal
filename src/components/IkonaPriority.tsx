@@ -5,93 +5,105 @@ import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * PRIORITA GRAFICKY (zadání 18. 9. 2026: „ještě bych předělal nějak pole
- * Priorita. Nepsal bych to slovem, ale udělal graficky nějak, třeba ikonou
- * tři stupně").
+ * Priorita. Nepsal bych to slovem, ale udělal graficky nějak, třeba ikonou").
  *
- * Tři sloupečky jako signál na mobilu: nízká = jeden, střední = dva, vysoká
- * = tři. Slovo „Střední" zabíralo v přehledu celý sloupec a člověk ho stejně
- * četl jen na první písmeno.
+ * DVĚ ÚROVNĚ, NE TŘI (zadání 17. 11. 2026: „pojďme ještě vymyslet jen dvě
+ * ikony priority projektu. Zelenou, když je to normální priorita a nespěchá,
+ * a červenou, když je to vysoká. Jen se to zapne v případě, že spěchá a má
+ * vysokou prioritu." - a „nazvěme ty priority jako normální a vysoká").
  *
- * ÚROVEŇ NESE TVAR, NE JEN BARVA. Kdo barvy rozlišuje hůř (a červená se
- * zelenou je nejčastější případ), pozná prioritu podle počtu sloupečků -
- * a v bublině je pořád celé slovo, takže se nic neztratí.
+ * Tři sloupečky znamenaly, že sloupec Priorita svítil oranžově u každého
+ * projektu, protože skoro všechno bylo „střední" - a co svítí pořád, to oko
+ * přestane vidět. Teď jsou stavy dva:
  *
- * STEJNĚ VŠUDE, I KDYŽ SE MĚNÍ (upřesnění tentýž den: „v náhledu nejde
- * změnit a objevují se tam slova. V detailu to musí být graficky stejné!
- * Vymysli, jak se tam ty čárky budou přidávat a ubírat. Dělal bych to např
- * klikáním na tu ikonu").
+ *   normální (zelený prstenec)  - nespěchá, výchozí stav
+ *   vysoká   (červené kolečko s vykřičníkem) - spěchá
  *
- * Do teď se při úpravě ikona vyměnila za rozbalovátko se slovy - v přehledu
- * se do úzkého sloupce nevešlo („Vysc…") a v kartě projektu z toho byla
- * bublina s textem. Proto se teď needituje NIC JINÉHO NEŽ TA IKONA.
+ * V PŘEHLEDU PROJEKTŮ SE KRESLÍ JEN VYSOKÁ (`vPrehledu`), normální zůstane
+ * prázdná buňka. Jinak by byl sloupec zase plný a červená by nic neznamenala.
+ * Na kartě projektu a v zakládání se kreslí obojí - musí být kam klepnout.
  *
- * JEDEN KLIK = JEDNA ČÁRKA NAVÍC, a po třetí se to vrátí na jednu (upřesnění
- * 18. 9. 2026: „jedním klikem jedna čárka, druhým klikem dvě čárky a dalším
- * klikem třetí čárka a dalším klikem zase jedna"). Celá ikona je jedno
- * tlačítko - dřív byl každý sloupeček vlastní cíl a do tří pixelů se člověk
- * snadno překlikl a nastavil nechtěný stupeň. Takhle je jedno, kam se
- * klepne, a překlep se opraví dalším klepnutím na tomtéž místě.
+ * TVAR, NE JEN BARVA. Červená se zelenou je nejčastější porucha barvocitu,
+ * takže se obě ikony liší i kresbou: prstenec je dutý a tenký, vysoká je
+ * vyplněná a je v ní vykřičník. V bublině je navíc celé slovo.
  *
- * Kreslí to jediná funkce `Sloupecek` - kdyby měl náhled a úprava vlastní
+ * KLEPNUTÍ PŘEKLÁPÍ TAM A ZPĚT. Dřív se čárky přidávaly dokola přes tři
+ * stupně; u dvou stavů je to prostý přepínač.
+ *
+ * Kreslí to jediná funkce `Kresba` - kdyby měl náhled a úprava vlastní
  * kresbu, rozešly by se při první úpravě jedné z nich.
  */
 
-const STUPEN: Record<ProjectPriority, number> = { LOW: 1, MEDIUM: 2, HIGH: 3 };
-/** Název stupně se bere ze slovníku portálu, ne z číselníku v lib - ten je jen česky. */
-const KLIC_NAZVU: Record<ProjectPriority, string> = {
-  LOW: 'priorita.nizka',
-  MEDIUM: 'priorita.stredni',
-  HIGH: 'priorita.vysoka',
-};
-/** Pořadí odpovídá stupňům 1-3 výše. */
-const PODLE_STUPNE: ProjectPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
+/** Jediná hodnota, která v portálu znamená „spěchá". */
+export function jeVysoka(priorita: ProjectPriority | null | undefined): boolean {
+  return priorita === 'HIGH';
+}
 
-/** Barva nese jen důraz: čím výš, tím naléhavěji. */
-const BARVA: Record<ProjectPriority, string> = {
-  LOW: 'text-muted',
-  MEDIUM: 'text-status-progress',
-  HIGH: 'text-danger',
-};
+/**
+ * Stará `LOW` zůstává v číselníku kvůli datům, která v databázi vznikla před
+ * 17. 11. 2026 - čte se jako normální. Jednorázový převod na `MEDIUM` dělá
+ * seed (značka `priorita-dve-urovne`).
+ */
+const KLIC_NAZVU = {
+  normalni: 'priorita.normalni',
+  vysoka: 'priorita.vysoka',
+} as const;
 
-/** Nedosažené stupně zůstávají vidět jako obrys - jinak by nebylo poznat,
- *  jestli je to „nízká ze tří", nebo jediný možný stav. */
-const ZHASLE = 0.22;
-
-function Sloupecek({ podil, svitici }: { podil: number; svitici: boolean }) {
+function Kresba({ vysoka, velikost }: { vysoka: boolean; velikost: number }) {
+  // Vykricnik se "vykousne" podkladem karty, ne bilou - bila by na tmavem
+  // rezimu zarila a na zelenou se podle pravidla portalu bile nedava.
   return (
-    <span
+    <svg
+      width={velikost}
+      height={velikost}
+      viewBox="0 0 18 18"
+      fill="none"
       aria-hidden="true"
-      className="w-[3px] rounded-[1px] bg-current"
-      style={{ height: `${podil * 100}%`, opacity: svitici ? 1 : ZHASLE }}
-    />
+      className="block"
+    >
+      {vysoka ? (
+        <>
+          <circle cx="9" cy="9" r="7" fill="currentColor" />
+          <rect x="8.1" y="4.4" width="1.8" height="5.5" rx="0.9" className="fill-surface" />
+          <circle cx="9" cy="12.6" r="1.05" className="fill-surface" />
+        </>
+      ) : (
+        <circle cx="9" cy="9" r="6.25" stroke="currentColor" strokeWidth="1.7" />
+      )}
+    </svg>
   );
 }
 
-/** Náhled - jen kresba, nikde se na ni neklepe. */
+/**
+ * Náhled - jen kresba, nikde se na ni neklepe.
+ *
+ * `vPrehledu` je tabulka projektů: tam se normální priorita nekreslí vůbec.
+ */
 export function IkonaPriority({
   priorita,
   velikost = 16,
+  vPrehledu = false,
 }: {
   priorita: ProjectPriority | null | undefined;
   velikost?: number;
+  /** Tabulka projektů - normální priorita zůstane prázdná buňka. */
+  vPrehledu?: boolean;
 }) {
   const t = usePreklad();
-  if (!priorita || !STUPEN[priorita]) return <span className="text-muted">—</span>;
+  const vysoka = jeVysoka(priorita);
+  if (!vysoka && vPrehledu) return null;
 
-  const stupen = STUPEN[priorita];
-  const popisek = t(KLIC_NAZVU[priorita]);
+  const popisek = t(vysoka ? KLIC_NAZVU.vysoka : KLIC_NAZVU.normalni);
 
   return (
     <span
       title={t('priorita.bublina', { stupen: popisek })}
       aria-label={t('priorita.bublina', { stupen: popisek })}
       role="img"
-      className={`inline-flex items-end gap-[2px] align-middle ${BARVA[priorita]}`}
+      className={`inline-flex items-center align-middle ${vysoka ? 'text-danger' : 'text-status-done'}`}
       style={{ height: velikost }}
     >
-      {[1, 2, 3].map((i) => (
-        <Sloupecek key={i} podil={i / 3} svitici={i <= stupen} />
-      ))}
+      <Kresba vysoka={vysoka} velikost={velikost} />
     </span>
   );
 }
@@ -99,12 +111,8 @@ export function IkonaPriority({
 /**
  * Úprava - tatáž kresba, jen je z ní tlačítko.
  *
- * Bez priority se nekreslí pomlčka, ale tři zhasnuté sloupečky: musí být
- * kam klepnout, jinak by prioritu nešlo přidat tam, kde ještě žádná není.
- *
- * Klepnutí přidá čárku, po třetí se vrátí na jednu. Tlačítko je celá ikona
- * i s odsazením kolem ní (záporné okraje si to místo berou zpátky, takže se
- * kvůli tomu nikde nic neposune) - trefit se dá i prstem na telefonu.
+ * Tady se normální priorita kreslí vždycky (i v tabulce): musí být kam
+ * klepnout, jinak by spěch nešel zapnout tam, kde zatím není.
  */
 export function VyberPriority({
   priorita,
@@ -119,12 +127,12 @@ export function VyberPriority({
   uklada?: boolean;
 }) {
   const t = usePreklad();
-  const stupen = priorita && STUPEN[priorita] ? STUPEN[priorita] : 0;
-  // Dokola: 1 -> 2 -> 3 -> 1. Z prazdneho se zacina jednou carkou.
-  const dalsi = PODLE_STUPNE[stupen >= 3 ? 0 : stupen];
-  const barva = stupen > 0 ? BARVA[PODLE_STUPNE[stupen - 1]] : 'text-muted';
-  const popisek = stupen > 0 ? t(KLIC_NAZVU[PODLE_STUPNE[stupen - 1]]) : t('priorita.bez');
-  const nazevDalsi = t(KLIC_NAZVU[dalsi]);
+  const vysoka = jeVysoka(priorita);
+  // Prazdna priorita (projekt bez karty ProjectMeta) se cte jako normalni,
+  // takze prvni klepnuti zapne spech - presne to, kvuli cemu na ikonu kliknes.
+  const dalsi: ProjectPriority = vysoka ? 'MEDIUM' : 'HIGH';
+  const popisek = t(vysoka ? KLIC_NAZVU.vysoka : KLIC_NAZVU.normalni);
+  const nazevDalsi = t(vysoka ? KLIC_NAZVU.normalni : KLIC_NAZVU.vysoka);
 
   return (
     <button
@@ -133,16 +141,12 @@ export function VyberPriority({
       onClick={() => onZmena(dalsi)}
       title={t('priorita.bublinaKlepnuti', { stupen: popisek, dalsi: nazevDalsi.toLowerCase() })}
       aria-label={t('priorita.bublinaKlepnutiPopis', { stupen: popisek, dalsi: nazevDalsi })}
-      className={`inline-flex items-end gap-[2px] align-middle px-1.5 py-1 -mx-1.5 -my-1 rounded ${barva} ${
-        uklada ? 'opacity-60' : 'hover:bg-field'
-      }`}
+      className={`inline-flex items-center align-middle px-1.5 py-1 -mx-1.5 -my-1 rounded ${
+        vysoka ? 'text-danger' : 'text-status-done'
+      } ${uklada ? 'opacity-60' : 'hover:bg-field'}`}
       style={{ height: velikost + 8 }}
     >
-      {[1, 2, 3].map((i) => (
-        <span key={i} className="flex items-end" style={{ height: velikost }}>
-          <Sloupecek podil={i / 3} svitici={i <= stupen} />
-        </span>
-      ))}
+      <Kresba vysoka={vysoka} velikost={velikost} />
     </button>
   );
 }

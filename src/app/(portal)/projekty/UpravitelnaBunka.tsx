@@ -72,8 +72,11 @@ function Chyba({ text }: { text: string | null }) {
  * klepl dvakrát rychle za sebou. Proto se teď ikona přepne v tu ránu, stejně
  * jako v detailu, a uloží se až hodnota, u které se klepání zastaví.
  *
- * Když uložení neprojde, čárky se vrátí na to, co je opravdu v databázi,
+ * Když uložení neprojde, ikona se vrátí na to, co je opravdu v databázi,
  * a vypíše se chyba - tabulka nesmí ukazovat něco, co uložené není.
+ *
+ * Od 17. 11. 2026 jsou stavy dva (normální / vysoká) a klepnutí je překlápí;
+ * v tabulce se kreslí jen vysoká - viz components/IkonaPriority.tsx.
  */
 const PRIORITA_ULOZIT_PO_MS = 600;
 

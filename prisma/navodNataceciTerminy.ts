@@ -79,6 +79,8 @@ Oznámení vede na stránku nabídky. Nahoře vidíte, kolik frekvencí je potř
    - **Vrátit k přepracování** — herec vybírá znovu (do vzkazu napište proč),
    - **Zamítnout** — termíny se uvolní.
 
+**Kopii potvrzení chce i produkce** (připomínka Heleny 16. 11. 2026: „může mi prosím chodit potvrzení termínů, které chodí hercům, když jim ty termíny schválí?"). V **Můj účet → Upozornění** je zaškrtávátko *Chci kopii potvrzení, které jde herci* — zapnout se dá i za někoho na jeho kartě v Administraci (*Dostává potvrzení termínů*). Chodí **tentýž mail**, jaký dostane herec, se stejným seznamem termínů i odkazem do kalendáře, a jde **skrytou kopií**, takže herec v adrese vidí jen sebe. Je to něco jiného než *Chci vědět, když si herec naklikal termíny* o kousek výš — to hlásí jeho výběr, tohle až vaše potvrzení; kdo chce obojí, zaškrtne si obě.
+
 Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a herec může vybírat znovu.
 
 **Aby to nepropadlo potichu** (16. 11. 2026): dokud výběr čeká na potvrzení, svítí **červený pruh nahoře v Kalendáři** — projekt, herec, kolik termínů vybral a do kdy se drží. Den před koncem držení přijde tomu, kdo nabídku založil, ještě připomínka pod zvoneček. A když to přesto propadne, pruh svítí dál, dokud nabídku nepošlete znovu nebo herec nevybere. Zavřít se nedá; zmizí sám. Vidí ho jen ten, kdo do kalendáře zapisuje.

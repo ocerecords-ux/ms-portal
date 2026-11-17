@@ -79,6 +79,7 @@ type EditableUser = {
   jenNahled: boolean;
   dostavaDotoceno: boolean;
   dostavaVyberTerminu: boolean;
+  dostavaPotvrzeniTerminu: boolean;
   /** Zvonek, kdyz klient schvali reklamu (23. 9. 2026). */
   schvaleniReklam: boolean;
   planovaniTerminu: boolean;
@@ -178,6 +179,9 @@ export function UserEditForm({
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [dostavaVyberTerminu, setDostavaVyberTerminu] = useState(user.dostavaVyberTerminu);
+  const [dostavaPotvrzeniTerminu, setDostavaPotvrzeniTerminu] = useState(
+    user.dostavaPotvrzeniTerminu,
+  );
   const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
   const [planovaniTerminu, setPlanovaniTerminu] = useState(user.planovaniTerminu);
   const [strihaExterne, setStrihaExterne] = useState(user.strihaExterne);
@@ -326,6 +330,9 @@ export function UserEditForm({
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('dostavaVyberTerminu', dostavaVyberTerminu ? '1' : '0');
+        if (isMediaspace) {
+          fd.set('dostavaPotvrzeniTerminu', dostavaPotvrzeniTerminu ? '1' : '0');
+        }
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
         if (isMediaspace) fd.set('planovaniTerminu', planovaniTerminu ? '1' : '0');
         if (isMediaspace) fd.set('strihaExterne', strihaExterne ? '1' : '0');
@@ -1042,6 +1049,29 @@ export function UserEditForm({
                 {t('uzivatel.pravoDostavaVyberTerminu')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.pravoDostavaVyberTerminuPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Kopie potvrzeni, ktere jde herci (pripominka Heleny 16. 11. 2026:
+            „muze mi prosim chodit potvrzeni terminu, ktere chodi hercum, kdyz
+            jim ty terminy schvali?"). Je to krok ZA zaskrtavatkem vyse - to
+            hlasi, ze si herec terminy naklikal, tohle az jejich potvrzeni. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dostavaPotvrzeniTerminu}
+                onChange={(e) => setDostavaPotvrzeniTerminu(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.pravoDostavaPotvrzeniTerminu')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.pravoDostavaPotvrzeniTerminuPopis')}
                 </span>
               </span>
             </label>
