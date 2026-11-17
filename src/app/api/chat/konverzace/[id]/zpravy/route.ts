@@ -71,6 +71,7 @@ async function nactiPristupnou(conversationId: string, userId: string) {
         select: {
           userId: true,
           lastReadAt: true,
+          vidiOdAt: true,
           user: { select: { name: true, email: true } },
         },
       },
@@ -97,15 +98,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // ?vlakno=<id> vrati zpravu a odpovedi pod ni; jinak hlavni proud, tedy
     // jen zpravy bez rodice (zadani 8. 9. 2026: odpovedi ve vlakne).
     const vlakno = req.nextUrl.searchParams.get('vlakno');
+    // Od kdy tenhle clovek rozhovor vidi - prazdno znamena od zalozeni.
+    const vidiOd =
+      (conversation.members.find((m) => m.userId === me) as { vidiOdAt?: Date | null } | undefined)
+        ?.vidiOdAt ?? null;
     // Cteni zprav a zapis "precteno" jsou na sobe nezavisle, takze jdou do
     // databaze najednou. Za sebou to byla jedna zbytecna cesta tam a zpet
     // navic pri kazdem otevreni konverzace (oprava 10. 9. 2026: "v MS chatu
     // se strasne dlouho nacitaji zpravy").
     const [zpravy] = await Promise.all([
       prisma.message.findMany({
-      where: vlakno
-        ? { conversationId: conversation.id, OR: [{ id: vlakno }, { parentId: vlakno }] }
-        : { conversationId: conversation.id, parentId: null },
+      where: {
+        // ODKDY TEN CLOVEK VIDI (17. 11. 2026). Kdo byl pridan s volbou
+        // „nevidi starou historii", tomu se starsi zpravy NEPOSILAJI -
+        // schovat je az v prohlizeci by znamenalo, ze je stejne dostal.
+        ...(vidiOd ? { createdAt: { gte: vidiOd } } : {}),
+        ...(vlakno
+          ? { conversationId: conversation.id, OR: [{ id: vlakno }, { parentId: vlakno }] }
+          : { conversationId: conversation.id, parentId: null }),
+      },
       orderBy: { createdAt: 'desc' },
       // ŠEDESÁT, NE DVĚ STĚ (oprava 12. 9. 2026: „pořád je u chatu obecně
       // problém, že trvá, než se načte konverzace"). Ke každé zprávě se

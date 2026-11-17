@@ -1919,6 +1919,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // Treti zalozka panelu (17. 11. 2026) - jen kdo na seznam ma pravo.
   const smiPotreby = usePravoNaPotreby();
   /**
+   * PŘIDÁNÍ ČLOVĚKA DO ROZHOVORU (zadání 17. 11. 2026) - ikona + v hlavičce.
+   * Otevře se seznam lidí a u každého dvě volby, jestli uvidí starou historii.
+   */
+  const [pridavani, setPridavani] = useState(false);
+  const [pridavam, setPridavam] = useState<string | null>(null);
+  /**
    * ÚKOL Z CHATU (zadání 18. 9. 2026). Termín se vybírá v liště nad psátkem,
    * která se ukáže, jakmile zpráva začíná „@úkol"; prázdno znamená bez
    * termínu, což je běžný případ, ne chyba.
@@ -3071,6 +3077,35 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       setError(t('chat.odchodNezdaril'));
     } finally {
       setSpravaUklada(false);
+    }
+  }
+
+  /**
+   * Přidá člověka do otevřeného rozhovoru. Ze soukromé zprávy se tím stane
+   * skupina bez názvu - server to překlopí sám, tady se jen znovu načte
+   * seznam, ať se rozhovor přejmenuje podle lidí.
+   */
+  async function pridejDoRozhovoru(userId: string, historie: 'CELA' | 'ODTED') {
+    if (!otevrena || pridavam) return;
+    setPridavam(userId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/chat/konverzace/${otevrena.id}/clenove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, historie }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(hlaskaChyby(data, t, t('chat.pridaniNepodarilo')));
+        return;
+      }
+      setPridavani(false);
+      await nactiKonverzace();
+    } catch {
+      setError(t('chat.pridaniNepodarilo'));
+    } finally {
+      setPridavam(null);
     }
   }
 
@@ -4420,6 +4455,41 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         <span className="tabular-nums">{otevrena.memberLabels.length + 1}</span>
                       </button>
                     )}
+                    {/* PŘIDAT ČLOVĚKA JEDNÍM KLEPNUTÍM (zadání 17. 11. 2026:
+                        „na té horní liště u jména přidat ikonu + a tím přidám
+                        někoho do konverzace. Ať nemusím znova tvořit
+                        skupinu").
+
+                        U soukromé zprávy i u skupiny. Ze soukromé se tím
+                        stane skupina bez názvu, která se jmenuje podle lidí -
+                        historie zůstává, nic se nezakládá znovu. */}
+                    {(otevrena.kind === 'SOUKROMA' || otevrena.kind === 'SKUPINA') && (
+                      <button
+                        type="button"
+                        onClick={() => setPridavani((v) => !v)}
+                        title={t('chat.pridatCloveka')}
+                        aria-label={t('chat.pridatCloveka')}
+                        aria-expanded={pridavani}
+                        className={`shrink-0 leading-none p-1 -m-1 transition-colors ${
+                          pridavani ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'
+                        }`}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="w-4 h-4"
+                          aria-hidden="true"
+                        >
+                          <circle cx="9" cy="8" r="3.4" />
+                          <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+                          <path d="M18 9v6M15 12h6" />
+                        </svg>
+                      </button>
+                    )}
                     {/* TECHNICKÉ PARAMETRY (zadání 27. 9. 2026) - v kanálu
                         projektu hned po ruce, aby si zvukař nemusel otevírat
                         detail jen kvůli tomu, v čem se to odevzdává. */}
@@ -4463,6 +4533,58 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       {otevrena.ztlumeno ? <ZvonekSkrtnuty /> : <ZvonekMaly />}
                     </button>
                   </div>
+
+                  {/* NABÍDKA „KOHO PŘIDAT" (17. 11. 2026). U každého jsou
+                      rovnou dvě tlačítka, aby se volba historie nemusela
+                      proklikávat zvlášť:
+
+                        „Vidí vše"  - uvidí i to, co se psalo před ním,
+                        „Jen nové"  - starší zprávy mu server vůbec nepošle.
+
+                      Ten, kdo přidává, se rozhoduje vědomě: do skupiny vedení
+                      se nový člověk většinou přidává bez historie, do
+                      pracovního rozhovoru s ní. */}
+                  {pridavani && (
+                    <div className="border-b border-line bg-tint px-4 py-3 flex flex-col gap-2">
+                      <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">
+                        {t('chat.pridatCloveka')}
+                      </p>
+                      {team.filter((u) => !otevrena.memberIds?.includes(u.id)).length === 0 ? (
+                        <p className="text-xs font-body text-muted m-0">{t('chat.nikdoDalsi')}</p>
+                      ) : (
+                        <ul className="list-none p-0 m-0 flex flex-col gap-1 max-h-[40vh] overflow-y-auto">
+                          {team
+                            .filter((u) => !otevrena.memberIds?.includes(u.id))
+                            .map((u) => (
+                              <li key={u.id} className="flex items-center gap-2">
+                                <span className="flex items-center gap-2 flex-1 min-w-0">
+                                  <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
+                                  <span className="truncate text-sm font-body text-ink">{u.label}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={pridavam !== null}
+                                  onClick={() => void pridejDoRozhovoru(u.id, 'CELA')}
+                                  title={t('chat.pridatSHistoriiPopis')}
+                                  className="shrink-0 rounded-pill border border-line px-2 py-0.5 text-[11px] font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-50"
+                                >
+                                  {t('chat.pridatSHistorii')}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={pridavam !== null}
+                                  onClick={() => void pridejDoRozhovoru(u.id, 'ODTED')}
+                                  title={t('chat.pridatBezHistoriePopis')}
+                                  className="shrink-0 rounded-pill border border-line px-2 py-0.5 text-[11px] font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-50"
+                                >
+                                  {t('chat.pridatBezHistorie')}
+                                </button>
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
 
                   {otevrena.kind === 'SKUPINA' && spravaOtevrena && (
                     <div className="border-b border-line bg-tint px-4 py-3 flex flex-col gap-2">

@@ -1692,6 +1692,18 @@ model ConversationMember {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastReadAt     DateTime     @default(now())
 
+  /// OD KDY TENHLE CLOVEK VIDI HISTORII (zadani 17. 11. 2026: „melo by to
+  /// nabidnout dve moznosti, kdyz cloveka budu pridavat. 1. nevidi historii,
+  /// ktera byla pred pridanim, 2. vidi historii od zacatku zalozeni kanalu").
+  ///
+  /// Prazdno = vidi vsechno od zalozeni, coz je stav vsech clenu do 17. 11.
+  /// 2026 i vychozi volba pri pridani. Vyplneny cas znamena, ze starsi zpravy
+  /// se mu vubec nenactou - neni to jen schovani v prohlizeci, server je
+  /// neposle (viz api/chat/konverzace/[id]/zpravy).
+  ///
+  /// Zpetne se to nemeni: kdo jednou historii videl, tomu se nebere.
+  vidiOdAt       DateTime?
+
   /// Ztlumeny rozhovor (zadani 12. 9. 2026). Zprava se dorucuje dal a je
   /// videt jako neprectena - jen z nej nechodi upozorneni. Nejcasteji
   /// pouzivane nastaveni ze vsech: jeden ukecany kanal se umlci a zbytek

@@ -2024,6 +2024,21 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Název skupiny (nepovinný)',
     en: 'Group name (optional)',
   },
+  'chat.pridatCloveka': { cs: 'Přidat někoho do rozhovoru', en: 'Add someone to the conversation' },
+  'chat.pridatSHistorii': { cs: 'Vidí vše', en: 'Sees everything' },
+  'chat.pridatSHistoriiPopis': {
+    cs: 'Uvidí i to, co se psalo před jeho přidáním.',
+    en: 'They will also see what was written before they joined.',
+  },
+  'chat.pridatBezHistorie': { cs: 'Jen nové', en: 'New only' },
+  'chat.pridatBezHistoriePopis': {
+    cs: 'Starší zprávy neuvidí — rozhovor pro něj začíná teď.',
+    en: 'They will not see older messages — the conversation starts now for them.',
+  },
+  'chat.pridaniNepodarilo': {
+    cs: 'Přidat se ho nepodařilo.',
+    en: 'They could not be added.',
+  },
   'chat.napsatVybranym': {
     cs: 'Napsat vybraným ({pocet})',
     en: 'Message the selected ({pocet})',
