@@ -101,6 +101,20 @@ export const NASTROJE = [
     },
   },
   {
+    name: 'pripominky_k_portalu',
+    description:
+      'Co lidem v portálu vadí a čeká na vyřízení - nevyřízené připomínky k portálu, nejstarší napřed, i s tím, kdo je napsal a jak dlouho visí. Používej, když se někdo ptá, co se má v portálu opravit, co visí, co je rozdělané nebo na co se zapomnělo. Vidí to jen Žůžo-labůžo; komukoliv jinému řekni, že tenhle seznam nemáš.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        dni: {
+          type: 'number',
+          description: 'Jen to, co visí déle než tolik dní. Bez toho všechno nevyřízené.',
+        },
+      },
+    },
+  },
+  {
     name: 'hledej_navod',
     description:
       'Prohledá návody k portálu (Nápověda) a vrátí kus textu i s odkazem. Používej, když se někdo ptá, jak se co dělá nebo kde co je.',
@@ -130,6 +144,8 @@ export async function spustNastroj(
         return await hledejProjekt(String(vstup.dotaz ?? ''));
       case 'moje_ukoly':
         return await mojeUkoly(kdo);
+      case 'pripominky_k_portalu':
+        return await pripominkyKPortalu(Number(vstup.dni ?? 0), kdo);
       case 'hledej_navod':
         return await hledejNavod(String(vstup.dotaz ?? ''), kdo);
       case 'posli_zpravu':
@@ -412,4 +428,55 @@ async function posliZpravu(komu: string, text: string, kdo: KdoSePta): Promise<s
   const poslano = await brunoVyridVzkaz(bezTitulu(ja?.name) || ja?.email || 'Někdo z týmu', prijemce.id, text.trim());
   if (!poslano) return 'Zprávu se odeslat nepodařilo, zkus to prosím přes chat napřímo.';
   return `ODESLÁNO. ${prijemce.name || prijemce.email} dostal zprávu do chatu a cinklo mu to. Napiš, že je vyřízeno, a zopakuj, co jsi mu vzkázal.`;
+}
+
+
+/**
+ * NEVYŘÍZENÉ PŘIPOMÍNKY K PORTÁLU (zadání 17. 11. 2026: „občas se tam i můžeš
+ * mrknout a zařvat, když tam bude nějaká nedořešená věc nebo tam bude viset
+ * něco dlouho").
+ *
+ * Pondělní připomínka od Bruna chodí sama (lib/pripominkyVisiServer.ts);
+ * tohle je totéž na vyžádání - „co visí?" kdykoliv v chatu.
+ *
+ * PRÁVA SE NEOBCHÁZEJÍ: seznam čte jen Žůžo-labůžo, stejně jako na stránce
+ * Můj účet. Komukoliv jinému Bruno řekne, že ho nemá.
+ */
+async function pripominkyKPortalu(dni: number, kdo: KdoSePta): Promise<string> {
+  if (kdo.role !== 'ADMIN') {
+    return 'Seznam připomínek k portálu vidí jen Žůžo-labůžo - tenhle účet na něj nemá právo.';
+  }
+  const prah = Number.isFinite(dni) && dni > 0 ? dni : 0;
+  const hranice = prah > 0 ? new Date(Date.now() - prah * 86_400_000) : null;
+
+  const visici = await prisma.pripominkaPortalu
+    .findMany({
+      where: { stav: 'NOVA', ...(hranice ? { createdAt: { lt: hranice } } : {}) },
+      orderBy: { createdAt: 'asc' },
+      take: 40,
+      select: {
+        text: true,
+        odkud: true,
+        createdAt: true,
+        user: { select: { name: true, email: true } },
+      },
+    })
+    .catch(() => []);
+
+  if (visici.length === 0) {
+    return prah > 0
+      ? `Nic nevyřízeného staršího než ${prah} dní.`
+      : 'V připomínkách k portálu nic nevyřízeného není.';
+  }
+
+  const ted = Date.now();
+  const radky = visici.map((p) => {
+    const kdoPsal = p.user?.name || p.user?.email || 'neznámo kdo';
+    const kolikDni = Math.floor((ted - p.createdAt.getTime()) / 86_400_000);
+    const kde = p.odkud ? `, ${p.odkud}` : '';
+    const text = p.text.replace(/\s+/g, ' ').trim();
+    return `- ${text} (${kdoPsal}, visí ${kolikDni} dní${kde})`;
+  });
+
+  return `Nevyřízené připomínky k portálu (${visici.length}), nejstarší napřed:\n${radky.join('\n')}`;
 }
