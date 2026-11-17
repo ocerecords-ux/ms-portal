@@ -184,6 +184,8 @@ export function UserEditForm({
     user.dostavaPotvrzeniTerminu,
   );
   const [vidiPozadavkyStudii, setVidiPozadavkyStudii] = useState(user.vidiPozadavkyStudii);
+  /** Která záložka formuláře je vidět - viz lišta níž. */
+  const [zalozka, setZalozka] = useState<'UDAJE' | 'PRISTUPY' | 'UPOZORNENI' | 'SPRAVA'>('UDAJE');
   const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
   const [planovaniTerminu, setPlanovaniTerminu] = useState(user.planovaniTerminu);
   const [strihaExterne, setStrihaExterne] = useState(user.strihaExterne);
@@ -414,10 +416,56 @@ export function UserEditForm({
     }
   }
 
+  /**
+   * ZÁLOŽKY VE FORMULÁŘI (zadání 17. 11. 2026: „a tady se to může rozdělit
+   * klidně do více karet").
+   *
+   * Karta uživatele má přes třicet zaškrtávátek a sedm skupin polí pod sebou.
+   * Kdo přišel přepnout jedno jediné, hledal ho očima v celé té ploše.
+   *
+   * ČTYŘI ZÁLOŽKY, JEDEN FORMULÁŘ. Ukládá se pořád najednou tlačítkem dole -
+   * přepnutí záložky nic neodesílá a nic neztrácí, protože všechna pole žijí
+   * ve stejném stavu. Co není vidět, se taky uloží.
+   *
+   *   Údaje      - jméno, role, kontakt, sazby, fakturační údaje herce
+   *   Přístupy   - co ten člověk smí vidět a dělat
+   *   Upozornění - co mu z portálu chodí mailem a zvonkem
+   *   Správa     - heslo, vyřazení, smazání účtu
+   */
+  const ZALOZKY = [
+    { klic: 'UDAJE' as const, nazev: t('uzivatel.zalozkaUdaje') },
+    { klic: 'PRISTUPY' as const, nazev: t('uzivatel.zalozkaPristupy') },
+    { klic: 'UPOZORNENI' as const, nazev: t('uzivatel.zalozkaUpozorneniKarta') },
+    { klic: 'SPRAVA' as const, nazev: t('uzivatel.zalozkaSprava') },
+  ];
+
   return (
     <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4">
+      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-line -mt-2 mb-1">
+        {ZALOZKY.map((z) => {
+          const jeTu = z.klic === zalozka;
+          return (
+            <button
+              key={z.klic}
+              type="button"
+              role="tab"
+              aria-selected={jeTu}
+              onClick={() => setZalozka(z.klic)}
+              className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
+                jeTu
+                  ? 'bg-surface border-line text-brand-purple'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
+            >
+              {z.nazev}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Poradi poli (zadani 12. 9. 2026): Jmeno + Fotka (drag & drop) prvni,
           pak Role (+ Firma), az pak E-mail + Telefon. */}
+      {zalozka === 'UDAJE' && (
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">
           <AdminField label={t('uzivatel.poleJmeno')}>
@@ -440,8 +488,13 @@ export function UserEditForm({
           </div>
         )}
       </div>
+      )}
 
+      {/* SPOLEČNÝ OBAL VŠECH ZAŠKRTÁVÁTEK. Schovaný není nikdy - hlídá se
+          každá položka v něm zvlášť podle záložky (17. 11. 2026), takže se
+          z něj v jiné záložce prostě nic nevykreslí a sám se složí. */}
       <div className="flex gap-4 flex-wrap">
+        {zalozka === 'UDAJE' && (
         <div className="flex-1 min-w-[200px]">
           <AdminField label={t('uzivatel.poleTypPristupu')} required>
             <VyberPole required value={role} onChange={(e) => setRole(e.target.value as Role)} className="admin-input">
@@ -460,9 +513,10 @@ export function UserEditForm({
             </VyberPole>
           </AdminField>
         </div>
+        )}
         {/* Hodinova sazba - jen zvukar, pocitaji se z ni vykazy prace
             (zadani 6. 9. 2026). */}
-        {role === 'ZVUKAR' && (
+        {zalozka === 'UDAJE' && role === 'ZVUKAR' && (
           <div className="flex-1 min-w-[180px]">
             <AdminField label={t('uzivatel.poleHodinovaSazba')} hint={t('uzivatel.hodinovaSazbaHint')}>
               <input
@@ -480,7 +534,7 @@ export function UserEditForm({
             na dohodu, takže bych potřeboval, aby to šlo rovnou na mzdovou
             účetní"). Drží se u člověka, ne natvrdo v kódu - lidí na dohodu
             přibývá a účetní se mění. */}
-        {role === 'ZVUKAR' && (
+        {zalozka === 'UDAJE' && role === 'ZVUKAR' && (
           <div className="flex-1 min-w-[260px]">
             <AdminField label={t('uzivatel.poleMzdyEmail')} hint={t('uzivatel.mzdyEmailHint')}>
               <input
@@ -496,7 +550,7 @@ export function UserEditForm({
         {/* PODÍL NA OBRATU (zadání 6. 10. 2026: „každý z nich má jiný podíl
             na obratu"). Procenta z obratu bez DPH; prázdno = žádný podíl
             a záložka Moje bonusy se tomu člověku vůbec neukáže. */}
-        {isMediaspace && (
+        {zalozka === 'UDAJE' && isMediaspace && (
           <div className="flex-1 min-w-[180px]">
             <AdminField label={t('uzivatel.polePodilNaObratu')} hint={t('uzivatel.podilNaObratuHint')}>
               <input
@@ -517,7 +571,7 @@ export function UserEditForm({
             zaškrtávátka"). Zaškrtávátka jsou ze skutečných studií, takže se
             nově přidané studio objeví samo. Brno I a Brno II jsou dvě
             místnosti - kdo točí v obou, má zaškrtnuté obě. */}
-        {isZvukar && (
+        {zalozka === 'PRISTUPY' && isZvukar && (
           <div className="w-full">
             <AdminField label={t('uzivatel.poleStudia')} hint={t('uzivatel.studiaHint')}>
               <div className="flex flex-wrap gap-2">
@@ -574,7 +628,7 @@ export function UserEditForm({
             tabule Tomáši Ilavskému a celému Žůžo-labůžo. A pak v Praze Ondřej
             Černý ml."). Kdo má studio zaškrtnuté, otevře si jeho tabuli pod
             svým účtem - adresu ani účet tabule k tomu nepotřebuje. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="w-full">
             <AdminField label={t('uzivatel.polePristupTabule')} hint={t('uzivatel.pristupTabuleHint')}>
               <div className="flex flex-wrap gap-2">
@@ -609,7 +663,7 @@ export function UserEditForm({
 
             NIC ZAŠKRTNUTÉHO ZNAMENÁ VŠECHNY - ať se stávajícím účtům nic
             neuzavře. Viz lib/naseFirmy.ts. */}
-        {isMediaspace && naseFirmy.length > 1 && (
+        {zalozka === 'PRISTUPY' && isMediaspace && naseFirmy.length > 1 && (
           <div className="w-full">
             <AdminField label={t('uzivatel.poleViditelneFirmy')} hint={t('uzivatel.viditelneFirmyNapoveda')}>
               <div className="flex flex-wrap gap-2">
@@ -640,6 +694,7 @@ export function UserEditForm({
             ani nenabídne - o její existenci se z portálu nedozví.
 
             Přeloženo v dávce 7h (10. 10. 2026). */}
+        {zalozka === 'PRISTUPY' && (
         <div className="w-full">
           <AdminField
             label={t('uzivatel.poleSlozkyDisku')}
@@ -672,6 +727,7 @@ export function UserEditForm({
             </div>
           </AdminField>
         </div>
+        )}
 
         {/* PŘÍSTUP DO SEKCÍ (zadání 28. 9. 2026: „tam mu pomocí zaškrtávacích
             polí dávám přístup jednotlivým sekcím").
@@ -680,7 +736,7 @@ export function UserEditForm({
             vlastní úzký portál, který se tímhle neřídí. U superadmina se
             zaškrtávátka nenabízí vůbec: ten vidí všechno a je to pojistka
             proti tomu, aby se poslední správce zamknul ze správy uživatelů. */}
-        {isMediaspace && jsemSuperadmin && (
+        {zalozka === 'PRISTUPY' && isMediaspace && jsemSuperadmin && (
           <div className="w-full">
             <AdminField label={t('uzivatel.pristupySekce')}>
               {user.superadmin ? (
@@ -781,7 +837,7 @@ export function UserEditForm({
         )}
 
         {/* Kdo se nabizi jako manazer projektu (zadani 10. 9. 2026). */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -799,7 +855,7 @@ export function UserEditForm({
         )}
         {/* Kdo za Mediaspace podepisuje smlouvy (zadani 15. 9. 2026). Jeho
             podpis se ke smlouve pripoji sam pri odeslani k podpisu. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -819,7 +875,7 @@ export function UserEditForm({
         )}
         {/* Kdo sedi v kanalech, ktere klient otevre tlacitkem "Zeptat se"
             u sveho projektu (zadani 11. 9. 2026). */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -841,7 +897,7 @@ export function UserEditForm({
         {/* KOPIE NABÍDEK TERMÍNŮ HERCŮM (12. 10. 2026). Viditelná kopie,
             ne skrytá - herec má vidět, s kým termín řešit, a odpověď
             „žádný mi nesedí" má dorazit produkci. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -864,7 +920,7 @@ export function UserEditForm({
             „nastavit notifikaci při stavu projektu Schváleno - k fakturaci
             na mě. Nejlépe email… a proklik na projekt"). Mail i zvonek,
             obojí s odkazem rovnou na projekt. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -886,7 +942,7 @@ export function UserEditForm({
         {/* Kdo vidi sekci Banka - napojeni uctu a parovani plateb
             (zadani 17. 9. 2026: „nastaveni a parovani banky bych mel videt
             jen ja a Bara Siblova"). */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -906,7 +962,7 @@ export function UserEditForm({
         {/* Kdo vidi sekci Pokladna - hotovostni pokladni kniha
             (zadani 23. 10. 2026). Vlastni pravo vedle Banky: hotovost
             a bankovni ucet se muzou rozejit. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -928,7 +984,7 @@ export function UserEditForm({
         {/* Kdo spravuje technicke parametry vyroby (zadani 27. 9. 2026:
             „menit to muzu hromadne ja nebo Peter. Ostatni zvukari by to
             nemeli mit moznost upravovat"). */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -948,7 +1004,7 @@ export function UserEditForm({
         {/* Kdo smi prehazovat stavy projektu (zadani 17. 11. 2026: „Tomas
             Ilavsky by mel mit moznost prehazovat stavy projektu"). Pusti
             jen stav - zbytek karty projektu zustava jen ke cteni. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -969,7 +1025,7 @@ export function UserEditForm({
             at Peter vidi ve zvonecku notifikace o zmene datumu a zmene stavu
             projektu"). Vychozi je NE - jinak by zvonek zvonil vsem u kazde
             zmeny a prestal by se cist. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -996,6 +1052,7 @@ export function UserEditForm({
             přepíná sám v liště. Role a firma na téhle kartě rozhodují jen
             o tom, ČÍ zakázky uvidí v pohledu Klient - proto se takový účet
             zakládá jako Klient nějaké firmy. */}
+        {zalozka === 'PRISTUPY' && (
         <div className="flex-1 min-w-[240px] flex items-end">
           <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
             <input
@@ -1012,12 +1069,13 @@ export function UserEditForm({
             </span>
           </label>
         </div>
+        )}
 
         {/* Zprava o dotocenem herci (zadani 11. 9. 2026: "info o dotoceno
             s hercem jde notifikaci mailem na Helenu Rychlik"). Priznak
             u uctu, ne adresa v kodu - az to bude hlidat nekdo jiny,
             preklikne se to tady. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1039,7 +1097,7 @@ export function UserEditForm({
         {/* Mail, kdyz si herec naklika terminy (pripominka Heleny 5. 10. 2026:
             „potrebuju dostavat mailem notifikace o vyplneni terminu").
             Prepnout si to kazdy umi i sam v „Muj ucet". */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1062,7 +1120,7 @@ export function UserEditForm({
             „muze mi prosim chodit potvrzeni terminu, ktere chodi hercum, kdyz
             jim ty terminy schvali?"). Je to krok ZA zaskrtavatkem vyse - to
             hlasi, ze si herec terminy naklikal, tohle az jejich potvrzeni. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1084,7 +1142,7 @@ export function UserEditForm({
         {/* Cely seznam "Co je potreba" ve studiich (zadani 17. 11. 2026:
             „kompletni seznam bych mel videt jen ja a Peter"). Vedouci pobocky
             do svych studii zapisuje i bez tohohle - viz lib/pozadavkyStudii.ts. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1105,7 +1163,7 @@ export function UserEditForm({
 
         {/* Schvalovani reklam klientem (zadani 23. 9. 2026: „u reklam ma jit
             notifikace zvoneckem na me a Petera Dratvu"). Zvonek, ne mail. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1126,7 +1184,7 @@ export function UserEditForm({
 
         {/* Zvonek „muzeme planovat" (zadani 24. 9. 2026: „v tomto stavu pujde
             notifikace pres zvonecek jen Helci"). Zvonek, ne mail. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1148,7 +1206,7 @@ export function UserEditForm({
         {/* Striha externe (zadani 23. 9. 2026: „vyjimka je Matej Suk, ktery
             striha externe"). V kalendari u jeho udalosti sviti letadlo
             a studio se u nich nepocita jako obsazene. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1170,7 +1228,7 @@ export function UserEditForm({
         {/* Status v chatu z kalendare (zadani 25. 9. 2026: „Tohle nastav jen
             mi"). Bez zaskrtnuti si clovek status pise jen sam; „Mimo studio"
             se ukazuje vsem tak jako tak. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1191,7 +1249,7 @@ export function UserEditForm({
 
         {/* Znacka stavu nabidky u reklam (zadani 23. 9. 2026: „chtel bych
             nekde videt (jen ja) ... ze je nabidka schvalena"). */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1212,7 +1270,7 @@ export function UserEditForm({
 
         {/* I ZVUKAŘ (zadání 22. 9. 2026: „aby se mohl občas i přidat jako
             zvukař k některým projektům"). Účet si nechá svou roli. */}
-        {isMediaspace && role !== 'ZVUKAR' && (
+        {zalozka === 'PRISTUPY' && isMediaspace && role !== 'ZVUKAR' && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1235,7 +1293,7 @@ export function UserEditForm({
             uzivatelu tymu, ktere si nastavim na webu v portalu"). Driv chodila
             objednavka na jednu spolecnou schranku z promenne prostredi, ktera
             se nedala z portalu ani precist, natoz zmenit. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1257,7 +1315,7 @@ export function UserEditForm({
         {/* Vyplnene udaje z odkazu (zadani 16. 9. 2026: „zahlasi Karoline -
             tohle bych chtel mit ale taky moznost menit do budoucna, komu to
             bude hlasit"). Proto prepinac u uctu, ne jmeno v kodu. */}
-        {isMediaspace && (
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1279,7 +1337,7 @@ export function UserEditForm({
         {/* Vychozi manazer audioknih (zadani 15. 9. 2026: „manazer projektu
             u audioknih je vzdy Karolina"). Projekt z objednavky audioknihy
             dostane rovnou jeho, at nezustava nicí. */}
-        {isMediaspace && (
+        {zalozka === 'PRISTUPY' && isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1304,7 +1362,7 @@ export function UserEditForm({
             Tyka se jen projektu, u kterych je tenhle clovek napsany jako
             klient - tedy tech, ktere v portalu vidi. Tyz prepinac ma
             i u sebe v „Muj ucet", at si to zapne a vypne sam. */}
-        {isKlient && (
+        {zalozka === 'UPOZORNENI' && isKlient && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1328,7 +1386,7 @@ export function UserEditForm({
             frekvence"). Stejny princip jako prepinac vys - jen projekty, u
             kterych je tenhle clovek napsany jako klient, a tyz prepinac ma
             i u sebe v „Muj ucet". */}
-        {isKlient && (
+        {zalozka === 'UPOZORNENI' && isKlient && (
           <div className="flex-1 min-w-[240px] flex items-end">
             <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
               <input
@@ -1347,7 +1405,7 @@ export function UserEditForm({
           </div>
         )}
 
-        {needsCompany && (
+        {zalozka === 'UDAJE' && needsCompany && (
           <div className="flex-1 min-w-[200px]">
             <AdminField label={t('uzivatel.poleFirma')} required>
               <VyberPole required value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="admin-input">
@@ -1392,6 +1450,7 @@ export function UserEditForm({
         )}
       </div>
 
+      {zalozka === 'UDAJE' && (
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <AdminField label={t('uzivatel.poleEmail')} required>
@@ -1423,8 +1482,9 @@ export function UserEditForm({
           </AdminField>
         </div>
       </div>
+      )}
 
-      {isMediaspace && (
+      {zalozka === 'UDAJE' && isMediaspace && (
         <div className="flex gap-4 flex-wrap">
           <div className="flex-1 min-w-[160px]">
             <AdminField label={t('uzivatel.poleDatumNarozeni')}>
@@ -1434,7 +1494,7 @@ export function UserEditForm({
         </div>
       )}
 
-      {isHerec && (
+      {zalozka === 'UDAJE' && isHerec && (
         <>
           <AdminField label={t('uzivatel.poleLokace')} hint={t('uzivatel.lokaceHint')}>
             {/* Barva u kazde lokace je stejna jako v seznamu hercu (zadani
@@ -1554,6 +1614,7 @@ export function UserEditForm({
         </>
       )}
 
+      {zalozka === 'SPRAVA' && (
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">
           <AdminField label={t('uzivatel.poleNoveHeslo')} hint={t('uzivatel.noveHesloHint')}>
@@ -1567,11 +1628,13 @@ export function UserEditForm({
           </AdminField>
         </div>
       </div>
+      )}
 
       {/* Vyrazeni misto mazani (zadani 10. 9. 2026): na uzivateli visi smlouvy,
           vykazy a projekty, ktere musi zustat citelne. Drive to byla jen
           nenapadna zaskrtavaci polozka, takze nikdo netusil, ze tudy vede
           cesta, kdyz je potreba nekoho "smazat". */}
+      {zalozka === 'SPRAVA' && (
       <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
         <div className="flex-1 min-w-[260px]">
           <p className="font-heading font-semibold text-sm text-ink m-0">
@@ -1595,9 +1658,11 @@ export function UserEditForm({
           {active ? t('uzivatel.vyraditUzivatele') : t('uzivatel.vratitMeziAktivni')}
         </button>
       </div>
+      )}
 
       {/* Tvrde smazani (zadani 10. 9. 2026). Kdyz na uctu neco visi, portal
           nabidne archivaci - viz SmazatSPrekazkami. */}
+      {zalozka === 'SPRAVA' && (
       <div className="flex flex-col gap-3">
         <div>
           <p className="font-heading font-semibold text-sm text-ink m-0">{t('uzivatel.smazatUplneNadpis')}</p>
@@ -1615,6 +1680,7 @@ export function UserEditForm({
           }}
         />
       </div>
+      )}
 
       {error && <p className="text-danger text-sm">{error}</p>}
 

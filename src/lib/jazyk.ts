@@ -2786,6 +2786,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'pozadavky.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
   'uzivatel.zalozkaKarta': { cs: 'Karta', en: 'Profile' },
+  'uzivatel.zalozkaUdaje': { cs: 'Údaje', en: 'Details' },
+  'uzivatel.zalozkaPristupy': { cs: 'Přístupy', en: 'Access' },
+  'uzivatel.zalozkaUpozorneniKarta': { cs: 'Upozornění', en: 'Notifications' },
+  'uzivatel.zalozkaSprava': { cs: 'Správa účtu', en: 'Account' },
   'uzivatel.zalozkaUpozorneni': { cs: 'Upozornění', en: 'Notifications' },
   'uzivatel.zalozkyPopis': { cs: 'Části karty uživatele', en: 'Sections of the user card' },
   'uzivatel.pravoPozadavkyStudii': {
