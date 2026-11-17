@@ -301,7 +301,10 @@ export function RezimNevidomi({
   useEffect(() => {
     function stisk(e: KeyboardEvent) {
       const cil = e.target as HTMLElement | null;
-      const vPoli = cil && (cil.tagName === 'INPUT' || cil.tagName === 'TEXTAREA');
+      // Psátko chatu je contentEditable DIV, ne TEXTAREA (29. 10. 2026) - viz
+      // stejná oprava v projekty/[id]/Preposlech.tsx.
+      const vPoli =
+        cil && (cil.tagName === 'INPUT' || cil.tagName === 'TEXTAREA' || cil.isContentEditable);
       if (vPoli) {
         // V poli funguje jen uložení; psaní nesmí spouštět přehrávač.
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

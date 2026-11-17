@@ -918,9 +918,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'preposlech.kreslimKrivku': { cs: 'kreslím křivku…', en: 'drawing the waveform…' },
   /* Délky stop a kolik zbývá doposlechnout (25. 9. 2026). */
   'preposlech.celkemStop': { cs: 'celkem', en: 'total' },
+  'preposlech.poslechnuto': { cs: 'poslechnuto', en: 'listened' },
   'preposlech.celkemStopTitle': {
-    cs: 'Součet délek všech nahraných stop ve složce projektu.',
-    en: 'The lengths of all recorded tracks in the project folder added up.',
+    cs: 'Součet délek všech nahraných stop ve složce projektu a kolik z nich už máte za sebou.',
+    en: 'The lengths of all recorded tracks in the project folder added up, and how much of it you have already been through.',
   },
   'preposlech.delkaStopy': { cs: 'Délka stopy', en: 'Track length' },
   'preposlech.zbyvaDoposlechnout': { cs: 'Zbývá doposlechnout', en: 'Left to listen' },

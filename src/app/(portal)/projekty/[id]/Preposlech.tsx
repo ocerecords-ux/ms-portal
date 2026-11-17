@@ -1983,7 +1983,20 @@ export function Preposlech({
   useEffect(() => {
     function stisk(e: KeyboardEvent) {
       const cil = e.target as HTMLElement | null;
-      if (cil && (cil.tagName === 'INPUT' || cil.tagName === 'TEXTAREA')) return;
+      /**
+       * PSANÍ MÁ PŘEDNOST PŘED PŘEHRÁVAČEM (připomínka Heleny 29. 10. 2026:
+       * „když přeposlouchávám, stopnu si track a chci v tom samém okně napsat
+       * něco do chatu… když dělám mezeru, na ten zmáčknutý mezerník reaguje
+       * i přehrávač a spustí mi track").
+       *
+       * Políčka INPUT a TEXTAREA se vynechávala od začátku, jenže psátko
+       * v chatu je `contentEditable` DIV (kvůli zmínkám a smajlíkům), takže
+       * se mezi ně nepočítalo. `isContentEditable` pokryje jak psátko, tak
+       * cokoli, co v něm stojí.
+       */
+      if (cil && (cil.tagName === 'INPUT' || cil.tagName === 'TEXTAREA' || cil.isContentEditable)) {
+        return;
+      }
       // Vysunuta zalozka prehravac zamyka - klavesy delaji jen jedno.
       if (zalozkaZasunuta) {
         if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
@@ -2782,6 +2795,17 @@ export function Preposlech({
                     <span className="font-normal text-muted">{t('preposlech.celkemStop')}</span>
                     <span className="tabular-nums">{hms(celkem.sekundy)}</span>
                     {!celkem.uplne && <span className="text-muted">…</span>}
+                    {/* A kolik z toho už je za mnou (připomínka Heleny
+                        29. 10. 2026: „úplně nejlepší by bylo, kdyby bylo
+                        vidět, kolik mám z té celkové stopáže už
+                        poslechnuto"). Je to celek minus to, co zbývá -
+                        počítá se z týchž čísel, takže si ta dvě čísla nikdy
+                        neodporují. */}
+                    <span className="text-muted">·</span>
+                    <span className="font-normal text-muted">{t('preposlech.poslechnuto')}</span>
+                    <span className="tabular-nums">
+                      {hms(Math.max(0, celkem.sekundy - zbyva.sekundy))}
+                    </span>
                   </span>
                 )}
               </span>
