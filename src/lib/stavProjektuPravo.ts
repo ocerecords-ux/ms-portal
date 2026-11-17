@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { canEditProjectMeta, type Role } from '@/lib/roles';
+import type { Role } from '@prisma/client';
+import { canEditProjectMeta } from '@/lib/roles';
 
 /**
  * KDO SMÍ PŘEHAZOVAT STAVY PROJEKTŮ (zadání 17. 11. 2026: „Tomáš Ilavský by

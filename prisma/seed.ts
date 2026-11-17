@@ -1683,7 +1683,7 @@ async function stavyProjektuTomasovi() {
     if (uz) return;
     const vysledek = await prisma.user.updateMany({
       where: { name: { contains: 'Ilavsk', mode: 'insensitive' } },
-      data: { meniStavProjektu: true } as never,
+      data: { meniStavProjektu: true },
     });
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
     console.log(`  stavy projektu smi prehazovat i Tomas Ilavsky (${vysledek.count} uctu)`);
