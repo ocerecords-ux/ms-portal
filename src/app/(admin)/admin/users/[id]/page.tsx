@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { UserEditForm } from './UserEditForm';
+import { ZalozkyKarty } from './ZalozkyKarty';
 import { InviteButton } from '../InviteButton';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, formatDatumCas, prelozit, prelozitS } from '@/lib/jazyk';
@@ -143,6 +144,20 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         </div>
       </div>
 
+      {/* ZÁLOŽKY (zadání 17. 11. 2026: „tu historii upozornění u uživatelů
+          bychom mohli dát zvlášť do záložky… už je to nepřehledné, jak je tam
+          toho moc teď"). Karta se rolovala celou minutu, protože pod údaji
+          visela ještě padesátiřádková historie upozornění.
+
+          Přepíná se v prohlížeči, adresa se nemění - formulář je jeden a
+          ukládá se najednou. Viz ZalozkyKarty.tsx. */}
+      <ZalozkyKarty
+        zalozky={[
+          {
+            klic: 'karta',
+            nazev: prelozit(jazyk, 'uzivatel.zalozkaKarta'),
+            obsah: (
+              <div className="flex flex-col gap-6">
       {/* Pozvanka do portalu (zadani 5. 9. 2026) - uzivateli prijde e-mail s
           odkazem, kde si sam nastavi heslo. */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-start justify-between gap-4 flex-wrap">
@@ -162,60 +177,6 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           invitedAtLabel={user.invitedAt ? formatDatum(jazyk, user.invitedAt) : null}
           variant="button"
         />
-      </div>
-
-      {/**
-        * UPOZORNĚNÍ V PORTÁLU (19. 10. 2026). Jen ke čtení - od toho, kdy se
-        * co komu ukázalo. „Přečteno" znamená, že adresát v portálu rozbalil
-        * zvoneček; dokud to neudělá, visí upozornění jako nepřečtené.
-        */}
-      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
-        <div>
-          <p className="font-heading font-semibold text-sm text-ink m-0">
-            {prelozit(jazyk, 'uzivatel.upozorneniNadpis')}
-          </p>
-          <p className="text-muted text-xs font-body m-0 mt-1">
-            {prelozit(jazyk, 'uzivatel.upozorneniPopis')}
-          </p>
-        </div>
-
-        {upozorneni.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'uzivatel.upozorneniZadna')}</p>
-        ) : (
-          <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
-            {upozorneni.map((u) => (
-              <li key={u.id} className="py-2 flex flex-col gap-0.5">
-                <span className="text-sm font-body text-ink">{u.title}</span>
-                {u.body && <span className="text-xs font-body text-muted">{u.body}</span>}
-                <span className="text-xs font-body text-muted">
-                  {formatDatumCas(jazyk, u.createdAt)} ·{' '}
-                  {u.readAt
-                    ? prelozitS(jazyk, 'uzivatel.upozorneniPrecteno', {
-                        datum: formatDatumCas(jazyk, u.readAt),
-                      })
-                    : prelozit(jazyk, 'uzivatel.upozorneniNeprecteno')}
-                </span>
-                {/**
-                  * JESTLI K TOMU ODEŠEL MAIL (19. 10. 2026). Starší řádky to
-                  * nevědí - tam se nepíše nic, protože „nevíme" a „nedošel"
-                  * nejsou totéž.
-                  */}
-                {u.emailedAt && (
-                  <span className="text-xs font-body text-muted">
-                    {prelozitS(jazyk, 'uzivatel.upozorneniMailOdeslan', {
-                      datum: formatDatumCas(jazyk, u.emailedAt),
-                    })}
-                  </span>
-                )}
-                {u.emailChyba && (
-                  <span className="text-xs font-body text-danger">
-                    {prelozitS(jazyk, 'uzivatel.upozorneniMailChyba', { duvod: u.emailChyba })}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <UserEditForm
@@ -301,6 +262,71 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         // Které naše firmy účet vidí v Dokladech (12. 10. 2026).
         naseFirmy={naseFirmy}
         jsemSuperadmin={Boolean(ja?.superadmin)}
+      />
+              </div>
+            ),
+          },
+          {
+            klic: 'upozorneni',
+            nazev: prelozit(jazyk, 'uzivatel.zalozkaUpozorneni'),
+            obsah: (
+              /**
+               * UPOZORNĚNÍ V PORTÁLU (19. 10. 2026). Jen ke čtení - od toho,
+               * kdy se co komu ukázalo. „Přečteno" znamená, že adresát
+               * v portálu rozbalil zvoneček; dokud to neudělá, visí
+               * upozornění jako nepřečtené.
+               */
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
+        <div>
+          <p className="font-heading font-semibold text-sm text-ink m-0">
+            {prelozit(jazyk, 'uzivatel.upozorneniNadpis')}
+          </p>
+          <p className="text-muted text-xs font-body m-0 mt-1">
+            {prelozit(jazyk, 'uzivatel.upozorneniPopis')}
+          </p>
+        </div>
+
+        {upozorneni.length === 0 ? (
+          <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'uzivatel.upozorneniZadna')}</p>
+        ) : (
+          <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
+            {upozorneni.map((u) => (
+              <li key={u.id} className="py-2 flex flex-col gap-0.5">
+                <span className="text-sm font-body text-ink">{u.title}</span>
+                {u.body && <span className="text-xs font-body text-muted">{u.body}</span>}
+                <span className="text-xs font-body text-muted">
+                  {formatDatumCas(jazyk, u.createdAt)} ·{' '}
+                  {u.readAt
+                    ? prelozitS(jazyk, 'uzivatel.upozorneniPrecteno', {
+                        datum: formatDatumCas(jazyk, u.readAt),
+                      })
+                    : prelozit(jazyk, 'uzivatel.upozorneniNeprecteno')}
+                </span>
+                {/**
+                  * JESTLI K TOMU ODEŠEL MAIL (19. 10. 2026). Starší řádky to
+                  * nevědí - tam se nepíše nic, protože „nevíme" a „nedošel"
+                  * nejsou totéž.
+                  */}
+                {u.emailedAt && (
+                  <span className="text-xs font-body text-muted">
+                    {prelozitS(jazyk, 'uzivatel.upozorneniMailOdeslan', {
+                      datum: formatDatumCas(jazyk, u.emailedAt),
+                    })}
+                  </span>
+                )}
+                {u.emailChyba && (
+                  <span className="text-xs font-body text-danger">
+                    {prelozitS(jazyk, 'uzivatel.upozorneniMailChyba', { duvod: u.emailChyba })}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+            ),
+          },
+        ]}
       />
     </section>
   );

@@ -2761,6 +2761,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The list could not be loaded.',
   },
   'pozadavky.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'uzivatel.zalozkaKarta': { cs: 'Karta', en: 'Profile' },
+  'uzivatel.zalozkaUpozorneni': { cs: 'Upozornění', en: 'Notifications' },
+  'uzivatel.zalozkyPopis': { cs: 'Části karty uživatele', en: 'Sections of the user card' },
   'uzivatel.pravoPozadavkyStudii': {
     cs: 'Vidí celý seznam „Co je potřeba"',
     en: 'Sees the whole “What we need” list',
