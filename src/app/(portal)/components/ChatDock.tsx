@@ -5438,12 +5438,17 @@ function RadekUkolu({
   const poTerminu = !ukol.done && jePoTerminu(ukol.dueDate, ukol.dueTime ?? null);
   return (
     <label className="group flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-field cursor-pointer">
-      <input
-        type="checkbox"
-        checked={ukol.done}
-        onChange={onOdskrtni}
-        className="mt-0.5 w-4 h-4 accent-brand-purple shrink-0"
-      />
+      {/* Vetsi cil (17. 11. 2026) - ctverec 16 px se prstem trefuje spatne.
+          Odsazeni si bere zpatky zaporny okraj, takze se radek neroztahne. */}
+      <span className="shrink-0 -m-1.5 p-1.5">
+        <input
+          type="checkbox"
+          checked={ukol.done}
+          onChange={onOdskrtni}
+          aria-label={ukol.title}
+          className="w-4 h-4 accent-brand-purple block"
+        />
+      </span>
       <span className="min-w-0">
         <span className={`block text-sm font-body ${ukol.done ? 'text-muted line-through' : 'text-ink'}`}>
           {ukol.title}

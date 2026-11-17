@@ -97,6 +97,33 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   const [showDone, setShowDone] = useState(false);
   /** Který úkol se zrovna upravuje (25. 9. 2026) - vždycky nejvýš jeden. */
   const [upravovany, setUpravovany] = useState<string | null>(null);
+  /**
+   * ODŠKRTNUTÍ SE PROJEVÍ HNED (zadání 17. 11. 2026: „docela špatně se klika
+   * na ta zaškrtávátka… a taky to má strašné zpoždění, když na to kliknu, tak
+   * čekám tak dvě vteřiny, než to zmizí. A já v tu chvíli nevím, jestli se mi
+   * to povedlo trefit").
+   *
+   * Úkoly chodí ze serveru (layout), takže se řádek přesouval až po
+   * `router.refresh()` - to je celé kolo na server a zpátky. Tady si držíme,
+   * co už člověk odškrtl, a seznam se podle toho překreslí OKAMŽITĚ. Jakmile
+   * dorazí čerstvá data, poznámka se zahodí; kdyby uložení selhalo, vrátí se
+   * řádek zpátky a vypíše se chyba.
+   */
+  const [prepnute, setPrepnute] = useState<Record<string, boolean>>({});
+
+  // Cerstva data ze serveru maji prednost - co uz v nich sedi, nemusime
+  // drzet navic.
+  useEffect(() => {
+    setPrepnute((soucasne) => {
+      const zbyva = Object.fromEntries(
+        Object.entries(soucasne).filter(([id, done]) => {
+          const naServeru = tasks.find((t) => t.id === id);
+          return naServeru ? naServeru.done !== done : false;
+        }),
+      );
+      return Object.keys(zbyva).length === Object.keys(soucasne).length ? soucasne : zbyva;
+    });
+  }, [tasks]);
   // „Zadal jsem" (21. 9. 2026) - načítá se, až když je panel otevřený; layout
   // tak nemusí na každé stránce tahat úkoly ostatních.
   const [zadane, setZadane] = useState<ZadanyUkolVSeznamu[]>([]);
@@ -114,8 +141,11 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   }, [dok]);
 
   // Stav si pamatujeme v prohlizeci, at se panel neotevira porad znovu.
-  const open = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
+  // Co uz clovek odskrtl, bereme jako odskrtnute - i kdyz se server jeste
+  // neozval.
+  const ukoly = tasks.map((t) => (t.id in prepnute ? { ...t, done: prepnute[t.id] } : t));
+  const open = ukoly.filter((t) => !t.done);
+  const done = ukoly.filter((t) => t.done);
   // Po termínu i s časem (21. 9. 2026) - úkol do 14:00 je po termínu už
   // odpoledne, ne až zítra.
   const overdue = open.filter((t) => jePoTerminu(t.dueDate, t.dueTime ?? null));
@@ -151,6 +181,33 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
       return false;
     } finally {
       setBusy(false);
+    }
+  }
+
+  /**
+   * Odškrtnutí a vrácení zpátky. Nepoužívá `busy` ze `send` - tím se dřív
+   * zamkla VŠECHNA zaškrtávátka v panelu, takže po klepnutí nešlo odškrtnout
+   * nic dalšího, dokud se server neozval.
+   */
+  async function prepni(id: string, done: boolean) {
+    setPrepnute((c) => ({ ...c, [id]: done }));
+    setError(null);
+    try {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done }),
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+      void nactiZadane();
+    } catch {
+      // Nepovedlo se - radek se vrati tam, kde byl.
+      setPrepnute((c) => {
+        const { [id]: _pryc, ...zbytek } = c;
+        return zbytek;
+      });
+      setError(t('ukoly.chybaUlozit'));
     }
   }
 
@@ -267,14 +324,20 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
               />
             </li>
           ) : (
-          <li key={task.id} className="flex items-start gap-2.5 py-2.5 group">
-            <input
-              type="checkbox"
-              checked={false}
-              disabled={busy}
-              onChange={() => send(`/api/tasks/${task.id}`, 'PATCH', { done: true })}
-              className="mt-0.5 w-4 h-4 accent-[#6C4BF4] shrink-0"
-            />
+          <li key={task.id} className="flex items-start gap-1 py-1.5 group">
+            {/* VĚTŠÍ CÍL NEŽ SAMO ZAŠKRTÁVÁTKO (17. 11. 2026). Čtverec 16 px
+                se prstem trefuje špatně; obal kolem něj dělá z cíle plochu
+                přes 40 px, aniž by se řádek roztáhl - odsazení si bere zpátky
+                záporný okraj vlevo. */}
+            <label className="shrink-0 -ml-2 p-2 cursor-pointer rounded-lg hover:bg-field">
+              <input
+                type="checkbox"
+                checked={false}
+                onChange={() => void prepni(task.id, true)}
+                aria-label={task.title}
+                className="w-4 h-4 accent-[#6C4BF4] block"
+              />
+            </label>
             <span className="flex-1 min-w-0 text-sm font-body text-ink break-words">
               {task.title}
               {task.zadalJmeno && (
@@ -330,14 +393,16 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
           {showDone && (
             <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
               {done.map((task) => (
-                <li key={task.id} className="flex items-start gap-2.5 py-2 group">
-                  <input
-                    type="checkbox"
-                    checked
-                    disabled={busy}
-                    onChange={() => send(`/api/tasks/${task.id}`, 'PATCH', { done: false })}
-                    className="mt-0.5 w-4 h-4 accent-[#6C4BF4] shrink-0"
-                  />
+                <li key={task.id} className="flex items-start gap-1 py-1 group">
+                  <label className="shrink-0 -ml-2 p-2 cursor-pointer rounded-lg hover:bg-field">
+                    <input
+                      type="checkbox"
+                      checked
+                      onChange={() => void prepni(task.id, false)}
+                      aria-label={task.title}
+                      className="w-4 h-4 accent-[#6C4BF4] block"
+                    />
+                  </label>
                   <span className="flex-1 min-w-0 text-sm font-body text-muted line-through break-words">{task.title}</span>
                   <TlacitkoSmazat
                     onSmazat={() => send(`/api/tasks/${task.id}`, 'DELETE')}
