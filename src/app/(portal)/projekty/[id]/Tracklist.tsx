@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import {
+  bezDiakritiky,
   cisloTracku,
   precislujTracky,
   upravNazevTracku,
@@ -283,6 +284,21 @@ export function Tracklist({
     const cast = (poradi: number) =>
       base ? base + ', ' + t('tracklist.cast', { cislo: poradi }) : t('tracklist.cast', { cislo: poradi });
 
+    /**
+     * ČÁST PATŘÍ I DO NÁZVU STOPY (připomínky Richarda Hanuly 12. 11. 2026
+     * a Tomáše Ilavského 17. 11. 2026: „keď sa rozdelí stopa, automaticky tam
+     * pribudne ‚časť X'… keď sa kopíruje pomocou tlačítka copy, skopíruje sa
+     * iba názov, bez ‚časť x' a zvukár to tam musí aj tak manuálne dopisovať
+     * do markru v Cubase").
+     *
+     * Tlačítko Kopírovat bere NÁZEV STOPY - ten se lepí do markeru v Cubase
+     * i do jména souboru. Dokud v něm část nebyla, zvukař ji tam dopisoval
+     * ručně. Píše se bez diakritiky, stejně jako zbytek názvu stopy, a ve
+     * stejném tvaru, jaký vypisuje generátor tracklistu („, Cast 1").
+     */
+    const castTracku = (nazev: string, poradi: number) =>
+      `${zakladKapitoly(nazev)}, ${bezDiakritiky(t('tracklist.cast', { cislo: poradi }))}`;
+
     const nove = [...tracky];
     // Nova stopa je kopie te puvodni - vsechno ostatni zustava, meni se jen
     // nazev kapitoly a poradova cisla stop za ni (ta se dopocitavaji sama).
@@ -303,7 +319,12 @@ export function Tracklist({
     }
 
     for (let k = od; k <= doKonce; k += 1) {
-      nove[k] = { ...nove[k], nazevKapitoly: cast(k - od + 1) };
+      const poradiCasti = k - od + 1;
+      nove[k] = {
+        ...nove[k],
+        nazevKapitoly: cast(poradiCasti),
+        nazevTracku: castTracku(nove[k].nazevTracku, poradiCasti),
+      };
     }
     setTracky(precisluj(nove));
   }

@@ -45,6 +45,13 @@ export function bezDiakritiky(text: string): string {
   return text
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+    /**
+     * KONCE ŘÁDKŮ NA MEZERU (17. 11. 2026). Filtr níž vyhazuje všechno mimo
+     * ASCII včetně `\n` - víceřádkový popis chyby by se tím slepil do jednoho
+     * slova („prvni radekdruhy radek"). Nejdřív tedy z každé bílé mezery
+     * udělat obyčejnou.
+     */
+    .replace(/\s+/g, ' ')
     .replace(/[^\x20-\x7E]/g, '')
     .trim();
 }
@@ -95,7 +102,16 @@ export function souborMarkeru(markery: MarkerDoCubase[]): Uint8Array {
 
   let posledni = 0;
   for (const m of serazene) {
-    const text = znaky(m.nazev.slice(0, 120));
+    /**
+     * CELÝ POPIS, NE PRVNÍCH STO DVACET ZNAKŮ (připomínka Richarda Hanuly
+     * 26. 10. 2026: „keď si člověk kopíruje markre z oprav do cubase,
+     * neskopíruje sa celý text").
+     *
+     * Délka meta textu se v MIDI zapisuje proměnnou délkou, takže na ni
+     * žádný strop není - to oříznutí bylo jen opatrnost navíc a zrovna
+     * u dlouhých popisů chyb brala tu část, kvůli které se marker dělal.
+     */
+    const text = znaky(m.nazev);
     udalosti.push(...promennaDelka(m.tik - posledni), 0xff, 0x06, ...promennaDelka(text.length), ...text);
     posledni = m.tik;
   }

@@ -65,6 +65,23 @@ describe('markery do Cubase', () => {
     expect(bezDiakritiky('   ')).toBe('');
   });
 
+  /**
+   * Připomínka Richarda Hanuly (26. 10. 2026): „keď si člověk kopíruje markre
+   * z oprav do cubase, neskopíruje sa celý text." Popis se do 17. 11. 2026
+   * ořezával na 120 znaků.
+   */
+  it('vezme i dlouhý popis celý', () => {
+    const dlouhy = `${'velmi dlouhy popis chyby, '.repeat(12)}konec textu`;
+    const markery = precti(souborMarkeru([{ cas: 5, nazev: dlouhy }]));
+    expect(markery).toHaveLength(1);
+    expect(markery[0].text).toBe(dlouhy);
+    expect(markery[0].text.length).toBeGreaterThan(120);
+  });
+
+  it('víceřádkový popis slepí mezerou, ne dohromady', () => {
+    expect(bezDiakritiky('prvni radek\ndruhy radek')).toBe('prvni radek druhy radek');
+  });
+
   it('marker bez názvu do souboru nepatří', () => {
     expect(precti(souborMarkeru([{ cas: 5, nazev: '   ' }]))).toHaveLength(0);
   });
