@@ -16,6 +16,7 @@ import { doplnVelkaPismena, naVelke, zacatekVety } from '@/lib/velkePismena';
 import { bezDiakritiky } from '@/lib/countries';
 import { MsSmajlik } from './MsSmajlik';
 import { TechnickeParametryOkno } from './TechnickeParametryOkno';
+import { PozadavkyVChatu } from './PozadavkyVChatu';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import {
   CHAT_TABS,
@@ -23,6 +24,7 @@ import {
   nazevZalozky,
   ZALOZKA_UKOLY,
   ZALOZKA_UPOZORNENI,
+  ZALOZKA_POTREBUJEME,
   EMOJI,
   MAX_MESSAGE_LENGTH,
   RYCHLE_REAKCE,
@@ -1916,6 +1918,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const expanded = naStrance || dok === 'chat';
   const [tab, setTab] = useState<ZalozkaChatu>('PROJEKT');
   /**
+   * CO JE POTŘEBA VE STUDIÍCH (17. 11. 2026) - záložku vidí jen ten, kdo na
+   * seznam má právo. ChatDock se renderuje na třech místech (portál,
+   * administrace, mobilní stránka chatu), takže se právo neptá propem, ale
+   * jedním dotazem na server; než odpoví, záložka v liště není.
+   */
+  const [smiPozadavky, setSmiPozadavky] = useState(false);
+  /**
    * ÚKOL Z CHATU (zadání 18. 9. 2026). Termín se vybírá v liště nad psátkem,
    * která se ukáže, jakmile zpráva začíná „@úkol"; prázdno znamená bez
    * termínu, což je běžný případ, ne chyba.
@@ -2821,10 +2830,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    */
   const listaDruhu = (
     <span className={`${naStrance ? 'hidden sm:flex' : 'flex'} items-center gap-0.5`}>
-      {CHAT_ZALOZKY.map((z) => {
+      {CHAT_ZALOZKY.filter(
+        (z) => z.klic !== ZALOZKA_POTREBUJEME || smiPozadavky,
+      ).map((z) => {
         const jeTu = tab === z.klic;
         const nove =
-          z.klic === ZALOZKA_UKOLY || z.klic === ZALOZKA_UPOZORNENI
+          z.klic === ZALOZKA_UKOLY ||
+          z.klic === ZALOZKA_UPOZORNENI ||
+          z.klic === ZALOZKA_POTREBUJEME
             ? 0
             : neprectenePodleDruhu[z.klic] ?? 0;
         return (
@@ -2864,6 +2877,21 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       })}
     </span>
   );
+
+  useEffect(() => {
+    let platne = true;
+    fetch('/api/pozadavky/pristup')
+      .then((r) => (r.ok ? r.json() : { smi: false }))
+      .then((d) => {
+        if (platne) setSmiPozadavky(Boolean(d?.smi));
+      })
+      .catch(() => {
+        // Seznam je doplnek - kdyz se pravo nenacte, zalozka proste neni.
+      });
+    return () => {
+      platne = false;
+    };
+  }, []);
 
   // Cislo u zalozky MS chat vidi i panel Ukolu - viz pravyDok.ts.
   useEffect(() => {
@@ -3995,7 +4023,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             {/* HLEDÁNÍ (19. 10. 2026) - přesně tam, kde si o něj Helča řekla,
                 pod statusem a nad seznamem. U Úkolů ne: to není seznam
                 konverzací a hledá se v něm jinak. */}
-            {tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && (
+            {tab !== ZALOZKA_UKOLY &&
+              tab !== ZALOZKA_UPOZORNENI &&
+              tab !== ZALOZKA_POTREBUJEME && (
               <div className="px-3 pb-2">
                 <div className="flex items-center gap-2 rounded-lg border border-line bg-field px-2.5 py-1.5 focus-within:border-brand-purple transition-colors">
                   <svg
@@ -4041,6 +4071,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               {/* HISTORIE UPOZORNĚNÍ (22. 10. 2026) - výpis přes všechny
                   rozhovory, ať je vidět, kde jsem označený. */}
               {tab === ZALOZKA_UPOZORNENI && <PrehledUpozorneni onOtevri={otevriZpravu} />}
+              {/* CO JE POTŘEBA VE STUDIÍCH (17. 11. 2026) - taky to není
+                  konverzace, ale společný seznam. Jedna záložka, dva druhy:
+                  koupit a udělat. */}
+              {tab === ZALOZKA_POTREBUJEME && <PozadavkyVChatu />}
               {nicNesedi && nalezene.length === 0 && !hledaZpravy && (
                 <p className="text-sm font-body text-muted m-0 px-1">{t('chat.hledaniPrazdno')}</p>
               )}
@@ -4146,7 +4180,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   </button>
                 ))}
 
-              {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && vZalozce.length === 0 && !novy && hledanyVyraz.length === 0 && (
+              {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && tab !== ZALOZKA_POTREBUJEME && vZalozce.length === 0 && !novy && hledanyVyraz.length === 0 && (
                 <p className="text-sm font-body text-muted m-0 px-1">
                   {tab === 'SOUKROMA' ? t('chat.zadneSoukrome') : t('chat.zadneSkupiny')}
                 </p>
@@ -4155,6 +4189,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 tab !== 'DOTAZ' &&
                 tab !== ZALOZKA_UKOLY &&
                 tab !== ZALOZKA_UPOZORNENI &&
+                tab !== ZALOZKA_POTREBUJEME &&
                 vZalozceVidi.map((c) => (
                   <RadekKonverzace
                     key={c.id}
@@ -4254,7 +4289,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
             {/* Kanaly k projektum se nezakladaji rucne - berou se z aktivnich
                 projektu, takze tlacitko dava smysl jen u zbylych dvou zalozek. */}
-            {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && (
+            {tab !== 'PROJEKT' && tab !== 'DOTAZ' && tab !== ZALOZKA_UKOLY && tab !== ZALOZKA_UPOZORNENI && tab !== ZALOZKA_POTREBUJEME && (
               <div className="border-t border-line p-2">
                 <button
                   type="button"
@@ -5429,6 +5464,21 @@ function IkonaZalozky({ kind }: { kind: ZalozkaChatu }) {
       <svg {...spolecne}>
         <path d="M4 13h4l1.5 2.5h5L16 13h4" />
         <path d="M4 13 6.5 5h11L20 13v4.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
+      </svg>
+    );
+  }
+  if (kind === ZALOZKA_POTREBUJEME) {
+    /*
+     * KOŠÍK (17. 11. 2026). Záložka nese obojí - koupit i udělat - a kdyby
+     * v liště byl klíč, četlo by se to jako technika nebo nastavení. Košík
+     * říká „něco je potřeba pořídit", což je devět z deseti řádků, a druh
+     * se uvnitř pozná podle značky u každé položky.
+     */
+    return (
+      <svg {...spolecne}>
+        <path d="M4 5h2l2.2 9.5a1.6 1.6 0 0 0 1.6 1.2h7.1a1.6 1.6 0 0 0 1.6-1.2L20 8H6.5" />
+        <circle cx="10" cy="19.5" r="1.3" />
+        <circle cx="17.5" cy="19.5" r="1.3" />
       </svg>
     );
   }

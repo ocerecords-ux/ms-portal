@@ -80,6 +80,7 @@ type EditableUser = {
   dostavaDotoceno: boolean;
   dostavaVyberTerminu: boolean;
   dostavaPotvrzeniTerminu: boolean;
+  vidiPozadavkyStudii: boolean;
   /** Zvonek, kdyz klient schvali reklamu (23. 9. 2026). */
   schvaleniReklam: boolean;
   planovaniTerminu: boolean;
@@ -182,6 +183,7 @@ export function UserEditForm({
   const [dostavaPotvrzeniTerminu, setDostavaPotvrzeniTerminu] = useState(
     user.dostavaPotvrzeniTerminu,
   );
+  const [vidiPozadavkyStudii, setVidiPozadavkyStudii] = useState(user.vidiPozadavkyStudii);
   const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
   const [planovaniTerminu, setPlanovaniTerminu] = useState(user.planovaniTerminu);
   const [strihaExterne, setStrihaExterne] = useState(user.strihaExterne);
@@ -332,6 +334,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('dostavaVyberTerminu', dostavaVyberTerminu ? '1' : '0');
         if (isMediaspace) {
           fd.set('dostavaPotvrzeniTerminu', dostavaPotvrzeniTerminu ? '1' : '0');
+          fd.set('vidiPozadavkyStudii', vidiPozadavkyStudii ? '1' : '0');
         }
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
         if (isMediaspace) fd.set('planovaniTerminu', planovaniTerminu ? '1' : '0');
@@ -1072,6 +1075,28 @@ export function UserEditForm({
                 {t('uzivatel.pravoDostavaPotvrzeniTerminu')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.pravoDostavaPotvrzeniTerminuPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Cely seznam "Co je potreba" ve studiich (zadani 17. 11. 2026:
+            „kompletni seznam bych mel videt jen ja a Peter"). Vedouci pobocky
+            do svych studii zapisuje i bez tohohle - viz lib/pozadavkyStudii.ts. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={vidiPozadavkyStudii}
+                onChange={(e) => setVidiPozadavkyStudii(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.pravoPozadavkyStudii')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.pravoPozadavkyStudiiPopis')}
                 </span>
               </span>
             </label>

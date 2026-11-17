@@ -215,6 +215,7 @@ async function main() {
   await naberBezHudby();
   await stavyProjektuTomasovi();
   await prioritaDveUrovne();
+  await seznamPotrebOndrejAPeter();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1719,6 +1720,40 @@ async function prioritaDveUrovne() {
     console.log(`  priorita jen normalni/vysoka (${vysledek.count} projektu prepsano z nizke)`);
   } catch (err) {
     console.warn('  priority se nepodarilo prevest na dve urovne:', err);
+  }
+}
+
+/**
+ * KOMPLETNÍ SEZNAM „CO JE POTŘEBA" VIDÍ ONDŘEJ A PETER (zadání 17. 11. 2026:
+ * „kompletní seznam bych měl vidět jen já a Peter. Ale hlavní zvukaři by mohli
+ * přidávat na seznam své požadavky").
+ *
+ * Vedoucí poboček se sem NEZAPISUJÍ - právo zadávat mají automaticky z toho,
+ * že jsou u studia vedení jako vedoucí (Studio.vedouci), a celý seznam přes
+ * všechna studia vidět nemají. Viz lib/pozadavkyStudii.ts.
+ *
+ * Jednorázově, ať se to nemusí doklikávat; dál se to přepíná v Administraci
+ * → Uživatelé.
+ */
+async function seznamPotrebOndrejAPeter() {
+  const ZNAMKA = 'pozadavky-studii-ondrej-peter';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: {
+        active: true,
+        OR: [
+          { email: { equals: 'ocerecords@gmail.com', mode: 'insensitive' } },
+          { name: { contains: 'Dratva', mode: 'insensitive' } },
+        ],
+      },
+      data: { vidiPozadavkyStudii: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  cely seznam "Co je potreba" vidi Ondrej a Peter (${vysledek.count} uctu)`);
+  } catch (err) {
+    console.warn('  pravo na seznam pozadavku se nepodarilo nastavit:', err);
   }
 }
 

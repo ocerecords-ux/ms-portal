@@ -62,6 +62,7 @@ const schema = z.object({
   /** Herec si naklikal terminy (5. 10. 2026) - mail pro tym. */
   dostavaVyberTerminu: z.string().trim().optional(),
   dostavaPotvrzeniTerminu: z.string().trim().optional(),
+  vidiPozadavkyStudii: z.string().trim().optional(),
   schvaleniReklam: z.string().trim().optional(),
   planovaniTerminu: z.string().trim().optional(),
   strihaExterne: z.string().trim().optional(),
@@ -126,6 +127,9 @@ function readFormData(formData: FormData) {
     dostavaVyberTerminu: has('dostavaVyberTerminu') ? formData.get('dostavaVyberTerminu') : undefined,
     dostavaPotvrzeniTerminu: has('dostavaPotvrzeniTerminu')
       ? formData.get('dostavaPotvrzeniTerminu')
+      : undefined,
+    vidiPozadavkyStudii: has('vidiPozadavkyStudii')
+      ? formData.get('vidiPozadavkyStudii')
       : undefined,
     schvaleniReklam: has('schvaleniReklam') ? formData.get('schvaleniReklam') : undefined,
     planovaniTerminu: has('planovaniTerminu') ? formData.get('planovaniTerminu') : undefined,
@@ -289,6 +293,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Mail, kdyz si herec naklika terminy (5. 10. 2026).
       ...(data.dostavaPotvrzeniTerminu !== undefined
         ? { dostavaPotvrzeniTerminu: data.dostavaPotvrzeniTerminu === '1' }
+        : {}),
+      ...(data.vidiPozadavkyStudii !== undefined
+        ? { vidiPozadavkyStudii: data.vidiPozadavkyStudii === '1' }
         : {}),
       ...(data.dostavaVyberTerminu !== undefined
         ? { dostavaVyberTerminu: data.dostavaVyberTerminu === '1' }

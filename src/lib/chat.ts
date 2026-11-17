@@ -46,10 +46,23 @@ export const ZALOZKA_UKOLY = 'UKOLY' as const;
  * vedle úkolů, ne další filtr v seznamu.
  */
 export const ZALOZKA_UPOZORNENI = 'UPOZORNENI' as const;
+
+/**
+ * CO JE POTŘEBA VE STUDIÍCH (zadání 17. 11. 2026: „tyhle seznamy by mohly být
+ * jako další záložka v chatu, ať je to po ruce. KOUPIT/UDĚLAT. JEDNA ZÁLOŽKA,
+ * DVA DRUHY").
+ *
+ * Není to rozhovor ani úkol - je to společný seznam studií. V chatu proto, že
+ * se na to přijde u pultu a chat je jediné okno, které má člověk otevřené
+ * pořád. Záložku vidí jen ten, kdo na seznam má právo (vedoucí pobočky a kdo
+ * má na kartě `vidiPozadavkyStudii`) - viz lib/pozadavkyStudii.ts.
+ */
+export const ZALOZKA_POTREBUJEME = 'POTREBUJEME' as const;
 export type ZalozkaChatu =
   | ConversationKind
   | typeof ZALOZKA_UKOLY
-  | typeof ZALOZKA_UPOZORNENI;
+  | typeof ZALOZKA_UPOZORNENI
+  | typeof ZALOZKA_POTREBUJEME;
 
 /**
  * DOTAZY KLIENTŮ MAJÍ VLASTNÍ ZÁLOŽKU ZPĚT (zadání 9. 10. 2026: „možná bych
@@ -66,6 +79,7 @@ export const CHAT_ZALOZKY: { klic: ZalozkaChatu; label: string }[] = [
   { klic: 'DOTAZ' as ZalozkaChatu, label: 'Dotazy klientů' },
   { klic: ZALOZKA_UKOLY, label: 'Úkoly' },
   { klic: ZALOZKA_UPOZORNENI, label: 'Upozornění' },
+  { klic: ZALOZKA_POTREBUJEME, label: 'Co je potřeba' },
 ];
 
 /**

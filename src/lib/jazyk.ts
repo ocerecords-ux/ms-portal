@@ -2724,6 +2724,52 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Priority: {stupen}. Tap to set: {dalsi}',
   },
 
+  // Co je potřeba ve studiích - záložka chatu (17. 11. 2026)
+  'pozadavky.placeholder': {
+    cs: 'Co je potřeba? Třeba „Mikrofon do režie"',
+    en: 'What is needed? For example “A microphone for the control room”',
+  },
+  'pozadavky.druhKoupit': { cs: 'Koupit', en: 'Buy' },
+  'pozadavky.druhUdelat': { cs: 'Udělat', en: 'Do' },
+  'pozadavky.studio': { cs: 'Studio', en: 'Studio' },
+  'pozadavky.vyberteStudio': { cs: 'Vyberte studio', en: 'Pick a studio' },
+  'pozadavky.specha': { cs: 'Spěchá', en: 'Urgent' },
+  'pozadavky.spechaZkratka': { cs: 'Spěchá', en: 'Urgent' },
+  'pozadavky.stavNovy': { cs: 'Nové', en: 'New' },
+  'pozadavky.stavZarizujeSe': { cs: 'Zařizuje se', en: 'In progress' },
+  'pozadavky.stavHotovo': { cs: 'Hotovo', en: 'Done' },
+  'pozadavky.stavZamitnuto': { cs: 'Zamítnuto', en: 'Turned down' },
+  'pozadavky.dalsiStav': {
+    cs: 'Klepnutím posunete na další stav',
+    en: 'Tap to move it to the next state',
+  },
+  'pozadavky.zamitnout': { cs: 'Zamítnout', en: 'Turn down' },
+  'pozadavky.smazat': { cs: 'Smazat', en: 'Delete' },
+  'pozadavky.vyridil': { cs: 'vyřídil {kdo}', en: 'closed by {kdo}' },
+  'pozadavky.prazdno': {
+    cs: 'Zatím nic. Co je potřeba koupit nebo udělat, napište nahoře.',
+    en: 'Nothing yet. Write what needs buying or doing in the box above.',
+  },
+  'pozadavky.nacitam': { cs: 'Načítám…', en: 'Loading…' },
+  'pozadavky.ukazHotove': {
+    cs: 'Ukázat vyřízené ({pocet})',
+    en: 'Show closed ({pocet})',
+  },
+  'pozadavky.skryjHotove': { cs: 'Skrýt vyřízené', en: 'Hide closed' },
+  'pozadavky.chybaNacteni': {
+    cs: 'Seznam se nepodařilo načíst.',
+    en: 'The list could not be loaded.',
+  },
+  'pozadavky.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'uzivatel.pravoPozadavkyStudii': {
+    cs: 'Vidí celý seznam „Co je potřeba"',
+    en: 'Sees the whole “What we need” list',
+  },
+  'uzivatel.pravoPozadavkyStudiiPopis': {
+    cs: 'Požadavky ze všech studií v záložce chatu, včetně přehazování stavů. Bez toho vidí vedoucí pobočky jen svoje studia.',
+    en: 'Requests from every studio in the chat tab, including moving them between states. Without it a branch head sees only their own studios.',
+  },
+
   // QR platba v řádku dokladu
   'qr.platbaCastka': { cs: 'QR platba: {castka}', en: 'QR payment: {castka}' },
   'qr.zobrazit': { cs: 'Zobrazit QR platbu', en: 'Show QR payment' },
@@ -6186,6 +6232,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.zalozka.DOTAZ': { cs: 'Dotazy klientů', en: 'Client questions' },
   'chat.zalozka.UKOLY': { cs: 'Úkoly', en: 'Tasks' },
   'chat.zalozka.UPOZORNENI': { cs: 'Upozornění', en: 'Notifications' },
+  'chat.zalozka.POTREBUJEME': { cs: 'Co je potřeba', en: 'What we need' },
   'chat.prehledVse': { cs: 'Vše', en: 'All' },
   'chat.prehledZminky': { cs: 'Zmínky', en: 'Mentions' },
   'chat.prehledNeprectene': { cs: 'Nepřečtené', en: 'Unread' },

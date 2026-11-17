@@ -444,6 +444,18 @@ model User {
   /// zaskrtne tem, kdo uz vidi Banku (seed), dal se nastavuje rucne.
   vidiPokladnu Boolean @default(false)
 
+  /// VIDI CELY SEZNAM "CO JE POTREBA" ve studiich (zadani 17. 11. 2026:
+  /// „potrebuju nekde udelat takovy seznam, co je potreba nakoupit nebo
+  /// udelat ve studiich. Kompletni seznam bych mel videt jen ja a Peter.
+  /// Ale hlavni zvukari by mohli pridavat na seznam sve pozadavky").
+  ///
+  /// Kdo to ma zaskrtnute, vidi pozadavky VSECH studii a prehazuje jim stav.
+  /// Vedouci pobocky bez tohohle priznaku vidi jen svoje studia a muze do
+  /// nich pridavat - viz lib/pozadavkyStudii.ts.
+  ///
+  /// Stejne pravidlo jako u vidiBanku: priznak u uctu, ne jmena v kodu.
+  vidiPozadavkyStudii Boolean @default(false)
+
   /// NAHLEDOVY UCET - portal na zkousku (zadani 18. 9. 2026: „vytvor mi jeste
   /// jeden profil pro uzivatele, ktery nemuze nic menit, jen si muze
   /// vyzkouset cely portal z ruznych roli. Herec, Tym, Klient").
@@ -714,6 +726,9 @@ model User {
   bookingStudio   Studio? @relation("BookingStudio", fields: [bookingStudioId], references: [id], onDelete: SetNull)
   /// Rezervace, ktere si ten clovek zalozil (StudioBlock druhu BOOKING).
   bookingRezervace StudioBlock[] @relation("BookingRezervace")
+  /// Co ten clovek napsal na seznam "Co je potreba" (17. 11. 2026).
+  pozadavkyStudii PozadavekStudia[] @relation("ZadalPozadavek")
+  pozadavkyVyrizene PozadavekStudia[] @relation("VyridilPozadavek")
   /// UPOZORNENI KLIENTA STUDIA (zadani 25. 9. 2026: „pod kliknutim na jmeno
   /// by mel jit nastavit osobni profil a ruzne notifikace, zmeny terminu
   /// a pod"). Vychozi ZAPNUTO - kdo si rezervuje studio, chce vedet, ze to
@@ -2697,6 +2712,8 @@ model Studio {
   tabuleLide User[] @relation("TabulePristup")
   /// Účty počítačů u obrazovky (role TABULE), viz User.tabuleStudioId.
   tabuleUcty User[] @relation("TabuleUcet")
+  /// Co je v tomhle studiu potreba koupit nebo udelat (17. 11. 2026).
+  pozadavky PozadavekStudia[]
 
   /// TABULE VE STUDIU (zadani 21. 9. 2026). Tajny klic v adrese
   /// /tabule/<klic> - dotykovy displej se neprihlasuje. Null = tabule vypnuta.
@@ -2813,6 +2830,68 @@ model StudioChybi {
   doplnenoAt  DateTime?
 
   @@index([studioId, doplnenoAt])
+}
+
+/// Koupit, nebo udelat (zadani 17. 11. 2026: „koupit a udelat. Jen tyto dve").
+/// Schvalne jen dva druhy - delsi ciselnik by znamenal, ze se nad kazdym
+/// radkem premysli, do ktere skatulky patri, misto aby se proste zapsal.
+enum DruhPozadavku {
+  KOUPIT
+  UDELAT
+}
+
+/// Kde pozadavek stoji. Vic nez tohle by byl projektovy nastroj, ne seznam.
+enum StavPozadavku {
+  NOVY       // nekdo to napsal, nikdo se toho jeste nechytil
+  ZARIZUJE_SE // objednano / domluveno, ceka se na dodani
+  HOTOVO     // koupeno nebo udelano
+  ZAMITNUTO  // nekupujeme, nedelame - s duvodem ve vyrizeni
+}
+
+/// CO JE POTREBA VE STUDIU (zadani 17. 11. 2026: „treba v Brne I bude potreba
+/// mikrofon, tak Tom Ilavsky zada pozadavek").
+///
+/// NENI TO TABULE. StudioChybi vys je spotrebni material na dotykovem displeji
+/// ve studiu - kava, toaletak, ťuknutim. Tohle jsou vetsi veci, ktere nekdo
+/// musi koupit nebo zaridit, a maji autora, stav a historii.
+///
+/// KDO CO VIDI: cely seznam pres vsechna studia vidi ten, kdo ma na karte
+/// uctu `vidiPozadavkyStudii` (Ondrej a Peter). Vedouci pobocky vidi a zadava
+/// jen ve studiich, ktera vede (`Studio.vedouci`). Viz lib/pozadavkyStudii.ts.
+///
+/// Zamerne tu NENI cena ani vazba na doklad (zadani: „ne, tohle je jen
+/// seznam") - jakmile by se tu ucetnictvi zacalo, prestal by to byt seznam,
+/// ktery nekdo vecer u pultu rychle doplni.
+model PozadavekStudia {
+  id        String        @id @default(cuid())
+  studioId  String
+  studio    Studio        @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  druh      DruhPozadavku @default(KOUPIT)
+  /// Jedna veta do seznamu - „Mikrofon do rezie".
+  text      String
+  /// Podrobnosti, kdyz ta jedna veta nestaci. Nepovinne.
+  popis     String?       @db.Text
+  /// Specha to. Stejny jazyk jako priorita projektu (17. 11. 2026).
+  specha   Boolean       @default(false)
+
+  stav      StavPozadavku @default(NOVY)
+
+  zadalId   String
+  zadal     User          @relation("ZadalPozadavek", fields: [zadalId], references: [id])
+
+  /// Kdo pozadavek uzavrel a co k tomu napsal (duvod zamitnuti, kde je to
+  /// koupene). Vidi to kazdy, kdo pozadavek vidi - neni to tajna poznamka.
+  vyridilId String?
+  vyridil   User?         @relation("VyridilPozadavek", fields: [vyridilId], references: [id], onDelete: SetNull)
+  vyrizeniPoznamka String? @db.Text
+  vyrizenoAt DateTime?
+
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([studioId, stav])
+  @@index([stav, specha])
 }
 
 /// Pracovni doba studia po dnech v tydnu. Minuty od pulnoci, at se s tim da
