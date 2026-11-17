@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { smiNaKartyFirem } from '@/lib/pristupyServer';
+import { smiMenitStavProjektu } from '@/lib/stavProjektuPravo';
 import {
   canEditProjectMeta,
   canManageCalendar,
@@ -112,6 +113,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const caflouProjectId = params.id;
   const canEdit = canEditProjectMeta(session.user.role);
+  /**
+   * Stav projektu smí přehodit i zvukař se zaškrtávátkem na kartě (17. 11.
+   * 2026) - zbytek karty mu zůstane jen ke čtení. Viz
+   * lib/stavProjektuPravo.ts.
+   */
+  const muzeMenitStav = canEdit || (await smiMenitStavProjektu(session.user.id, session.user.role));
   // Jazyk pro odznaky stavu u dokladů (dávka 4, 27. 9. 2026).
   const jazyk = nactiJazyk();
 
@@ -577,6 +584,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       <ProjectMetaForm
         caflouProjectId={caflouProjectId}
         canEdit={canEdit}
+        muzeMenitStav={muzeMenitStav}
         managers={managers}
         klienti={klientiUctu.map((k) => ({
           id: k.id,

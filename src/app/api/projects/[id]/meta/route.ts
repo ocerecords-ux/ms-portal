@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
+import { jenZmenaStavu, smiMenitStavProjektu } from '@/lib/stavProjektuPravo';
 import { STAV_PLANUJEME, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { zvonekOPlanovani } from '@/lib/planovaniServer';
 import { zpravaOSchvaleniKFakturaci } from '@/lib/fakturaceZpravaServer';
@@ -114,7 +115,7 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !canEditProjectMeta(session.user.role)) {
+    if (!session) {
       return NextResponse.json({ error: 'Nemáte oprávnění tyto údaje měnit.' }, { status: 403 });
     }
 
@@ -123,6 +124,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
     const data = parsed.data;
+
+    /**
+     * ZVUKAŘ SE ZAŠKRTÁVÁTKEM SMÍ JEN STAV (17. 11. 2026) - viz
+     * lib/stavProjektuPravo.ts. Kdo nemá právo na celou kartu, projde jen
+     * s požadavkem, ve kterém není nic jiného než `statusName`; jinak by se
+     * tím zaškrtávátkem otevřel i herec, firma, klient nebo název projektu.
+     */
+    if (!canEditProjectMeta(session.user.role)) {
+      const smi = jenZmenaStavu(data) && (await smiMenitStavProjektu(session.user.id, session.user.role));
+      if (!smi) {
+        return NextResponse.json({ error: 'Nemáte oprávnění tyto údaje měnit.' }, { status: 403 });
+      }
+    }
 
     if (data.driveUrl && !/^https?:\/\//i.test(data.driveUrl)) {
       return NextResponse.json({ error: 'Odkaz na KZ musí začínat http:// nebo https://.' }, { status: 400 });

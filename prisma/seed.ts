@@ -213,6 +213,7 @@ async function main() {
   await albatrosCenuUrcujeSam();
   await audiotekaTracklistZTextu();
   await naberBezHudby();
+  await stavyProjektuTomasovi();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1667,6 +1668,30 @@ async function klientAlbatrosu() {
  * Jednorázově, ať se nemusí doklikávat; dál se to přepíná v Administraci →
  * Ceníky, sloupec Bez hudby. Viz PriceListItem.bezHudby.
  */
+/**
+ * TOMÁŠ ILAVSKÝ SMÍ PŘEHAZOVAT STAVY PROJEKTŮ (zadání 17. 11. 2026: „Tomáš
+ * Ilavský by měl mít možnost přehazovat stavy projektů").
+ *
+ * Jednorázově, ať se to nemusí doklikávat; dál se to přepíná v Administraci
+ * → Uživatelé, zaškrtávátko „Přehazuje stavy projektů". Viz
+ * lib/stavProjektuPravo.ts.
+ */
+async function stavyProjektuTomasovi() {
+  const ZNAMKA = 'stav-projektu-tomas-ilavsky';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: { name: { contains: 'Ilavsk', mode: 'insensitive' } },
+      data: { meniStavProjektu: true } as never,
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  stavy projektu smi prehazovat i Tomas Ilavsky (${vysledek.count} uctu)`);
+  } catch (err) {
+    console.warn('  pravo na stavy projektu se nepodarilo nastavit:', err);
+  }
+}
+
 async function naberBezHudby() {
   const ZNAMKA = 'naber-audioknihy-bez-hudby';
   try {

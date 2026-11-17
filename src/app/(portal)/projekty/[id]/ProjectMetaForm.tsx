@@ -19,6 +19,7 @@ import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from
 import { OdznakStrany, posledniStranyHercu } from '../OdznakStrany';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
+import { StavProjektuSelect } from '../StavProjektuSelect';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { UkonceniProjektu } from './UkonceniProjektu';
@@ -153,6 +154,7 @@ function datumTextem(iso: string, jazyk: Jazyk): string {
 export function ProjectMetaForm({
   caflouProjectId,
   canEdit,
+  muzeMenitStav = false,
   managers,
   klienti,
   firmy,
@@ -182,6 +184,12 @@ export function ProjectMetaForm({
 }: {
   caflouProjectId: string;
   canEdit: boolean;
+  /**
+   * STAV PROJEKTU SMÍ PŘEHODIT I BEZ PRÁVA NA CELOU KARTU (17. 11. 2026:
+   * „Tomáš Ilavský by měl mít možnost přehazovat stavy projektů"). Zbytek
+   * karty zůstává jen ke čtení - viz lib/stavProjektuPravo.ts.
+   */
+  muzeMenitStav?: boolean;
   managers: { id: string; label: string }[];
   /** Ucty klientu, ze kterych jde vybrat, ci ten projekt je. */
   klienti: { id: string; label: string; companyId: string | null }[];
@@ -617,7 +625,16 @@ export function ProjectMetaForm({
                 {t('projektMeta.stavProjektu')}
               </dt>
               <dd className="m-0 mt-1">
-                <OdznakStavu stav={values.statusName} jazyk={jazyk} />
+                {muzeMenitStav ? (
+                  <StavProjektuSelect
+                    caflouProjectId={caflouProjectId}
+                    stav={values.statusName}
+                    dokonceny={ukonceny}
+                    jeReklama={jeReklamniProjekt}
+                  />
+                ) : (
+                  <OdznakStavu stav={values.statusName} jazyk={jazyk} />
+                )}
               </dd>
             </div>
             <div>

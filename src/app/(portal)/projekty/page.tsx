@@ -4,6 +4,7 @@ import { nastaveniSekce } from '@/lib/nastaveniSekci';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import type { DisplayProject } from '@/lib/projektyTypy';
+import { smiMenitStavProjektu } from '@/lib/stavProjektuPravo';
 import {
   canEditProjectMeta,
   canViewProjectBusinessInfo,
@@ -59,11 +60,18 @@ export default async function ProjektyPage() {
   // projekty" hlasky jim tu ukazeme prehled VSECH projektu napric firmami,
   // rozdeleny na aktivni a dokoncene (zadani 5. 9. 2026).
   if (isInternalRole(session!.user.role)) {
+    /**
+     * DVĚ RŮZNÁ PRÁVA (17. 11. 2026). Zakládat projekt smí dál jen Produkce
+     * a Žůžo-labůžo; stav projektu smí přehazovat i zvukař, který to má
+     * zaškrtnuté na kartě - viz lib/stavProjektuPravo.ts.
+     */
+    const muzeMenitStav = await smiMenitStavProjektu(session!.user.id, session!.user.role);
     return (
       <InternalProjektySection
         isAdmin={session!.user.role === 'ADMIN'}
         userId={session!.user.id}
-        muzeMenitStav={canEditProjectMeta(session!.user.role)}
+        muzeZakladatProjekt={canEditProjectMeta(session!.user.role)}
+        muzeMenitStav={muzeMenitStav}
         vidiObchodniUdaje={canViewProjectBusinessInfo(session!.user.role)}
         vidiVPriprave={vidiProjektyVPriprave(session!.user.role)}
       />
@@ -520,6 +528,7 @@ export default async function ProjektyPage() {
 async function InternalProjektySection({
   isAdmin,
   userId,
+  muzeZakladatProjekt,
   muzeMenitStav,
   vidiObchodniUdaje,
   vidiVPriprave,
@@ -527,7 +536,9 @@ async function InternalProjektySection({
   isAdmin: boolean;
   /** Prihlaseny - sloupce si kazdy sklada sam (zadani 19. 9. 2026). */
   userId: string;
-  /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo. */
+  /** Zalozit novy projekt smi Produkce a Zuzo-labuzo. */
+  muzeZakladatProjekt: boolean;
+  /** Prehazovat stav smi i zvukar se zaskrtavatkem (17. 11. 2026). */
   muzeMenitStav: boolean;
   /** Zvukar nevidi datum vydani - viz canViewProjectBusinessInfo. */
   vidiObchodniUdaje: boolean;
@@ -823,7 +834,7 @@ async function InternalProjektySection({
       <InternalProjectsBrowser
         poradiStavu={poradiStavu}
         novyProjekt={
-          muzeMenitStav ? (
+          muzeZakladatProjekt ? (
             <NovyProjektForm
               firmy={firmyProFormular.map((f) => ({
                 id: f.id,

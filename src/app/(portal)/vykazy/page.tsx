@@ -30,18 +30,12 @@ export default async function TimesheetsPage({
   if (!session?.user?.id || (role !== 'ZVUKAR' && role !== 'ADMIN')) redirect('/projekty');
 
   const isAdmin = role === 'ADMIN';
-  // Vykaz si pise jen zvukar (zadani 6. 9. 2026: "Nikdo ze Žůžo Labůžo si
-  // výkazy nedělá") - Zuzo-labuzo ma tuhle stranku jen jako prehled.
-  //
-  // UPRAVOVAT uz ale smi oba (zadani 14. 9. 2026: "A melo by jit upravit
-  // vykazy. Prava na to budou mit Zuzo-labuzo i zvukari"). Zalozit novy vykaz
-  // Zuzo-labuzo porad nemuze - to by bylo proti zadani z 6. 9.; muze jen
-  // opravit ten, co uz nekdo napsal. Stejne jako u mazani, ktere tu ma od
-  // zacatku.
-  const canWrite = role === 'ZVUKAR';
 
   const [me, entries] = await Promise.all([
-    prisma.user.findUnique({ where: { id: session.user.id }, select: { hourlyRate: true } }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { hourlyRate: true, takyZvukar: true },
+    }),
     prisma.timesheetEntry.findMany({
       // Zvukar nikdy nedostane data kolegu - filtruje se uz v dotazu, ne az
       // v prohlizeci.
@@ -51,6 +45,20 @@ export default async function TimesheetsPage({
       include: { user: { select: { id: true, name: true, email: true } } },
     }),
   ]);
+
+  /**
+   * KDO SI VÝKAZ PÍŠE. Zvukař vždycky (zadání 6. 9. 2026: „Nikdo ze Žůžo
+   * Labůžo si výkazy nedělá") - Žůžo-labůžo má tuhle stránku jako přehled
+   * a od 14. 9. 2026 smí cizí výkaz opravit, ne ale založit.
+   *
+   * VÝJIMKA: KDO OBČAS SÁM TOČÍ NEBO STŘÍHÁ (zadání 17. 11. 2026: „Peter
+   * Dratva si sice nepíše výkazy, ale občas stříhá nebo natáčí a měl by mít
+   * možnost si to nějak zaznamenat jako výkaz, abychom viděli jasně, jak ten
+   * projekt teče"). Rozhoduje zaškrtávátko `takyZvukar` na kartě účtu -
+   * tytéž lidi, kteří se od 22. 9. 2026 nabízejí mezi zvukaři v kalendáři.
+   * Bez něj se nic nemění: Žůžo-labůžo si výkazy dál nepíše.
+   */
+  const canWrite = role === 'ZVUKAR' || Boolean((me as { takyZvukar?: boolean } | null)?.takyZvukar);
 
   /**
    * Nabidka projektu pro vyber - stejny seznam, jaky pouziva prehled Projekty.

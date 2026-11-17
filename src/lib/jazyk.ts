@@ -4537,6 +4537,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'hotovostní pokladní kniha a zůstatek v Dokladech',
     en: 'the cash book and its balance in Invoicing',
   },
+  'uzivatel.pravoStavProjektu': {
+    cs: 'Přehazuje stavy projektů',
+    en: 'Changes project statuses',
+  },
+  'uzivatel.pravoStavProjektuPopis': {
+    cs: 'smí měnit stav projektu v seznamu i v detailu — zbytek karty projektu má dál jen ke čtení',
+    en: 'may change a project status in the list and in the detail — the rest of the project card stays read-only',
+  },
   'uzivatel.pravoTechParametry': {
     cs: 'Spravuje technické parametry',
     en: 'Manages the technical parameters',
@@ -12692,6 +12700,71 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chybaApi.pozvankaNeodeslana': {
     cs: 'Pozvánku se nepodařilo odeslat.',
     en: 'The invitation could not be sent.',
+  },
+
+  // WIKIPEDIE (dávka 7aa) - hlášky rout `api/admin/wikipedie/**`, chatu nad
+  // konceptem a odesílání na Wikipedii.
+  'chybaApi.wikiChybiVerze': { cs: 'Chybí verze.', en: 'The version is missing.' },
+  'chybaApi.wikiVerzeNenalezena': { cs: 'Verze nenalezena.', en: 'Version not found.' },
+  'chybaApi.wikiNejdrivUlozte': { cs: 'Nejdřív koncept uložte.', en: 'Save the draft first.' },
+  'chybaApi.wikiChybiToken': {
+    cs: 'Chybí přístupový token - vyplňte ho v Odesílání na Wikipedii.',
+    en: 'The access token is missing — enter it under Sending to Wikipedia.',
+  },
+  'chybaApi.wikiChybiNazev': { cs: 'Chybí název článku.', en: 'The article title is missing.' },
+  'chybaApi.wikiNahledNevykreslenS': {
+    cs: 'Wikipedie náhled nevykreslila ({stav}).',
+    en: 'Wikipedia did not render the preview ({stav}).',
+  },
+  'chybaApi.wikiNahledNepodaril': { cs: 'Náhled se nepodařil.', en: 'The preview did not work.' },
+  'chybaApi.wikiNahledNepodarilS': {
+    cs: 'Náhled se nepodařil ({zprava}).',
+    en: 'The preview did not work ({zprava}).',
+  },
+  'chybaApi.wikiNeodpovedela': { cs: 'Wikipedie neodpověděla.', en: 'Wikipedia did not respond.' },
+  'chybaApi.wikiNeodpovedelaS': {
+    cs: 'Wikipedie neodpověděla ({stav}).',
+    en: 'Wikipedia did not respond ({stav}).',
+  },
+  'chybaApi.wikiNeodpovedelaZpravaS': {
+    cs: 'Wikipedie neodpověděla ({zprava}).',
+    en: 'Wikipedia did not respond ({zprava}).',
+  },
+  'chybaApi.wikiTokenNeprijata': {
+    cs: 'Wikipedie token nepřijala - zkontrolujte přístupový token v Odesílání.',
+    en: 'Wikipedia did not accept the token — check the access token under Sending.',
+  },
+  'chybaApi.wikiTokenNeprijataS': {
+    cs: 'Wikipedie token nepřijala: {zprava}',
+    en: 'Wikipedia did not accept the token: {zprava}',
+  },
+  'chybaApi.wikiUpravuOdmitlaS': {
+    cs: 'Wikipedie úpravu odmítla: {zprava}',
+    en: 'Wikipedia rejected the edit: {zprava}',
+  },
+  'chybaApi.wikiUpravaNeulozenaS': {
+    cs: 'Úpravu se nepodařilo uložit ({zprava}).',
+    en: 'The edit could not be saved ({zprava}).',
+  },
+  'chybaApi.wikiChatBezKlice': {
+    cs: 'Na Vercelu chybí ANTHROPIC_API_KEY.',
+    en: 'ANTHROPIC_API_KEY is missing on Vercel.',
+  },
+  'chybaApi.wikiModelNeodpovedelS': {
+    cs: 'Model neodpověděl ({stav}).',
+    en: 'The model did not respond ({stav}).',
+  },
+  'chybaApi.wikiModelPrazdny': {
+    cs: 'Model vrátil prázdnou odpověď.',
+    en: 'The model returned an empty response.',
+  },
+  'chybaApi.wikiModelNezavolan': {
+    cs: 'Model se nepodařilo zavolat.',
+    en: 'The model could not be called.',
+  },
+  'chybaApi.wikiModelNezavolanS': {
+    cs: 'Model se nepodařilo zavolat ({zprava}).',
+    en: 'The model could not be called ({zprava}).',
   },
 };
 

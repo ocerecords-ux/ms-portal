@@ -52,6 +52,7 @@ const schema = z.object({
   vidiBanku: z.string().trim().optional(),
   vidiPokladnu: z.string().trim().optional(),
   spravujeTechParametry: z.string().trim().optional(),
+  meniStavProjektu: z.string().trim().optional(),
   /** Sekce, do kterých člověk smí (28. 9. 2026). Mění je jen superadmin. */
   pristupy: z.array(z.string()).optional(),
   sledujeZmenyProjektu: z.string().trim().optional(),
@@ -117,6 +118,7 @@ function readFormData(formData: FormData) {
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
     vidiPokladnu: has('vidiPokladnu') ? formData.get('vidiPokladnu') : undefined,
     spravujeTechParametry: has('spravujeTechParametry') ? formData.get('spravujeTechParametry') : undefined,
+    meniStavProjektu: has('meniStavProjektu') ? formData.get('meniStavProjektu') : undefined,
     sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
     jenNahled: has('jenNahled') ? formData.get('jenNahled') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
@@ -314,6 +316,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         : {}),
       ...(data.spravujeTechParametry !== undefined
         ? { spravujeTechParametry: data.spravujeTechParametry === '1' }
+        : {}),
+      ...(data.meniStavProjektu !== undefined
+        ? { meniStavProjektu: data.meniStavProjektu === '1' }
         : {}),
       ...(data.sledujeZmenyProjektu !== undefined
         ? { sledujeZmenyProjektu: data.sledujeZmenyProjektu === '1' }

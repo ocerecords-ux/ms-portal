@@ -68,6 +68,7 @@ type EditableUser = {
   vidiPokladnu: boolean;
   /** Spravuje technické parametry výroby (zadání 27. 9. 2026). */
   spravujeTechParametry: boolean;
+  meniStavProjektu: boolean;
   /** Do kterých sekcí smí - klíče ze SEKCE v lib/pristupy.ts (28. 9. 2026). */
   pristupy: string[];
   /** Superadmin vidí všechno a zaškrtávátka se u něj neřeší. */
@@ -172,6 +173,7 @@ export function UserEditForm({
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
   const [vidiPokladnu, setVidiPokladnu] = useState(user.vidiPokladnu);
   const [spravujeTechParametry, setSpravujeTechParametry] = useState(user.spravujeTechParametry);
+  const [meniStavProjektu, setMeniStavProjektu] = useState(user.meniStavProjektu);
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
@@ -310,6 +312,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
         if (isMediaspace) fd.set('vidiPokladnu', vidiPokladnu ? '1' : '0');
         if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
+        if (isMediaspace) fd.set('meniStavProjektu', meniStavProjektu ? '1' : '0');
         /**
          * Přístupy posílá jen superadmin - ostatním se zaškrtávátka
          * nevykreslí a formulář je nemá odkud vzít. `pristupyPrazdne` je
@@ -927,6 +930,26 @@ export function UserEditForm({
               <span className="text-sm font-body text-ink">
                 {t('uzivatel.pravoTechParametry')}
                 <span className="block text-xs text-muted">{t('uzivatel.pravoTechParametryPopis')}</span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Kdo smi prehazovat stavy projektu (zadani 17. 11. 2026: „Tomas
+            Ilavsky by mel mit moznost prehazovat stavy projektu"). Pusti
+            jen stav - zbytek karty projektu zustava jen ke cteni. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={meniStavProjektu}
+                onChange={(e) => setMeniStavProjektu(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.pravoStavProjektu')}
+                <span className="block text-xs text-muted">{t('uzivatel.pravoStavProjektuPopis')}</span>
               </span>
             </label>
           </div>

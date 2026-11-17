@@ -543,6 +543,15 @@ model User {
   /// ne seznam jmen v kódu - až to bude hlídat někdo další, překlikne se to
   /// v Administraci.
   spravujeTechParametry Boolean @default(false)
+  /// PŘEHAZUJE STAVY PROJEKTŮ (zadání 17. 11. 2026: „Tomáš Ilavský by měl mít
+  /// možnost přehazovat stavy projektů").
+  ///
+  /// Celou kartu interních údajů smí měnit jen Produkce a Žůžo-labůžo
+  /// (canEditProjectMeta) - herec, klient ani zvukař tam nemají co dělat.
+  /// Tímhle zaškrtávátkem se zvukaři pustí JEDINÉ pole: stav projektu. Nic
+  /// jiného z té karty, ani zakládání nových projektů. Je to příznak u účtu,
+  /// ne jméno v kódu - stejně jako `spravujeTechParametry`.
+  meniStavProjektu Boolean @default(false)
   /// Vidí Palubovku - budíky, podle kterých se řídí firma (zadání 27. 9. 2026:
   /// „potřeboval bych udělat takový přehled jen pro sebe, jako jsou budíky -
   /// ukazatele v autě… vidím jen já a tím řídím celou firmu"). Obrat, cíle
