@@ -4233,31 +4233,76 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   </RadekKonverzace>
                 ))}
 
+              {/* HROMADNÝ CHAT BEZ ZAKLÁDÁNÍ SKUPINY (zadání 17. 11. 2026:
+                  „potřeboval bych v chatu napsat třeba dvěma lidem, abych
+                  nemusel zakládat skupinu… nějak jednoduše, že přidám jen
+                  uživatele do chatu").
+
+                  Jedno klepnutí na jméno = soukromá zpráva jako dosud.
+                  Zaškrtnutí víc lidí = rozhovor pro všechny, bez názvu;
+                  jmenuje se pak podle nich (viz lib/chatServer.ts) a najde se
+                  v záložce Skupiny, kam se po založení rovnou přepne. */}
               {novy && tab === 'SOUKROMA' && (
                 <div className="mt-2 flex flex-col gap-0.5 border-t border-line pt-2">
                   {team.length === 0 && (
                     <p className="text-xs text-muted m-0 px-1">{t('chat.nikdoDalsi')}</p>
                   )}
-                  {team.map((u) => (
+                  {team.map((u) => {
+                    const vybrany = vybraniLide.includes(u.id);
+                    return (
+                      <span key={u.id} className="flex items-center gap-2 pr-1">
+                        <input
+                          type="checkbox"
+                          checked={vybrany}
+                          onChange={(e) =>
+                            setVybraniLide((current) => prepniVSeznamu(current, u.id, e.target.checked))
+                          }
+                          aria-label={u.label}
+                          className="w-4 h-4 accent-brand-purple shrink-0 ml-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            vybraniLide.length > 0
+                              ? setVybraniLide((current) => prepniVSeznamu(current, u.id, !vybrany))
+                              : otevriNovou({ kind: 'SOUKROMA', userId: u.id })
+                          }
+                          className="flex-1 min-w-0 text-left rounded-lg px-2 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
+                        >
+                          <Avatar label={u.label} photoUrl={u.photoUrl} size={24} />
+                          <span className="truncate">{u.label}</span>
+                        </button>
+                      </span>
+                    );
+                  })}
+                  {vybraniLide.length > 0 && (
                     <button
-                      key={u.id}
                       type="button"
-                      onClick={() => otevriNovou({ kind: 'SOUKROMA', userId: u.id })}
-                      className="text-left rounded-lg px-2.5 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
+                      onClick={() => {
+                        if (vybraniLide.length === 1) {
+                          void otevriNovou({ kind: 'SOUKROMA', userId: vybraniLide[0] });
+                          return;
+                        }
+                        // Bez nazvu - rozhovor se pojmenuje podle lidi.
+                        setTab('SKUPINA');
+                        void otevriNovou({ kind: 'SKUPINA', userIds: vybraniLide });
+                      }}
+                      className="mt-1 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2"
                     >
-                      <Avatar label={u.label} photoUrl={u.photoUrl} size={24} />
-                      <span className="truncate">{u.label}</span>
+                      {t('chat.napsatVybranym', { pocet: vybraniLide.length })}
                     </button>
-                  ))}
+                  )}
                 </div>
               )}
 
               {novy && tab === 'SKUPINA' && (
                 <div className="mt-2 flex flex-col gap-2 border-t border-line pt-2">
+                  {/* Název je od 17. 11. 2026 NEPOVINNÝ - bez něj se skupina
+                      jmenuje podle lidí a dá se pojmenovat později. */}
                   <input
                     value={nazevSkupiny}
                     onChange={(e) => setNazevSkupiny(e.target.value)}
-                    placeholder={t('chat.nazevSkupiny')}
+                    placeholder={t('chat.nazevSkupinyNepovinny')}
                     className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
                   />
                   <div className="flex flex-wrap gap-1.5">
@@ -4277,8 +4322,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   </div>
                   <button
                     type="button"
-                    disabled={!nazevSkupiny.trim() || vybraniLide.length === 0}
-                    onClick={() => otevriNovou({ kind: 'SKUPINA', name: nazevSkupiny.trim(), userIds: vybraniLide })}
+                    disabled={vybraniLide.length === 0}
+                    onClick={() =>
+                      otevriNovou({
+                        kind: 'SKUPINA',
+                        ...(nazevSkupiny.trim() ? { name: nazevSkupiny.trim() } : {}),
+                        userIds: vybraniLide,
+                      })
+                    }
                     className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 disabled:opacity-50"
                   >
                     {t('chat.zalozitSkupinu')}
@@ -4293,7 +4344,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               <div className="border-t border-line p-2">
                 <button
                   type="button"
-                  onClick={() => setNovy((v) => !v)}
+                  onClick={() =>
+                    setNovy((v) => {
+                      // Zavreni panelu zahodi rozdelany vyber - jinak by se
+                      // zaskrtnuti drzela i po prepnuti zalozky.
+                      if (v) setVybraniLide([]);
+                      return !v;
+                    })
+                  }
                   className="w-full font-heading font-semibold text-xs rounded-lg border border-line px-3 py-2 text-brand-purple hover:border-brand-purple transition-colors"
                 >
                   {novy ? t('obecne.zrusit') : tab === 'SOUKROMA' ? t('chat.napsatNekomu') : t('chat.novaSkupina')}

@@ -31,7 +31,12 @@ const schema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('SOUKROMA'), userId: z.string().trim().min(1) }),
   z.object({
     kind: z.literal('SKUPINA'),
-    name: z.string().trim().min(1, 'Skupina musí mít název.').max(60),
+    /**
+     * NÁZEV JE NEPOVINNÝ (zadání 17. 11. 2026: „nějak jednoduše, že přidám
+     * jen uživatele do chatu"). Bez názvu se rozhovor jmenuje podle lidí -
+     * viz lib/chatServer.ts. Doplnit se dá kdykoliv později (PATCH).
+     */
+    name: z.string().trim().max(60).optional(),
     userIds: z.array(z.string().trim().min(1)).min(1, 'Vyberte aspoň jednoho člověka.').max(30),
   }),
 ]);
@@ -219,7 +224,9 @@ export async function POST(req: NextRequest) {
     const created = await prisma.conversation.create({
       data: {
         kind: 'SKUPINA',
-        name: data.name,
+        // Prazdny nazev se uklada jako null, ne jako "" - jinak by se
+        // v seznamu kreslil prazdny radek misto jmen clenu.
+        name: data.name?.trim() || null,
         createdById: me,
         members: { create: ids.map((id) => ({ userId: id })) },
       },

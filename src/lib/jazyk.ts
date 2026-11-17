@@ -2020,6 +2020,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'chat.uklidit': { cs: 'Uklidit', en: 'Tidy away' },
   'chat.nikdoDalsi': { cs: 'Nikdo další tu zatím není.', en: 'There is nobody else here yet.' },
   'chat.nazevSkupiny': { cs: 'Název skupiny', en: 'Group name' },
+  'chat.nazevSkupinyNepovinny': {
+    cs: 'Název skupiny (nepovinný)',
+    en: 'Group name (optional)',
+  },
+  'chat.napsatVybranym': {
+    cs: 'Napsat vybraným ({pocet})',
+    en: 'Message the selected ({pocet})',
+  },
   'chat.zalozitSkupinu': { cs: 'Založit skupinu', en: 'Create the group' },
   'chat.napsatNekomu': { cs: '+ Napsat někomu', en: '+ Message someone' },
   'chat.novaSkupina': { cs: '+ Nová skupina', en: '+ New group' },

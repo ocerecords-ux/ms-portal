@@ -182,8 +182,20 @@ export async function loadConversations(
 
     const ostatniClenove = c.members.filter((m) => m.userId !== userId);
     const ostatni = ostatniClenove.map((m) => userLabel(m.user));
+    /**
+     * SKUPINA BEZ NÁZVU SE JMENUJE PODLE LIDÍ (zadání 17. 11. 2026:
+     * „potřeboval bych v chatu napsat třeba dvěma lidem, abych nemusel
+     * zakládat skupinu… nějak jednoduše, že přidám jen uživatele do chatu").
+     *
+     * Kdo chce napsat Peterovi a Tomášovi, nevymýšlí název - rozhovor se
+     * jmenuje „Peter Dratva, Tomáš Ilavský". Název se dá doplnit později
+     * a od té chvíle platí on. „Bez názvu" zůstává jen pro skupinu, ze které
+     * všichni ostatní odešli.
+     */
     const label =
-      c.kind === 'SOUKROMA' ? (ostatni[0] ?? 'Soukromá zpráva') : (c.name ?? 'Bez názvu');
+      c.kind === 'SOUKROMA'
+        ? (ostatni[0] ?? 'Soukromá zpráva')
+        : (c.name ?? (ostatni.length > 0 ? popisClenu(ostatni) : 'Bez názvu'));
 
     return {
       id: c.id,
@@ -224,6 +236,15 @@ export async function loadConversations(
  * konverzace zapojim Bruna pomoci @bruno"). Prihlasit se pod nimi nejde -
  * to odmita sama role v lib/auth.ts, ne priznak „neaktivni".
  */
+/**
+ * Jména členů do názvu skupiny bez názvu. Tři se vypíšou, zbytek se sečte -
+ * v úzkém sloupci seznamu se víc jmen stejně nevejde.
+ */
+function popisClenu(jmena: string[]): string {
+  if (jmena.length <= 3) return jmena.join(', ');
+  return `${jmena.slice(0, 3).join(', ')} +${jmena.length - 3}`;
+}
+
 export async function loadTeam(userId: string) {
   const users = await prisma.user.findMany({
     where: {
