@@ -2325,7 +2325,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- pravý panel: záložky, poutko, nepřečtené (dávka 3) ---
   'dok.zalozkaUkoly': { cs: 'Úkoly', en: 'Tasks' },
-  'dok.zalozkaPotrebujeme': { cs: 'Potřebujeme', en: 'We need' },
+  'dok.zalozkaPotrebujeme': { cs: 'Koupit/Udělat', en: 'Buy/Do' },
   'dok.skrytPanel': { cs: 'Skrýt panel', en: 'Hide the panel' },
   'dok.zobrazitChatAUkoly': {
     cs: 'Zobrazit MS chat a úkoly',
