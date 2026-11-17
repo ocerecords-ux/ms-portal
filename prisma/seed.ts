@@ -216,6 +216,7 @@ async function main() {
   await stavyProjektuTomasovi();
   await prioritaDveUrovne();
   await seznamPotrebOndrejAPeter();
+  await pravoNaSeznamPotrebZnovu();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1754,6 +1755,40 @@ async function seznamPotrebOndrejAPeter() {
     console.log(`  cely seznam "Co je potreba" vidi Ondrej a Peter (${vysledek.count} uctu)`);
   } catch (err) {
     console.warn('  pravo na seznam pozadavku se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * OPRAVA PRÁVA NA SEZNAM „KOUPIT/UDĚLAT" (17. 11. 2026).
+ *
+ * První pokus (`pozadavky-studii-ondrej-peter`) hledal účet podle e-mailu
+ * `ocerecords@gmail.com`. Takový účet v portálu není - přihlašovací jméno je
+ * jiné - takže updateMany nenašel nikoho, značka se přesto uložila a právo
+ * zůstalo vypnuté. V chatu pak chyběla celá záložka.
+ *
+ * Teď se to bere podle ROLE: `ADMIN` je v portálu Žůžo-labůžo, tedy ten, kdo
+ * doklady a provoz stejně spravuje. Plus kdokoliv s příjmením Dratva.
+ * Komukoliv dalšímu se to dá odškrtnout v Administraci → Uživatelé.
+ *
+ * Značka je schválně nová - stará už je v databázi uložená a znovu by
+ * neproběhla.
+ */
+async function pravoNaSeznamPotrebZnovu() {
+  const ZNAMKA = 'pozadavky-studii-podle-role';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: {
+        active: true,
+        OR: [{ role: 'ADMIN' }, { name: { contains: 'Dratva', mode: 'insensitive' } }],
+      },
+      data: { vidiPozadavkyStudii: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  seznam Koupit/Udelat vidi ${vysledek.count} uctu (ADMIN + Dratva)`);
+  } catch (err) {
+    console.warn('  pravo na seznam Koupit/Udelat se nepodarilo nastavit:', err);
   }
 }
 
