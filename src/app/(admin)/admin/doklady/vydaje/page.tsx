@@ -92,6 +92,22 @@ export default async function ExpensesPage({
 
   const projects = await listProjectOptions();
 
+  /**
+   * JMÉNA LIDÍ Z TÝMU (zadání 17. 11. 2026: „to by mohl ale systém taky poznat,
+   * kdo je kdo podle jména. Všichni lidi v týmu jsou v seznamu uživatelů.
+   * A když je to někdo z týmu, tak to jsou mzdy").
+   *
+   * Posílají se jen jména, nic jiného - formulář z nich dělá jedinou věc:
+   * pozná, že faktura je od někoho od nás, a předvybere kategorii Mzdy.
+   */
+  const tymJmena = await prisma.user
+    .findMany({
+      where: { active: true, role: { in: ['ADMIN', 'PRODUKCE', 'ZVUKAR'] } },
+      select: { name: true },
+    })
+    .then((lide) => lide.map((u) => u.name).filter((n): n is string => Boolean(n)))
+    .catch(() => []);
+
   const countFor = (key: (typeof TABS)[number]['key']) =>
     key === 'nezarazene' ? pocty[0] : key === 'neuhrazene' ? pocty[1] : pocty[2];
 
@@ -221,6 +237,7 @@ export default async function ExpensesPage({
             }))}
             projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
             vychoziProjekt={searchParams?.projekt || null}
+            tymJmena={tymJmena}
           />
         </div>
       </div>

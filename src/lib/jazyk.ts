@@ -3477,6 +3477,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'vydaj.poleCisloDokladu': { cs: 'Číslo dokladu', en: 'Document number' },
   'vydaj.poleKategorie': { cs: 'Kategorie', en: 'Category' },
   'vydaj.poleProjekt': { cs: 'Projekt', en: 'Project' },
+  'vydaj.mzdyBezProjektu': {
+    cs: 'U mezd se projekt neuvádí.',
+    en: 'Wages are not tied to a project.',
+  },
   'vydaj.projektyNenacteny': {
     cs: 'Projekty se z Caflou nenačetly.',
     en: 'Projects could not be loaded from Caflou.',

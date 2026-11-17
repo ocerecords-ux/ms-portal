@@ -39,7 +39,9 @@ Objekt má přesně tyto klíče:
 {
   "dodavatel": string|null,      // kdo doklad vystavil, např. "ORLEN Praha 4"
   "popis": string|null,          // krátce co se kupovalo, např. "Nafta 42,3 l"
-  "datum": string|null,          // YYYY-MM-DD
+  "datum": string|null,          // YYYY-MM-DD, datum vystaveni
+  "splatnost": string|null,      // YYYY-MM-DD, datum splatnosti faktury
+  "neplatceDph": boolean|null,   // true, kdyz dodavatel neni platce DPH
   "castkaSDph": string|null,     // celkem k úhradě, jen číslo s desetinnou čárkou
   "castkaBezDph": string|null,   // základ daně, pokud je uveden zvlášť
   "sazbaDph": number|null,       // 21, 12 nebo 0
@@ -56,7 +58,14 @@ Pravidla:
   Bankovní spojení a variabilní symbol na faktuře -> TRANSFER.
 - Když je doklad nečitelný, vrať samá null a jistota 0.
 - U faktury je "castkaSDph" částka k úhradě celkem a "castkaBezDph" základ daně.
-  Když je na faktuře víc sazeb DPH, dej sazbu s největším základem.`;
+  Když je na faktuře víc sazeb DPH, dej sazbu s největším základem.
+- "splatnost" je datum splatnosti faktury ("Datum splatnosti", "Splatno dne",
+  "Due date"). Na účtence z obchodu žádná splatnost není - tam dej null.
+  Nepočítej ji z lhůty, ber jen datum, které je na dokladu napsané.
+- "neplatceDph" dej true, když je na dokladu napsané, že dodavatel není plátce
+  DPH ("Nejsem plátce DPH", "Neplátce DPH", "Dodavatel není plátcem DPH"), nebo
+  když doklad nemá DIČ a žádné DPH nevyčísluje. V takovém případě dej zároveň
+  "sazbaDph": 0. Když to z dokladu nepoznáš, dej null.`;
 
 type Odpoved = { content?: { type: string; text?: string }[] };
 
@@ -108,6 +117,9 @@ function naTvar(data: unknown): PrectenaUctenka {
     dodavatel: text(d.dodavatel),
     popis: text(d.popis, 300),
     datum: datum(d.datum),
+    splatnost: datum(d.splatnost),
+    // Jen jasne "ano" bereme jako neplatce - cokoliv jineho je "nevime".
+    neplatceDph: d.neplatceDph === true ? true : d.neplatceDph === false ? false : null,
     castkaSDph: text(d.castkaSDph, 30),
     castkaBezDph: text(d.castkaBezDph, 30),
     sazbaDph: sazba(d.sazbaDph),

@@ -26,12 +26,21 @@ export function NewExpenseForm({
   issuers,
   projects,
   vychoziProjekt,
+  tymJmena = [],
 }: {
   categories: { id: string; name: string }[];
   issuers: { id: string; name: string; isDefault: boolean; currency: Currency }[];
   projects: ProjectChoice[];
   /** Projekt z adresy (?projekt=) - výdaj založený z detailu projektu (21. 9. 2026). */
   vychoziProjekt?: string | null;
+  /**
+   * JMÉNA LIDÍ Z TÝMU (zadání 17. 11. 2026: „to by mohl ale systém taky
+   * poznat, kdo je kdo podle jména. Všichni lidi v týmu jsou v seznamu
+   * uživatelů. A když je to někdo z týmu, tak to jsou mzdy").
+   *
+   * Posílají se jen jména, ne celé účty - formulář z nich nic jiného nedělá.
+   */
+  tymJmena?: string[];
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -139,6 +148,38 @@ export function NewExpenseForm({
   }
 
   /**
+   * JE TO NĚKDO Z TÝMU? (zadání 17. 11. 2026). Porovnává se holé jméno bez
+   * diakritiky a bez titulů, protože na faktuře bývá „Jonáš Čupa" a v portálu
+   * „Jonas Cupa" nebo naopak. Shoda musí být na CELÉ jméno - kus příjmení by
+   * trefil i dodavatele, který se jmenuje podobně.
+   */
+  function jeZTymu(jmeno: string | null): boolean {
+    if (!jmeno) return false;
+    const ocisti = (s: string) =>
+      s
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z ]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const hledane = ocisti(jmeno);
+    if (hledane.split(' ').length < 2) return false;
+    return tymJmena.some((n) => ocisti(n) === hledane);
+  }
+
+  /** Kategorie „Mzdy" - hledá se podle názvu, ne podle pevného ID. */
+  const mzdyKategorie = categories.find((c) => /mzd/i.test(c.name));
+  /** Je vybraná kategorie mzdová? Pak se projekt neuvádí. */
+  const jsouMzdy = Boolean(mzdyKategorie) && form.categoryId === mzdyKategorie?.id;
+
+  // Pri prepnuti na Mzdy se vybrany projekt zahodi - jinak by se ulozil,
+  // i kdyz uz ho nikde nevidim.
+  useEffect(() => {
+    if (jsouMzdy && form.caflouProjectId) set('caflouProjectId', '');
+  }, [jsouMzdy, form.caflouProjectId]);
+
+  /**
    * Predvyplni formular podle toho, co se podarilo z dokladu precist.
    *
    * Zamerne se prepisuji jen prazdna pole a datum - kdyz uz clovek neco
@@ -146,7 +187,12 @@ export function NewExpenseForm({
    */
   function predvyplnit(u: PrectenaUctenka) {
     setForm((f) => {
-      const sazba = u.sazbaDph ?? f.vatRate;
+      // NEPLATCE DPH = BEZ DPH (17. 11. 2026). Kdyz doklad rekne, ze dodavatel
+      // platcem neni, sazba je nula, at uz model do "sazbaDph" dal cokoliv.
+      const sazbaZDokladu = u.neplatceDph === true ? 0 : u.sazbaDph;
+      const sazba = sazbaZDokladu ?? f.vatRate;
+      // Faktura od nekoho z tymu je mzda - projekt se u ni neuvadi.
+      const tymovy = jeZTymu(u.dodavatel) || jeZTymu(u.popis);
 
       // Ve formulari se zadava castka BEZ DPH, na uctence byva jen celkem.
       let castka = f.amount;
@@ -165,14 +211,27 @@ export function NewExpenseForm({
       return {
         ...f,
         issueDate: u.datum || f.issueDate,
+        // Splatnost z faktury (17. 11. 2026) - uctenka z obchodu zadnou nema.
+        dueDate: f.dueDate || u.splatnost || '',
         number: f.number || u.cislo || '',
         description: f.description || [u.dodavatel, u.popis].filter(Boolean).join(' — '),
         amount: castka,
-        vatRate: u.sazbaDph ?? f.vatRate,
+        vatRate: sazba,
         currency: mena,
         paymentMethod: zpusob,
         // Kartou a hotove je zaplaceno uz na miste (zadani 10. 9. 2026).
         paid: zaplacenoRovnou(zpusob) ? true : f.paid,
+        // Nekdo z tymu -> Mzdy. Prepise se jen vychozi kategorie, ne to, co uz
+        // clovek vybral sam.
+        categoryId:
+          tymovy && mzdyKategorie && f.categoryId === (categories[0]?.id ?? '')
+            ? mzdyKategorie.id
+            : f.categoryId,
+        // U mezd se projekt neuvadi.
+        caflouProjectId:
+          tymovy && mzdyKategorie && f.categoryId === (categories[0]?.id ?? '')
+            ? ''
+            : f.caflouProjectId,
       };
     });
   }
@@ -482,19 +541,28 @@ export function NewExpenseForm({
       </div>
 
       {/* Vazba na projekt (zadani 8. 9. 2026) - podle ni se doklad ukaze v
-          detailu projektu. Nepovinna, rezie se k zadnemu projektu nevaze. */}
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">{t('vydaj.poleProjekt')}</span>
-        <ProjectSelect
-          value={form.caflouProjectId}
-          onChange={(id) => set('caflouProjectId', id)}
-          projects={projects}
-          className={inputClass}
-        />
-        {projects.length === 0 && (
-          <span className="text-xs text-muted font-body">{t('vydaj.projektyNenacteny')}</span>
-        )}
-      </label>
+          detailu projektu. Nepovinna, rezie se k zadnemu projektu nevaze.
+
+          U MEZD SE NEUVADI VUBEC (zadani 17. 11. 2026: „kdyz je to kategorie
+          mzdy, tak neni treba uvadet projekt"). Mzda se nevaze k jedne
+          zakazce, takze prazdne pole tu jen zdrzovalo a svadelo neco vyplnit.
+          Pole se schova a vybrany projekt se zahodi, at se neulozi potichu. */}
+      {jsouMzdy ? (
+        <p className="text-xs font-body text-muted m-0">{t('vydaj.mzdyBezProjektu')}</p>
+      ) : (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">{t('vydaj.poleProjekt')}</span>
+          <ProjectSelect
+            value={form.caflouProjectId}
+            onChange={(id) => set('caflouProjectId', id)}
+            projects={projects}
+            className={inputClass}
+          />
+          {projects.length === 0 && (
+            <span className="text-xs text-muted font-body">{t('vydaj.projektyNenacteny')}</span>
+          )}
+        </label>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="flex flex-col gap-1.5">

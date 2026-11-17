@@ -48,6 +48,19 @@ export type PrectenaUctenka = {
   popis: string | null;
   /** Datum ve tvaru YYYY-MM-DD. */
   datum: string | null;
+  /**
+   * DATUM SPLATNOSTI u faktury (zadání 17. 11. 2026: „když vkládám výdaj a je
+   * to faktura, tak potřebuju, ať se načte i datum splatnosti a DPH").
+   * Účtenka z obchodu ho nemá - tam zůstává prázdné.
+   */
+  splatnost: string | null;
+  /**
+   * JE DODAVATEL NEPLÁTCE DPH? (tentýž den: „pokud člověk není plátce, musí
+   * se zaškrtnout bez DPH"). Pozná se podle věty na dokladu („Nejsem plátce
+   * DPH", „Neplátce DPH") nebo podle toho, že DIČ chybí a DPH se nikde
+   * nevyčísluje. `true` znamená jistotu, `null` nevíme.
+   */
+  neplatceDph: boolean | null;
   /** Celková částka VČETNĚ DPH, v korunách jako text ("1234,50"). */
   castkaSDph: string | null;
   /** Částka BEZ DPH, pokud je na účtence uvedená zvlášť. */
@@ -73,6 +86,8 @@ export const PRAZDNA_UCTENKA: PrectenaUctenka = {
   dodavatel: null,
   popis: null,
   datum: null,
+  splatnost: null,
+  neplatceDph: null,
   castkaSDph: null,
   castkaBezDph: null,
   sazbaDph: null,
