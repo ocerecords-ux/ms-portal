@@ -348,6 +348,15 @@ model User {
   // prace. Vychozi 250 Kc; u ostatnich roli se nepouziva.
   hourlyRate   Int?      @default(250)
 
+  /// JAK JE ODMENOVANY (zadani 18. 11. 2026: „bych dal rozliseni lidi v tymu,
+  /// kteri fakturuji a kteri jsou na dohodu. Tim padem tam pak nemusi byt to
+  /// pole, kam posilat podklady pro mzdy").
+  ///
+  /// false = fakturuje (vetsina lidi), true = je na dohodu. Podle toho se na
+  /// karte vubec nabizi `mzdyEmail`: kdo fakturuje, nema komu posilat podklad
+  /// pro mzdovou ucetni, tak se pole neukazuje a pri prepnuti se vyprazdni.
+  naDohodu     Boolean   @default(false)
+
   /// KOMU POSLAT PODKLAD PRO MZDY (zadani 12. 10. 2026: „Daniel Vlcek je na
   /// dohodu, takze bych potreboval, aby to slo rovnou na mzdovou ucetni").
   ///

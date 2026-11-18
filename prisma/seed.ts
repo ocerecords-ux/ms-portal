@@ -218,6 +218,7 @@ async function main() {
   await seznamPotrebOndrejAPeter();
   await pravoNaSeznamPotrebZnovu();
   await sazbaVsemZvukarum();
+  await danielJeNaDohodu();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1827,6 +1828,27 @@ async function sazbaVsemZvukarum() {
     console.log(`  hodinova sazba ${VYCHOZI} Kc doplnena u ${vysledek.count} uctu`);
   } catch (err) {
     console.warn('  hodinovou sazbu se nepodarilo doplnit:', err);
+  }
+}
+
+/**
+ * JEDINY ZVUKAR NA DOHODU JE DANIEL VLCEK (zadani 18. 11. 2026). Ostatni
+ * fakturuji, coz je vychozi stav sloupce, takze se nic jineho prepisovat
+ * nemusi. Hleda se podle prijmeni, ne podle mailu - ten se u lidi meni.
+ */
+async function danielJeNaDohodu() {
+  const ZNAMKA = 'daniel-vlcek-na-dohodu';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: { name: { contains: 'Vlček', mode: 'insensitive' } },
+      data: { naDohodu: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  na dohodu je ${vysledek.count} uctu (Daniel Vlcek)`);
+  } catch (err) {
+    console.warn('  priznak "na dohodu" se nepodarilo nastavit:', err);
   }
 }
 

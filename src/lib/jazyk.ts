@@ -4540,6 +4540,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'nic zaškrtnutého = vidí doklady všech našich firem',
     en: 'nothing ticked = sees the documents of all our companies',
   },
+  'uzivatel.poleOdmenovani': { cs: 'Odměňování', en: 'Paid as' },
+  'uzivatel.odmenovaniFakturuje': { cs: 'Fakturuje', en: 'Invoices us' },
+  'uzivatel.odmenovaniDohoda': { cs: 'Na dohodu', en: 'Work agreement' },
+  'uzivatel.odmenovaniHint': {
+    cs: 'kdo je na dohodu, tomu se podklad posílá mzdové účetní',
+    en: 'people on a work agreement have their figures sent to the payroll accountant',
+  },
   'uzivatel.poleMzdyEmail': { cs: 'Podklad pro mzdy posílat na', en: 'Send payroll figures to' },
   'uzivatel.mzdyEmailHint': {
     cs: 'Adresa mzdové účetní u lidí na dohodu. Spolu s měsíčním přehledem jí odejde holý podklad — jméno, období, hodiny a částka, nic jiného. Prázdné = neposílá se.',
