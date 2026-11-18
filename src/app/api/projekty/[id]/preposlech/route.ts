@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import { posliPodekovaniZaPreposlech } from '@/lib/preposlechDikyServer';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { STAV_PREPOSLECH_HOTOVO } from '@/lib/notifikaceFirmy';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
@@ -50,6 +51,9 @@ async function over(req: NextRequest, caflouProjectId: string, jenInterni: boole
     userId: pristup.userId,
     interni: pristup.interni,
     jmeno: pristup.jmeno ?? (pristup.pres_odkaz ? 'Klient' : null),
+    // Kdo z Posluchačů to je - podle něj se pozná adresa toho, kdo přeposlech
+    // odklepl (18. 11. 2026).
+    posluchacId: (pristup as { posluchacId?: string | null }).posluchacId ?? null,
   };
 }
 
@@ -393,6 +397,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       await posliNotifikaciKeStavu(params.id, STAV_PREPOSLECH_HOTOVO).catch((err) =>
         console.error('Zprava klientovi o dokoncenem preposlechu selhala:', err),
       );
+    }
+
+    /**
+     * A TOMU, KDO PŘEPOSLECH ODKLEPL, PODĚKUJEME (zadání 18. 11. 2026: „tohle
+     * by mělo jít pouze na člověka, který odklikne, že přeposlech je
+     * kompletní. Na klienta ne, tam už máme jinou notifikaci").
+     *
+     * Až TEĎ, po zprávě klientovi: kdyby to byla tatáž adresa, poděkování se
+     * vynechá - a to se pozná jen tehdy, když se nejdřív ví, komu ta zpráva
+     * šla. Při našem interním odškrtnutí neodchází nic.
+     */
+    if (!pristup.interni) {
+      await posliPodekovaniZaPreposlech(params.id, {
+        posluchacId: pristup.posluchacId,
+        userId: pristup.userId,
+        jmeno: pristup.jmeno,
+      }).catch((err) => console.error('Podekovani za preposlech selhalo:', err));
     }
 
     /**

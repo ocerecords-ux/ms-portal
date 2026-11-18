@@ -19,8 +19,11 @@ export type PripominkaRadek = {
   hotovoAt: string | null;
   hotovoJmeno: string | null;
   poznamka: string | null;
-  autorId: string;
+  /** Prázdné u podnětu zvenčí - ten žádný účet nemá. */
+  autorId: string | null;
   autor: string;
+  /** Podnět od klienta z AudioTaggeru (18. 11. 2026) - jinak false. */
+  zvenci: boolean;
   /** Kolik dalších lidí se k téhle připomínce přidalo. */
   pridalSe: number;
   prilohy: { id: string; url: string; nazev: string }[];
@@ -35,8 +38,10 @@ function naRadek(p: {
   hotovoAt: Date | null;
   hotovoJmeno: string | null;
   poznamka: string | null;
-  userId: string;
+  userId: string | null;
   user: { name: string | null; email: string } | null;
+  hostEmail?: string | null;
+  hostJmeno?: string | null;
   prilohy: { id: string; url: string; nazev: string }[];
   _count?: { podobne?: number };
   pridalSe?: number;
@@ -51,7 +56,9 @@ function naRadek(p: {
     hotovoJmeno: p.hotovoJmeno,
     poznamka: p.poznamka,
     autorId: p.userId,
-    autor: p.user?.name || p.user?.email || 'Neznámý',
+    // Podnět zvenčí nemá účet - podepisuje ho jméno a adresa z Posluchačů.
+    autor: p.user?.name || p.user?.email || p.hostJmeno || p.hostEmail || 'Neznámý',
+    zvenci: !p.userId,
     pridalSe: p.pridalSe ?? 0,
     prilohy: p.prilohy,
   };
@@ -67,6 +74,8 @@ const VYBER = {
   hotovoJmeno: true,
   poznamka: true,
   userId: true,
+  hostEmail: true,
+  hostJmeno: true,
   podobnaId: true,
   user: { select: { name: true, email: true } },
   prilohy: { select: { id: true, url: true, nazev: true }, orderBy: { createdAt: 'asc' as const } },
@@ -131,14 +140,58 @@ export async function podobnePripominky(text: string, kromeId?: string): Promise
       where: { stav: 'NOVA', podobnaId: null, ...(kromeId ? { id: { not: kromeId } } : {}) },
       orderBy: { createdAt: 'desc' },
       take: 300,
-      select: { id: true, text: true, user: { select: { name: true, email: true } } },
+      select: {
+        id: true,
+        text: true,
+        hostEmail: true,
+        hostJmeno: true,
+        user: { select: { name: true, email: true } },
+      },
     });
     return najdiPodobne(
       text,
-      data.map((p) => ({ id: p.id, text: p.text, autor: p.user?.name || p.user?.email || 'Neznámý' })),
+      data.map((p) => ({
+        id: p.id,
+        text: p.text,
+        autor: p.user?.name || p.user?.email || p.hostJmeno || p.hostEmail || 'Neznámý',
+      })),
     );
   } catch (err) {
     console.error('podobnePripominky selhalo:', err);
     return [];
+  }
+}
+
+/**
+ * PODNĚT OD KLIENTA Z AUDIOTAGGERU (zadání 18. 11. 2026: „pokud máte nějaký
+ * podněty pro zlepšení AudioTaggeru, zanechte nám je prosím zde. A půjde mi
+ * to pak do připomínek k portálu").
+ *
+ * Přeposlouchávač žádný účet nemá, takže připomínka vzniká bez něj - podepíše
+ * ji adresa a jméno z Posluchačů. V seznamu vypadá jako každá jiná, jen je
+ * u ní vidět, že přišla zvenčí a od kterého projektu.
+ */
+export async function zapisPodnetZvenci(vstup: {
+  text: string;
+  email: string | null;
+  jmeno: string | null;
+  /** Odkud přišel - do pole „odkud" jde adresa projektu, ať se to dohledá. */
+  odkud: string | null;
+}): Promise<boolean> {
+  const text = vstup.text.trim();
+  if (!text) return false;
+  try {
+    await prisma.pripominkaPortalu.create({
+      data: {
+        text,
+        odkud: vstup.odkud,
+        hostEmail: vstup.email?.trim() || null,
+        hostJmeno: vstup.jmeno?.trim() || null,
+      },
+    });
+    return true;
+  } catch (err) {
+    console.error('zapisPodnetZvenci selhalo:', err);
+    return false;
   }
 }

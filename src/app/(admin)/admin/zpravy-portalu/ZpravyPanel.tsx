@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { OZNAMENI, popisekOznameni, type KlicOznameni } from '@/lib/oznameni';
+import { OZNAMENI, popisekOznameni, zneniOznameni, type KlicOznameni } from '@/lib/oznameni';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
@@ -18,12 +18,17 @@ import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 export type Odeslany = { mesic: string; komu: string; kdy: string; prijemce: string | null };
 
+export type UlozeneZneni = { predmet: string | null; nadpis: string | null; text: string | null };
+
 export function ZpravyPanel({
   zapnuti,
+  zneni,
   odeslane,
   minulyMesic,
 }: {
   zapnuti: Record<string, boolean>;
+  /** Vlastní znění zpráv (18. 11. 2026) - prázdno znamená výchozí text. */
+  zneni: Record<string, UlozeneZneni>;
   odeslane: Odeslany[];
   minulyMesic: string;
 }) {
@@ -35,6 +40,48 @@ export function ZpravyPanel({
   const [chyba, setChyba] = useState<string | null>(null);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [mesic, setMesic] = useState(minulyMesic);
+
+  /**
+   * ZNĚNÍ SE UPRAVUJE ROVNOU TADY (zadání 18. 11. 2026: „vždy, když něco
+   * takového přidáme, tak to udělej tak, ať to můžeme upravovat a individuálně
+   * zapínat a vypínat"). Prázdné pole vrátí výchozí text - druhé tlačítko na
+   * to není potřeba a nejde se tak zaseknout u textu, který nejde smazat.
+   */
+  const [texty, setTexty] = useState<Record<string, { predmet: string; nadpis: string; text: string }>>(
+    () =>
+      Object.fromEntries(
+        OZNAMENI.filter((o) => o.vychozi).map((o) => [o.klic, zneniOznameni(o, zneni[o.klic])]),
+      ),
+  );
+  const [otevrene, setOtevrene] = useState<string | null>(null);
+
+  function uprav(klic: KlicOznameni, cast: 'predmet' | 'nadpis' | 'text', hodnota: string) {
+    setTexty((p) => ({ ...p, [klic]: { ...p[klic], [cast]: hodnota } }));
+  }
+
+  async function ulozZneni(klic: KlicOznameni) {
+    setBusy(klic);
+    setChyba(null);
+    setHlaska(null);
+    try {
+      const res = await fetch('/api/admin/oznameni', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ klic, ...texty[klic] }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setChyba(data?.error || t('zpravyPortalu.nejdeUlozit'));
+        return;
+      }
+      setHlaska(t('zpravyPortalu.zneniUlozeno'));
+      router.refresh();
+    } catch {
+      setChyba(t('zpravyPortalu.bezSpojeni'));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function prepni(klic: KlicOznameni, zapnuto: boolean) {
     setBusy(klic);
@@ -162,6 +209,16 @@ export function ZpravyPanel({
                 {t('zpravyPortalu.nahled')}
               </a>
 
+              {o.vychozi && (
+                <button
+                  type="button"
+                  onClick={() => setOtevrene(otevrene === o.klic ? null : o.klic)}
+                  className="font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-ink hover:border-brand-purple transition-colors"
+                >
+                  {otevrene === o.klic ? t('zpravyPortalu.skrytZneni') : t('zpravyPortalu.upravitZneni')}
+                </button>
+              )}
+
               {/* Rucni rozeslani ma smysl jen u te mesicni - bonus odchazi
                   ve chvili, kdy ho nekdo schvali. */}
               {o.klic === 'MESICNI_PREHLED' && (
@@ -186,6 +243,66 @@ export function ZpravyPanel({
                 </span>
               )}
             </div>
+
+            {o.vychozi && otevrene === o.klic && texty[o.klic] && (
+              <div className="border-t border-line pt-3 flex flex-col gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                    {t('zpravyPortalu.polePredmet')}
+                  </span>
+                  <input
+                    value={texty[o.klic].predmet}
+                    onChange={(e) => uprav(o.klic, 'predmet', e.target.value)}
+                    className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                    {t('zpravyPortalu.poleNadpis')}
+                  </span>
+                  <input
+                    value={texty[o.klic].nadpis}
+                    onChange={(e) => uprav(o.klic, 'nadpis', e.target.value)}
+                    className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                    {t('zpravyPortalu.poleText')}
+                  </span>
+                  <textarea
+                    value={texty[o.klic].text}
+                    onChange={(e) => uprav(o.klic, 'text', e.target.value)}
+                    rows={7}
+                    className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple resize-y"
+                  />
+                </label>
+
+                {o.znacky && o.znacky.length > 0 && (
+                  <div className="text-xs font-body text-muted">
+                    {o.znacky.map((z) => (
+                      <div key={z.znacka}>
+                        <code className="font-heading text-brand-purple">{z.znacka}</code> — {z.popis}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => void ulozZneni(o.klic)}
+                    disabled={busy === o.klic}
+                    className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+                  >
+                    {t('zpravyPortalu.ulozitZneni')}
+                  </button>
+                  <span className="text-xs font-body text-muted">
+                    {t('zpravyPortalu.prazdnoVychozi')}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         );
       })}

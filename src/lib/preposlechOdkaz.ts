@@ -41,6 +41,18 @@ export function urlNahravek(token: string): string {
 }
 
 /**
+ * PODNĚT K AUDIOTAGGERU BEZ PŘIHLAŠOVÁNÍ (zadání 18. 11. 2026: „pokud máte
+ * nějaký podněty pro zlepšení AudioTaggeru, zanechte nám je prosím zde.
+ * A půjde mi to pak do připomínek k portálu").
+ *
+ * Tentýž token jako u přeposlechu - kdo přeposlech odklepl, ten odkaz
+ * dostal, a nic dalšího po něm chtít nemůžeme.
+ */
+export function urlPodnetu(token: string): string {
+  return `${zakladPortalu()}/podnet/${encodeURIComponent(token)}`;
+}
+
+/**
  * ODKAZ NA SPOT PRO KLIENTA U REKLAMY (oprava 23. 9. 2026: „klient schválil
  * projekt Strabag, ale nikam se to nepropsalo").
  *

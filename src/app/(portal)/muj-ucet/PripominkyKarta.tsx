@@ -38,9 +38,12 @@ export function PripominkyKarta({
   const poLidech = useMemo(() => {
     const mapa = new Map<string, { autor: string; polozky: PripominkaRadek[] }>();
     seznam.forEach((p) => {
-      const zaznam = mapa.get(p.autorId) ?? { autor: p.autor, polozky: [] };
+      // Podnět zvenčí (18. 11. 2026) nemá účet - sdruží se pod jednu skupinu
+      // podle adresy, ať se připomínky od téhož klienta drží pohromadě.
+      const klic = p.autorId ?? `host:${p.autor}`;
+      const zaznam = mapa.get(klic) ?? { autor: p.autor, polozky: [] };
       zaznam.polozky.push(p);
-      mapa.set(p.autorId, zaznam);
+      mapa.set(klic, zaznam);
     });
     return [...mapa.values()].sort((a, b) => b.polozky.length - a.polozky.length);
   }, [seznam]);
@@ -116,6 +119,13 @@ export function PripominkyKarta({
             <div key={skupina.autor} className="flex flex-col gap-2">
               <p className="text-xs font-heading font-semibold text-ink uppercase tracking-wide m-0">
                 {skupina.autor} <span className="text-muted font-normal">({skupina.polozky.length})</span>
+                {/* Podnět z AudioTaggeru (18. 11. 2026) - ať je na první pohled
+                    poznat, že nepíše nikdo od nás. */}
+                {skupina.polozky[0]?.zvenci && (
+                  <span className="ml-2 align-middle inline-block rounded-pill bg-brand-green text-onAccent text-[10px] font-heading font-bold uppercase tracking-wide px-2 py-0.5">
+                    klient
+                  </span>
+                )}
               </p>
               {skupina.polozky.map((p) => (
                 <Polozka

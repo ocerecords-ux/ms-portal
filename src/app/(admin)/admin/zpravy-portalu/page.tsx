@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { nactiZapnuti } from '@/lib/oznameniServer';
+import { nactiZapnuti, nactiZneni } from '@/lib/oznameniServer';
 import { minulyMesic, nazevMesice } from '@/lib/mesicniPrehledServer';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { kodJazyka, prelozit } from '@/lib/jazyk';
@@ -23,8 +23,9 @@ export default async function ZpravyPortaluPage() {
   if (session?.user?.role !== 'ADMIN') redirect('/projekty');
   const jazyk = nactiJazyk();
 
-  const [zapnuti, odeslaneRaw] = await Promise.all([
+  const [zapnuti, zneni, odeslaneRaw] = await Promise.all([
     nactiZapnuti(),
+    nactiZneni(),
     prisma.mesicniPrehledOdeslan
       .findMany({ orderBy: { odeslanoAt: 'desc' }, take: 40 })
       .catch(() => []),
@@ -60,7 +61,7 @@ export default async function ZpravyPortaluPage() {
           {prelozit(jazyk, 'zpravyPortalu.uvod')}
         </p>
       </div>
-      <ZpravyPanel zapnuti={zapnuti} odeslane={odeslane} minulyMesic={minulyMesic()} />
+      <ZpravyPanel zapnuti={zapnuti} zneni={zneni} odeslane={odeslane} minulyMesic={minulyMesic()} />
     </div>
   );
 }

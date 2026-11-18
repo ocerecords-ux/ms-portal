@@ -3177,6 +3177,86 @@ export async function sendPreposlechPredanEmail(input: PreposlechPredanInput) {
   return overOdeslani(vysledekPosty, 'sendPreposlechPredanEmail');
 }
 
+/**
+ * PODĚKOVÁNÍ ZA KONTROLNÍ POSLECH (zadání 18. 11. 2026: „jde mi jen o to, ať
+ * se nějak k přeposlouchávači dostane info s tím celkovým časem").
+ *
+ * Odchází JEDNOMU člověku - tomu, kdo zmáčkl Přeposlechnuto. Není to zpráva
+ * pro klienta: ta chodí zvlášť ze Vzorů zpráv a říká, že se pouštíme do
+ * oprav. Znění si jde přepsat ve Zprávách portálu, proto sem předmět, nadpis
+ * i text přicházejí hotové - tahle funkce je jen vysází.
+ */
+export type PreposlechDikyInput = {
+  to: string;
+  jazyk?: Jazyk;
+  predmet: string;
+  nadpis: string;
+  text: string;
+  /** „8 h 42 min 15 s", nebo null, když se délku nepodařilo změřit. */
+  celkovyCas: string | null;
+  pocetStop: number;
+  /** Veřejná stránka, kam se zapíše podnět k AudioTaggeru. */
+  odkazPodnet: string | null;
+};
+
+export function buildPreposlechDikyHtml(input: PreposlechDikyInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  const odstavce = input.text
+    .split(/\n\s*\n/)
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .map((o) => `<p>${znackyNaHtml(escapeHtml(o).replace(/\n/g, '<br />'))}</p>`)
+    .join('\n    ');
+
+  // Celkový čas je to jediné, co má ve zprávě svítit - proto vlastní rámeček
+  // uprostřed, ne řádek v tabulce mezi ostatními údaji.
+  const cas = input.celkovyCas
+    ? `
+    <table role="presentation" width="100%" style="background:#F7F5FF;border-radius:12px;margin:4px 0 22px;">
+      <tr><td style="padding:18px 20px;text-align:center;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#6B2AF0;font-weight:700;">${prelozitEmail(jazyk, 'mail.diky.celkovyCas')}</div>
+        <div style="font-size:28px;font-weight:700;color:#201A33;padding-top:6px;">${escapeHtml(input.celkovyCas)}</div>
+        ${input.pocetStop > 0 ? `<div style="font-size:12px;color:#6E6580;padding-top:6px;">${escapeHtml(prelozitEmailS(jazyk, 'mail.diky.stop', { pocet: input.pocetStop }))}</div>` : ''}
+      </td></tr>
+    </table>`
+    : '';
+
+  const tlacitko = input.odkazPodnet
+    ? `
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkazPodnet)}" class="cta">${prelozitEmail(jazyk, 'mail.diky.tlacitko')}</a>
+    </div>`
+    : '';
+
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.diky.stitek'),
+    preheader: input.nadpis,
+    body: `
+    ${input.nadpis.trim() ? `<h2>${escapeHtml(input.nadpis.trim())}</h2>` : ''}
+    ${odstavce}
+    ${cas}
+    ${tlacitko}
+`,
+  });
+}
+
+export async function sendPreposlechDikyEmail(input: PreposlechDikyInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: input.predmet,
+    text: [input.text, input.celkovyCas ? `\n${input.celkovyCas}` : '', input.odkazPodnet ?? '']
+      .filter(Boolean)
+      .join('\n'),
+    html: buildPreposlechDikyHtml(input),
+  });
+  return overOdeslani(vysledekPosty, 'sendPreposlechDikyEmail');
+}
+
 export type NoveStopyInput = PreposlechPosluchaciInput & {
   pribylo: number;
   celkem: number;

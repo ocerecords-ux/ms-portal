@@ -3966,6 +3966,22 @@ model PreposlechStav {
   /// trackach (21. 9. 2026). Kdyz je jich na Disku vic, poslou se znovu.
   oznamenoStop    Int?
 
+  /// CELKOVY CAS NAHRAVKY V SEKUNDACH (zadani 18. 11. 2026: „jde mi jen o to,
+  /// at se nejak k preposlouchavaci dostane info s tim celkovym casem").
+  ///
+  /// AudioTagger si delky meri v prohlizeci, server je tak nikdy nemel. Tohle
+  /// je jejich serverovy soucet, spocitany z hlavicek WAVu na Disku - staci
+  /// z kazdeho souboru prvnich par desitek bajtu. Drzi se tady, aby se pri
+  /// kazdem pouziti nesahalo na Disk znovu.
+  delkaSekund     Int?
+  delkaZjistenaAt DateTime?
+
+  /// Kdy odeslo podekovani za kontrolni poslech (18. 11. 2026). Posila se
+  /// v okamziku, kdy preposlech odklepne nekdo ZVENCI - ne pri prekloponi
+  /// stavu projektu a ne pri nasem internim odskrtnuti. Datum tu je proto,
+  /// aby se zprava neopakovala, kdyz se fajfka sundá a dá znovu.
+  dikyOdeslanoAt  DateTime?
+
   updatedAt       DateTime  @updatedAt
 }
 
@@ -4191,6 +4207,17 @@ model NastaveniOznameni {
   klic String @id
 
   zapnuto   Boolean  @default(true)
+
+  /// VLASTNI ZNENI (zadani 18. 11. 2026: „vzdy, kdyz neco takoveho pridame,
+  /// tak to udelej tak, at to muzeme upravovat a individualne zapinat
+  /// a vypinat").
+  ///
+  /// Prazdno = plati vychozi text z lib/oznameni.ts. Da se tak kdykoli vratit
+  /// zpatky tim, ze se pole vyprazdni. Tyka se jen zprav, ktere volny text
+  /// maji - bonus a mesicni prehled jsou tabulky skladane z dat.
+  predmet String?
+  nadpis  String?
+  text    String? @db.Text
   zmenilJmeno String?
   updatedAt DateTime @updatedAt
 }
@@ -4520,8 +4547,20 @@ enum StavPripominky {
 /// Jedna pripominka k portalu. Pise ji kdokoliv, cte je jen Zuzo-labuzo.
 model PripominkaPortalu {
   id     String @id @default(cuid())
-  userId String
-  user   User   @relation("PripominkyPortalu", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// KDO JI NAPSAL. Prazdne u podnetu zvenci - viz `hostEmail` niz.
+  userId String?
+  user   User?   @relation("PripominkyPortalu", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// PODNET OD KLIENTA (zadani 18. 11. 2026: „pokud mate nejaky podnety pro
+  /// zlepseni AudioTaggeru, zanechte nam je prosim zde. A pujde mi to pak do
+  /// pripominek k portalu").
+  ///
+  /// Preposlouchavac zadny ucet v portalu nema, takze pripominka musi umet
+  /// existovat i bez nej - identifikuje ho mail a jmeno z Posluchacu.
+  /// V seznamu se takovy podnet ukaze jako skupina „Klient" s jeho adresou.
+  hostEmail String?
+  hostJmeno String?
 
   text String @db.Text
 

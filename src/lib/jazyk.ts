@@ -10818,6 +10818,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'zpravyPortalu.kdy': { cs: 'Kdy', en: 'When' },
   'zpravyPortalu.komu': { cs: 'Komu', en: 'To whom' },
   'zpravyPortalu.nahled': { cs: 'Ukázat, jak mail vypadá', en: 'Show what the email looks like' },
+  'zpravyPortalu.upravitZneni': { cs: 'Upravit znění', en: 'Edit wording' },
+  'zpravyPortalu.skrytZneni': { cs: 'Skrýt znění', en: 'Hide wording' },
+  'zpravyPortalu.ulozitZneni': { cs: 'Uložit znění', en: 'Save wording' },
+  'zpravyPortalu.zneniUlozeno': { cs: 'Znění uloženo.', en: 'Wording saved.' },
+  'zpravyPortalu.polePredmet': { cs: 'Předmět', en: 'Subject' },
+  'zpravyPortalu.poleNadpis': { cs: 'Nadpis', en: 'Headline' },
+  'zpravyPortalu.poleText': { cs: 'Text', en: 'Body' },
+  'zpravyPortalu.prazdnoVychozi': {
+    cs: 'prázdné pole vrátí výchozí znění',
+    en: 'an empty field restores the default wording',
+  },
   'zpravyPortalu.rozesilam': { cs: 'Rozesílám…', en: 'Sending…' },
   'zpravyPortalu.rozeslatTed': { cs: 'Rozeslat teď', en: 'Send now' },
   'zpravyPortalu.podruheNe': {

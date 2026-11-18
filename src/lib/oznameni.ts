@@ -12,7 +12,7 @@
 
 import { prelozit, type Jazyk } from '@/lib/jazyk';
 
-export type KlicOznameni = 'BONUS_SCHVALEN' | 'MESICNI_PREHLED';
+export type KlicOznameni = 'BONUS_SCHVALEN' | 'MESICNI_PREHLED' | 'PREPOSLECH_DIKY';
 
 export type PopisOznameni = {
   klic: KlicOznameni;
@@ -25,6 +25,14 @@ export type PopisOznameni = {
   komu: string;
   /** Adresa náhledu - ukáže, jak mail vypadá. */
   nahled: string;
+  /**
+   * VÝCHOZÍ ZNĚNÍ, KTERÉ JDE PŘEPSAT (zadání 18. 11. 2026). Zpráva, která
+   * tohle má, se v administraci nabídne k úpravě; co ho nemá, má jen vypínač,
+   * protože jeho mail je tabulka skládaná z dat, ne volný text.
+   */
+  vychozi?: { predmet: string; nadpis: string; text: string };
+  /** Značky, které se v textu nahradí - bez nich by je nikdo neuhodl. */
+  znacky?: { znacka: string; popis: string }[];
 };
 
 export const OZNAMENI: PopisOznameni[] = [
@@ -44,7 +52,55 @@ export const OZNAMENI: PopisOznameni[] = [
     komu: 'Každému zvukaři, který v tom měsíci něco vykázal.',
     nahled: '/api/admin/vykazy/nahled-mesicni',
   },
+  {
+    klic: 'PREPOSLECH_DIKY',
+    nazev: 'Poděkování za kontrolní poslech',
+    popis: 'Poděkování s celkovým časem nahrávky a s dotazem na podněty k AudioTaggeru.',
+    kdy: 'Ve chvíli, kdy přeposlech odklepne někdo zvenčí. Při našem interním odškrtnutí neodchází.',
+    komu: 'Jen tomu jedinému člověku, který zmáčkl Přeposlechnuto. Ostatním posluchačům ani klientovi ne.',
+    nahled: '/api/admin/preposlech/nahled-diky',
+    vychozi: {
+      predmet: 'Děkujeme za kontrolní poslech — {projekt}',
+      nadpis: 'Děkujeme za kontrolní poslech',
+      text: [
+        'Dobrý den,',
+        '',
+        'děkujeme za kontrolní poslech audioknihy **{projekt}**.',
+        '',
+        'Fungovalo vše bez problémů? Pokud máte nějaké podněty pro zlepšení AudioTaggeru, zanechte nám je prosím zde.',
+      ].join('\n'),
+    },
+    znacky: [
+      { znacka: '{projekt}', popis: 'Název projektu.' },
+      { znacka: '{jmeno}', popis: 'Jméno toho, kdo přeposlech odklepl.' },
+      { znacka: '{celkovycas}', popis: 'Celkový čas nahrávky, například „8 h 42 min 15 s".' },
+      { znacka: '{pocetstop}', popis: 'Kolik stop na Disku leží.' },
+    ],
+  },
 ];
+
+/**
+ * Znění zprávy - uložené, nebo výchozí. Uložené prázdno se bere jako „vrátit
+ * výchozí", proto se prázdné řetězce přeskakují.
+ */
+export function zneniOznameni(
+  o: PopisOznameni,
+  ulozene?: { predmet?: string | null; nadpis?: string | null; text?: string | null } | null,
+): { predmet: string; nadpis: string; text: string } {
+  const vychozi = o.vychozi ?? { predmet: '', nadpis: '', text: '' };
+  return {
+    predmet: ulozene?.predmet?.trim() || vychozi.predmet,
+    nadpis: ulozene?.nadpis?.trim() || vychozi.nadpis,
+    text: ulozene?.text?.trim() || vychozi.text,
+  };
+}
+
+/** Dosadí značky do textu. Co ve `hodnoty` není, se nechá být. */
+export function dosadZnacky(text: string, hodnoty: Record<string, string>): string {
+  return text.replace(/\{([a-z]+)\}/g, (cele, klic: string) =>
+    klic in hodnoty ? hodnoty[klic] : cele,
+  );
+}
 
 export const KLICE_OZNAMENI: KlicOznameni[] = OZNAMENI.map((o) => o.klic);
 

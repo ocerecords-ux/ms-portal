@@ -170,6 +170,8 @@ Po potvrzení se přeposlech **uzamkne**:
 
 **Zamyká jen klient.** Když nahrávku označíme jako přeposlechnutou my z portálu — tedy u knih, které přeposloucháváme interně — nezamyká se nic a **nikomu neodejde žádný e-mail**. Zpráva „přeposlech hotový, pouštíme se do oprav" chodí klientovi jen tehdy, když přeposlech dokončil on sám. Odškrtnutí zpátky (**Odemknout klientovi**) je jediná cesta, jak vrátit nahrávku do práce — sundá i to naše označení.
 
+**A tomu, kdo přeposlech odklepl, přijde poděkování** (18. 11. 2026). Odchází v okamžiku toho kliknutí, jen při odklepnutí zvenčí, a jen tomu jedinému člověku — ne všem posluchačům. Je v něm **celkový čas nahrávky** (portál si ho spočítá sám z hlaviček souborů na Disku, nemusí kvůli tomu nikdo otevřít AudioTagger) a odkaz, kde jde zanechat **podnět ke zlepšení AudioTaggeru**; ten spadne rovnou mezi *Připomínky k portálu* s označením, od koho a od kterého projektu je. Když je ta adresa tatáž, které už odešla zpráva „pouštíme se do oprav", poděkování se vynechá — dva maily naráz jsou horší než jeden. Znění i vypínač jsou v **Administrace → Zprávy portálu**.
+
 # Kolik je přeposlechnuto (procenta)
 
 Stopy k přeposlechu chodí po kouscích, takže „3 z 5 stop" o celé knize nic neřekne. Procento se proto počítá **podle stran PDF**: v hlavičce je proužek a „Přeposlechnuto 42 % · strana 120 z 286".
