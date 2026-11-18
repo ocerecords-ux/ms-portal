@@ -2775,6 +2775,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Nothing yet. Write what needs buying or doing in the box above.',
   },
   'pozadavky.nacitam': { cs: 'Načítám…', en: 'Loading…' },
+  'pozadavky.pridatPoznamku': { cs: '+ poznámka', en: '+ note' },
+  'pozadavky.upravitPoznamku': { cs: 'upravit poznámku', en: 'edit note' },
+  'pozadavky.poznamkaPlaceholder': {
+    cs: 'Upřesnění — rozměr, model, odkaz na produkt…',
+    en: 'Details — size, model, a link to the product…',
+  },
   'pozadavky.ukazHotove': {
     cs: 'Ukázat vyřízené ({pocet})',
     en: 'Show closed ({pocet})',

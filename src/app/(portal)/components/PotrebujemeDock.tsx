@@ -30,6 +30,8 @@ type Pozadavek = {
   studio: string;
   druh: 'KOUPIT' | 'UDELAT';
   text: string;
+  /** Upřesnění pod názvem - odkaz na konkrétní produkt, rozměr, cokoliv. */
+  popis: string | null;
   specha: boolean;
   stav: 'NOVY' | 'ZARIZUJE_SE' | 'HOTOVO' | 'ZAMITNUTO';
   zadal: string | null;
@@ -39,6 +41,36 @@ type Pozadavek = {
 };
 
 type Studio = { id: string; name: string; shortName: string };
+
+/**
+ * ODKAZ V POZNÁMCE SE DÁ KLEPNOUT (zadání 17. 11. 2026: „pak se dala vložit
+ * poznámka s delším textem… třeba i odkaz na konkrétní produkt na webu").
+ *
+ * Schválně ručně, ne knihovnou: hledá se jen http(s) adresa, všechno ostatní
+ * zůstává obyčejným textem. Koncová interpunkce se do odkazu nebere - věta
+ * „kup tohle: https://eshop.cz/mikrofon." by jinak měla tečku v URL.
+ */
+function sOdkazy(text: string): React.ReactNode[] {
+  return text.split(/(https?:\/\/[^\s]+)/g).map((kus, i) => {
+    if (!/^https?:\/\//.test(kus)) return kus;
+    const cisty = kus.replace(/[.,;:)\]]+$/, '');
+    const zbytek = kus.slice(cisty.length);
+    return (
+      <span key={i}>
+        <a
+          href={cisty}
+          target="_blank"
+          rel="noreferrer"
+          className="text-brand-purple underline break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {cisty}
+        </a>
+        {zbytek}
+      </span>
+    );
+  });
+}
 
 function jeHotovy(stav: Pozadavek['stav']): boolean {
   return stav === 'HOTOVO' || stav === 'ZAMITNUTO';
@@ -146,6 +178,12 @@ export function PotrebujemeDock() {
   const [studioId, setStudioId] = useState('');
   const [druh, setDruh] = useState<Pozadavek['druh']>('KOUPIT');
   const [specha, setSpecha] = useState(false);
+  /** Poznámka k nové položce - nepovinná, schovaná pod odkazem. */
+  const [popis, setPopis] = useState('');
+  const [popisOtevren, setPopisOtevren] = useState(false);
+  /** Která hotová položka se zrovna doplňuje poznámkou. */
+  const [upravovany, setUpravovany] = useState<string | null>(null);
+  const [upravovanyText, setUpravovanyText] = useState('');
   /** Co uz clovek odskrtl - seznam se prekresli hned, server se dorovna potom. */
   const [prepnute, setPrepnute] = useState<Record<string, boolean>>({});
 
@@ -199,7 +237,7 @@ export function PotrebujemeDock() {
       const res = await fetch('/api/pozadavky', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studioId, druh, text: veta, specha }),
+        body: JSON.stringify({ studioId, druh, text: veta, specha, popis: popis.trim() || null }),
       });
       const odpoved = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -208,6 +246,8 @@ export function PotrebujemeDock() {
       }
       setText('');
       setSpecha(false);
+      setPopis('');
+      setPopisOtevren(false);
       await nacti();
     } finally {
       setBusy(false);
@@ -232,6 +272,25 @@ export function PotrebujemeDock() {
         return zbytek;
       });
       setChyba(t('pozadavky.chybaUlozeni'));
+    }
+  }
+
+  /** Uloží (nebo smaže) poznámku u existující položky. */
+  async function ulozPoznamku(id: string) {
+    const novy = upravovanyText.trim();
+    setUpravovany(null);
+    try {
+      const res = await fetch(`/api/pozadavky/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ popis: novy || null }),
+      });
+      if (!res.ok) {
+        const odpoved = await res.json().catch(() => ({}));
+        setChyba(odpoved?.error ?? t('pozadavky.chybaUlozeni'));
+      }
+    } finally {
+      await nacti();
     }
   }
 
@@ -288,6 +347,55 @@ export function PotrebujemeDock() {
               </span>
             )}
           </span>
+          {/* POZNÁMKA POD NÁZVEM (17. 11. 2026) - upřesnění, rozměr, odkaz na
+              konkrétní produkt. Odkazy jsou klikací, viz sOdkazy. */}
+          {p.popis && upravovany !== p.id && (
+            <span className="block text-xs font-body text-muted mt-0.5 whitespace-pre-wrap break-words">
+              {sOdkazy(p.popis)}
+            </span>
+          )}
+          {upravovany === p.id ? (
+            <span className="block mt-1">
+              <textarea
+                autoFocus
+                rows={3}
+                value={upravovanyText}
+                onChange={(e) => setUpravovanyText(e.target.value)}
+                placeholder={t('pozadavky.poznamkaPlaceholder')}
+                maxLength={2000}
+                className="w-full rounded-lg border border-line bg-field px-2.5 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple"
+              />
+              <span className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => void ulozPoznamku(p.id)}
+                  className="rounded-lg bg-brand-purple text-white font-heading font-semibold text-[11px] px-2.5 py-1"
+                >
+                  {t('obecne.ulozit')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUpravovany(null)}
+                  className="text-[11px] font-body text-muted hover:text-ink"
+                >
+                  {t('obecne.zrusit')}
+                </button>
+              </span>
+            </span>
+          ) : (
+            smiOdskrtnout && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUpravovany(p.id);
+                  setUpravovanyText(p.popis ?? '');
+                }}
+                className="text-[11px] font-body text-muted hover:text-brand-purple mt-0.5"
+              >
+                {p.popis ? t('pozadavky.upravitPoznamku') : t('pozadavky.pridatPoznamku')}
+              </button>
+            )
+          )}
           <span className="block text-[11px] font-heading text-muted mt-0.5">
             {p.studio}
             {p.zadal ? ` · ${p.zadal}` : ''}
@@ -345,6 +453,28 @@ export function PotrebujemeDock() {
                 maxLength={300}
                 className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
               />
+              {/* POZNÁMKA JE SCHOVANÁ, DOKUD NENÍ POTŘEBA (17. 11. 2026).
+                  Devět z deseti řádků je jedna věta; textové pole nastálo by
+                  z rychlého zápisu udělalo formulář. */}
+              {popisOtevren ? (
+                <textarea
+                  autoFocus
+                  rows={3}
+                  value={popis}
+                  onChange={(e) => setPopis(e.target.value)}
+                  placeholder={t('pozadavky.poznamkaPlaceholder')}
+                  maxLength={2000}
+                  className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-xs outline-none focus:border-brand-purple w-full"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPopisOtevren(true)}
+                  className="self-start text-[11px] font-body text-muted hover:text-brand-purple"
+                >
+                  {t('pozadavky.pridatPoznamku')}
+                </button>
+              )}
               <div className="flex items-center gap-2">
                 {/* KOUPIT / UDELAT je prepinac, ne dalsi seznam. */}
                 <span className="flex rounded-lg border border-line overflow-hidden shrink-0">
