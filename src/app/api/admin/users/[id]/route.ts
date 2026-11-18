@@ -350,7 +350,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.prijimaDotazyKlientu !== undefined
         ? { prijimaDotazyKlientu: data.prijimaDotazyKlientu === '1' }
         : {}),
-      ...(nextRole === 'ZVUKAR' && data.hourlyRate !== undefined
+      /**
+       * SAZBU MA I TEN, KDO JEN OBCAS TOCI (17. 11. 2026). Puvodne se ukladala
+       * jen u role ZVUKAR, takze Peteru Dratvovi - produkce se zaskrtnutym
+       * „taky zvukar" - zustavalo pole prazdne a jeho vykazy by se pocitaly
+       * z vychozi sazby. Formular pole nabizi obema, tak ho obema i ulozime.
+       */
+      ...(data.hourlyRate !== undefined
         ? { hourlyRate: data.hourlyRate ? parseInt(data.hourlyRate, 10) || null : null }
         : {}),
       // Prázdné pole znamená „neposílat" - null, ne prázdný řetězec, ať se na

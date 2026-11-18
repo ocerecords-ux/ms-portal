@@ -217,6 +217,7 @@ async function main() {
   await prioritaDveUrovne();
   await seznamPotrebOndrejAPeter();
   await pravoNaSeznamPotrebZnovu();
+  await sazbaVsemZvukarum();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1789,6 +1790,43 @@ async function pravoNaSeznamPotrebZnovu() {
     console.log(`  seznam Koupit/Udelat vidi ${vysledek.count} uctu (ADMIN + Dratva)`);
   } catch (err) {
     console.warn('  pravo na seznam Koupit/Udelat se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * KAŽDÝ, KDO PÍŠE VÝKAZY, MÁ VYPLNĚNOU SAZBU (zadání 17. 11. 2026: „a udělal
+ * bych to u všech zvukařů, aby to šlo pak třeba ručně nastavit. Všichni mají
+ * teď 250,-/hod. Nastav to tak i u Tomáše. My si to pak navýšíme toho
+ * 1. prosince ručně").
+ *
+ * PRÁZDNÁ SAZBA JE TICHÁ CHYBA: výkaz se z ní počítá, a kdo ji nemá, tomu se
+ * den spočítá z výchozí hodnoty, aniž by to na kartě bylo vidět. Proto se
+ * doplní všem, kdo točí - roli ZVUKAR i těm, kdo mají zaškrtnuté „taky
+ * zvukař" (Peter Dratva).
+ *
+ * PŘEPISUJE SE JEN PRÁZDNÉ POLE. Kdo už svou sazbu má, ten si ji nechá -
+ * jednorázovka nesmí nikomu přepsat domluvené číslo. Zvýšení (Tomáš
+ * 280 Kč/h od 1. 12.) se dělá ručně na kartě uživatele; výkazy si sazbu
+ * ukládají v okamžiku zápisu, takže starší dny zůstanou na staré sazbě.
+ */
+async function sazbaVsemZvukarum() {
+  const ZNAMKA = 'hodinova-sazba-vsem-zvukarum';
+  const VYCHOZI = 250;
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: {
+        active: true,
+        hourlyRate: null,
+        OR: [{ role: 'ZVUKAR' }, { takyZvukar: true }],
+      },
+      data: { hourlyRate: VYCHOZI },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  hodinova sazba ${VYCHOZI} Kc doplnena u ${vysledek.count} uctu`);
+  } catch (err) {
+    console.warn('  hodinovou sazbu se nepodarilo doplnit:', err);
   }
 }
 

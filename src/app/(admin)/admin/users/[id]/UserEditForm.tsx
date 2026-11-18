@@ -309,7 +309,9 @@ export function UserEditForm({
       if (newPassword) fd.set('password', newPassword);
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
-        if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
+        // Sazba se uklada i tomu, kdo jen obcas toci - pole se mu od
+        // 17. 11. 2026 nabizi, takze by jinak odeslani zahodilo, co vyplnil.
+        if (role === 'ZVUKAR' || takyZvukar) fd.set('hourlyRate', hourlyRate);
         if (role === 'ZVUKAR') fd.set('mzdyEmail', mzdyEmail);
         if (isMediaspace) fd.set('podilNaObratu', podilNaObratu);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
@@ -514,9 +516,16 @@ export function UserEditForm({
           </AdminField>
         </div>
         )}
-        {/* Hodinova sazba - jen zvukar, pocitaji se z ni vykazy prace
-            (zadani 6. 9. 2026). */}
-        {zalozka === 'UDAJE' && role === 'ZVUKAR' && (
+        {/* Hodinova sazba - pocitaji se z ni vykazy prace (zadani 6. 9. 2026).
+            Vsichni zvukari maji 250 Kc/h; kdo ma mit jinou, prepise se mu tady
+            rucne (zadani 17. 11. 2026: „my si to pak navysime 1. prosince
+            rucne"). Vykaz si sazbu ulozi v okamziku zapisu, takze zmena
+            nikdy neprepise uz vykazane dny.
+
+            UKAZUJE SE I TOMU, KDO JEN OBCAS TOCI (`takyZvukar`) - Peter Dratva
+            vykazy pise, ale roli ZVUKAR nema, takze se mu pole nenabizelo
+            a sazba zustavala prazdna. */}
+        {zalozka === 'UDAJE' && (role === 'ZVUKAR' || takyZvukar) && (
           <div className="flex-1 min-w-[180px]">
             <AdminField label={t('uzivatel.poleHodinovaSazba')} hint={t('uzivatel.hodinovaSazbaHint')}>
               <input
