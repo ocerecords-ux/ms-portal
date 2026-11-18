@@ -2807,6 +2807,24 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Requests from every studio in the chat tab, including moving them between states. Without it a branch head sees only their own studios.',
   },
 
+  // Čas nad knihou - hodiny místo korun (17. 11. 2026)
+  'cas.nadpis': { cs: 'Čas nad knihou', en: 'Time on this book' },
+  'cas.popis': {
+    cs: 'Plán se počítá z normostran a platí pro každého stejně.',
+    en: 'The plan comes from the page count and is the same for everyone.',
+  },
+  'cas.hodin': { cs: '{pocet} h', en: '{pocet} h' },
+  'cas.zPlanu': { cs: 'z plánovaných {plan}', en: 'of {plan} planned' },
+  'cas.zbyva': {
+    cs: 'Zbývá {pocet} — odpracováno {procenta} % plánu.',
+    en: '{pocet} left — {procenta} % of the plan done.',
+  },
+  'cas.prekroceno': { cs: 'Přes plán o {pocet}.', en: 'Over the plan by {pocet}.' },
+  'cas.nataceni': { cs: 'Natáčení', en: 'Recording' },
+  'cas.strih': { cs: 'Střih', en: 'Editing' },
+  'cas.opravy': { cs: 'Opravy', en: 'Repairs' },
+  'cas.ostatni': { cs: 'Ostatní', en: 'Other' },
+
   // QR platba v řádku dokladu
   'qr.platbaCastka': { cs: 'QR platba: {castka}', en: 'QR payment: {castka}' },
   'qr.zobrazit': { cs: 'Zobrazit QR platbu', en: 'Show QR payment' },
@@ -6352,6 +6370,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'rozpocet.nataceni': { cs: 'Natáčení', en: 'Recording' },
   'rozpocet.strih': { cs: 'Střih', en: 'Editing' },
   'rozpocet.bonus': { cs: 'Bonus', en: 'Bonus' },
+  'rozpocet.vyssiSazby': {
+    cs: 'Z toho {castka} dělají vyšší sazby, ne práce navíc.',
+    en: 'Of that, {castka} comes from higher rates, not extra work.',
+  },
+  'rozpocet.nizsiSazby': {
+    cs: 'O {castka} méně, než kolik by stála základní sazba.',
+    en: '{castka} less than the standard rate would have cost.',
+  },
+  'projekt.zalozka.cas': { cs: 'Čas', en: 'Time' },
   'rozpocet.nakladyNaVyrobu': { cs: 'Náklady na výrobu', en: 'Production costs' },
   'rozpocet.cerpani': { cs: 'Čerpání', en: 'Spent' },
   'rozpocet.zCelkem': { cs: '{cast} z {celek} · {procent} %', en: '{cast} of {celek} · {procent}%' },

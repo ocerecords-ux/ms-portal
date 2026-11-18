@@ -40,6 +40,17 @@ export type Budget = {
   sessions: number;
   /** Pocet strihovych jednotek (zaokrouhleno nahoru). */
   editingUnits: number;
+  /**
+   * KOLIK HODIN BY TO MELO ZABRAT (zadani 17. 11. 2026: „zásadní to počítat
+   * z těch hodin, abychom věděli, jestli nad tím zvukaři netráví zbytečně moc
+   * času").
+   *
+   * Hodiny jsou jediná část plánu, která NEZÁVISÍ NA TOM, KDO knihu dělá -
+   * frekvence trvá čtyři hodiny Tomášovi i komukoliv jinému. Peníze se liší
+   * podle sazeb a je v nich rezerva, takže se podle nich nedá poznat, jestli
+   * se nad knihou nesedí zbytečně dlouho. Proto se přetečení hlídá tady.
+   */
+  plannedHours: number;
   /** Cena jedne frekvence i jedne strihove jednotky. */
   unitPrice: number;
   recordingCost: number;
@@ -62,6 +73,7 @@ export function computeBudget(pageCount: number, settings: BudgetSettingsValues)
     pageCount: pages,
     sessions,
     editingUnits,
+    plannedHours: (sessions + editingUnits) * settings.sessionHours,
     unitPrice,
     recordingCost,
     editingCost,

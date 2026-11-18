@@ -22,6 +22,8 @@ import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from 
 import { druhNotifikaceFirmy } from '@/lib/notifikaceFirmy';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
+import { CasProjektu } from './CasProjektu';
+import { nactiCasProjektu, soucetHodin } from '@/lib/casProjektuServer';
 import { ProjectBudget } from './ProjectBudget';
 import { ProjectBudgetZakazka } from './ProjectBudgetZakazka';
 import { StatusPill } from '../shared';
@@ -405,6 +407,21 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     0,
   );
   const hoursLogged = timesheets.reduce((sum, e) => sum + toHours(durationMinutes(e.startMinutes, e.endMinutes)), 0);
+
+  /**
+   * ČAS NAD KNIHOU (zadání 17. 11. 2026) - plán v hodinách a kolik se jich
+   * zapsalo. Vidí to i zvukař, protože v tom není jediná koruna ani sazba.
+   *
+   * Kdo rozpočet vidí, má výkazy stejně načtené - tomu se jen sečtou. Komu se
+   * nenačetly (zvukař), tomu se dotáhnou zvlášť dotazem, který vybírá POUZE
+   * minuty a druh práce. Viz lib/casProjektuServer.ts.
+   */
+  const jeAudiokniha = company?.dealsAudiobooks === true && (project?.pageCount ?? 0) > 0;
+  const casNadKnihou = !jeAudiokniha
+    ? null
+    : showRozpocet
+      ? soucetHodin(timesheets, computeBudget(project!.pageCount!, settings).plannedHours)
+      : await nactiCasProjektu(caflouProjectId, project!.pageCount!);
   /**
    * Výnos od klienta ze sazby a normostran.
    *
@@ -741,6 +758,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       // Měna klienta (12. 10. 2026) - sazba za normostranu je v ní.
       mena={company?.mena ?? 'CZK'}
       hoursLogged={hoursLogged}
+      /**
+       * KOLIK Z ČERPÁNÍ DĚLAJÍ VYŠŠÍ SAZBY (17. 11. 2026). Rozpočet se počítá
+       * základní sazbou z Ceníků; kdo má na kartě vlastní, čerpá jinak. Bez
+       * tohohle řádku vypadá kniha dražší „protože se protáhla", i když se
+       * odpracovalo přesně podle plánu - jen na ní dělal někdo dražší.
+       */
+      rozdilSazeb={Math.round(spent - hoursLogged * settings.hourlyRate)}
       caflouProjectId={caflouProjectId}
       pocatecniPolozky={nakladovePolozky}
       jmenaHercu={jmenaHercu}
@@ -1031,6 +1055,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       label: prelozit(jazyk, 'projekt.zalozka.vystupy'),
       count: vystupy.length,
       content: vystupySekce,
+    });
+  }
+  /**
+   * ČAS (zadání 17. 11. 2026) - záložka pro VŠECHNY naše lidi, zvukaře
+   * včetně. Je v ní plán v hodinách a kolik se jich zapsalo; peníze ani sazby
+   * v ní nejsou, takže se nemá co prozradit. Jen u audioknih, kde známe
+   * normostrany - jinde se plán spočítat nedá.
+   */
+  if (casNadKnihou && isInternalRole(session.user.role)) {
+    tabs.push({
+      key: 'cas',
+      label: prelozit(jazyk, 'projekt.zalozka.cas'),
+      content: <CasProjektu cas={casNadKnihou} />,
     });
   }
   // Zalozka je u kazdeho projektu, ale jen pro toho, kdo na cisla ma pravo

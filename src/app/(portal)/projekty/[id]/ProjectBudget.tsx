@@ -57,6 +57,7 @@ const uKlienta = (v: number, mena: Currency, jazyk: Jazyk) =>
 export function ProjectBudget({
   budget,
   spent,
+  rozdilSazeb = 0,
   revenue,
   ratePerPage,
   mena = 'CZK',
@@ -72,6 +73,12 @@ export function ProjectBudget({
   budget: Budget;
   /** Uz vykazane penize podle vykazu zvukaru. */
   spent: number;
+  /**
+   * O kolik korun se čerpání liší od základní sazby z Ceníků (17. 11. 2026).
+   * Kladné = na knize dělal někdo s vyšší sazbou. Není to přetečení rozpočtu,
+   * je to rozhodnutí o obsazení - proto vlastní řádek, ne červená.
+   */
+  rozdilSazeb?: number;
   /** Cena zakazky z normostran x sazba firmy, null kdyz sazba chybi. */
   revenue: number | null;
   ratePerPage: number | null;
@@ -198,6 +205,17 @@ export function ProjectBudget({
           {vykazanoOpravy > 0 &&
             t('rozpocet.opravyVCerpani', { castka: czk(vykazanoOpravy, jazyk) })}
         </p>
+        {/* VYŠŠÍ SAZBY ZVLÁŠŤ (17. 11. 2026: „bude rozdíl, jestli na ní bude
+            pár frekvencí natáčet nebo stříhat Tomáš, který má vyšší sazbu").
+            Jinak se nedá poznat, jestli kniha stála víc prací, nebo tím, kdo
+            na ní dělal - a to jsou dvě úplně jiné zprávy. */}
+        {rozdilSazeb !== 0 && (
+          <p className="text-xs font-body text-muted mt-1 m-0">
+            {rozdilSazeb > 0
+              ? t('rozpocet.vyssiSazby', { castka: czk(rozdilSazeb, jazyk) })
+              : t('rozpocet.nizsiSazby', { castka: czk(-rozdilSazeb, jazyk) })}
+          </p>
+        )}
       </div>
 
       {/* Firma, pro kterou nedelame na klic: platime jen vyrobu, takze zisk
