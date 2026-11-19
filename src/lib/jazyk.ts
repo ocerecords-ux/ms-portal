@@ -11189,6 +11189,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'dokladyKlienta.objednavka': { cs: 'Objednávka {cislo}', en: 'Order {cislo}' },
 
   /* --- Dávka 7g: ruční značka nabídky u reklam (lib/nabidkaReklamy.tsx) --- */
+  'nabidkaReklamy.NENI': { cs: 'Nabídka není vytvořena', en: 'No quote yet' },
   'nabidkaReklamy.CEKA': { cs: 'Nabídka čeká na schválení', en: 'Quote awaiting approval' },
   'nabidkaReklamy.SCHVALENA': { cs: 'Nabídka schválena', en: 'Quote approved' },
   'nabidkaReklamy.NESCHVALENA': { cs: 'Nabídka neschválena', en: 'Quote not approved' },

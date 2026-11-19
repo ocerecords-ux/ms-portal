@@ -25,19 +25,29 @@ export async function stavyNabidekZDokladu(
   const ids = Array.from(new Set(caflouProjectIds.filter(Boolean)));
   if (ids.length === 0) return vysledek;
 
+  /**
+   * ODESLANÁ NABÍDKA V PORTÁLU UŽ OPRAVDU ČEKÁ (19. 11. 2026). Do té doby se
+   * z dokladů četly jen schválené a odmítnuté; odeslaná nabídka u projektu
+   * nic neznamenala a značka zůstávala na ruční. Když ji ale portál sám
+   * odeslal, ví o ní dost na to, aby to napsal.
+   */
   const nabidky = await prisma.offer
     .findMany({
-      where: { caflouProjectId: { in: ids }, status: { in: ['APPROVED', 'REJECTED'] } },
+      where: { caflouProjectId: { in: ids }, status: { in: ['APPROVED', 'REJECTED', 'SENT'] } },
       select: { caflouProjectId: true, status: true },
     })
     .catch(() => []);
 
   for (const n of nabidky) {
     if (!n.caflouProjectId) continue;
-    // Schválená přebíjí odmítnutou: z jedné zakázky může viset víc nabídek
-    // a stačí, když je odsouhlasená jedna z nich.
+    // Schválená přebíjí odmítnutou i odeslanou: z jedné zakázky může viset víc
+    // nabídek a stačí, když je odsouhlasená jedna z nich.
     if (n.status === 'APPROVED') vysledek.set(n.caflouProjectId, 'SCHVALENA');
-    else if (!vysledek.has(n.caflouProjectId)) vysledek.set(n.caflouProjectId, 'NESCHVALENA');
+    else if (n.status === 'REJECTED') {
+      if (vysledek.get(n.caflouProjectId) !== 'SCHVALENA') {
+        vysledek.set(n.caflouProjectId, 'NESCHVALENA');
+      }
+    } else if (!vysledek.has(n.caflouProjectId)) vysledek.set(n.caflouProjectId, 'CEKA');
   }
 
   return vysledek;

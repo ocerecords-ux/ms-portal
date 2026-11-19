@@ -17,21 +17,27 @@ import { prelozit, type Jazyk } from '@/lib/jazyk';
  * vypadala na obou místech stejně.
  */
 
-export type StavNabidky = 'CEKA' | 'SCHVALENA' | 'NESCHVALENA';
+export type StavNabidky = 'NENI' | 'CEKA' | 'SCHVALENA' | 'NESCHVALENA';
 
 export const STAVY_NABIDKY: { klic: StavNabidky; popis: string; barva: string }[] = [
+  // „NENÍ VYTVOŘENA" JE VÝCHOZÍ STAV (oprava 19. 11. 2026: „tady to lže.
+  // Nabídka není založena, takže nemůže čekat na schválení"). Do té doby se
+  // prázdná značka ukazovala jako „čeká na schválení" - u projektu, kde ještě
+  // žádná nabídka nevznikla, to bylo tvrzení o něčem, co neexistuje.
+  { klic: 'NENI', popis: 'Nabídka není vytvořena', barva: '#9ca3af' },
   { klic: 'CEKA', popis: 'Nabídka čeká na schválení', barva: '#f59e0b' },
   { klic: 'SCHVALENA', popis: 'Nabídka schválena', barva: '#16a34a' },
   { klic: 'NESCHVALENA', popis: 'Nabídka neschválena', barva: '#ef4444' },
 ];
 
 /**
- * Co je v databázi → stav. Prázdno je „čeká": u reklamy nabídka vždycky
- * někde je, jen u ní ještě nikdo neklikl.
+ * Co je v databázi → stav. PRÁZDNO ZNAMENÁ „NENÍ VYTVOŘENA" (19. 11. 2026),
+ * ne „čeká na schválení": dokud nabídka nevznikla, nemá na co čekat. Na
+ * „čeká" si ji překlopí ten, kdo ji klientovi poslal.
  */
 export function stavNabidky(ulozeno: string | null | undefined): StavNabidky {
-  if (ulozeno === 'SCHVALENA' || ulozeno === 'NESCHVALENA') return ulozeno;
-  return 'CEKA';
+  if (ulozeno === 'SCHVALENA' || ulozeno === 'NESCHVALENA' || ulozeno === 'CEKA') return ulozeno;
+  return 'NENI';
 }
 
 /** Čeština ze `STAVY_NABIDKY` je zdroj pravdy, angličtina ze slovníku podle kódu. */
@@ -96,6 +102,13 @@ export function ZnackaNabidky({
           <>
             <circle cx="6" cy="6" r="4.2" />
             <path d="M6 3.4 V6 L7.9 7.2" />
+          </>
+        )}
+        {/* Není vytvořena: prázdné kolečko s pomlčkou - nic se neděje. */}
+        {stav === 'NENI' && (
+          <>
+            <circle cx="6" cy="6" r="4.2" strokeDasharray="2 1.6" />
+            <path d="M4.2 6 H7.8" />
           </>
         )}
       </svg>
