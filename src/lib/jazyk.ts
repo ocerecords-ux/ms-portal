@@ -8576,7 +8576,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'No chapters were found in the text - the tracklist will have to be typed in by hand.',
   },
   'tracklist.cteniNeslo': { cs: 'Text se nepodařilo přečíst.', en: 'The text could not be read.' },
-  'tracklist.bruno': { cs: 'Bruno u tracklistu', en: 'Bruno at the tracklist' },
+  /* Jen „Bruno" (19. 11. 2026) - o co jde, stojí v podtitulku pod jménem. */
+  'tracklist.bruno': { cs: 'Bruno', en: 'Bruno' },
   /* Popis psaný i pro klienta (19. 11. 2026) - musí dávat smysl i tomu,
      kdo o Brunovi slyší poprvé. */
   'tracklist.brunoPopis': {
