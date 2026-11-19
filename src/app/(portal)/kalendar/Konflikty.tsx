@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DNU_KONFLIKTU, rozsahKonfliktu } from '@/lib/konflikty';
 import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
@@ -80,6 +80,33 @@ export function Konflikty({
   const [skryte, setSkryte] = useState<Skryty[]>([]);
   const [otevreno, setOtevreno] = useState(false);
   const [pracuje, setPracuje] = useState<string | null>(null);
+
+  /**
+   * ZAVŘE SE KLIKNUTÍM KAMKOLIV JINAM (zadání 19. 11. 2026: „potřebuju, ať se
+   * tato vyskakovací okna zavřou kliknutím kdekoli jinam do prostoru portálu,
+   * ať nemusím znova klikat na ikonu").
+   *
+   * Hlídá se `mousedown`, ne `click`: panel se zavře hned při stisknutí,
+   * takže se nestane, že by kliknutí „propadlo" do kalendáře pod ním. Co je
+   * uvnitř obalu, se nepočítá - tlačítka v panelu tak dál fungují.
+   */
+  const obal = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    if (!otevreno) return;
+    const mimo = (e: MouseEvent) => {
+      if (!obal.current?.contains(e.target as Node)) setOtevreno(false);
+    };
+    const naKlavesu = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOtevreno(false);
+    };
+    document.addEventListener('mousedown', mimo);
+    document.addEventListener('keydown', naKlavesu);
+    return () => {
+      document.removeEventListener('mousedown', mimo);
+      document.removeEventListener('keydown', naKlavesu);
+    };
+  }, [otevreno]);
+
 
   const nacti = useCallback(() => {
     return fetch(`/api/kalendar/konflikty?od=${encodeURIComponent(od)}&do=${encodeURIComponent(doKdy)}`)
@@ -195,7 +222,7 @@ export function Konflikty({
     ));
 
   return (
-    <span className="relative inline-flex shrink-0">
+    <span ref={obal} className="relative inline-flex shrink-0">
       {/* JEN IKONA (zadání 23. 9. 2026: „dej tam jen ikony"). Číslo zůstává
           jako malý odznak v rohu - bez něj by nebylo poznat, jestli je konflikt
           jeden, nebo patnáct. */}

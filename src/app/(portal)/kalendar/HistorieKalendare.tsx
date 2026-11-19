@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { kodJazyka } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
@@ -51,6 +51,33 @@ export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
   const [otevreno, setOtevreno] = useState(false);
   const [radky, setRadky] = useState<Radek[] | null>(null);
 
+  /**
+   * ZAVŘE SE KLIKNUTÍM KAMKOLIV JINAM (zadání 19. 11. 2026: „potřebuju, ať se
+   * tato vyskakovací okna zavřou kliknutím kdekoli jinam do prostoru portálu,
+   * ať nemusím znova klikat na ikonu").
+   *
+   * Hlídá se `mousedown`, ne `click`: panel se zavře hned při stisknutí,
+   * takže se nestane, že by kliknutí „propadlo" do kalendáře pod ním. Co je
+   * uvnitř obalu, se nepočítá - tlačítka v panelu tak dál fungují.
+   */
+  const obal = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    if (!otevreno) return;
+    const mimo = (e: MouseEvent) => {
+      if (!obal.current?.contains(e.target as Node)) setOtevreno(false);
+    };
+    const naKlavesu = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOtevreno(false);
+    };
+    document.addEventListener('mousedown', mimo);
+    document.addEventListener('keydown', naKlavesu);
+    return () => {
+      document.removeEventListener('mousedown', mimo);
+      document.removeEventListener('keydown', naKlavesu);
+    };
+  }, [otevreno]);
+
+
   useEffect(() => {
     if (!otevreno || radky) return;
     let platne = true;
@@ -78,7 +105,7 @@ export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
   };
 
   return (
-    <span className="relative inline-flex shrink-0">
+    <span ref={obal} className="relative inline-flex shrink-0">
       {/* Jen ikona hodin se šipkou zpět (zadání 23. 9. 2026: „dej tam jen
           ikony") - u nadpisu Kalendář, vedle konfliktů. */}
       <button
