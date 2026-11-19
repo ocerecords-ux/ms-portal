@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { Napoveda } from '@/components/Napoveda';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
 import {
   bezDiakritiky,
@@ -443,7 +444,11 @@ export function Tracklist({
 
   return (
     <div className="flex flex-col gap-4 max-w-[900px]">
-      <p className="text-sm font-body text-muted m-0">{t('tracklist.uvod')}</p>
+      {/* NÁPOVĚDA POD OTAZNÍKEM (19. 11. 2026: „ať je portál čistý") - vysvětlující
+          věty se schovaly, text zůstal na jedno klepnutí. */}
+      <div className="flex justify-end -mb-2">
+        <Napoveda text={t('tracklist.uvod')} vlevo />
+      </div>
 
       {/* GENEROVÁNÍ Z TEXTU - jen u firem, které to mají na kartě zapnuté
           (30. 10. 2026: „ale takto jen u Audiotéky"). */}
@@ -457,9 +462,11 @@ export function Tracklist({
           >
             {ctuText ? t('tracklist.generuji') : t('tracklist.generovat')}
           </button>
+          <Napoveda text={t('tracklist.generovatPopis')} />
           <label className="flex flex-col gap-1.5 w-[150px]">
-            <span className="text-xs font-heading font-semibold text-muted uppercase tracking-wide">
+            <span className="text-xs font-heading font-semibold text-muted uppercase tracking-wide flex items-center gap-1.5">
               {t('tracklist.nejdelsiStopa')}
+              <Napoveda text={t('tracklist.nejdelsiStopaPopis')} />
             </span>
             <input
               type="number"
@@ -470,8 +477,6 @@ export function Tracklist({
               className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-body text-ink"
             />
           </label>
-          <span className="basis-full text-xs font-body text-muted">{t('tracklist.generovatPopis')}</span>
-          <span className="basis-full text-xs font-body text-muted">{t('tracklist.nejdelsiStopaPopis')}</span>
         </div>
       )}
 
@@ -487,7 +492,10 @@ export function Tracklist({
           />
         </label>
         <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-          <span className={popisek}>{t('tracklist.vzorNazvu')}</span>
+          <span className={`${popisek} flex items-center gap-1.5`}>
+            {t('tracklist.vzorNazvu')}
+            <Napoveda text={t('tracklist.vzorPopis', { priklad: podleVzoru(tracky.length + 1) })} />
+          </span>
           <input value={vzor} onChange={(e) => setVzor(e.target.value)} className={pole} />
         </label>
         <button
@@ -497,9 +505,7 @@ export function Tracklist({
         >
           {t('tracklist.zalozit')}
         </button>
-        <span className="basis-full text-xs font-body text-muted">
-          {t('tracklist.vzorPopis', { priklad: podleVzoru(tracky.length + 1) })}
-        </span>
+
       </div>
 
       {tracky.length === 0 ? (
@@ -622,9 +628,9 @@ export function Tracklist({
 
       {/* BRUNO POD TABULKOU (30. 10. 2026) - hromadná úprava větou. */}
       <div className="rounded-card border border-line bg-field p-4 flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1.5">
           <span className="font-heading font-semibold text-sm text-ink">{t('tracklist.bruno')}</span>
-          <span className="text-xs font-body text-muted">{t('tracklist.brunoPopis')}</span>
+          <Napoveda text={t('tracklist.brunoPopis')} />
         </div>
 
         {zpravyBruna.length > 0 && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Napoveda } from '@/components/Napoveda';
 import { Volba } from '@/components/Volba';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
@@ -334,14 +335,23 @@ export function AdminField({
   hint?: string;
   children: React.ReactNode;
 }) {
+  /**
+   * NÁPOVĚDA SE SCHOVALA POD OTAZNÍK (19. 11. 2026: „všechny nápovědní texty
+   * dejme pod otazník, ať je portál čistý"). Do té doby visela pod každým
+   * políčkem jako šedá věta a karta uživatele z toho byla dvakrát delší, než
+   * musela být. Text se nikam neztratil - sedí vedle popisku a je na jedno
+   * klepnutí.
+   */
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[13px] font-heading font-medium text-ink">
-        {label}
-        {required && <span className="text-brand-purple ml-0.5">*</span>}
+      <label className="text-[13px] font-heading font-medium text-ink flex items-center gap-1.5">
+        <span>
+          {label}
+          {required && <span className="text-brand-purple ml-0.5">*</span>}
+        </span>
+        {hint && <Napoveda text={hint} />}
       </label>
       {children}
-      {hint && <span className="text-xs text-muted font-body">{hint}</span>}
     </div>
   );
 }
