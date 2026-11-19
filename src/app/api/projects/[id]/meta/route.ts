@@ -15,6 +15,7 @@ import { nazevProjektuVelky, nazevSerieVelky } from '@/lib/nazevProjektu';
 import { cisloDilu } from '@/lib/serie';
 import { zkopirujHudbuSerie } from '@/lib/hudbaSerieServer';
 import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
+import { zkontrolujUplnostStop } from '@/lib/kontrolaStopServer';
 import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
 
 /**
@@ -468,6 +469,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
        * nic.
        */
       const stavSeZmenil = data.statusName !== (pred?.statusName ?? null);
+      /**
+       * DÍRY V ČÍSLOVÁNÍ STOP (zadání 19. 11. 2026 po mailu z Audioteky
+       * „mrkněte prosím na chybějící tracky 17 - 20").
+       *
+       * Přehození stavu je ten okamžik, kdy se kniha posouvá dál a na Disku
+       * už má ležet celá - proto se kontroluje právě tady. Bez čekání: nález
+       * nesmí zdržet uložení stavu, a když Disk zrovna nejde, mlčí se.
+       */
+      if (stavSeZmenil) {
+        void zkontrolujUplnostStop(params.id).catch(() => undefined);
+      }
       if (stavSeZmenil && !pred?.finished) {
         // Po prodlevě a jen když stav vydrží (zadání 22. 9. 2026).
         posliNotifikaciPoProdleve(params.id, data.statusName);

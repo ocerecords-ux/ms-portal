@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { sendNoveStopyEmail } from '@/lib/email';
 import { nactiZDisku } from '@/lib/preposlechDriveServer';
+import { zkontrolujUplnostStop } from '@/lib/kontrolaStopServer';
 import { urlPreposlechu } from '@/lib/preposlechOdkaz';
 import { stavJeOdevzdany } from '@/lib/stavyProjektu';
 
@@ -193,6 +194,11 @@ export async function zkontrolujNoveStopy(strop = 60): Promise<{ projektu: numbe
       })
       .catch(() => undefined);
     zprav += await oznamNoveStopy(id, disk.stopy.length);
+    /**
+     * DÍRY V ČÍSLOVÁNÍ (19. 11. 2026). Složka je načtená, takže kontrola nic
+     * nestojí navíc - viz lib/kontrolaStopServer.ts. Na Disk se nesahá znovu.
+     */
+    await zkontrolujUplnostStop(id, disk.stopy).catch(() => undefined);
   }
   return { projektu: kontrolovat.length, zprav };
 }

@@ -4022,6 +4022,15 @@ model PreposlechStav {
   /// aby se zprava neopakovala, kdyz se fajfka sundá a dá znovu.
   dikyOdeslanoAt  DateTime?
 
+  /// DIRY V CISLOVANI STOP (zadani 19. 11. 2026 po mailu z Audioteky
+  /// „mrknete prosim na chybejici tracky 17 - 20").
+  ///
+  /// Otisk posledniho nalezu - podle nej se pozna, ze se od minule nic
+  /// nezmenilo, a Bruno tedy nekrici v chatu podruhe na to same. Kdyz se
+  /// stopy doplni, otisk se smaze a pristi nalez se zas ohlasi.
+  mezeryOtisk     String?
+  mezeryAt        DateTime?
+
   updatedAt       DateTime  @updatedAt
 }
 

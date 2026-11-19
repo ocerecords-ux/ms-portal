@@ -24,6 +24,7 @@ import {
 } from '@/lib/preposlechOffline';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
+import { vypisCisla } from '@/lib/mezeryVeStopach';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -243,6 +244,17 @@ export function Preposlech({
   const [upravovana, setUpravovana] = useState<string | null>(null);
   const [upravaText, setUpravaText] = useState('');
   const [poznamka, setPoznamka] = useState<string | null>(null);
+  /**
+   * DÍRY V ČÍSLOVÁNÍ STOP (zadání 19. 11. 2026 po mailu z Audioteky „mrkněte
+   * prosím na chybějící tracky 17 - 20"). Chodí jen našim - klientovi se díra
+   * v naší složce nehlásí. Server to zároveň píše Brunem do chatu projektu.
+   */
+  const [mezery, setMezery] = useState<{
+    chybi: number[];
+    duplicity: number[];
+    pocet: number;
+    ocekavano: number | null;
+  } | null>(null);
   const [slozkaUrl, setSlozkaUrl] = useState<string | null>(null);
 
   const [pdfNazev, setPdfNazev] = useState('');
@@ -1039,6 +1051,7 @@ export function Preposlech({
       stopyRef.current = nove;
       setSlozkaUrl(data.slozkaUrl ?? null);
       setPoznamka(data.poznamkaKTextu ?? null);
+      setMezery(data.mezery ?? null);
       setZDisku('hotovo');
       const pdfUrl = data.text?.id ? sKlicem(`${zaklad}/soubor?soubor=${encodeURIComponent(data.text.id)}`) : null;
       setTextUrl(pdfUrl);
@@ -2523,6 +2536,29 @@ export function Preposlech({
       {poznamka && (
         <p className="text-xs font-body text-status-progress bg-warnTint border border-line rounded-lg px-4 py-2.5 m-0">
           {poznamka}
+        </p>
+      )}
+
+      {mezery && (mezery.chybi.length > 0 || mezery.duplicity.length > 0) && (
+        <p className="text-sm font-body text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">
+          {mezery.chybi.length > 0 && (
+            <span className="block">
+              {t('preposlech.chybiStopy').replace('{cisla}', vypisCisla(mezery.chybi))}
+            </span>
+          )}
+          {mezery.duplicity.length > 0 && (
+            <span className="block">
+              {t('preposlech.dvakratStopy').replace('{cisla}', vypisCisla(mezery.duplicity))}
+            </span>
+          )}
+          <span className="block text-xs text-muted mt-1">
+            {(mezery.ocekavano !== null
+              ? t('preposlech.mezeryPocty')
+              : t('preposlech.mezeryPoctyBezTracklistu')
+            )
+              .replace('{pocet}', String(mezery.pocet))
+              .replace('{ocekavano}', String(mezery.ocekavano ?? ''))}
+          </span>
         </p>
       )}
 

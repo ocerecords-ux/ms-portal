@@ -847,6 +847,22 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Složku projektu se nepodařilo načíst.',
     en: 'The project folder could not be loaded.',
   },
+  'preposlech.chybiStopy': {
+    cs: 'Ve složce chybí stopy {cisla}.',
+    en: 'Tracks {cisla} are missing from the folder.',
+  },
+  'preposlech.dvakratStopy': {
+    cs: 'Dvakrát je tam číslo {cisla}.',
+    en: 'Number {cisla} is there twice.',
+  },
+  'preposlech.mezeryPocty': {
+    cs: 'Na Disku je {pocet} stop, tracklist jich má {ocekavano}.',
+    en: 'The drive holds {pocet} tracks, the tracklist has {ocekavano}.',
+  },
+  'preposlech.mezeryPoctyBezTracklistu': {
+    cs: 'Na Disku je {pocet} stop.',
+    en: 'The drive holds {pocet} tracks.',
+  },
   'preposlech.chybaText': {
     cs: 'Text „{nazev}" se nepodařilo otevřít.',
     en: 'The text “{nazev}” could not be opened.',

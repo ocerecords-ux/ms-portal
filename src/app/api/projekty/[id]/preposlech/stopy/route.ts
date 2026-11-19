@@ -3,6 +3,7 @@ import { nactiZDisku } from '@/lib/preposlechDriveServer';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { prisma } from '@/lib/db';
 import { oznamNoveStopy } from '@/lib/preposlechPosluchaciServer';
+import { zjistiMezeryZeStop, zkontrolujUplnostStop } from '@/lib/kontrolaStopServer';
 
 /**
  * Stopy a text pro přeposlech, načtené ze složky projektu na Disku
@@ -37,10 +38,32 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .then(() => oznamNoveStopy(params.id, vysledek.stopy.length))
     .catch((err) => console.error('Ulozeni poctu stop selhalo:', err));
 
+  /**
+   * DÍRY V ČÍSLOVÁNÍ STOP (zadání 19. 11. 2026 po mailu z Audioteky „mrkněte
+   * prosím na chybějící tracky 17 - 20").
+   *
+   * Složku máme načtenou, takže kontrola nic nestojí navíc. Výsledek jde
+   * JEN NAŠIM - klientovi se díra v naší složce hlásit nemá, ten má vidět
+   * hotovou práci. Do chatu Bruno napíše tak jako tak (a jen jednou, viz
+   * lib/kontrolaStopServer.ts).
+   */
+  void zkontrolujUplnostStop(params.id, vysledek.stopy).catch(() => undefined);
+  const nalez = pristup.interni
+    ? await zjistiMezeryZeStop(params.id, vysledek.stopy).catch(() => null)
+    : null;
+
   return NextResponse.json({
     slozkaUrl: vysledek.slozkaUrl,
     stopy: vysledek.stopy,
     text: vysledek.text,
     poznamkaKTextu: vysledek.poznamkaKTextu,
+    mezery: nalez
+      ? {
+          chybi: nalez.mezery.chybi,
+          duplicity: nalez.mezery.duplicity,
+          pocet: nalez.mezery.pocet,
+          ocekavano: nalez.ocekavano,
+        }
+      : null,
   });
 }
