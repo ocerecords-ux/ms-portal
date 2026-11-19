@@ -127,9 +127,18 @@ export function Tracklist({
    */
   const ulozRef = useRef(uloz);
   ulozRef.current = uloz;
+  /**
+   * Co už jednou odešlo. Server může řádky vrátit srovnané jinak (přečíslování,
+   * oříznuté mezery) a pak se tabulka pořád tváří jako změněná - bez téhle
+   * pojistky by se tatáž data ukládala pořád dokola.
+   */
+  const poslanoRef = useRef<string | null>(null);
   useEffect(() => {
     if (!zmeneno || bezi || chyba) return;
+    const otisk = JSON.stringify(tracky);
+    if (poslanoRef.current === otisk) return;
     const casovac = setTimeout(() => {
+      poslanoRef.current = otisk;
       void ulozRef.current(true);
     }, 1000);
     return () => clearTimeout(casovac);
@@ -411,10 +420,18 @@ export function Tracklist({
        * zahodí a stránka se natáhne znovu - stejně to dělají ostatní
        * formuláře v detailu projektu.
        */
-      // Při automatickém ukládání se stránka neobnovuje - tracklist má
-      // v tu chvíli pravdu sám o sobě a obnova celé karty projektu po každé
-      // napsané větě by byla zbytečná práce navíc.
-      if (!tise) router.refresh();
+      /**
+       * OBNOVA MUSÍ BÝT I PŘI TICHÉM UKLÁDÁNÍ (oprava 19. 11. 2026: „akorát
+       * se teď neukládá, když tam něco přepíšu").
+       *
+       * Chvíli jsem ji u automatického ukládání vynechal, ať se po každé
+       * napsané větě nepřekresluje celá karta projektu - jenže tím se vrátila
+       * přesně ta chyba z 15. 10. 2026, kvůli které tu `refresh` je: zápis
+       * projde, ale prohlížeč si drží starou podobu stránky a po návratu
+       * ukáže tracklist, jaký byl předtím. Vypadá to, že se neuložilo.
+       * Ukládá se po vteřině ticha, takže obnova nepřijde po každé klávese.
+       */
+      router.refresh();
       return true;
     } catch {
       setChyba(t('tracklist.ulozeniNeslo'));
