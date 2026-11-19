@@ -65,6 +65,8 @@ type EditableUser = {
   kopieNabidekTerminu: boolean;
   /** Dostává zprávu, když je projekt schválený k fakturaci (12. 10. 2026). */
   fakturaceProjektu: boolean;
+  /** Zvoneček, když klient vyplní tracklist (19. 11. 2026). */
+  tracklistKlienta: boolean;
   /** Vidí sekci Banka (zadání 17. 9. 2026). */
   vidiBanku: boolean;
   vidiPokladnu: boolean;
@@ -181,6 +183,12 @@ export function UserEditForm({
    * s proklikem na projekt a zvonek. Viz lib/fakturaceZpravaServer.ts.
    */
   const [fakturaceProjektu, setFakturaceProjektu] = useState(user.fakturaceProjektu);
+  /**
+   * KLIENT VYPLNIL TRACKLIST (zadání 19. 11. 2026: „a když přibude tracklist,
+   * tak by to mělo jít do zvonečku mi, Peterovi a Helči"). Příznak na kartě,
+   * ne jména v kódu - seed ho jednou zapne těm třem.
+   */
+  const [tracklistKlienta, setTracklistKlienta] = useState(user.tracklistKlienta ?? false);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
   const [vidiPokladnu, setVidiPokladnu] = useState(user.vidiPokladnu);
   const [spravujeTechParametry, setSpravujeTechParametry] = useState(user.spravujeTechParametry);
@@ -332,6 +340,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('kopieNabidekTerminu', kopieNabidek ? '1' : '0');
         if (isMediaspace) fd.set('fakturaceProjektu', fakturaceProjektu ? '1' : '0');
+        if (isMediaspace) fd.set('tracklistKlienta', tracklistKlienta ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
         if (isMediaspace) fd.set('vidiPokladnu', vidiPokladnu ? '1' : '0');
         if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
@@ -990,6 +999,27 @@ export function UserEditForm({
                 {t('uzivatel.fakturaceProjektu')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.fakturaceProjektuPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* KLIENT VYPLNIL TRACKLIST (19. 11. 2026) - zvoneček s proklikem
+            na záložku Tracklist toho projektu. */}
+        {zalozka === 'UPOZORNENI' && isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={tracklistKlienta}
+                onChange={(e) => setTracklistKlienta(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.tracklistKlienta')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.tracklistKlientaPopis')}
                 </span>
               </span>
             </label>

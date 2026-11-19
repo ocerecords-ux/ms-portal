@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { upravNazevTracku } from '@/lib/tracklist';
+import { zvonecekONovemTracklistu } from '@/lib/tracklistZvonecekServer';
 import type { Track } from '@/lib/tracklist';
 
 /**
@@ -92,8 +93,18 @@ export async function klientSmiTracklist(
 export async function ulozTracklist(
   caflouProjectId: string,
   tracky: { nazevTracku: string; nazevKapitoly: string }[],
+  /**
+   * Uložil to KLIENT (19. 11. 2026)? Pak se při prvním přírůstku rozezvoní
+   * zvonek těm, kdo to mají na kartě - viz lib/tracklistZvonecekServer.ts.
+   * Naše vlastní ukládání nezvoní.
+   */
+  odKlienta?: { jmeno: string | null },
 ): Promise<Track[]> {
   const sMezerami = await generovaniZTextuPovoleno(caflouProjectId);
+  // Kolik stop tu bylo PŘED uložením - podle toho se pozná přírůstek.
+  const predtim = odKlienta
+    ? await prisma.trackProjektu.count({ where: { caflouProjectId } }).catch(() => 0)
+    : 0;
   const radky = tracky
     .map((t) => ({
       nazevTracku: upravNazevTracku(t.nazevTracku, sMezerami),
@@ -110,5 +121,15 @@ export async function ulozTracklist(
       data: radky.map((t, i) => ({ caflouProjectId, poradi: i + 1, ...t })),
     }),
   ]);
+
+  /**
+   * ZVONEK JEN PŘI PŘÍRŮSTKU. Editor ukládá sám po vteřině ticha, takže
+   * zvonit při každém zápisu by zvonek utopilo. Cinkne se proto jen tehdy,
+   * když tracklist u projektu VZNIKNE - do té chvíle tam žádné stopy nebyly.
+   */
+  if (odKlienta && predtim === 0 && radky.length > 0) {
+    await zvonecekONovemTracklistu(caflouProjectId, radky.length, odKlienta.jmeno);
+  }
+
   return nactiTracklist(caflouProjectId);
 }

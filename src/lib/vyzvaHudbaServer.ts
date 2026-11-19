@@ -27,6 +27,13 @@ export type StavVyzvy = {
   /** Kdy výzva odejde sama, když do té doby nic nepřijde. */
   odejdeAt: string | null;
   odkaz: string | null;
+  /** Firma dodává i tracklist (19. 11. 2026) - podle toho se ukáže panel. */
+  tracklist: boolean;
+  /** Kdy odešla ruční výzva jen na tracklist. */
+  tracklistVyzvaAt: string | null;
+  /** Kdy klient tracklist naposledy uložil a kdo to byl. */
+  tracklistAt: string | null;
+  tracklistJmeno: string | null;
 };
 
 export function odkazNaVyzvu(token: string): string {
@@ -97,6 +104,13 @@ export async function zajistiVyzvu(caflouProjectId: string): Promise<string | nu
 export async function posliVyzvu(
   caflouProjectId: string,
   znovu = false,
+  /**
+   * O CO SE ŽÁDÁ (zadání 19. 11. 2026). `auto` je úloha na pozadí tři dny
+   * před první frekvencí: pošle jeden mail na všechno, co ta firma dodává.
+   * `hudba` a `tracklist` jsou ruční tlačítka z karty projektu - každé
+   * posílá svůj mail zvlášť.
+   */
+  co: 'auto' | 'hudba' | 'tracklist' = 'auto',
 ): Promise<{ ok: true; email: string } | { ok: false; duvod: string; duvodKlic: string }> {
   const token = await zajistiVyzvu(caflouProjectId);
   if (!token) return { ok: false, duvod: 'Projekt nemá e-mail klienta ani kontakt firmy.', duvodKlic: 'hudbaVyzva.duvodBezKontaktu' };
@@ -108,10 +122,20 @@ export async function posliVyzvu(
     jmeno: string | null;
     odeslanoAt: Date | null;
     vlozenoAt: Date | null;
+    tracklistVyzvaAt: Date | null;
   } | null;
   if (!vyzva) return { ok: false, duvod: 'Výzva se nenašla.', duvodKlic: 'hudbaVyzva.duvodNenalezena' };
-  if (vyzva.vlozenoAt) return { ok: false, duvod: 'Klient hudbu už vložil.', duvodKlic: 'hudbaVyzva.duvodUzVlozil' };
-  if (vyzva.odeslanoAt && !znovu) return { ok: false, duvod: 'Výzva už odešla.', duvodKlic: 'hudbaVyzva.duvodUzOdesla' };
+  /**
+   * Hotovo znamená u každé výzvy něco jiného: u hudby to, že klient nějakou
+   * vložil, u tracklistu to, že ho vyplnil. Ruční výzvu na tracklist proto
+   * nebrzdí vložená hudba - a naopak.
+   */
+  if (co !== 'tracklist' && vyzva.vlozenoAt) {
+    return { ok: false, duvod: 'Klient hudbu už vložil.', duvodKlic: 'hudbaVyzva.duvodUzVlozil' };
+  }
+  if (co !== 'tracklist' && vyzva.odeslanoAt && !znovu) {
+    return { ok: false, duvod: 'Výzva už odešla.', duvodKlic: 'hudbaVyzva.duvodUzOdesla' };
+  }
 
   const meta = (await prisma.projectMeta
     .findUnique({
@@ -137,6 +161,21 @@ export async function posliVyzvu(
     })
     .catch(() => []);
 
+  const dodavaTracklist = meta?.company?.tracklistOdKlienta === true;
+  if (co === 'tracklist' && !dodavaTracklist) {
+    return {
+      ok: false,
+      duvod: 'Tahle firma tracklisty nedodává.',
+      duvodKlic: 'hudbaVyzva.duvodBezTracklistu',
+    };
+  }
+  /**
+   * AUTOMATICKY JEDEN MAIL NA VŠECHNO, RUČNĚ KAŽDÉ ZVLÁŠŤ (19. 11. 2026:
+   * „v automatickém módu dohromady v jedné notifikaci ... v tom ručním módu
+   * bych to udělal zvlášť na hudbu a zvlášť na tracklist").
+   */
+  const oCo = co === 'auto' ? (dodavaTracklist ? 'oboji' : 'hudba') : co;
+
   const vysledek = await sendVyzvaHudbaEmail({
     to: vyzva.email,
     jmenoPrijemce: vyzva.jmeno,
@@ -144,13 +183,24 @@ export async function posliVyzvu(
     firma: meta?.company?.name ?? meta?.companyName ?? null,
     prvniFrekvence: (terminy as { start: Date }[])[0]?.start ?? null,
     odkaz: odkazNaVyzvu(token),
-    // Jedna výzva na obojí (19. 11. 2026) - rozhoduje příznak u firmy.
-    tracklist: meta?.company?.tracklistOdKlienta === true,
+    co: oCo,
   });
   if (!vysledek.sent) return { ok: false, duvod: 'E-mail se nepodařilo odeslat.', duvodKlic: 'hudbaVyzva.duvodMailNeodesel' };
 
+  /**
+   * Co se zapíše: samotná výzva na tracklist má vlastní datum, ať se u hudby
+   * netváří, že výzva na ni už odešla. Výzva na obojí platí za obě.
+   */
   await prisma.vyzvaHudba
-    .update({ where: { caflouProjectId }, data: { odeslanoAt: new Date() } })
+    .update({
+      where: { caflouProjectId },
+      data:
+        oCo === 'tracklist'
+          ? { tracklistVyzvaAt: new Date() }
+          : oCo === 'oboji'
+            ? { odeslanoAt: new Date(), tracklistVyzvaAt: new Date() }
+            : { odeslanoAt: new Date() },
+    })
     .catch(() => undefined);
   return { ok: true, email: vyzva.email };
 }
@@ -178,12 +228,22 @@ export async function stavVyzvy(caflouProjectId: string): Promise<StavVyzvy | nu
     odeslanoAt: Date | null;
     vlozenoAt: Date | null;
     vlozilJmeno: string | null;
+    tracklistVyzvaAt: Date | null;
+    tracklistAt: Date | null;
+    tracklistJmeno: string | null;
   } | null;
 
   // Adresát z výzvy, a dokud není, tak ten, komu by právě teď odešla.
   const komu = vyzva
     ? { email: vyzva.email, jmeno: vyzva.jmeno }
     : await prijemce(caflouProjectId);
+
+  const firma = (await prisma.projectMeta
+    .findUnique({
+      where: { caflouProjectId },
+      select: { company: { select: { tracklistOdKlienta: true } } },
+    })
+    .catch(() => null)) as { company: { tracklistOdKlienta: boolean } | null } | null;
 
   return {
     token: vyzva?.token ?? null,
@@ -194,6 +254,10 @@ export async function stavVyzvy(caflouProjectId: string): Promise<StavVyzvy | nu
     vlozilJmeno: vyzva?.vlozilJmeno ?? null,
     odejdeAt: (await kdyVyzvaOdejde(caflouProjectId))?.toISOString() ?? null,
     odkaz: vyzva ? odkazNaVyzvu(vyzva.token) : null,
+    tracklist: firma?.company?.tracklistOdKlienta === true,
+    tracklistVyzvaAt: vyzva?.tracklistVyzvaAt ? vyzva.tracklistVyzvaAt.toISOString() : null,
+    tracklistAt: vyzva?.tracklistAt ? vyzva.tracklistAt.toISOString() : null,
+    tracklistJmeno: vyzva?.tracklistJmeno ?? null,
   };
 }
 

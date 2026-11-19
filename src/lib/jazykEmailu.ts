@@ -886,6 +886,39 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     cs: 'Hudbu i tracklist vlozite zde:',
     en: 'You can add the music and the tracklist here:',
   },
+  'mail.hudba.klicOboji': {
+    cs: 'Odkaz je jen pro tenhle projekt a nikam jinam nevede. Pokud hudbu vybírat nebudete, dejte nám prosím vědět odpovědí na tenhle e-mail.',
+    en: 'The link is for this project only and leads nowhere else. If you are not going to choose any music, just reply to this email and let us know.',
+  },
+
+  /* --- vyzva JEN NA TRACKLIST (rucni tlacitko z karty projektu, 19. 11. 2026:
+     „v tom rucnim modu bych to udelal zvlast na hudbu a zvlast na tracklist") --- */
+  'mail.hudba.odznakTracklist': { cs: 'Tracklist k audioknize', en: 'Audiobook tracklist' },
+  'mail.hudba.preheaderTracklist': {
+    cs: 'K audioknize {nazev} od vás potřebujeme tracklist.',
+    en: 'We need the tracklist for the audiobook {nazev} from you.',
+  },
+  'mail.hudba.vetaTracklist': {
+    cs: 'u audioknihy {nazev} bychom od vás potřebovali tracklist — tedy seznam stop s názvy kapitol, podle kterého se hotová kniha rozdělí.',
+    en: 'for the audiobook {nazev} we need your tracklist — the list of tracks with chapter names the finished book will be split into.',
+  },
+  'mail.hudba.tlacitkoTracklist': { cs: 'Vyplnit tracklist', en: 'Fill in the tracklist' },
+  'mail.hudba.klicTracklist': {
+    cs: 'Odkaz je jen pro tenhle projekt a nikam jinam nevede. Kdyby cokoliv nebylo jasné, stačí odpovědět na tenhle e-mail.',
+    en: 'The link is for this project only and leads nowhere else. If anything is unclear, just reply to this email.',
+  },
+  'mail.hudba.predmetTracklist': {
+    cs: 'Tracklist k audioknize {nazev}',
+    en: 'Tracklist for the audiobook {nazev}',
+  },
+  'mail.hudba.textVetaTracklist': {
+    cs: 'u audioknihy {nazev} bychom od vas potrebovali tracklist - tedy seznam stop s nazvy kapitol.',
+    en: 'for the audiobook {nazev} we need your tracklist - the list of tracks with chapter names.',
+  },
+  'mail.hudba.textOtevritTracklist': {
+    cs: 'Tracklist vyplnite zde:',
+    en: 'You can fill in the tracklist here:',
+  },
 
   // --- smlouva k podpisu (sendContractEmail) ---
   'mail.smlouva.stitek': { cs: 'Smlouva k podpisu', en: 'Contract to sign' },

@@ -40,6 +40,7 @@ import { computeTotals } from '@/lib/doklady';
 import { nactiSerieFirmy } from '@/lib/serieServer';
 import { TagySekce } from './TagySekce';
 import { Tracklist } from './Tracklist';
+import { VyzvaTracklistu } from './VyzvaTracklistu';
 import { HudbaSekce } from './HudbaSekce';
 import { nactiHudbu } from '@/lib/hudbaProjektuServer';
 import { stavVyzvy } from '@/lib/vyzvaHudbaServer';
@@ -1334,14 +1335,34 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     tabs.push({
       key: 'tracklist',
       label: prelozit(jazyk, 'projekt.zalozka.tracklist'),
-      content: (
-        <Tracklist
-          caflouProjectId={caflouProjectId}
-          nazevProjektu={metaPoSync?.name || project?.name || ''}
-          pocatecni={await nactiTracklist(caflouProjectId)}
-          zTextu={await generovaniZTextuPovoleno(caflouProjectId)}
-        />
-      ),
+      content: await (async () => {
+        const tracky = await nactiTracklist(caflouProjectId);
+        /**
+         * VÝZVA KLIENTOVI NA TRACKLIST (19. 11. 2026) - jen u firem, které
+         * tracklisty dodávají. Automaticky jde jedna výzva na hudbu
+         * i tracklist; tohle je ruční tlačítko jen na tracklist.
+         */
+        const stav = (company as { tracklistOdKlienta?: boolean } | null)?.tracklistOdKlienta
+          ? await stavVyzvy(caflouProjectId)
+          : null;
+        return (
+          <div className="flex flex-col gap-4">
+            {stav && (
+              <VyzvaTracklistu
+                caflouProjectId={caflouProjectId}
+                vyzva={stav}
+                maTracklist={tracky.length > 0}
+              />
+            )}
+            <Tracklist
+              caflouProjectId={caflouProjectId}
+              nazevProjektu={metaPoSync?.name || project?.name || ''}
+              pocatecni={tracky}
+              zTextu={await generovaniZTextuPovoleno(caflouProjectId)}
+            />
+          </div>
+        );
+      })(),
     });
   }
 

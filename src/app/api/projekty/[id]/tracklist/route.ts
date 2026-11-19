@@ -22,11 +22,20 @@ import { klientSmiTracklist, nactiTracklist, ulozTracklist } from '@/lib/trackli
  */
 export const dynamic = 'force-dynamic';
 
-async function kdoSmi(caflouProjectId: string): Promise<boolean> {
+/**
+ * Vrací, kdo tracklist ukládá: `null` = nesmí, jinak jestli je to náš člověk,
+ * nebo klient. Podle toho se pozná, jestli se má rozeznít zvonek.
+ */
+async function kdoSmi(
+  caflouProjectId: string,
+): Promise<{ interni: boolean; jmeno: string | null } | null> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return false;
-  if (isInternalRole(session.user.role)) return true;
-  return klientSmiTracklist(caflouProjectId, session.user.companyId ?? null);
+  if (!session?.user?.id) return null;
+  if (isInternalRole(session.user.role)) {
+    return { interni: true, jmeno: session.user.name ?? null };
+  }
+  const smi = await klientSmiTracklist(caflouProjectId, session.user.companyId ?? null);
+  return smi ? { interni: false, jmeno: session.user.name ?? null } : null;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -49,7 +58,8 @@ const schema = z.object({
 });
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await kdoSmi(params.id))) {
+  const kdo = await kdoSmi(params.id);
+  if (!kdo) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
 
@@ -64,7 +74,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
      * pravidlo předpisu, ne vlastnost jednoho formuláře, a platí stejně
      * i pro seznam, který uloží klient ze svého odkazu.
      */
-    return NextResponse.json({ tracky: await ulozTracklist(params.id, parsed.data.tracky) });
+    return NextResponse.json({
+      tracky: await ulozTracklist(
+        params.id,
+        parsed.data.tracky,
+        // Zvonek se rozezní jen tehdy, když tracklist vyplnil klient.
+        kdo.interni ? undefined : { jmeno: kdo.jmeno },
+      ),
+    });
   } catch (err) {
     console.error('Tracklist: ulozeni selhalo:', err);
     return NextResponse.json({ error: 'Uložení se nepodařilo.' }, { status: 500 });

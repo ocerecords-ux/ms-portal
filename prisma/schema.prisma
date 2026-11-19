@@ -451,6 +451,15 @@ model User {
   /// zaskrtava se u uctu, ne podle jmena v kodu.
   fakturaceProjektu Boolean @default(false)
 
+  /// ZVONECEK, KDYZ KLIENT VYPLNI TRACKLIST (zadani 19. 11. 2026: „a kdyz
+  /// pribude tracklist, tak by to melo jit do zvonecku mi, Peterovi a Helci").
+  ///
+  /// Zazvoni jen tehdy, kdyz tracklist k projektu PRIBUDE od klienta - tedy
+  /// kdyz u nej do te chvile zadne stopy nebyly. Nase vlastni ukladani
+  /// nezvoni, jinak by zvonek cinkal pri kazde oprave. Zaskrtava se u uctu,
+  /// ne podle jmena v kodu; seed ho jednou zapne tem trem ze zadani.
+  tracklistKlienta  Boolean @default(false)
+
   /// Vidi sekci Banka - napojeni uctu a parovani plateb (zadani 17. 9. 2026:
   /// „nastaveni a parovani banky bych mel videt jen ja a Bara Siblova").
   /// Priznak u uctu, ne seznam jmen v kodu: lidi se meni, kod by o tom nevedel.
@@ -3241,6 +3250,11 @@ model VyzvaHudba {
   /// Kdy klient vlozil prvni skladbu, a kdo to byl.
   vlozenoAt       DateTime?
   vlozilJmeno     String?
+
+  /// Kdy odesla RUCNI vyzva jen na tracklist (19. 11. 2026). Automaticka
+  /// vyzva tri dny pred prvni frekvenci chodi na hudbu i tracklist naraz
+  /// a znaci se v `odeslanoAt`; tohle je tlacitko ze zalozky Tracklist.
+  tracklistVyzvaAt DateTime?
 
   /// Kdy klient naposledy ulozil TRACKLIST a kdo to byl (19. 11. 2026).
   /// Tracklist sam lezi v TrackProjektu jako ten nas - je to jeden seznam,

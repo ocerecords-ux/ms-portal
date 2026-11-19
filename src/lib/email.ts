@@ -1684,29 +1684,34 @@ export type VyzvaHudbaInput = {
   odkaz: string;
   jazyk?: Jazyk;
   /**
-   * FIRMA DODÁVÁ I TRACKLIST (zadání 19. 11. 2026: „chtěl bych o to požádat
-   * v té samé notifikaci do mailu"). Nechodí druhý e-mail - mění se jen pár
-   * vět a tlačítko v tomhle. Rozhoduje Company.tracklistOdKlienta.
+   * O CO SE V MAILU ŽÁDÁ (zadání 19. 11. 2026).
+   *
+   * `oboji` je automatická výzva tři dny před první frekvencí: jeden mail na
+   * hudbu i tracklist, ať klienta neobtěžujeme dvakrát („v automatickém módu
+   * dohromady v jedné notifikaci"). `hudba` a `tracklist` jsou RUČNÍ tlačítka
+   * z karty projektu - tam se posílá každé zvlášť („v ručním módu bych to
+   * udělal zvlášť na hudbu a zvlášť na tracklist"). Výchozí je samotná hudba,
+   * jak to chodilo od 17. 10. 2026.
    */
-  tracklist?: boolean;
+  co?: 'hudba' | 'oboji' | 'tracklist';
 };
 
 export function buildVyzvaHudbaHtml(input: VyzvaHudbaInput): string {
   const jazyk = input.jazyk ?? 'cs';
-  const oboji = input.tracklist === true;
+  const co = input.co ?? 'hudba';
+  const oboji = co === 'oboji';
+  const jenTracklist = co === 'tracklist';
   return emailShell({
     jazyk,
-    tag: prelozitEmail(jazyk, oboji ? 'mail.hudba.odznakOboji' : 'mail.hudba.stitek'),
-    preheader: prelozitEmailS(
-      jazyk,
-      oboji ? 'mail.hudba.preheaderOboji' : 'mail.hudba.preheader',
-      { nazev: input.nazevProjektu },
-    ),
+    tag: prelozitEmail(jazyk, klicPodleToho(co, 'stitek')),
+    preheader: prelozitEmailS(jazyk, klicPodleToho(co, 'preheader'), {
+      nazev: input.nazevProjektu,
+    }),
     body: `
-    <span class="badge">${prelozitEmail(jazyk, oboji ? 'mail.hudba.odznakOboji' : 'mail.hudba.odznak')}</span>
+    <span class="badge">${prelozitEmail(jazyk, klicPodleToho(co, 'odznak'))}</span>
     <h2>${escapeHtml(input.nazevProjektu)}</h2>
     <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
-    <p>${prelozitEmailS(jazyk, oboji ? 'mail.hudba.vetaOboji' : 'mail.hudba.veta', {
+    <p>${prelozitEmailS(jazyk, klicPodleToho(co, 'veta'), {
       nazev: `<strong>${escapeHtml(input.nazevProjektu)}</strong>`,
     })}</p>
 
@@ -1726,15 +1731,29 @@ export function buildVyzvaHudbaHtml(input: VyzvaHudbaInput): string {
     <div class="cta-row">
       <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(
         jazyk,
-        oboji ? 'mail.hudba.tlacitkoOboji' : 'mail.hudba.tlacitko',
+        klicPodleToho(co, 'tlacitko'),
       )}</a>
     </div>
 
-    <p>${prelozitEmail(jazyk, 'mail.hudba.jakNaTo')}</p>
-    ${oboji ? `<p>${prelozitEmail(jazyk, 'mail.hudba.tracklistJakNaTo')}</p>` : ''}
-    <p class="small">${prelozitEmail(jazyk, 'mail.hudba.klic')}</p>
+    ${jenTracklist ? '' : `<p>${prelozitEmail(jazyk, 'mail.hudba.jakNaTo')}</p>`}
+    ${oboji || jenTracklist ? `<p>${prelozitEmail(jazyk, 'mail.hudba.tracklistJakNaTo')}</p>` : ''}
+    <p class="small">${prelozitEmail(jazyk, klicPodleToho(co, 'klic'))}</p>
   `,
   });
+}
+
+/**
+ * Který klíč ze slovníku vzít. Tři varianty téhož mailu se liší jen větami,
+ * takže je zbytečné mít tři stavby - jen se sáhne pro jinou sadu textů.
+ */
+function klicPodleToho(co: 'hudba' | 'oboji' | 'tracklist', cast: string): string {
+  if (co === 'oboji') {
+    return cast === 'stitek' ? 'mail.hudba.odznakOboji' : `mail.hudba.${cast}Oboji`;
+  }
+  if (co === 'tracklist') {
+    return cast === 'stitek' ? 'mail.hudba.odznakTracklist' : `mail.hudba.${cast}Tracklist`;
+  }
+  return `mail.hudba.${cast}`;
 }
 
 export async function sendVyzvaHudbaEmail(input: VyzvaHudbaInput) {
@@ -1745,19 +1764,17 @@ export async function sendVyzvaHudbaEmail(input: VyzvaHudbaInput) {
   const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: prelozitEmailS(
-      jazyk,
-      input.tracklist ? 'mail.hudba.predmetOboji' : 'mail.hudba.predmet',
-      { nazev: input.nazevProjektu },
-    ),
+    subject: prelozitEmailS(jazyk, klicPodleToho(input.co ?? 'hudba', 'predmet'), {
+      nazev: input.nazevProjektu,
+    }),
     text: [
       pozdravPosty(jazyk, input.jmenoPrijemce),
       '',
-      prelozitEmailS(jazyk, input.tracklist ? 'mail.hudba.textVetaOboji' : 'mail.hudba.textVeta', {
+      prelozitEmailS(jazyk, klicPodleToho(input.co ?? 'hudba', 'textVeta'), {
         nazev: input.nazevProjektu,
       }),
       '',
-      prelozitEmail(jazyk, input.tracklist ? 'mail.hudba.textOtevritOboji' : 'mail.hudba.textOtevrit'),
+      prelozitEmail(jazyk, klicPodleToho(input.co ?? 'hudba', 'textOtevrit')),
       input.odkaz,
     ].join('\n'),
     html: buildVyzvaHudbaHtml(input),

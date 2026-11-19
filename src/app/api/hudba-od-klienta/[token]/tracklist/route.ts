@@ -58,7 +58,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ toke
     parsed.data.jmeno?.trim() || req.nextUrl.searchParams.get('jmeno')?.trim() || null;
 
   try {
-    const tracky = await ulozTracklist(projekt.caflouProjectId, parsed.data.tracky);
+    // Zvonek nám, až tracklist u projektu vznikne - viz lib/tracklistServer.ts.
+    const tracky = await ulozTracklist(projekt.caflouProjectId, parsed.data.tracky, { jmeno });
     await oznacTracklist(token, jmeno);
     return NextResponse.json({ tracky });
   } catch (err) {

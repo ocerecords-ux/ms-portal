@@ -221,6 +221,7 @@ async function main() {
   await danielJeNaDohodu();
   await vykazyJenKnihyPeterovi();
   await tracklistOdFiremSHudbou();
+  await zvonecekONovemTracklistu();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1851,6 +1852,36 @@ async function danielJeNaDohodu() {
     console.log(`  na dohodu je ${vysledek.count} uctu (Daniel Vlcek)`);
   } catch (err) {
     console.warn('  priznak "na dohodu" se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * ZVONECEK, KDYZ KLIENT VYPLNI TRACKLIST (zadani 19. 11. 2026: „a kdyz
+ * pribude tracklist, tak by to melo jit do zvonecku mi, Peterovi a Helci").
+ *
+ * Priznak je na karte uzivatele (User.tracklistKlienta); tohle ho jen jednou
+ * zapne tem trem, o koho v zadani slo. Ondrej se hleda podle e-mailu, aby to
+ * nechytlo jeho jmenovce.
+ */
+async function zvonecekONovemTracklistu() {
+  const ZNAMKA = 'zvonecek-tracklist-klienta';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: {
+        OR: [
+          { email: 'ondrej.cerny@mediaspace.cz' },
+          { name: { contains: 'Dratva', mode: 'insensitive' } },
+          { name: { contains: 'Rychlík', mode: 'insensitive' } },
+        ],
+      },
+      data: { tracklistKlienta: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  zvonecek o tracklistu zapnuty u ${vysledek.count} uctu`);
+  } catch (err) {
+    console.warn('  zvonecek o tracklistu se nepodarilo nastavit:', err);
   }
 }
 

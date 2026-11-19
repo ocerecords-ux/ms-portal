@@ -53,6 +53,8 @@ const schema = z.object({
   kopieNabidekTerminu: z.string().trim().optional(),
   /** Zpráva o schválení k fakturaci (12. 10. 2026). */
   fakturaceProjektu: z.string().trim().optional(),
+  /** Zvoneček, když klient vyplní tracklist (19. 11. 2026). */
+  tracklistKlienta: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
   vidiPokladnu: z.string().trim().optional(),
   spravujeTechParametry: z.string().trim().optional(),
@@ -123,6 +125,7 @@ function readFormData(formData: FormData) {
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     kopieNabidekTerminu: has('kopieNabidekTerminu') ? formData.get('kopieNabidekTerminu') : undefined,
     fakturaceProjektu: has('fakturaceProjektu') ? formData.get('fakturaceProjektu') : undefined,
+    tracklistKlienta: has('tracklistKlienta') ? formData.get('tracklistKlienta') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
     vidiPokladnu: has('vidiPokladnu') ? formData.get('vidiPokladnu') : undefined,
     spravujeTechParametry: has('spravujeTechParametry') ? formData.get('spravujeTechParametry') : undefined,
@@ -349,6 +352,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.jenNahled !== undefined ? { jenNahled: data.jenNahled === '1' } : {}),
       ...(data.kopieNabidekTerminu !== undefined
         ? { kopieNabidekTerminu: data.kopieNabidekTerminu === '1' }
+        : {}),
+      ...(data.tracklistKlienta !== undefined
+        ? { tracklistKlienta: data.tracklistKlienta === '1' }
         : {}),
       ...(data.fakturaceProjektu !== undefined
         ? { fakturaceProjektu: data.fakturaceProjektu === '1' }

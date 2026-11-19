@@ -21,7 +21,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const vysledek = await posliVyzvu(id, true);
+  // Ručně jen na hudbu (19. 11. 2026) - tracklist má vlastní tlačítko.
+  const vysledek = await posliVyzvu(id, true, 'hudba');
   if (!vysledek.ok) {
     // Důvod chodí i klíčem - obrazovka si ho přeloží (dávka 7o).
     return NextResponse.json({ error: vysledek.duvod, klic: vysledek.duvodKlic }, { status: 502 });

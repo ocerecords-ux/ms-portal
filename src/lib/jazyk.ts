@@ -526,6 +526,26 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Klient vkládá hudbu odkazem bez přihlašování. Co vloží, se objeví rovnou tady i s jeho poznámkou. Vložit ji za něj můžete kdykoliv sami níž.',
     en: 'The client adds the music through a link, with nothing to log in to. Whatever they add shows up here with their note. You can always add it for them below.',
   },
+  /* Výzva klientovi na tracklist (19. 11. 2026) - ruční tlačítko u záložky. */
+  'tracklistVyzva.nadpis': { cs: 'Tracklist dodává klient', en: 'The client supplies the tracklist' },
+  'tracklistVyzva.hotovo': { cs: 'Tracklist od klienta je tu', en: 'The tracklist from the client is in' },
+  'tracklistVyzva.odeslanaKdy': { cs: 'Výzva na tracklist odešla', en: 'The tracklist request went out' },
+  'tracklistVyzva.odejdeSOhudbou': {
+    cs: 'Odejde spolu s výzvou na hudbu',
+    en: 'It goes out together with the request for the music',
+  },
+  'tracklistVyzva.jesteNesla': { cs: 'Výzva zatím nešla.', en: 'No request has gone out yet.' },
+  'tracklistVyzva.vyplnilKdy': { cs: 'Klient ho vyplnil', en: 'The client filled it in' },
+  'tracklistVyzva.poslatHned': { cs: 'Poslat výzvu na tracklist', en: 'Send the tracklist request' },
+  'tracklistVyzva.poslatZnovu': { cs: 'Poslat znovu', en: 'Send again' },
+  'tracklistVyzva.vysvetleni': {
+    cs: 'Tři dny před první frekvencí odejde klientovi jedna výzva na hudbu i tracklist. Tímhle tlačítkem pošlete samostatný mail jen na tracklist — odkaz je tentýž a vyplňuje ho ve stejné tabulce jako vy.',
+    en: 'Three days before the first recording day the client gets one request covering the music and the tracklist. This button sends a separate email about the tracklist only — the link is the same one, and they fill it in the same table you do.',
+  },
+  'hudbaVyzva.duvodBezTracklistu': {
+    cs: 'Tahle firma tracklisty nedodává.',
+    en: 'This company does not supply tracklists.',
+  },
   'projekt.zalozka.protokol': { cs: 'Natáčecí protokol', en: 'Recording log' },
   'projekt.zalozka.historie': { cs: 'Historie', en: 'History' },
   'projekt.zalozka.doklady': { cs: 'Doklady', en: 'Documents' },
@@ -4620,6 +4640,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.fakturaceProjektuPopis': {
     cs: 'jakmile projekt přejde na „Schváleno - k fakturaci", přijde mu mail s proklikem na projekt a zvoneček v portálu',
     en: 'the moment a project moves to “Approved — ready to invoice”, they get an e-mail linking straight to the project and a bell in the portal',
+  },
+  /* Zvoneček, když klient vyplní tracklist (19. 11. 2026). */
+  'uzivatel.tracklistKlienta': { cs: 'Tracklist od klienta', en: 'Tracklist from the client' },
+  'uzivatel.tracklistKlientaPopis': {
+    cs: 'zacinká zvoneček, jakmile klient vyplní tracklist k zakázce — s proklikem rovnou na něj',
+    en: 'the bell rings as soon as a client fills in the tracklist for a title — linking straight to it',
   },
   /* Kopie nabídek termínů hercům (12. 10. 2026). */
   'uzivatel.kopieNabidekTerminu': { cs: 'Kopie nabídek termínů', en: 'Copy of session offers' },
