@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 /**
  * NÁPOVĚDA POD OTAZNÍKEM (zadání 19. 11. 2026: „všechny nápovědní texty
@@ -23,7 +23,8 @@ export function Napoveda({
   /** Vlevo u pravého okraje obrazovky, ať bublina neuteče ven. */
   vlevo = false,
 }: {
-  text: string;
+  /** Obyčejná věta, nebo kousek JSX - některé nápovědy mají tučné slovo. */
+  text: ReactNode;
   vlevo?: boolean;
 }) {
   const [otevreno, setOtevreno] = useState(false);
@@ -54,10 +55,18 @@ export function Napoveda({
     <span ref={obal} className="relative inline-flex align-middle">
       <button
         type="button"
-        onClick={() => setOtevreno((o) => !o)}
+        onClick={(e) => {
+          // Otazník často sedí uvnitř <label>. Bez tohohle by klepnutí na něj
+          // rovnou skočilo do políčka (a u data otevřelo kalendář).
+          e.preventDefault();
+          e.stopPropagation();
+          setOtevreno((o) => !o);
+        }}
         aria-expanded={otevreno}
         // `title` schválně taky: kdo jen přejede myší, nemusí klikat vůbec.
-        title={text}
+        // U nápovědy složené z JSX se bublina otevře klepnutím, bublina stačí.
+        title={typeof text === 'string' ? text : undefined}
+        aria-label={typeof text === 'string' ? text : 'Nápověda'}
         className={`inline-grid place-items-center w-4 h-4 rounded-full border text-[10px] font-heading font-bold leading-none cursor-pointer bg-transparent transition-colors ${
           otevreno
             ? 'border-brand-purple text-brand-purple'

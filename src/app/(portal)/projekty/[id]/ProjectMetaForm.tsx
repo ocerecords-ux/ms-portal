@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Napoveda } from '@/components/Napoveda';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
@@ -850,30 +851,42 @@ export function ProjectMetaForm({
               vydání je termín klienta. U reklamy je jen to první -
               viz vidiDatumVydani. */}
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{t('projektMeta.datumDokonceni')}</span>
+            <span className="text-sm font-body text-ink flex items-center gap-1.5">
+              {t('projektMeta.datumDokonceni')}
+              <Napoveda
+                text={
+                  <>
+{t('projektMeta.datumDokonceniNapoveda')}
+                  </>
+                }
+              />
+            </span>
             <DatumPole
               value={values.endDate}
               onChange={(e) => set('endDate', e.target.value)}
               onBlur={ulozHned}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
             />
-            <span className="text-xs text-muted font-body">
-              {t('projektMeta.datumDokonceniNapoveda')}
-            </span>
           </label>
 
           {vidiDatumVydani ? (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">{t('projektMeta.datumVydani')}</span>
+              <span className="text-sm font-body text-ink flex items-center gap-1.5">
+                {t('projektMeta.datumVydani')}
+                <Napoveda
+                  text={
+                    <>
+{t('projektMeta.datumVydaniNapoveda')}
+                    </>
+                  }
+                />
+              </span>
               <DatumPole
                 value={values.releaseDate}
                 onChange={(e) => set('releaseDate', e.target.value)}
                 onBlur={ulozHned}
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               />
-              <span className="text-xs text-muted font-body">
-                {t('projektMeta.datumVydaniNapoveda')}
-              </span>
             </label>
           ) : (
             // U reklamy musi druhe misto v radku zustat prazdne - jinak by se
@@ -892,7 +905,16 @@ export function ProjectMetaForm({
               „tady u reklam nemají být vůbec. NS"). */}
           {!bezNormostran && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">{t('projektMeta.normostrany')}</span>
+              <span className="text-sm font-body text-ink flex items-center gap-1.5">
+                {t('projektMeta.normostrany')}
+                <Napoveda
+                  text={
+                    <>
+{t('projektMeta.normostranyNapoveda')}
+                    </>
+                  }
+                />
+              </span>
               <input
                 type="number"
                 min={0}
@@ -906,9 +928,6 @@ export function ProjectMetaForm({
                 onBlur={ulozHned}
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm tabular-nums outline-none focus:border-brand-purple"
               />
-              <span className="text-xs text-muted font-body">
-                {t('projektMeta.normostranyNapoveda')}
-              </span>
             </label>
           )}
 
@@ -916,7 +935,18 @@ export function ProjectMetaForm({
               Ze vsech ovladacu se s nimi pracuje nejcasteji - proto hned pod
               daty a pred kartou Zakazka. */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{t('projektMeta.stavProjektu')}</span>
+            <span className="text-sm font-body text-ink flex items-center gap-1.5">
+              {t('projektMeta.stavProjektu')}
+              <Napoveda
+                text={
+                  <>
+{/* Od dávky 7e se popis i název stavu překládají podle KÓDU;
+                  do databáze se pořád ukládá český název. */}
+              {popisStavu(values.statusName, jazyk) ?? t('projektMeta.stavRucne')}
+                  </>
+                }
+              />
+            </span>
             {/* Odznak v barve stavu je ZAROVEN ovladac - stejne jako v prehledu
                 projektu (zadani 10. 9. 2026). Puvodne tu byl <VyberPole> a pod nim
                 jeste odznak s touz hodnotou, coz byla tataz vec dvakrat. */}
@@ -950,11 +980,6 @@ export function ProjectMetaForm({
                 })),
               ]}
             />
-            <span className="text-xs text-muted font-body">
-              {/* Od dávky 7e se popis i název stavu překládají podle KÓDU;
-                  do databáze se pořád ukládá český název. */}
-              {popisStavu(values.statusName, jazyk) ?? t('projektMeta.stavRucne')}
-            </span>
             {/* ODPOČET DO AUTOMATICKÉHO PŘEKLOPENÍ (zadání 16. 9. 2026).
                 Ukazuje se jen u uloženého stavu „Dokončeno - ke schválení" -
                 jakmile se v nabídce přepne jinam, číslo by už neplatilo. */}
@@ -980,7 +1005,26 @@ export function ProjectMetaForm({
 
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{t('projektMeta.herci')}</span>
+            <span className="text-sm font-body text-ink flex items-center gap-1.5">
+              {t('projektMeta.herci')}
+              <Napoveda
+                text={
+                  <>
+{bezNormostran ? (
+                t('projektMeta.herciNapovedaReklama')
+              ) : (
+                <>
+                  {napovedaHerciPred}
+                  <strong className="font-heading font-semibold">
+                    {t('projektMeta.herciNapovedaNs')}
+                  </strong>
+                  {napovedaHerciPo}
+                </>
+              )}
+                  </>
+                }
+              />
+            </span>
             <VyberHercu
               herci={herci}
               hodnoty={values.actorUserIds}
@@ -1025,19 +1069,6 @@ export function ProjectMetaForm({
             {/* Věta je JEDEN KLÍČ (pravidlo 7): u reklamy jedna varianta,
                 u audioknihy druhá s tučným „počtem normostran" uprostřed -
                 ten se vyřízne z přeložené věty, ne přilepí k jejím kouskům. */}
-            <span className="text-xs text-muted font-body">
-              {bezNormostran ? (
-                t('projektMeta.herciNapovedaReklama')
-              ) : (
-                <>
-                  {napovedaHerciPred}
-                  <strong className="font-heading font-semibold">
-                    {t('projektMeta.herciNapovedaNs')}
-                  </strong>
-                  {napovedaHerciPo}
-                </>
-              )}
-            </span>
           </div>
 
         </div>
@@ -1053,7 +1084,16 @@ export function ProjectMetaForm({
               mřížky jako pole a klik na něj neotevíral výběr. */}
           <div className="flex flex-col gap-1.5">
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">{t('projektMeta.firma')}</span>
+              <span className="text-sm font-body text-ink flex items-center gap-1.5">
+                {t('projektMeta.firma')}
+                <Napoveda
+                  text={
+                    <>
+{t('projektMeta.firmaNapoveda')}
+                    </>
+                  }
+                />
+              </span>
               <VyberPole
                 value={values.companyId}
                 onChange={(e) => set('companyId', e.target.value)}
@@ -1066,7 +1106,6 @@ export function ProjectMetaForm({
                   </option>
                 ))}
               </VyberPole>
-              <span className="text-xs text-muted font-body">{t('projektMeta.firmaNapoveda')}</span>
             </label>
             {smiNaKartuFirmy && values.companyId ? (
               <Link
@@ -1085,7 +1124,18 @@ export function ProjectMetaForm({
               nezustane tu dira. */}
           {vidiKlienta && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">{t('projektMeta.klient')}</span>
+              <span className="text-sm font-body text-ink flex items-center gap-1.5">
+                {t('projektMeta.klient')}
+                <Napoveda
+                  text={
+                    <>
+{klientNameZCaflou
+                  ? t('projektMeta.klientNapovedaCaflou', { stitek: klientNameZCaflou })
+                  : t('projektMeta.klientNapoveda')}
+                    </>
+                  }
+                />
+              </span>
               <VyberPole
                 value={values.klientUserId}
                 onChange={(e) => set('klientUserId', e.target.value)}
@@ -1115,11 +1165,6 @@ export function ProjectMetaForm({
                     ))}
                 </optgroup>
               </VyberPole>
-              <span className="text-xs text-muted font-body">
-                {klientNameZCaflou
-                  ? t('projektMeta.klientNapovedaCaflou', { stitek: klientNameZCaflou })
-                  : t('projektMeta.klientNapoveda')}
-              </span>
               {/* PROJEKT S FIRMOU, ALE BEZ KLIENTA (zadání 12. 10. 2026:
                   „klient Radka Kopecká ho teď nevidí ve svých projektech").
                   Ručně zadaný projekt tohle pole běžně prázdné má a nikde to
@@ -1161,16 +1206,22 @@ export function ProjectMetaForm({
               nahledu karty. Rozbalovatko se slovy tu bylo jedine misto v
               portalu, kde se priorita psala textem. */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{t('projektMeta.priorita')}</span>
+            <span className="text-sm font-body text-ink flex items-center gap-1.5">
+              {t('projektMeta.priorita')}
+              <Napoveda
+                text={
+                  <>
+{t('projektMeta.prioritaNapoveda')}
+                  </>
+                }
+              />
+            </span>
             <span className="flex items-center gap-3 h-[34px]">
               <VyberPriority
                 priorita={(values.priority || null) as ProjectPriority | null}
                 onZmena={(v) => set('priority', v)}
                 velikost={22}
               />
-              <span className="text-xs font-body text-muted">
-                {t('projektMeta.prioritaNapoveda')}
-              </span>
             </span>
           </div>
 
@@ -1195,7 +1246,16 @@ export function ProjectMetaForm({
                 />
               </label>
               <label className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-sm font-body text-ink">{t('projektMeta.zaverKnihy')}</span>
+                <span className="text-sm font-body text-ink flex items-center gap-1.5">
+                  {t('projektMeta.zaverKnihy')}
+                  <Napoveda
+                    text={
+                      <>
+{t('projektMeta.zaverNapoveda')}
+                      </>
+                    }
+                  />
+                </span>
                 <textarea
                   value={values.zaverKnihy}
                   onChange={(e) => set('zaverKnihy', e.target.value, true)}
@@ -1204,9 +1264,6 @@ export function ProjectMetaForm({
                   placeholder={t('projektMeta.zaverPlaceholder')}
                   className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
                 />
-                <span className="text-xs text-muted font-body">
-                  {t('projektMeta.zaverNapoveda')}
-                </span>
               </label>
             </>
           )}
@@ -1215,7 +1272,16 @@ export function ProjectMetaForm({
               a prázdné pole navíc by v kartě jen překáželo (17. 9. 2026). */}
           {jeReklama && (
             <label className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-body text-ink">{t('projektMeta.licenceUziti')}</span>
+              <span className="text-sm font-body text-ink flex items-center gap-1.5">
+                {t('projektMeta.licenceUziti')}
+                <Napoveda
+                  text={
+                    <>
+{t('projektMeta.licenceUzitiNapoveda')}
+                    </>
+                  }
+                />
+              </span>
               <input
                 value={values.licenceUziti}
                 onChange={(e) => set('licenceUziti', e.target.value, true)}
@@ -1223,9 +1289,6 @@ export function ProjectMetaForm({
                 placeholder={t('projektMeta.licenceUzitiPlaceholder')}
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               />
-              <span className="text-xs text-muted font-body">
-                {t('projektMeta.licenceUzitiNapoveda')}
-              </span>
             </label>
           )}
 
@@ -1239,7 +1302,16 @@ export function ProjectMetaForm({
               Účel a území užití licence nad tím. */}
           {jeReklama && druhyLicence.length > 0 && (
             <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-body text-ink">{t('projektMeta.licence')}</span>
+              <span className="text-sm font-body text-ink flex items-center gap-1.5">
+                {t('projektMeta.licence')}
+                <Napoveda
+                  text={
+                    <>
+{t('projektMeta.licenceNapoveda')}
+                    </>
+                  }
+                />
+              </span>
               <div className="flex flex-wrap gap-2">
                 {druhyLicence.map((d) => {
                   const zaskrtnuto = values.licenceIds.includes(d.id);
@@ -1295,14 +1367,22 @@ export function ProjectMetaForm({
                   );
                 })}
               </div>
-              <span className="text-xs text-muted font-body">
-                {t('projektMeta.licenceNapoveda')}
-              </span>
             </div>
           )}
 
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">{t('projektMeta.typProjektu')}</span>
+            <span className="text-sm font-body text-ink flex items-center gap-1.5">
+              {t('projektMeta.typProjektu')}
+              <Napoveda
+                text={
+                  <>
+{projectTypeOptions.length > 0
+                ? t('projektMeta.typZCeniku')
+                : t('projektMeta.typCenikPrazdny')}
+                  </>
+                }
+              />
+            </span>
             {/* Typ nese svou ikonu z Ceniku - stejne jako pred nazvem projektu
                 v prehledu (zadani 10. 9. 2026). */}
             <OdznakSelect
@@ -1332,11 +1412,6 @@ export function ProjectMetaForm({
                 })),
               ]}
             />
-            <span className="text-xs text-muted font-body">
-              {projectTypeOptions.length > 0
-                ? t('projektMeta.typZCeniku')
-                : t('projektMeta.typCenikPrazdny')}
-            </span>
           </label>
         </div>
       </Karta>
@@ -1347,7 +1422,10 @@ export function ProjectMetaForm({
               rucni zadani se rozbali az na vyzadani; potreba je hlavne tehdy,
               kdyz se slozka nezalozila sama. */}
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">{t('projektMeta.odkazKz')}</span>
+            <span className="text-sm font-body text-ink flex items-center gap-1.5">
+              {t('projektMeta.odkazKz')}
+              <Napoveda text={t('projektMeta.odkazNapoveda')} />
+            </span>
             {/* Odkazy pod sebou, kopirovani jen jako ikona na konci radku
                 (zadani 10. 9. 2026). Vedle sebe stalo v rade ctvero popsanych
                 tlacitek - otevrit, kopirovat, otevrit, kopirovat - a nebylo
@@ -1407,7 +1485,6 @@ export function ProjectMetaForm({
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               />
             )}
-            <span className="text-xs text-muted font-body">{t('projektMeta.odkazNapoveda')}</span>
           </div>
 
       </Karta>
