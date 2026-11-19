@@ -46,6 +46,15 @@ export function HudbaOdKlienta({
   const t = (klic: string) => prelozit(jazyk, klic);
   const [vlozene, setVlozene] = useState<Vlozena[]>([]);
   const [nahrava, setNahrava] = useState<Nahrava[]>([]);
+  /**
+   * VYBRANÉ, ALE JEŠTĚ NENAHRANÉ (připomínka klientky 19. 11. 2026: „stačí
+   * kliknout na ten soubor nebo ho přetáhnout a automaticky se nahraje. A pak
+   * už s tím nejde nic dělat. Což nechceš, když se třeba uklikneš").
+   *
+   * Soubor se teď nejdřív jen vybere, ukáže se v seznamu a dá se z něj
+   * vyhodit. Nahrávat se začne až tlačítkem.
+   */
+  const [vybrane, setVybrane] = useState<File[]>([]);
   const [pretahuje, setPretahuje] = useState(false);
   const [jmeno, setJmeno] = useState('');
   const vstup = useRef<HTMLInputElement | null>(null);
@@ -141,13 +150,20 @@ export function HudbaOdKlienta({
     setNahrava((p) => p.filter((s) => s.klic !== klic));
   }
 
-  async function vyber(soubory: FileList | File[] | null) {
+  /** Výběr jen přidá soubory do seznamu - nahrávat se začne až tlačítkem. */
+  function vyber(soubory: FileList | File[] | null) {
     const seznam = soubory ? Array.from(soubory) : [];
     if (seznam.length === 0) return;
-    const davka = seznam.map((soubor, i) => ({
+    setVybrane((p) => [...p, ...seznam]);
+    if (vstup.current) vstup.current.value = '';
+  }
+
+  async function nahrajVybrane() {
+    const davka = vybrane.map((soubor, i) => ({
       soubor,
       klic: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
     }));
+    setVybrane([]);
     setNahrava((p) => [
       ...p,
       ...davka.map(({ soubor, klic }) => ({ klic, nazev: soubor.name, procenta: 0 })),
@@ -155,7 +171,12 @@ export function HudbaOdKlienta({
     for (const { soubor, klic } of davka) {
       await nahrajJeden(soubor, klic);
     }
-    if (vstup.current) vstup.current.value = '';
+  }
+
+  /** Smaže skladbu, kterou klient vložil - uklikl se, nebo poslal jinou verzi. */
+  async function smaz(id: string) {
+    const res = await fetch(`${zaklad}/${id}`, { method: 'DELETE' }).catch(() => null);
+    if (res?.ok) setVlozene((p) => p.filter((s) => s.id !== id));
   }
 
   async function ulozPoznamku(id: string, poznamka: string) {
@@ -196,7 +217,7 @@ export function HudbaOdKlienta({
         onDrop={(e) => {
           e.preventDefault();
           setPretahuje(false);
-          void vyber(e.dataTransfer.files);
+          vyber(e.dataTransfer.files);
         }}
         className={`flex flex-col items-center justify-center gap-3 rounded-card border-[1.5px] border-dashed px-4 py-10 text-center transition-colors ${
           pretahuje ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
@@ -219,6 +240,40 @@ export function HudbaOdKlienta({
           className="hidden"
         />
       </div>
+
+      {/* VYBRANÉ, JEŠTĚ NENAHRANÉ. Dokud klient nezmáčkne Nahrát, nic se
+          neděje - a každý soubor se dá ze seznamu vyhodit. */}
+      {vybrane.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-card border border-line bg-surface px-4 py-3">
+          <span className="text-xs font-heading uppercase tracking-wide text-muted">
+            {t('hudbaKlient.kNahrani')}
+          </span>
+          {vybrane.map((soubor, i) => (
+            <span key={`${soubor.name}-${i}`} className="flex items-center gap-3 text-sm font-body">
+              <span className="truncate text-ink">{soubor.name}</span>
+              <span className="ml-auto text-xs text-muted shrink-0">
+                {velikost(jazyk, soubor.size)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setVybrane((p) => p.filter((_, j) => j !== i))}
+                title={t('hudbaKlient.odebrat')}
+                aria-label={t('hudbaKlient.odebrat')}
+                className="shrink-0 w-6 h-6 rounded-md border border-line bg-field text-muted text-xs cursor-pointer hover:text-danger hover:border-danger transition-colors"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={() => void nahrajVybrane()}
+            className="self-start mt-1 rounded-pill border-0 bg-brand-purple px-5 py-2.5 text-sm font-heading font-semibold text-white cursor-pointer hover:bg-brand-purpleDark transition-colors"
+          >
+            {t('hudbaKlient.nahrat')}
+          </button>
+        </div>
+      )}
 
       {nahrava.map((s) => (
         <div key={s.klic} className="rounded-card border border-line bg-surface px-4 py-3">
@@ -253,6 +308,15 @@ export function HudbaOdKlienta({
                 {[s.autor, velikost(jazyk, s.velikost)].filter(Boolean).join(' · ')}
               </span>
             </span>
+            {/* SMAZAT - klient se může uklidit po uklepnutí nebo poslat jinou
+                verzi. Smaže jen to, co vložil sám (hlídá to API). */}
+            <button
+              type="button"
+              onClick={() => void smaz(s.id)}
+              className="ml-auto shrink-0 rounded-pill border border-line bg-field px-3 py-1.5 text-xs font-heading text-muted cursor-pointer hover:text-danger hover:border-danger transition-colors"
+            >
+              {t('hudbaKlient.smazat')}
+            </button>
           </span>
           {/* POZNÁMKA KE KAŽDÉ SKLADBĚ - propíše se do karty projektu k té samé
               stopě, takže se k nám dostane i to, co by jinak zapadlo v mailu. */}

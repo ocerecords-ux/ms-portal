@@ -477,6 +477,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Drag the music here, or pick it with the button. WAV or MP3, several at once if you like.',
   },
   'hudbaKlient.zvolit': { cs: 'Zvolit soubory', en: 'Choose files' },
+  'hudbaKlient.kNahrani': { cs: 'K nahrání', en: 'Ready to upload' },
+  'hudbaKlient.nahrat': { cs: 'Nahrát', en: 'Upload' },
+  'hudbaKlient.odebrat': { cs: 'Odebrat ze seznamu', en: 'Remove from list' },
+  'hudbaKlient.smazat': { cs: 'Smazat', en: 'Delete' },
   'hudbaKlient.ctu': { cs: 'Čtu údaje ze souboru…', en: 'Reading file details…' },
   'hudbaKlient.chyba': {
     cs: 'Soubor se nepodařilo nahrát. Zkuste to prosím znovu.',
