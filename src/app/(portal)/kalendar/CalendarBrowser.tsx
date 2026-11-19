@@ -2962,11 +2962,23 @@ function UdalostForm({
       ...(presto ? { presto: true } : {}),
       ...(jePrace
         ? {
-            caflouProjectId: sProjektem ? (projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '') : '',
+            /**
+             * PROJEKT SE DÁ Z UDÁLOSTI ODEBRAT (oprava 19. 11. 2026: „když mám
+             * událost s názvem projektu a máme tam střih, tak chci odstranit
+             * jen projekt a nechat tam střih bez projektu").
+             *
+             * Rozhoduje VYBRANÉ ID, ne dohledaný projekt. Do té doby se při
+             * prázdném poli sáhlo zpátky po původním projektu - a protože
+             * dokončené projekty se v nabídce vůbec neukazují (`bezDokoncenych`),
+             * nešel odebrat ani omylem. Záloha z uložené události proto platí
+             * jen pro NÁZEV, a jen když id pořád nějaké je.
+             */
+            caflouProjectId: sProjektem ? projektId : '',
             // Bez firmy (zadání 14. 9. 2026: „firma je tady zbytečná“).
-            projectName: sProjektem
-              ? (projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '')
-              : '',
+            projectName:
+              sProjektem && projektId
+                ? (projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '')
+                : '',
             // U castingu je herec jen jméno - zadny ucet k nemu neni.
             actorUserId: sHercem && !herecPsany ? (herec?.id ?? '') : '',
             actorName: sHercem ? herecJmeno : '',
