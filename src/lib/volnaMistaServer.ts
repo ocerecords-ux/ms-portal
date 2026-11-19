@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { BLOCKING_SLOT_STATES } from '@/lib/calendar';
+import { BLOCKING_SLOT_STATES, DRUHY_MIMO_NABIDKU } from '@/lib/calendar';
 import {
   POZNAMKA_NAVRH_HERCE,
   klicMista,
@@ -91,7 +91,7 @@ export async function volnaMistaProParametry(p: {
   const rozsahDo = new Date(new Date(`${p.doo}T23:59:59.000Z`).getTime() + 24 * 3600 * 1000);
   const mimoTuto = p.requestId ? { requestId: { not: p.requestId } } : {};
 
-  const [terminy, udalosti, hercovy] = await Promise.all([
+  const [terminy, udalosti, hercovy, hercovyRucne] = await Promise.all([
     prisma.recordingSlot.findMany({
       where: {
         studioId: { in: ids },
@@ -102,8 +102,25 @@ export async function volnaMistaProParametry(p: {
       },
       select: { id: true, studioId: true, start: true, end: true },
     }),
+    /**
+     * STŘIH NABÍDKU NEBLOKUJE (upřesnění 19. 11. 2026: „když generujeme
+     * termíny pro herce na natáčení, tak to bere v potaz i střih, když tam je.
+     * Což je špatně").
+     *
+     * Do té doby se sem braly VŠECHNY blokace studia, takže hercovi zmizel
+     * z nabídky každý den, na který byl ve studiu zapsaný střih - a ten se
+     * přitom dělá u stolu, dá se přesunout a kabinu s hercem nepotřebuje.
+     * Hlídání kolizí tohle pravidlo znalo od začátku, skládání nabídky ne.
+     * Zbytek (svátky, dovolená, údržba, úklid, casting, rezervace) blokuje
+     * dál - viz DRUHY_MIMO_NABIDKU v lib/calendar.ts.
+     */
     prisma.studioBlock.findMany({
-      where: { studioId: { in: ids }, start: { lt: rozsahDo }, end: { gt: rozsahOd } },
+      where: {
+        studioId: { in: ids },
+        kind: { notIn: DRUHY_MIMO_NABIDKU as never },
+        start: { lt: rozsahDo },
+        end: { gt: rozsahOd },
+      },
       select: { id: true, studioId: true, start: true, end: true },
     }),
     p.actorUserId
@@ -112,6 +129,22 @@ export async function volnaMistaProParametry(p: {
             state: { in: BLOCKING_SLOT_STATES as never },
             ...mimoTuto,
             request: { actorUserId: p.actorUserId },
+            start: { lt: rozsahDo },
+            end: { gt: rozsahOd },
+          },
+          select: { id: true, start: true, end: true },
+        })
+      : Promise.resolve([]),
+    /**
+     * HEREC MŮŽE BÝT ZAPSANÝ I RUČNĚ (19. 11. 2026). Natáčení psané rovnou do
+     * kalendáře je StudioBlock, ne slot z nabídky - bez tohohle by se hercovi
+     * nabídl termín, na který ho produkce před týdnem zapsala jinam.
+     */
+    p.actorUserId
+      ? prisma.studioBlock.findMany({
+          where: {
+            kind: 'NATACENI',
+            actorUserId: p.actorUserId,
             start: { lt: rozsahDo },
             end: { gt: rozsahOd },
           },
@@ -127,7 +160,7 @@ export async function volnaMistaProParametry(p: {
     doo: p.doo,
     delkaMinut: p.sessionMinutes,
     obsazeno: [...terminy, ...udalosti, ...drzene],
-    hercovy: [...hercovy, ...drzene],
+    hercovy: [...hercovy, ...hercovyRucne, ...drzene],
     nejdrive: nejdriveMozne(),
   });
 

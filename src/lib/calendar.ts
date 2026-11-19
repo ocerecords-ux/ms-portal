@@ -112,6 +112,22 @@ export const SLOT_STATE_CLASSES: Record<string, string> = {
 /** Termíny, které zabírají studio. Zbytek je volno. */
 export const BLOCKING_SLOT_STATES = ['SELECTED', 'CONFIRMED'];
 
+/**
+ * DRUHY BLOKACÍ, KTERÉ SE PŘI SKLÁDÁNÍ NABÍDKY TERMÍNŮ PŘESKAKUJÍ.
+ *
+ * Jen střih (upřesnění 19. 11. 2026: „když generujeme termíny pro herce na
+ * natáčení, tak to bere v potaz i střih, když tam je. Což je špatně").
+ * Střih se dělá u stolu, dá se přesunout a kabinu s hercem nepotřebuje -
+ * hlídání kolizí to ví odjakživa, skládání nabídky ne, takže hercovi mizel
+ * z nabídky každý den, na který byl ve studiu zapsaný střih.
+ *
+ * VŠECHNO OSTATNÍ NABÍDKU DÁL BLOKUJE, a to včetně svátků, dovolené a
+ * interních blokací: ty sice kabinu „nedrží" v tom smyslu, jak to posuzuje
+ * hlídání kolizí, ale znamenají, že se v ten den neplánuje - a nabídnout
+ * hercovi 24. prosince je horší než nenabídnout mu nic.
+ */
+export const DRUHY_MIMO_NABIDKU = ['STRIH'];
+
 export const BLOCK_KIND_LABELS: Record<string, string> = {
   NATACENI: 'Natáčení',
   STRIH: 'Střih',
