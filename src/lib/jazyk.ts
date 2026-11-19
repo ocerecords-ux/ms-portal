@@ -8447,15 +8447,18 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The track name has the form 01_BOOK-NAME — no diacritics, spaces become hyphens. The next track would be called: {priklad}',
   },
   'tracklist.zalozit': { cs: 'Založit tracky', en: 'Create the tracks' },
-  'tracklist.zalozeno': { cs: 'Přibylo {pocet} tracků. Uložíš je tlačítkem níž.', en: '{pocet} tracks added. Save them with the button below.' },
+  'tracklist.zalozeno': { cs: 'Přibylo {pocet} tracků.', en: '{pocet} tracks added.' },
   'tracklist.cislo': { cs: 'Č.', en: 'No.' },
   'tracklist.nazevTracku': { cs: 'Název tracku', en: 'Track name' },
   'tracklist.nazevKapitoly': { cs: 'Název kapitoly', en: 'Chapter name' },
   'tracklist.pridat': { cs: '+ Přidat track', en: '+ Add a track' },
   'tracklist.ulozit': { cs: 'Uložit tracklist', en: 'Save the tracklist' },
+  'tracklist.vratitZpet': { cs: 'Vrátit zpět', en: 'Undo' },
+  'tracklist.vraceno': { cs: 'Vráceno zpátky.', en: 'Undone.' },
+  'tracklist.zkusitZnovu': { cs: 'Zkusit znovu', en: 'Try again' },
   'tracklist.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
   'tracklist.ulozeniNeslo': { cs: 'Uložit se to nepodařilo.', en: 'Saving failed.' },
-  'tracklist.neulozeno': { cs: 'Neuložené změny', en: 'Unsaved changes' },
+  'tracklist.neulozeno': { cs: 'Ukládá se…', en: 'Saving…' },
   'tracklist.zadne': { cs: 'Zatím tu žádné tracky nejsou.', en: 'There are no tracks here yet.' },
   'tracklist.odebrat': { cs: 'Odebrat track', en: 'Remove the track' },
   'tracklist.zkopirovat': { cs: 'Zkopírovat název tracku', en: 'Copy the track name' },
@@ -8480,8 +8483,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.generovat': { cs: 'Generovat tracklist', en: 'Generate the tracklist' },
   'tracklist.generuji': { cs: 'Čtu text…', en: 'Reading the text…' },
   'tracklist.generovatPopis': {
-    cs: 'Projde text projektu (PDF končící _RE ze složky na Disku) a vypíše tracky podle kapitol - prolog, části knihy i čísla kapitol. Tabulku níž to PŘEPÍŠE; uloží se teprve tlačítkem Uložit, takže si návrh projdi.',
-    en: "Goes through the project's text (the PDF whose name ends in _RE in the Drive folder) and lists the tracks by chapter - prologue, book parts and chapter numbers. It OVERWRITES the table below; nothing is stored until you press Save, so check the suggestion first.",
+    cs: 'Projde text projektu (PDF končící _RE ze složky na Disku) a vypíše tracky podle kapitol - prolog, části knihy i čísla kapitol. Tabulku níž to PŘEPÍŠE a rovnou uloží - když se to netrefí, vrať to tlačítkem Vrátit zpět.',
+    en: "Goes through the project's text (the PDF whose name ends in _RE in the Drive folder) and lists the tracks by chapter - prologue, book parts and chapter numbers. It OVERWRITES the table below and saves straight away - if it misses, put it back with Undo.",
   },
   'tracklist.nejdelsiStopa': { cs: 'Nejdelší stopa (NS)', en: 'Longest track (pages)' },
   'tracklist.nejdelsiStopaPopis': {
@@ -8489,8 +8492,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'A chapter longer than this many standard pages is split into several tracks - KAPITOLA 3 - STREDA, Cast 1 and Cast 2. Zero = do not split.',
   },
   'tracklist.vygenerovano': {
-    cs: 'Z textu vyšlo {pocet} tracků - projdi je a ulož.',
-    en: 'The text gave {pocet} tracks - check them and save.',
+    cs: 'Z textu vyšlo {pocet} tracků - projdi je.',
+    en: 'The text gave {pocet} tracks - check them.',
   },
   'tracklist.nicNenalezeno': {
     cs: 'V textu se nenašly žádné kapitoly - tracklist bude potřeba vypsat ručně.',
@@ -8499,7 +8502,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.cteniNeslo': { cs: 'Text se nepodařilo přečíst.', en: 'The text could not be read.' },
   'tracklist.bruno': { cs: 'Bruno u tracklistu', en: 'Bruno at the tracklist' },
   'tracklist.brunoPopis': {
-    cs: 'Napiš mu větou, co se má se seznamem stát - přepsat podle vzoru, přečíslovat, doplnit kapitoly, něco uklidit. Přepíše TABULKU, ne databázi; uloží se to až tlačítkem Uložit.',
+    cs: 'Napiš mu větou, co se má se seznamem stát - přepsat podle vzoru, přečíslovat, doplnit kapitoly, něco uklidit. Tabulku PŘEPÍŠE a rovnou uloží - když se to netrefí, vrať to tlačítkem Vrátit zpět.',
     en: 'Tell him in a sentence what should happen to the list - rewrite it to a pattern, renumber it, fill in the chapters, tidy something up. He rewrites the TABLE, not the database; it is stored only when you press Save.',
   },
   'tracklist.brunoPole': {
@@ -8509,8 +8512,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.brunoPoslat': { cs: 'Poslat', en: 'Send' },
   'tracklist.brunoPremysli': { cs: 'Bruno přemýšlí…', en: 'Bruno is thinking…' },
   'tracklist.brunoPrepsal': {
-    cs: 'Bruno přepsal tabulku ({pocet} tracků) - projdi to a ulož.',
-    en: 'Bruno rewrote the table ({pocet} tracks) - check it and save.',
+    cs: 'Bruno přepsal tabulku ({pocet} tracků) - projdi to.',
+    en: 'Bruno rewrote the table ({pocet} tracks) - check it.',
   },
   'tracklist.brunoNeslo': { cs: 'Bruno se teď neozval.', en: 'Bruno did not answer just now.' },
   'tracklist.ja': { cs: 'Já', en: 'Me' },

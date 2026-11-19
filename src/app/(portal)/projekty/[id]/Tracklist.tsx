@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { useNeulozeno } from '@/app/(portal)/components/NeulozeneZmeny';
@@ -91,8 +91,21 @@ export function Tracklist({
   const [brunoPremysli, setBrunoPremysli] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
+  /**
+   * ZÁLOHA PŘED HROMADNÝM PŘEPSÁNÍM (19. 11. 2026). Dokud se ukládalo
+   * tlačítkem, byl „projdi si návrh" krok navíc, který hotovou práci chránil.
+   * Teď se ukládá samo, takže ochranou je návrat zpátky - jedno kliknutí
+   * vrátí tabulku do stavu před generováním, Brunem nebo vložením seznamu.
+   */
+  const [zaloha, setZaloha] = useState<Radek[] | null>(null);
 
   const zmeneno = JSON.stringify(tracky) !== ulozene;
+
+  /** Hromadné přepsání tabulky - schová, co tam bylo, ať je kam se vrátit. */
+  function prepis(nove: Radek[]) {
+    setZaloha(tracky);
+    setTracky(nove);
+  }
 
   /**
    * POJISTKA PŘI ODCHODU ZE STRÁNKY (zadání 15. 10. 2026: „měli jsme vyplněný
@@ -100,6 +113,27 @@ export function Tracklist({
    * kliknutí tracklist uloží - viz components/NeulozeneZmeny.tsx.
    */
   useNeulozeno(zmeneno, uloz);
+
+  /**
+   * UKLÁDÁ SE SAMO (zadání 19. 11. 2026: „pryč uložit. Když to napíšu, ať se
+   * to rovnou ukládá" - a totéž z připomínek Petera 18. 11. 2026).
+   *
+   * Vteřina ticha po poslední změně a zápis odejde. Psaní se tím nepřerušuje
+   * a tlačítko „Uložit tracklist" zmizelo úplně.
+   *
+   * PO CHYBĚ SE SAMO NEZKOUŠÍ ZNOVU. Když zápis selže, zůstane u tabulky
+   * hláška s tlačítkem „Zkusit znovu" - jinak by portál mlčky zkoušel pořád
+   * dokola a člověk by se o nic nedozvěděl, dokud by nezavřel stránku.
+   */
+  const ulozRef = useRef(uloz);
+  ulozRef.current = uloz;
+  useEffect(() => {
+    if (!zmeneno || bezi || chyba) return;
+    const casovac = setTimeout(() => {
+      void ulozRef.current(true);
+    }, 1000);
+    return () => clearTimeout(casovac);
+  }, [zmeneno, bezi, chyba, tracky]);
 
   const pole =
     'w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple';
@@ -196,7 +230,7 @@ export function Tracklist({
         setChyba(t('tracklist.nicNenalezeno'));
         return;
       }
-      setTracky(navrh);
+      prepis(navrh);
       setHlaska(t('tracklist.vygenerovano', { pocet: navrh.length }));
     } catch (err) {
       console.error('Generovani tracklistu z textu selhalo:', err);
@@ -240,7 +274,7 @@ export function Tracklist({
           nazevTracku: x.nazevTracku ?? '',
           nazevKapitoly: x.nazevKapitoly ?? '',
         }));
-        setTracky(nove);
+        prepis(nove);
         setHlaska(t('tracklist.brunoPrepsal', { pocet: nove.length }));
       }
     } catch (err) {
@@ -340,13 +374,13 @@ export function Tracklist({
       nazevTracku: tracky[i]?.nazevTracku ?? podleVzoru(i + 1),
       nazevKapitoly: kapitola,
     }));
-    setTracky(precisluj([...nove, ...tracky.slice(radky.length)]));
+    prepis(precisluj([...nove, ...tracky.slice(radky.length)]));
     setVlozeny('');
     setVkladani(false);
   }
 
   /** Vrací, jestli se uložení povedlo - podle toho se pozná, že se smí odejít. */
-  async function uloz(): Promise<boolean> {
+  async function uloz(tise = false): Promise<boolean> {
     setBezi(true);
     setChyba(null);
     setHlaska(null);
@@ -377,7 +411,10 @@ export function Tracklist({
        * zahodí a stránka se natáhne znovu - stejně to dělají ostatní
        * formuláře v detailu projektu.
        */
-      router.refresh();
+      // Při automatickém ukládání se stránka neobnovuje - tracklist má
+      // v tu chvíli pravdu sám o sobě a obnova celé karty projektu po každé
+      // napsané větě by byla zbytečná práce navíc.
+      if (!tise) router.refresh();
       return true;
     } catch {
       setChyba(t('tracklist.ulozeniNeslo'));
@@ -527,17 +564,43 @@ export function Tracklist({
         >
           {t('tracklist.vlozitSeznam')}
         </button>
-        <button
-          type="button"
-          onClick={uloz}
-          disabled={bezi || !zmeneno}
-          className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 bg-brand-green text-onAccent border-0 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {bezi ? t('obecne.ukladam') : t('tracklist.ulozit')}
-        </button>
-        {zmeneno && <span className="text-xs font-body text-muted">{t('tracklist.neulozeno')}</span>}
-        {hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>}
-        {chyba && <span className="text-xs font-body text-danger">{chyba}</span>}
+        {/* VRÁTIT ZPĚT místo potvrzovacího tlačítka (19. 11. 2026) - hromadné
+            přepsání tabulky se ukládá samo, takže musí jít vzít zpátky. */}
+        {zaloha && (
+          <button
+            type="button"
+            onClick={() => {
+              setTracky(zaloha);
+              setZaloha(null);
+              setHlaska(t('tracklist.vraceno'));
+            }}
+            className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent"
+          >
+            {t('tracklist.vratitZpet')}
+          </button>
+        )}
+        {/* Stav ukládání místo tlačítka: ukládám / uloženo / chyba a zkusit znovu. */}
+        {chyba ? (
+          <>
+            <span className="text-xs font-body text-danger">{chyba}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setChyba(null);
+                void uloz(true);
+              }}
+              className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-danger text-danger hover:bg-dangerTint transition-colors cursor-pointer bg-transparent"
+            >
+              {t('tracklist.zkusitZnovu')}
+            </button>
+          </>
+        ) : bezi ? (
+          <span className="text-xs font-body text-muted">{t('obecne.ukladam')}</span>
+        ) : zmeneno ? (
+          <span className="text-xs font-body text-muted">{t('tracklist.neulozeno')}</span>
+        ) : (
+          hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>
+        )}
       </div>
 
       {/* BRUNO POD TABULKOU (30. 10. 2026) - hromadná úprava větou. */}
