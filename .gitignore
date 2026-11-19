@@ -23,3 +23,6 @@ stubs/
 # Odkladiste souboru, ktere jdou pryc. Mazani v pripojene slozce nejde bez
 # svoleni, tak se sem presouvaji - do repa nepatri.
 _to_delete/
+
+# Docasny zbytek po FUSE/iCloud (Claude, 19. 11. 2026) - neni to nas soubor.
+.fuse_hidden*

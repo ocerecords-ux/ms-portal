@@ -5019,11 +5019,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'firmy.technickeParametry': { cs: 'Technické parametry', en: 'Technical parameters' },
   'firmy.wikipedie': { cs: 'Wikipedie', en: 'Wikipedia' },
   'firmy.zpravyPortalu': { cs: 'Zprávy portálu', en: 'Portal messages' },
-  'firmy.caflouFirmy': { cs: 'Firmy z Caflou (archiv)', en: 'Companies from Caflou (archive)' },
-  'firmy.caflouTitle': {
-    cs: 'Caflou už portál nepoužívá. Zůstává jen na dohledání starých údajů.',
-    en: 'The portal no longer uses Caflou. It stays only for looking up old details.',
-  },
   'firmy.zalozkaKlienti': { cs: 'Klienti', en: 'Clients' },
   'firmy.zalozkaDodavatele': { cs: 'Dodavatelé', en: 'Suppliers' },
   'firmy.hledatPlaceholder': {
@@ -5099,12 +5094,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Sazba za normostranu ({mena} bez DPH)',
     en: 'Rate per standard page ({mena} excl. VAT)',
   },
-  'firmy.caflouId': { cs: 'ID firmy v Caflou', en: 'Company ID in Caflou' },
-  'firmy.caflouIdNapoveda': {
-    cs: 'podle tohoto ID se z Caflou tahají projekty této firmy - lze doplnit i později',
-    en: 'this ID is what the company’s projects are pulled from Caflou by - it can be filled in later too',
-  },
-  'firmy.caflouIdPriklad': { cs: 'např. 12345', en: 'e.g. 12345' },
   'firmy.odkazNaDisk': { cs: 'Odkaz na složku Google Disk', en: 'Link to the Google Drive folder' },
   'firmy.ulozitFirmu': { cs: 'Uložit firmu', en: 'Save the company' },
 
@@ -7502,12 +7491,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'V téhle měně se klientovi počítá sazba za normostranu i předběžná cena v objednávce. Na dokladu se předvyplní, ale dá se tam přepsat.',
     en: 'The rate per standard page and the estimated order price are calculated in this currency. Documents pre-fill it and can still override it.',
   },
-  'firma.caflouId': { cs: 'ID firmy v Caflou', en: 'Company ID in Caflou' },
-  'firma.caflouIdHint': {
-    cs: 'podle tohoto ID se z Caflou tahají projekty této firmy do sekce Projekty',
-    en: 'this ID is what pulls the company’s projects from Caflou into the Projects section',
-  },
-  'firma.caflouIdPlaceholder': { cs: 'např. 12345', en: 'e.g. 12345' },
   'firma.drive': { cs: 'Odkaz na složku Google Disk', en: 'Link to the Google Drive folder' },
   'firma.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
   'firma.ulozeno': { cs: '✓ Uloženo', en: '✓ Saved' },
@@ -7631,12 +7614,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'firma.ulozeniNepodarilo': { cs: 'Uložení se nepodařilo.', en: 'Saving failed.' },
 
   /* Karta firmy - test napojení na Caflou. */
-  'firma.testCaflou': { cs: 'Test napojení na Caflou', en: 'Caflou connection test' },
-  'firma.testCaflouPopis': {
-    cs: 'Nevíš ID firmy v Caflou? Napiš níže její název (nebo část) a klikni na „Najít" — vypíšou se jen odpovídající firmy. Až ID doplníš a uložíš výše, ověř přímo projekty tlačítkem „Otestovat".',
-    en: 'Do you not know the company’s Caflou ID? Type its name (or part of it) below and click “Find” — only matching companies are listed. Once you have filled the ID in and saved it above, check the projects themselves with “Test”.',
-  },
-  'firma.nazevVCaflou': { cs: 'název firmy v Caflou…', en: 'company name in Caflou…' },
   'firma.hledam': { cs: 'Hledám…', en: 'Searching…' },
   'firma.najit': { cs: 'Najít', en: 'Find' },
   'firma.testuji': { cs: 'Testuji…', en: 'Testing…' },
@@ -7649,80 +7626,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Nalezeno {pocet} firem (zobrazeno prvních {kolik}, zkus hledání zúžit).',
     en: '{pocet} companies found (first {kolik} shown, try narrowing the search).',
   },
-
-  /* Firmy z Caflou. */
-  'kontaktCaflou.NEZARAZENO': { cs: 'Nezařazeno', en: 'Unsorted' },
-  'kontaktCaflou.KLIENT': { cs: 'Klient', en: 'Customer' },
-  'kontaktCaflou.HEREC': { cs: 'Herec', en: 'Narrator' },
-  'kontaktCaflou.IGNOROVAT': { cs: 'Nepoužívat', en: 'Do not use' },
-  'caflou.nadpis': { cs: 'Firmy z Caflou', en: 'Companies from Caflou' },
-  'caflou.pracuji': { cs: 'Pracuji…', en: 'Working…' },
-  'caflou.jenNacist': { cs: 'Jen načíst', en: 'Just load them' },
-  'caflou.prenestRoztridene': { cs: 'Přenést roztříděné ({pocet})', en: 'Transfer the sorted ones ({pocet})' },
-  'caflou.prenestRoztrideneTitul': {
-    cs: 'Přenese jen to, co je tady roztříděné',
-    en: 'Transfers only what has been sorted here',
-  },
-  'caflou.prenasim': { cs: 'Přenáším…', en: 'Transferring…' },
-  'caflou.nacistAPrenest': { cs: 'Načíst a přenést do portálu', en: 'Load and transfer into the portal' },
-  'caflou.nacistAPrenestTitul': {
-    cs: 'Načte firmy z Caflou, odhadne klienty a herce a rovnou je založí v portálu',
-    en: 'Loads the companies from Caflou, guesses customers and narrators and creates them in the portal straight away',
-  },
-  'caflou.nacitam': { cs: 'Načítám z Caflou…', en: 'Loading from Caflou…' },
-  'caflou.nacteno': { cs: 'Načteno {pocet} firem…', en: '{pocet} companies loaded…' },
-  'caflou.hotovoNacteno': { cs: 'Hotovo — načteno {pocet} firem.', en: 'Done — {pocet} companies loaded.' },
-  'caflou.nactenoPrenasim': {
-    cs: 'Načteno {pocet} firem, přenáším do portálu…',
-    en: '{pocet} companies loaded, transferring into the portal…',
-  },
-  'caflou.importNezdaril': { cs: 'Import se nezdařil.', en: 'The import failed.' },
-  'caflou.prenosNezdaril': { cs: 'Přenos se nezdařil.', en: 'The transfer failed.' },
-  'caflou.prenosNezdarilMale': { cs: 'přenos se nezdařil.', en: 'the transfer failed.' },
-  'caflou.souhrnPrenosu': {
-    cs: 'Načteno {nacteno} firem · založeno {zalozeno}, doplněno {doplneno}, přeskočeno {preskoceno}.',
-    en: '{nacteno} companies loaded · {zalozeno} created, {doplneno} filled in, {preskoceno} skipped.',
-  },
-  'caflou.souhrnZalozeni': {
-    cs: 'Založeno {zalozeno}, doplněno {doplneno}, přeskočeno {preskoceno}.',
-    en: '{zalozeno} created, {doplneno} filled in, {preskoceno} skipped.',
-  },
-  'caflou.souhrnJednoho': {
-    cs: '{nazev}: založeno {zalozeno}, doplněno {doplneno}, přeskočeno {preskoceno}.',
-    en: '{nazev}: {zalozeno} created, {doplneno} filled in, {preskoceno} skipped.',
-  },
-  'caflou.chybaUFirmy': { cs: '{nazev}: {chyba}', en: '{nazev}: {chyba}' },
-  'caflou.nejdrivRoztridit': {
-    cs: 'Nejdřív u firem vyberte, jestli jde o klienta, nebo o herce.',
-    en: 'First choose for each company whether it is a customer or a narrator.',
-  },
-  'caflou.emailNeulozen': { cs: 'E-mail se nepodařilo uložit.', en: 'The email could not be saved.' },
-  'caflou.coSeStalo': { cs: 'Co se stalo', en: 'What happened' },
-  'caflou.zalozeno': { cs: 'Založeno', en: 'Created' },
-  'caflou.doplneno': { cs: 'Doplněno', en: 'Filled in' },
-  'caflou.preskoceno': { cs: 'Přeskočeno', en: 'Skipped' },
-  'caflou.vse': { cs: 'Vše', en: 'All' },
-  'caflou.uzVPortalu': { cs: 'Už v portálu', en: 'Already in the portal' },
-  'caflou.hledat': { cs: 'Hledat název, IČ, e-mail…', en: 'Search name, company number, email…' },
-  'caflou.sloupecNazev': { cs: 'Název', en: 'Name' },
-  'caflou.sloupecIc': { cs: 'IČ', en: 'Company number' },
-  'caflou.sloupecKontakt': { cs: 'Kontakt', en: 'Contact' },
-  'caflou.sloupecMesto': { cs: 'Město', en: 'Town' },
-  'caflou.sloupecKdoToJe': { cs: 'Kdo to je', en: 'Who it is' },
-  'caflou.sloupecPrenest': { cs: 'Přenést', en: 'Transfer' },
-  'caflou.prazdno': {
-    cs: 'Zatím tu nic není — načtěte firmy z Caflou tlačítkem nahoře.',
-    en: 'Nothing here yet — load the companies from Caflou with the button above.',
-  },
-  'caflou.nicNeodpovida': { cs: 'Nic neodpovídá filtru.', en: 'Nothing matches the filter.' },
-  'caflou.dopisteEmail': { cs: 'dopište e-mail', en: 'add an email' },
-  'caflou.prenest': { cs: 'Přenést', en: 'Transfer' },
-  'caflou.nejdrivVyberteVlevo': { cs: 'nejdřív vyberte vlevo', en: 'choose on the left first' },
-  'caflou.shodaNapojeno': { cs: 'Firmy (napojeno na Caflou)', en: 'Companies (linked to Caflou)' },
-  'caflou.shodaFirmyIc': { cs: 'Firmy (shodné IČ)', en: 'Companies (matching company number)' },
-  'caflou.shodaHerciIc': { cs: 'Herci (shodné IČ)', en: 'Narrators (matching company number)' },
-  'caflou.shodaFirmyNazev': { cs: 'Firmy (shodný název)', en: 'Companies (matching name)' },
-  'caflou.shodaHerciNazev': { cs: 'Herci (shodný název)', en: 'Narrators (matching name)' },
 
   /* Žádosti o údaje (administrace). */
   'zadost.nadpis': { cs: 'Žádosti o údaje', en: 'Requests for details' },
@@ -8290,40 +8193,6 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'navod.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
   'navod.neulozeno': { cs: 'Uložení se nepodařilo.', en: 'Saving failed.' },
   'navod.nesmazano': { cs: 'Smazání se nepodařilo.', en: 'The deletion failed.' },
-
-  /* Přenos projektů z Caflou. */
-  'prenos.zpetDoAdmin': { cs: '← Zpět do administrace', en: '← Back to administration' },
-  'prenos.nadpis': { cs: 'Přenos projektů z Caflou', en: 'Transfer of projects from Caflou' },
-  'prenos.uvod': {
-    cs: 'Stáhne z Caflou všechny projekty i s názvem, firmou, stavem, prioritou, normostranami, hercem, datem vydání a popisem a uloží je do portálu. Dá se pustit opakovaně — údaje zadané v portálu (manažer, odkaz na složku, rodný list) se nepřepisují a projektů založených přímo v portálu se přenos nedotkne.',
-    en: 'It downloads every project from Caflou with its name, company, status, priority, standard pages, narrator, release date and description and saves them into the portal. It can be run again and again — details entered in the portal (manager, folder link, advert record) are not overwritten and projects created in the portal itself are left alone.',
-  },
-  'prenos.prenasim': { cs: 'Přenáším…', en: 'Transferring…' },
-  'prenos.prenestProjekty': { cs: 'Přenést projekty z Caflou', en: 'Transfer the projects from Caflou' },
-  'prenos.trvaToChvili': {
-    cs: 'Sedm stovek projektů po stovkách — může to trvat i minutu, nezavírejte stránku.',
-    en: 'Seven hundred projects, a hundred at a time — it can take a minute, do not close the page.',
-  },
-  'prenos.nepodaril': { cs: 'Přenos se nepodařil.', en: 'The transfer failed.' },
-  'prenos.nepodarilZnovu': {
-    cs: 'Přenos se nepodařil — zkuste to prosím znovu.',
-    en: 'The transfer failed — please try again.',
-  },
-  'prenos.coPortalDrzi': { cs: 'Co portál drží', en: 'What the portal holds' },
-  'prenos.projektuCelkem': { cs: 'Projektů celkem', en: 'Projects in total' },
-  'prenos.zTohoZCaflou': { cs: 'Z toho z Caflou', en: 'Of those from Caflou' },
-  'prenos.zalozenoVPortalu': { cs: 'Založeno v portálu', en: 'Created in the portal' },
-  'prenos.rozpracovanych': { cs: 'Rozpracovaných', en: 'In progress' },
-  'prenos.bezNazvu': { cs: 'Bez názvu', en: 'Without a name' },
-  'prenos.posledniPrenos': { cs: 'Poslední přenos', en: 'Last transfer' },
-  'prenos.prectenoZCaflou': { cs: 'Přečteno z Caflou', en: 'Read from Caflou' },
-  'prenos.noveZalozeno': { cs: 'Nově založeno', en: 'Newly created' },
-  'prenos.doplneno': { cs: 'Doplněno', en: 'Filled in' },
-  'prenos.preskoceno': { cs: 'Přeskočeno', en: 'Skipped' },
-  'prenos.bezFirmy': {
-    cs: 'U těchto projektů se nepodařilo dohledat firmu v portálu — název firmy se uložil textem, ale projekt nebude vidět v přehledu klienta:',
-    en: 'The company could not be found in the portal for these projects — the company name was saved as text, but the project will not show in the customer’s overview:',
-  },
 
   /* ---------------------------------------------------------------
    * DÁVKA 7d - Přehledy, palubovka, backlog, ceník studia, Web,
