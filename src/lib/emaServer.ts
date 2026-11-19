@@ -254,7 +254,19 @@ export async function zadejUkol(
 
   const ukol = (await prisma.prUkol
     .create({
-      data: { kampanId, zadani: zadani.trim(), stav: 'BEZI', zadalId: kdo.id, kroky: [] },
+      /**
+       * PRVNÍ KROK SE ZAPÍŠE HNED (zadání 19. 11. 2026: „potřeboval bych
+       * nějaké reakce od Emy hned, jak vložím první zadání"). Než se načtou
+       * podklady a odpoví API, uběhne klidně minuta - a po tu dobu musí být
+       * na obrazovce vidět, že se něco děje.
+       */
+      data: {
+        kampanId,
+        zadani: zadani.trim(),
+        stav: 'BEZI',
+        zadalId: kdo.id,
+        kroky: ['Beru si zadání a čtu, co o kampani víme.'],
+      },
       select: { id: true },
     })
     .catch(() => null)) as { id: string } | null;
@@ -276,7 +288,7 @@ export async function zadejUkol(
     ukol: zadani.trim(),
   };
 
-  const kroky: string[] = [];
+  const kroky: string[] = ['Beru si zadání a čtu, co o kampani víme.'];
   const vysledek = await nechEmuPracovat(zadaniEme, async (krok) => {
     kroky.push(krok);
     await prisma.prUkol.update({ where: { id: ukol.id }, data: { kroky } }).catch(() => undefined);

@@ -85,6 +85,30 @@ export function KampanDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bezici, nactiUkol]);
 
+  /**
+   * CO EMA PRÁVĚ DĚLÁ (zadání 19. 11. 2026: „ať vidím, že na něčem dělá").
+   *
+   * Běh trvá klidně minutu a po tu dobu se na obrazovce nic neměnilo. Teď
+   * je nahoře u jména vidět poslední krok a kolik času už na tom Ema je -
+   * kroky chodí ze serveru (viz lib/emaAgent.ts), čas si tiká okno samo.
+   */
+  const ukolVPohybu = ukoly.find((u) => jeVPohybu(u.stav)) ?? null;
+  const posledniKrok = ukolVPohybu
+    ? (ukolVPohybu.kroky[ukolVPohybu.kroky.length - 1] ?? t('pr.zacinam'))
+    : null;
+  const [tikot, setTikot] = useState(0);
+  useEffect(() => {
+    if (!ukolVPohybu) {
+      setTikot(0);
+      return;
+    }
+    const zacatek = new Date(ukolVPohybu.createdAt).getTime();
+    const prepocti = () => setTikot(Math.max(0, Math.round((Date.now() - zacatek) / 1000)));
+    prepocti();
+    const casovac = setInterval(prepocti, 1000);
+    return () => clearInterval(casovac);
+  }, [ukolVPohybu?.id, ukolVPohybu?.createdAt]);
+
   const nactiMedia = useCallback(async () => {
     const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/media`).catch(() => null);
     if (!res?.ok) return;
@@ -145,13 +169,33 @@ export function KampanDetail({
       {/* ZADÁNÍ PRO EMU */}
       <div className="rounded-card border border-line bg-field p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <span className="w-9 h-9 rounded-full shrink-0 grid place-items-center bg-brand-purple text-white font-heading font-bold text-sm">
-            EP
+          <span className="relative shrink-0 grid place-items-center">
+            {/* KROUŽEK KOLEM AVATARU se rozbliká, dokud Ema pracuje. */}
+            {ukolVPohybu && (
+              <span className="absolute inset-0 rounded-full border-2 border-brand-purple animate-ping" />
+            )}
+            <span className="relative w-9 h-9 rounded-full grid place-items-center bg-brand-purple text-white font-heading font-bold text-sm">
+              EP
+            </span>
           </span>
-          <span className="flex flex-col">
-            <span className="font-heading font-semibold text-sm text-ink">{t('pr.ema')}</span>
-            <span className="text-[11px] font-body text-muted">{t('pr.emaRole')}</span>
+          <span className="flex flex-col min-w-0">
+            <span className="flex items-center gap-1.5 font-heading font-semibold text-sm text-ink">
+              {t('pr.ema')}
+              {ukolVPohybu && (
+                <span className="flex items-end gap-0.5 pb-0.5" aria-hidden>
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="w-1 h-1 rounded-full bg-brand-purple animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    />
+                  ))}
+                </span>
+              )}
+            </span>
+            <span className="text-[11px] font-body text-muted truncate">
+              {ukolVPohybu ? `${posledniKrok} · ${cas(tikot)}` : t('pr.emaRole')}
+            </span>
           </span>
         </div>
         <textarea
@@ -193,12 +237,31 @@ export function KampanDetail({
 
             {jeVPohybu(u.stav) && (
               <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                {(u.kroky.length ? u.kroky : [t('pr.zacinam')]).map((k, i) => (
-                  <li key={i} className="text-xs font-body text-muted">
-                    {i === u.kroky.length - 1 ? '▸ ' : '· '}
-                    {k}
-                  </li>
-                ))}
+                {(u.kroky.length ? u.kroky : [t('pr.zacinam')]).map((k, i, pole) => {
+                  const posledni = i === pole.length - 1;
+                  return (
+                    <li
+                      key={i}
+                      className={`text-xs font-body flex items-center gap-1.5 ${
+                        posledni ? 'text-ink' : 'text-muted'
+                      }`}
+                    >
+                      <span>{posledni ? '▸' : '·'}</span>
+                      <span>{k}</span>
+                      {posledni && (
+                        <span className="flex items-end gap-0.5 pb-0.5" aria-hidden>
+                          {[0, 1, 2].map((d) => (
+                            <span
+                              key={d}
+                              className="w-1 h-1 rounded-full bg-brand-purple animate-bounce"
+                              style={{ animationDelay: `${d * 0.15}s` }}
+                            />
+                          ))}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
 
@@ -362,4 +425,11 @@ function SeznamMedii({
       </div>
     </div>
   );
+}
+
+/** 0:07, 1:24 - kolik času už Ema na úkolu je. */
+function cas(sekund: number): string {
+  const m = Math.floor(sekund / 60);
+  const s = sekund % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }

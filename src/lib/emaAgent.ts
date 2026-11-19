@@ -121,7 +121,7 @@ export async function nechEmuPracovat(
   let hledani = 0;
 
   for (let kolo = 0; kolo < KOL_MAX; kolo += 1) {
-    await pridej(kolo === 0 ? 'Čtu zadání a podklady kampaně.' : 'Skládám, co jsem našla.');
+    await pridej(kolo === 0 ? 'Promýšlím, kde by to mohlo vyjít.' : 'Čtu, co jsem našla.');
 
     const odpoved = await fetch(ADRESA, {
       method: 'POST',
@@ -184,11 +184,12 @@ export async function nechEmuPracovat(
      * tak se zpráva vrátí zpátky a jede se dál.
      */
     if (telo?.stop_reason === 'pause_turn') {
+      await pridej('Pokračuju v hledání.');
       zpravy.push({ role: 'assistant', content: bloky });
       continue;
     }
     if (text) {
-      await pridej('Hotovo, předkládám ke kontrole.');
+      await pridej('Píšu návrh a předkládám ho ke kontrole.');
       return { text, hledani, kroky };
     }
     zpravy.push({ role: 'assistant', content: bloky });
