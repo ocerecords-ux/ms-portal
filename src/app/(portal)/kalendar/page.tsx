@@ -26,7 +26,7 @@ import { nactiRozliseniHercu } from '@/lib/rozliseniHercu';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import type { NepritomnostVKalendari } from '@/lib/nepritomnost';
 import { SOLO_PORADY } from '@/lib/porady';
-import { SOLO_MOJE } from '@/lib/calendar';
+import { SOLO_MOJE, SOLO_NATACENI, SOLO_STRIH } from '@/lib/calendar';
 import { nactiPorady } from '@/lib/poradyServer';
 import { SOLO_SCHUZKY } from '@/lib/porady';
 import { najdiPrvniFrekvence, oznacRezii } from '@/lib/rezieOnlineServer';
@@ -155,6 +155,16 @@ export default async function KalendarPage({
   // Svítí všechna studia, Mimo studio i Porady, ale jen to, kde je přihlášený
   // zvukař nebo herec (a jeho vlastní nepřítomnost).
   const soloMoje = soloZAdresy === SOLO_MOJE;
+  /**
+   * JEN NATÁČENÍ / JEN STŘIHY (19. 11. 2026, připomínka Petera 18. 11.: „na
+   * dlhodobé plánovanie dopredu by som potreboval v kalendári vedieť
+   * vyfiltrovať zvlášť natáčanie a zvlášť strihy").
+   *
+   * Na rozdíl od sóla jednoho studia tu zůstanou VŠECHNA studia - smysl je
+   * vidět jeden druh práce napříč pobočkami, ne jednu pobočku.
+   */
+  const soloNataceni = soloZAdresy === SOLO_NATACENI;
+  const soloStrih = soloZAdresy === SOLO_STRIH;
   const solo = soloStudio
     ? soloStudio.id
     : soloMimo
@@ -165,7 +175,11 @@ export default async function KalendarPage({
           ? SOLO_SCHUZKY
           : soloMoje
             ? SOLO_MOJE
-            : '';
+            : soloNataceni
+              ? SOLO_NATACENI
+              : soloStrih
+                ? SOLO_STRIH
+                : '';
   const puvodniPorady =
     searchParams?.porady !== undefined
       ? searchParams.porady !== '0'
@@ -175,7 +189,14 @@ export default async function KalendarPage({
       ? searchParams.schuzky !== '0'
       : (vychozi?.has(KALENDAR_SCHUZKY) ?? true);
 
-  const aktivni = soloMoje ? studios : solo ? (soloStudio ? [soloStudio] : []) : puvodni;
+  const aktivni =
+    soloMoje || soloNataceni || soloStrih
+      ? studios
+      : solo
+        ? soloStudio
+          ? [soloStudio]
+          : []
+        : puvodni;
   // Mřížka (pásmo a otevírací doba) se musí o něco opřít i bez studií.
   const mrizkaPodle = aktivni[0] ?? puvodni[0] ?? studios[0];
 
@@ -513,8 +534,23 @@ export default async function KalendarPage({
     u.actorUserId === session.user.id ||
     (sRezii.has(u.id) && !!u.caflouProjectId && mojeProjektyRezie.has(u.caflouProjectId));
 
-  const sloty = soloMoje ? occupancy.slots.filter(jeMoje) : occupancy.slots;
-  const bloky = soloMoje ? occupancy.blocks.filter(jeMoje) : occupancy.blocks;
+  /**
+   * Sólo na druh práce (19. 11. 2026): termíny z nabídek jsou vždycky
+   * natáčení, takže u „jen střihy" vypadnou celé; ručně psané události se
+   * poznají podle `kind`.
+   */
+  const sloty = soloMoje
+    ? occupancy.slots.filter(jeMoje)
+    : soloStrih
+      ? []
+      : occupancy.slots;
+  const bloky = soloMoje
+    ? occupancy.blocks.filter(jeMoje)
+    : soloNataceni
+      ? occupancy.blocks.filter((b) => b.kind === 'NATACENI')
+      : soloStrih
+        ? occupancy.blocks.filter((b) => b.kind === 'STRIH')
+        : occupancy.blocks;
 
   /**
    * KDO STŘÍHÁ EXTERNĚ (zadání 23. 9. 2026: „u Matěje by defaultně mohla

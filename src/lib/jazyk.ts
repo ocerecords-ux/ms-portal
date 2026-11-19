@@ -5299,6 +5299,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.vychoziZruseno': { cs: 'Výchozí zrušeno.', en: 'Your default is gone.' },
   'kalendar.vychoziChyba': { cs: 'Nepodařilo se uložit.', en: 'It could not be saved.' },
   'kalendar.jenMoje': { cs: 'Jen moje události', en: 'My events only' },
+  'kalendar.jenNataceni': { cs: 'Natáčení', en: 'Recording' },
+  'kalendar.jenStrih': { cs: 'Střih', en: 'Editing' },
   'kalendar.jenMojeSolo': { cs: 'Jen moje události (sólo)', en: 'My events only (solo)' },
   'kalendar.soloStitek': { cs: 'SÓLO: {nazev}', en: 'SOLO: {nazev}' },
   'kalendar.soloZpet': { cs: 'zpět na výběr', en: 'back to the selection' },

@@ -23,6 +23,28 @@ import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 /** Červený rámeček události, kde je režie na dálku (zadání 23. 9. 2026). */
 const BARVA_REZIE = '#ef4444';
 
+/** Mikrofon = natáčení, nůžky = střih. Ikony sedí v tlačítkách filtru druhu práce. */
+function IkonaMikrofonu() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <rect x="6" y="1.5" width="4" height="8" rx="2" />
+      <path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" />
+      <path d="M8 12v2.5" />
+    </svg>
+  );
+}
+
+function IkonaNuzek() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <circle cx="4" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M5.4 10.6 12.5 2" />
+      <path d="M10.6 10.6 3.5 2" />
+    </svg>
+  );
+}
+
 /**
  * ČAS, KTERÝ SE ŘÍKÁ KLIENTOVI - z políčka „Od" v okně úpravy (11. 10. 2026).
  *
@@ -66,6 +88,8 @@ import {
   ZADNE_STUDIO,
   SOLO_MIMO,
   SOLO_MOJE,
+  SOLO_NATACENI,
+  SOLO_STRIH,
   type CalendarView,
 } from '@/lib/calendar';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
@@ -983,7 +1007,11 @@ export function CalendarBrowser({
         ? nazevPorad(t)
         : solo === SOLO_MOJE
           ? t('kalendar.jenMoje')
-          : (studios.find((s) => s.id === solo)?.shortName ?? '')
+          : solo === SOLO_NATACENI
+            ? t('kalendar.jenNataceni')
+            : solo === SOLO_STRIH
+              ? t('kalendar.jenStrih')
+              : (studios.find((s) => s.id === solo)?.shortName ?? '')
     : '';
 
   // Odkud se prislo - po posunu zpet se tyden v mobilu ukaze od konce
@@ -1501,6 +1529,47 @@ export function CalendarBrowser({
             {nazevSchuzek(t)}
           </button>
         </span>
+        {/* JEN NATÁČENÍ / JEN STŘIHY (19. 11. 2026, připomínka Petera 18. 11.:
+            „na dlhodobé plánovanie dopredu by som potreboval v kalendári
+            vedieť vyfiltrovať zvlášť natáčanie a zvlášť strihy").
+            Nejsou to kalendáře, ale druhy práce - proto jediné tlačítko, které
+            jen sóluje, a ne dvojice vypínač + sólo jako u kalendářů. */}
+        <button
+          type="button"
+          onClick={() => jenTentoKalendar(SOLO_NATACENI)}
+          aria-pressed={solo === SOLO_NATACENI}
+          title={
+            solo === SOLO_NATACENI
+              ? t('kalendar.zpetNaVyber')
+              : t('kalendar.docasneJen', { nazev: t('kalendar.jenNataceni') })
+          }
+          className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
+            solo === SOLO_NATACENI
+              ? 'border-brand-purple text-brand-purple bg-tint'
+              : 'border-line text-muted hover:text-ink'
+          }`}
+        >
+          <IkonaMikrofonu />
+          {t('kalendar.jenNataceni')}
+        </button>
+        <button
+          type="button"
+          onClick={() => jenTentoKalendar(SOLO_STRIH)}
+          aria-pressed={solo === SOLO_STRIH}
+          title={
+            solo === SOLO_STRIH
+              ? t('kalendar.zpetNaVyber')
+              : t('kalendar.docasneJen', { nazev: t('kalendar.jenStrih') })
+          }
+          className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
+            solo === SOLO_STRIH
+              ? 'border-brand-purple text-brand-purple bg-tint'
+              : 'border-line text-muted hover:text-ink'
+          }`}
+        >
+          <IkonaNuzek />
+          {t('kalendar.jenStrih')}
+        </button>
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}

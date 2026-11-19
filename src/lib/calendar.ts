@@ -128,6 +128,18 @@ export const BLOCKING_SLOT_STATES = ['SELECTED', 'CONFIRMED'];
  */
 export const DRUHY_MIMO_NABIDKU = ['STRIH'];
 
+/**
+ * SÓLO NA DRUH PRÁCE (zadání 19. 11. 2026, z připomínky Petera 18. 11.: „na
+ * dlhodobé plánovanie dopredu by som potreboval v kalendári vedieť vyfiltrovať
+ * zvlášť natáčanie a zvlášť strihy").
+ *
+ * Chová se stejně jako sólo kalendáře: v adrese je `solo=nataceni`, štítky
+ * zůstanou, jen se ukáže jediný druh práce přes všechna studia. Zpátky se
+ * člověk dostane stejným kliknutím nebo štítkem „zpět na výběr".
+ */
+export const SOLO_NATACENI = 'nataceni';
+export const SOLO_STRIH = 'strih';
+
 export const BLOCK_KIND_LABELS: Record<string, string> = {
   NATACENI: 'Natáčení',
   STRIH: 'Střih',
