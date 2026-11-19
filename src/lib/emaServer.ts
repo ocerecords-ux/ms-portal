@@ -1,6 +1,9 @@
 import { prisma } from '@/lib/db';
-import { nechEmuPracovat, type ZadaniEme } from '@/lib/emaAgent';
+import { nechEmuPracovat, type Nastroj, type ZadaniEme } from '@/lib/emaAgent';
 import type { Kampan, Medium, StavKampane, StavMedia, StavUkolu, Ukol } from '@/lib/ema';
+import { DRUHY_MEDIA } from '@/lib/ema';
+import { klicFormatu, nabidkaFormatu } from '@/lib/emaSite';
+import { coBezeloNaSitich, zalozNavrhEmy } from '@/lib/emaSiteServer';
 
 /**
  * PR A KOMUNIKACE - práce s databází (zadání 19. 11. 2026).
@@ -232,10 +235,129 @@ export async function upravMedium(
       },
     })
     .catch((err: unknown) => console.error('Médium se nepodařilo upravit:', err));
+
+  /**
+   * VYŠLO = PŘÍLEŽITOST NA SÍTĚ (zadání 19. 11. 2026). Jakmile se u média
+   * přehodí stav na „Vyšlo", Ema sama připraví návrh příspěvku, který ten
+   * výstup sdílí, a předloží ho ke kontrole v rozhovoru kampaně.
+   *
+   * JEN JEDNOU ZA MÉDIUM - `prispevekAt` hlídá, že se to neopakuje při každé
+   * další úpravě řádku. A bez čekání: úprava stavu nesmí viset na Emě.
+   */
+  if (data.stav === 'VYSLO') {
+    void navrhniPrispevekKVystupu(id, kdoId).catch((err: unknown) =>
+      console.error('Navrh prispevku k vystupu selhal:', err),
+    );
+  }
+}
+
+async function navrhniPrispevekKVystupu(mediumId: string, kdoId: string): Promise<void> {
+  const medium = (await prisma.prMedium
+    .findUnique({
+      where: { id: mediumId },
+      select: { nazev: true, odkaz: true, kampanId: true, prispevekAt: true },
+    })
+    .catch(() => null)) as
+    | { nazev: string; odkaz: string | null; kampanId: string; prispevekAt: Date | null }
+    | null;
+  if (!medium || medium.prispevekAt) return;
+
+  await prisma.prMedium
+    .update({ where: { id: mediumId }, data: { prispevekAt: new Date() } })
+    .catch(() => undefined);
+
+  const kdo = (await prisma.user
+    .findUnique({ where: { id: kdoId }, select: { name: true, email: true } })
+    .catch(() => null)) as { name: string | null; email: string | null } | null;
+
+  const kam = medium.odkaz ? ` Odkaz na výstup: ${medium.odkaz}` : '';
+  await zadejUkol(
+    medium.kampanId,
+    `Vyšlo to v „${medium.nazev}".${kam} Připrav jeden příspěvek na Instagram a jeden na LinkedIn, kterým to sdílíme - nástrojem pripravPrispevek. Pak mi dvěma větami řekni, co jsi připravila.`,
+    { id: kdoId, jmeno: kdo?.name || kdo?.email || 'kolega' },
+  );
 }
 
 export async function smazMedium(id: string): Promise<void> {
   await prisma.prMedium.delete({ where: { id } }).catch(() => undefined);
+}
+
+/**
+ * NÁSTROJE, KTERÝMI EMA SÁHNE DO PORTÁLU (zadání 19. 11. 2026).
+ *
+ * Dva: zapsat médium do kampaně a připravit příspěvek na sítě. Obojí vzniká
+ * jako ROZPRACOVANÉ - portál sám nic neodesílá ani nepublikuje. Příspěvek
+ * patří tomu, kdo úkol zadal; sekce Sítě je osobní.
+ */
+function nastrojeEmy(kampanId: string, autorId: string): Nastroj[] {
+  return [
+    {
+      definice: {
+        name: 'pridejMedium',
+        description:
+          'Zapíše pořad, redakci nebo redaktora do seznamu médií téhle kampaně. Použij na každý tip, který navrhuješ - ne jen do textu odpovědi.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            nazev: { type: 'string', description: 'Název pořadu nebo redakce.' },
+            druh: { type: 'string', enum: [...DRUHY_MEDIA] },
+            kontakt: { type: 'string', description: 'Veřejný kontakt nebo cesta k oslovení.' },
+            odkaz: { type: 'string', description: 'Odkaz na zdroj, odkud to máš.' },
+            duvod: { type: 'string', description: 'Jednou větou, proč se téma hodí právě sem.' },
+            overeno: { type: 'boolean', description: 'true jen když je kontakt ověřený a konkrétní.' },
+            predmet: { type: 'string', description: 'Navržený předmět mailu.' },
+            textMailu: { type: 'string', description: 'Navržený text mailu na míru tomuhle příjemci.' },
+          },
+          required: ['nazev'],
+        },
+      },
+      krok: (v) => `Zapisuju médium: ${typeof v.nazev === 'string' ? v.nazev : '?'}`,
+      spust: async (v) => {
+        const nazev = typeof v.nazev === 'string' ? v.nazev.trim() : '';
+        if (!nazev) return 'Médium bez názvu zapsat nejde.';
+        const druh = typeof v.druh === 'string' && (DRUHY_MEDIA as readonly string[]).includes(v.druh)
+          ? (v.druh as Medium['druh'])
+          : 'JINE';
+        const text = (klic: string) => (typeof v[klic] === 'string' ? (v[klic] as string).trim() : null);
+        await pridejMedium(kampanId, {
+          nazev,
+          druh,
+          kontakt: text('kontakt'),
+          odkaz: text('odkaz'),
+          duvod: text('duvod'),
+          overeno: v.overeno === true,
+          predmet: text('predmet'),
+          textMailu: text('textMailu'),
+        });
+        return `Zapsáno do kampaně: ${nazev}.`;
+      },
+    },
+    {
+      definice: {
+        name: 'pripravPrispevek',
+        description:
+          'Připraví rozpracovaný příspěvek na sítě (Instagram nebo LinkedIn) v sekci Sítě. Ty píšeš texty, grafiku dodělá člověk v editoru. Nic se neodesílá.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            format: {
+              type: 'string',
+              enum: klicFormatu(),
+              description: `Formát plátna. ${nabidkaFormatu()}`,
+            },
+            nazev: { type: 'string', description: 'Krátký pracovní název, podle kterého se příspěvek najde.' },
+            nadpis: { type: 'string', description: 'Velký text na obrázku. Pár slov, klidně na dva řádky.' },
+            podnadpis: { type: 'string', description: 'Menší text pod nadpisem. Jedna dvě věty.' },
+            popisek: { type: 'string', description: 'Text pod příspěvek.' },
+            hashtagy: { type: 'string', description: 'Hashtagy oddělené mezerou. Bez přehánění.' },
+          },
+          required: ['format', 'nazev', 'nadpis'],
+        },
+      },
+      krok: (v) => `Připravuju příspěvek: ${typeof v.nazev === 'string' ? v.nazev : '?'}`,
+      spust: async (v) => zalozNavrhEmy(autorId, v),
+    },
+  ];
 }
 
 /**
@@ -285,14 +407,19 @@ export async function zadejUkol(
     brief: kampan.brief ?? '',
     oStudiu: await oStudiu(),
     cojeHotovo: souhrn,
+    naSitich: await coBezeloNaSitich(),
     ukol: zadani.trim(),
   };
 
   const kroky: string[] = ['Beru si zadání a čtu, co o kampani víme.'];
-  const vysledek = await nechEmuPracovat(zadaniEme, async (krok) => {
-    kroky.push(krok);
-    await prisma.prUkol.update({ where: { id: ukol.id }, data: { kroky } }).catch(() => undefined);
-  }).catch((err) => {
+  const vysledek = await nechEmuPracovat(
+    zadaniEme,
+    async (krok) => {
+      kroky.push(krok);
+      await prisma.prUkol.update({ where: { id: ukol.id }, data: { kroky } }).catch(() => undefined);
+    },
+    nastrojeEmy(kampanId, kdo.id),
+  ).catch((err) => {
     console.error('Ema spadla:', err);
     return null;
   });

@@ -6120,6 +6120,10 @@ model PrMedium {
   updatedAt DateTime @updatedAt
 
   @@index([kampanId, stav])
+  /// KDY EMA SAMA NAVRHLA PŘÍSPĚVEK NA SÍTĚ (zadání 19. 11. 2026: „když se
+  /// u média přehodí stav na Vyšlo, Ema sama navrhne příspěvek"). Datum tu
+  /// je proto, aby se návrh neopakoval při každé další úpravě řádku.
+  prispevekAt DateTime?
 }
 
 /// Stale podklady pro Emu (19. 11. 2026) - kdo jsme, tón komunikace, hotové

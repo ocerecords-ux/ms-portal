@@ -41,8 +41,30 @@ export type ZadaniEme = {
   oStudiu: string;
   /** Co už v kampani je - média a jejich stav, ať nenabízí totéž dvakrát. */
   cojeHotovo: string;
+  /** Co jsme nedávno dali na sítě - ať nenabízí to, co už tam je. */
+  naSitich?: string;
   /** Samotné zadání od člověka. */
   ukol: string;
+};
+
+/**
+ * NÁSTROJ, KTERÝM EMA SÁHNE DO PORTÁLU (zadání 19. 11. 2026: „bylo by super,
+ * kdyby Ema pracovala i s našimi sociálními sítěmi").
+ *
+ * Hledání na webu si řeší API samo; tohle jsou NAŠE věci - zapsat médium do
+ * kampaně, připravit příspěvek do sekce Sítě. Nic se tím neodesílá ven:
+ * všechno vzniká jako rozpracované, ke kontrole.
+ */
+export type Nastroj = {
+  definice: {
+    name: string;
+    description: string;
+    input_schema: Record<string, unknown>;
+  };
+  /** Udělá to a vrátí krátkou větu zpátky Emě. */
+  spust: (vstup: Record<string, unknown>) => Promise<string>;
+  /** Co se o tom napíše do průběhu na obrazovce. */
+  krok: (vstup: Record<string, unknown>) => string;
 };
 
 export type VysledekEmy = {
@@ -94,6 +116,14 @@ ${z.brief || '(brief není vyplněný)'}
 CO UŽ V KAMPANI JE:
 ${z.cojeHotovo || '(zatím nic)'}
 
+CO U NÁS NEDÁVNO BĚŽELO NA SÍTÍCH:
+${z.naSitich || '(nevím - účet není připojený nebo je prázdný)'}
+
+NÁSTROJE DO PORTÁLU: médium, které chceš do kampaně, rovnou zapiš nástrojem
+pridejMedium - ne jen do textu odpovědi. Příspěvek na sítě založ nástrojem
+pripravPrispevek; vznikne rozpracovaný v sekci Sítě, nic se neodesílá.
+Hotové věci pak v odpovědi jen krátce shrň, neopisuj je celé.
+
 JAK ODPOVÍDÁŠ: obyčejným textem (markdown). Když vracíš seznam médií, dej
 každé jako samostatný oddíl s nadpisem, kontaktem, odkazem a důvodem; když
 vracíš mail, odděl předmět a tělo. Žádné uvozování typu „tady je, co jsem
@@ -107,6 +137,7 @@ připravila" - rovnou věc.`;
 export async function nechEmuPracovat(
   z: ZadaniEme,
   hlasic?: (krok: string) => Promise<void> | void,
+  nastroje: Nastroj[] = [],
 ): Promise<VysledekEmy> {
   const klic = process.env.ANTHROPIC_API_KEY;
   const kroky: string[] = [];
@@ -136,6 +167,7 @@ export async function nechEmuPracovat(
             name: 'web_search',
             max_uses: Math.max(1, HLEDANI_MAX - hledani),
           },
+          ...nastroje.map((n) => n.definice),
         ],
         messages: zpravy,
       }),
@@ -156,7 +188,7 @@ export async function nechEmuPracovat(
     }
 
     const telo = (await odpoved.json().catch(() => null)) as {
-      content?: { type: string; text?: string; name?: string; input?: unknown }[];
+      content?: { type: string; text?: string; name?: string; input?: unknown; id?: string }[];
       stop_reason?: string;
     } | null;
     const bloky = telo?.content ?? [];
@@ -186,6 +218,32 @@ export async function nechEmuPracovat(
     if (telo?.stop_reason === 'pause_turn') {
       await pridej('Pokračuju v hledání.');
       zpravy.push({ role: 'assistant', content: bloky });
+      continue;
+    }
+
+    /**
+     * NAŠE NÁSTROJE. Když si o ně Ema řekne, udělají se a výsledek se jí
+     * vrátí zpátky jako `tool_result` - teprve pak píše odpověď. Nástroj,
+     * který spadne, vrátí větu o tom, co se nepovedlo; běh tím nekončí.
+     */
+    const volani = bloky.filter((b) => b.type === 'tool_use' && nastroje.some((n) => n.definice.name === b.name));
+    if (volani.length > 0) {
+      const vysledky: { type: 'tool_result'; tool_use_id: string; content: string }[] = [];
+      for (const b of volani) {
+        const nastroj = nastroje.find((n) => n.definice.name === b.name);
+        if (!nastroj || !b.id) continue;
+        const vstup = (b.input ?? {}) as Record<string, unknown>;
+        await pridej(nastroj.krok(vstup));
+        const odpovedNastroje = await nastroj
+          .spust(vstup)
+          .catch((err) => {
+            console.error('Ema: nastroj selhal:', err);
+            return 'Tohle se teď nepovedlo uložit.';
+          });
+        vysledky.push({ type: 'tool_result', tool_use_id: b.id, content: odpovedNastroje });
+      }
+      zpravy.push({ role: 'assistant', content: bloky });
+      zpravy.push({ role: 'user', content: vysledky });
       continue;
     }
     if (text) {
