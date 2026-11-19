@@ -308,6 +308,39 @@ export default async function ProjektyPage() {
     { userId: session!.user.id, interni: isInternalRole(session!.user.role) },
   );
 
+  /**
+   * TRACKLIST U KLIENTA (zadání 19. 11. 2026: „a pak by se k němu měli dostat
+   * i v portálu. Přidáme jim nové pole u projektu tracklist").
+   *
+   * Sloupec se nabízí jen firmám, které tracklisty dodávají
+   * (Company.tracklistOdKlienta) - u ostatních by to bylo prázdné pole navíc.
+   * Jeden dotaz na celý přehled, stejně jako u termínů; seznamy jsou krátké
+   * a rozbalený editor je pak hned, bez dalšího načítání.
+   */
+  const tracklisty = company?.tracklistOdKlienta
+    ? await (async () => {
+        const idcka = active.map((p) => String(p.id)).concat(firemniActive.map((p) => String(p.id)));
+        if (idcka.length === 0) return {} as Record<string, { poradi: number; nazevTracku: string; nazevKapitoly: string }[]>;
+        const radky = await prisma.trackProjektu
+          .findMany({
+            where: { caflouProjectId: { in: idcka } },
+            orderBy: { poradi: 'asc' },
+            select: { caflouProjectId: true, poradi: true, nazevTracku: true, nazevKapitoly: true },
+          })
+          .catch(() => [] as { caflouProjectId: string; poradi: number; nazevTracku: string | null; nazevKapitoly: string | null }[]);
+        const mapa: Record<string, { poradi: number; nazevTracku: string; nazevKapitoly: string }[]> = {};
+        for (const id of idcka) mapa[id] = [];
+        for (const r of radky as { caflouProjectId: string; poradi: number; nazevTracku: string | null; nazevKapitoly: string | null }[]) {
+          (mapa[r.caflouProjectId] ??= []).push({
+            poradi: r.poradi,
+            nazevTracku: r.nazevTracku ?? '',
+            nazevKapitoly: r.nazevKapitoly ?? '',
+          });
+        }
+        return mapa;
+      })()
+    : undefined;
+
   // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen
   // u rozpracovanych projektu - u dokoncenych uz nema co ukazovat.
   // Jen klientovo (20. 10. 2026): nase interni poznamky ani nase odskrtnuti
@@ -459,6 +492,7 @@ export default async function ProjektyPage() {
                 schvaleni={schvaleni}
                 progres={progres}
                 doklady={dokladyKlienta}
+                tracklisty={tracklisty}
                 jazyk={jazyk}
                 normostrany={ukazNormostrany}
               />
@@ -505,6 +539,7 @@ export default async function ProjektyPage() {
                 progres={firemniProgres}
                 kontakty={firemniKontakty}
                 doklady={dokladyKlienta}
+                tracklisty={tracklisty}
                 jazyk={jazyk}
                 normostrany={ukazNormostrany}
               />

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { upravNazevTracku } from '@/lib/tracklist';
 import type { Track } from '@/lib/tracklist';
 
 /**
@@ -47,4 +48,67 @@ export async function nactiTracklist(caflouProjectId: string): Promise<Track[]> 
     nazevTracku: r.nazevTracku ?? '',
     nazevKapitoly: r.nazevKapitoly ?? '',
   }));
+}
+
+
+/**
+ * SMÍ TENHLE KLIENT K TRACKLISTU? (zadání 19. 11. 2026: „a pak by se k němu
+ * měli dostat i v portálu").
+ *
+ * Dvě podmínky zároveň: firma to má na kartě zapnuté (Company.tracklistOdKlienta)
+ * a zakázka té firmě opravdu patří. Firma se porovnává stejně jako v přehledu
+ * zakázek - projekty z Caflou vazbu na firmu nemají, jen její jméno textem.
+ */
+export async function klientSmiTracklist(
+  caflouProjectId: string,
+  companyId: string | null | undefined,
+): Promise<boolean> {
+  if (!companyId) return false;
+  const [firma, meta] = await Promise.all([
+    prisma.company
+      .findUnique({ where: { id: companyId }, select: { name: true, tracklistOdKlienta: true } })
+      .catch(() => null),
+    prisma.projectMeta
+      .findUnique({ where: { caflouProjectId }, select: { companyId: true, companyName: true } })
+      .catch(() => null),
+  ]);
+  const smiFirma = (firma as { name: string; tracklistOdKlienta: boolean } | null);
+  if (!smiFirma?.tracklistOdKlienta) return false;
+  const kdo = meta as { companyId: string | null; companyName: string | null } | null;
+  if (!kdo) return false;
+  if (kdo.companyId) return kdo.companyId === companyId;
+  return (
+    Boolean(kdo.companyName) &&
+    kdo.companyName!.trim().toLowerCase() === smiFirma.name.trim().toLowerCase()
+  );
+}
+
+/**
+ * ULOŽÍ CELÝ TRACKLIST NARÁZ. Jedno místo pro obě cesty, kterými teď seznam
+ * přichází - z karty projektu od nás i od klienta (z odkazu v mailu nebo
+ * z jeho přehledu zakázek). Pravidlo o tvaru názvu stopy je tím pádem jedno,
+ * ne tři kopie.
+ */
+export async function ulozTracklist(
+  caflouProjectId: string,
+  tracky: { nazevTracku: string; nazevKapitoly: string }[],
+): Promise<Track[]> {
+  const sMezerami = await generovaniZTextuPovoleno(caflouProjectId);
+  const radky = tracky
+    .map((t) => ({
+      nazevTracku: upravNazevTracku(t.nazevTracku, sMezerami),
+      nazevKapitoly: t.nazevKapitoly.trim(),
+    }))
+    // Úplně prázdné řádky se zahazují; stačí ale vyplněný jeden ze dvou názvů.
+    .filter((t) => t.nazevTracku || t.nazevKapitoly);
+
+  // Celý seznam naráz: staré pryč, nové podle pořadí v poli. Jedna transakce,
+  // takže v půlce uložení nikdo neuvidí poloviční tracklist.
+  await prisma.$transaction([
+    prisma.trackProjektu.deleteMany({ where: { caflouProjectId } }),
+    prisma.trackProjektu.createMany({
+      data: radky.map((t, i) => ({ caflouProjectId, poradi: i + 1, ...t })),
+    }),
+  ]);
+  return nactiTracklist(caflouProjectId);
 }

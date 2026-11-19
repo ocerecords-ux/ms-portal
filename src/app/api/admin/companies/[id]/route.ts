@@ -40,6 +40,8 @@ const schema = z.object({
   cenuUrcujeKlient: z.boolean().optional(),
   fakturujeNaCasti: z.boolean().optional(),
   hudbuDodavaKlient: z.boolean().optional(),
+  /** Tracklist dodává klient taky (19. 11. 2026) - prosba jde v téže výzvě. */
+  tracklistOdKlienta: z.boolean().optional(),
   /** Kdo si u téhle firmy chodí režírovat (12. 10. 2026) - účet, nebo nic. */
   rezieKlientaUserId: z.string().trim().max(100).nullable().optional(),
   /** Pod kterou naši firmu klient patří (12. 10. 2026) - viz lib/naseFirmy.ts. */
@@ -137,6 +139,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               ...(data.cenuUrcujeKlient !== undefined ? { cenuUrcujeKlient: data.cenuUrcujeKlient } : {}),
               ...(data.fakturujeNaCasti !== undefined ? { fakturujeNaCasti: data.fakturujeNaCasti } : {}),
               ...(data.hudbuDodavaKlient !== undefined ? { hudbuDodavaKlient: data.hudbuDodavaKlient } : {}),
+              ...(data.tracklistOdKlienta !== undefined
+                ? { tracklistOdKlienta: data.tracklistOdKlienta }
+                : {}),
               ...(hudbaKlientOd !== undefined ? { hudbaKlientOd } : {}),
               ...(data.rezieKlientaUserId !== undefined
                 ? { rezieKlientaUserId: data.rezieKlientaUserId || null }

@@ -25,6 +25,8 @@ import { initials } from '@/lib/chat';
 import { barvaStavu, kodStavu, nazevStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { HerciBunka } from './HerciBunka';
+import { Tracklist } from './[id]/Tracklist';
+import type { Track } from '@/lib/tracklist';
 import { SeznamTerminu, TlacitkoTerminu } from './TerminyKlienta';
 import type { TerminKlienta } from '@/lib/terminyKlientaServer';
 import { StavProjektuSelect } from './StavProjektuSelect';
@@ -186,6 +188,7 @@ export function ProjectsTable({
   schvaleni,
   progres,
   kontakty,
+  tracklisty,
   jazyk,
   normostrany = true,
 }: {
@@ -260,6 +263,16 @@ export function ProjectsTable({
    * nevykreslí - jsou přehledy, kam doklady nepatří.
    */
   doklady?: Record<string, DokladKlienta[]>;
+  /**
+   * TRACKLIST U KLIENTA (zadání 19. 11. 2026: „přidáme jim nové pole
+   * u projektu tracklist a po stisknutí se rozevře dolů, jako je to
+   * u natáčecího plánu").
+   *
+   * Klíč je ID projektu, hodnota uložené stopy. Bez tohohle propu se sloupec
+   * nevykreslí - nabízí se jen firmám, které tracklisty dodávají
+   * (Company.tracklistOdKlienta).
+   */
+  tracklisty?: Record<string, Track[]>;
 }) {
   const showKontakt = kontakty !== undefined;
   const showTerminy = terminy !== undefined;
@@ -268,6 +281,7 @@ export function ProjectsTable({
   const showDoklady = doklady !== undefined;
   const showSchvaleni = schvaleni !== undefined;
   const showProgres = progres !== undefined;
+  const showTracklist = tracklisty !== undefined;
 
   /**
    * ROZBALENÝ NATÁČECÍ PLÁN (upřesnění 1. 10. 2026: „chci, aby se posunul
@@ -278,10 +292,13 @@ export function ProjectsTable({
    * z přehledu udělaly seznam termínů. Zavírá se týmž tlačítkem.
    */
   const [otevreneTerminy, setOtevreneTerminy] = useState<string | null>(null);
+  /** Rozbalený tracklist - stejné pravidlo jako u plánu: nejvýš jeden. */
+  const [otevrenyTracklist, setOtevrenyTracklist] = useState<string | null>(null);
   const pocetSloupcu =
     6 +
     (showKontakt ? 1 : 0) +
     (showTerminy ? 1 : 0) +
+    (showTracklist ? 1 : 0) +
     (showProgres ? 1 : 0) +
     (showPreposlech ? 1 : 0) +
     (showDoklady ? 1 : 0) +
@@ -319,6 +336,11 @@ export function ProjectsTable({
               {showTerminy && (
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">
                   {prelozit(jazyk, 'projekty.sl.nataceciPlan')}
+                </th>
+              )}
+              {showTracklist && (
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                  {prelozit(jazyk, 'projekty.sl.tracklist')}
                 </th>
               )}
               {showProgres && (
@@ -454,6 +476,20 @@ export function ProjectsTable({
                     />
                   </td>
                 )}
+                {showTracklist && (
+                  <td className="px-4 py-2 align-middle overflow-hidden">
+                    <TlacitkoTracklistu
+                      pocet={tracklisty?.[String(p.id)]?.length ?? 0}
+                      otevreno={otevrenyTracklist === String(p.id)}
+                      jazyk={jazyk}
+                      onPrepnout={() =>
+                        setOtevrenyTracklist((soucasne) =>
+                          soucasne === String(p.id) ? null : String(p.id),
+                        )
+                      }
+                    />
+                  </td>
+                )}
                 {showProgres && (
                   <td className="px-4 py-2 align-middle">
                     <ValecProgresu progres={progres?.[String(p.id)] ?? null} prazdne="—" kompaktni jazyk={jazyk} />
@@ -536,12 +572,67 @@ export function ProjectsTable({
                   </td>
                 </tr>
               )}
+
+              {/* ROZBALENÝ TRACKLIST (19. 11. 2026) - týmž způsobem jako plán:
+                  vlastní řádek přes celou šířku, takže odsune další zakázku
+                  dolů. Editor je TENTÝŽ, jaký máme my na kartě projektu. */}
+              {showTracklist && otevrenyTracklist === String(p.id) && (
+                <tr className="border-t border-line bg-surfaceSoft">
+                  <td colSpan={pocetSloupcu} className="px-4 py-3">
+                    <Tracklist
+                      caflouProjectId={String(p.id)}
+                      nazevProjektu={p.name}
+                      pocatecni={tracklisty?.[String(p.id)] ?? []}
+                      sBrunem={false}
+                    />
+                  </td>
+                </tr>
+              )}
               </Fragment>
             ))}
           </tbody>
         </table>
       </div>
     </div>
+  );
+}
+
+/**
+ * TLAČÍTKO TRACKLISTU V PŘEHLEDU (19. 11. 2026). Vypadá a chová se jako
+ * tlačítko natáčecího plánu vedle - jen místo počtu termínů ukazuje, kolik
+ * stop je vyplněných, a u prázdné zakázky vybízí k vyplnění.
+ */
+function TlacitkoTracklistu({
+  pocet,
+  otevreno,
+  jazyk,
+  onPrepnout,
+}: {
+  pocet: number;
+  otevreno: boolean;
+  jazyk: Jazyk;
+  onPrepnout: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPrepnout}
+      aria-expanded={otevreno}
+      title={prelozit(jazyk, 'projekty.tracklistNapoveda')}
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border border-line bg-surface px-2.5 py-1 text-xs font-heading text-ink cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
+    >
+      <span>
+        {otevreno
+          ? prelozit(jazyk, 'terminy.skrytKratce')
+          : pocet > 0
+            ? prelozit(jazyk, 'terminy.zobrazitKratce')
+            : prelozit(jazyk, 'projekty.tracklistVyplnit')}
+      </span>
+      {pocet > 0 && <span className="shrink-0 tabular-nums text-muted">{pocet}</span>}
+      <span aria-hidden className={`shrink-0 text-[9px] transition-transform ${otevreno ? 'rotate-180' : ''}`}>
+        ▼
+      </span>
+    </button>
   );
 }
 

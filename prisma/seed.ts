@@ -220,6 +220,7 @@ async function main() {
   await sazbaVsemZvukarum();
   await danielJeNaDohodu();
   await vykazyJenKnihyPeterovi();
+  await tracklistOdFiremSHudbou();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1850,6 +1851,31 @@ async function danielJeNaDohodu() {
     console.log(`  na dohodu je ${vysledek.count} uctu (Daniel Vlcek)`);
   } catch (err) {
     console.warn('  priznak "na dohodu" se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * TRACKLIST DODAVAJI FIRMY, KTERE UZ DODAVAJI HUDBU (zadani 19. 11. 2026:
+ * „u klientu Melvil, u kterych mame nastaveno, ze dodavaji hudbu ..., tak nam
+ * posilaji i tracklisty").
+ *
+ * Zapne se jednou u firem, ktere maji zaskrtnute `hudbuDodavaKlient` - tedy
+ * presne u te skupiny, o ktere zadani mluvi. Dal uz to ridi zaskrtavatko na
+ * karte firmy; zadne jmeno v kodu.
+ */
+async function tracklistOdFiremSHudbou() {
+  const ZNAMKA = 'tracklist-od-klienta-start';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.company.updateMany({
+      where: { hudbuDodavaKlient: true },
+      data: { tracklistOdKlienta: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  tracklist od klienta zapnuty u ${vysledek.count} firem`);
+  } catch (err) {
+    console.warn('  priznak "tracklist od klienta" se nepodarilo nastavit:', err);
   }
 }
 

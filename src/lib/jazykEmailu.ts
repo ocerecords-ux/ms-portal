@@ -858,6 +858,35 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
   },
   'mail.hudba.textOtevrit': { cs: 'Hudbu vlozite zde:', en: 'You can add the music here:' },
 
+  /* --- tataz vyzva, kdyz firma dodava i TRACKLIST (19. 11. 2026: „chtel bych
+     o to pozadat v te same notifikaci do mailu") --- */
+  'mail.hudba.odznakOboji': { cs: 'Hudba a tracklist', en: 'Music and tracklist' },
+  'mail.hudba.preheaderOboji': {
+    cs: 'K audioknize {nazev} od vás potřebujeme hudbu a tracklist.',
+    en: 'We need the music and the tracklist for the audiobook {nazev} from you.',
+  },
+  'mail.hudba.vetaOboji': {
+    cs: 'chystáme se natáčet audioknihu {nazev} a potřebovali bychom od vás hudbu, která se k ní má použít, a tracklist — tedy seznam stop s názvy kapitol.',
+    en: 'we are about to record the audiobook {nazev} and we need the music that should go with it, plus the tracklist — the list of tracks with chapter names.',
+  },
+  'mail.hudba.tlacitkoOboji': { cs: 'Vložit hudbu a tracklist', en: 'Add the music and tracklist' },
+  'mail.hudba.tracklistJakNaTo': {
+    cs: 'Tracklist vyplníte na téže stránce: buď ho rovnou vypíšete do tabulky, nebo nahrajete soubor TXT či PDF a portál si z něj seznam přečte. Vrátit se k němu a upravit ho můžete kdykoliv, i u sebe v portálu u téhle zakázky.',
+    en: 'You can fill in the tracklist on the same page: either type it straight into the table, or upload a TXT or PDF file and the portal will read the list from it. You can come back to it and change it at any time, including in the portal under this title.',
+  },
+  'mail.hudba.predmetOboji': {
+    cs: 'Hudba a tracklist k audioknize {nazev}',
+    en: 'Music and tracklist for the audiobook {nazev}',
+  },
+  'mail.hudba.textVetaOboji': {
+    cs: 'chystame se natacet audioknihu {nazev} a potrebovali bychom od vas hudbu, ktera se k ni ma pouzit, a tracklist - tedy seznam stop s nazvy kapitol.',
+    en: 'we are about to record the audiobook {nazev} and we need the music that should go with it, plus the tracklist - the list of tracks with chapter names.',
+  },
+  'mail.hudba.textOtevritOboji': {
+    cs: 'Hudbu i tracklist vlozite zde:',
+    en: 'You can add the music and the tracklist here:',
+  },
+
   // --- smlouva k podpisu (sendContractEmail) ---
   'mail.smlouva.stitek': { cs: 'Smlouva k podpisu', en: 'Contract to sign' },
   'mail.smlouva.preheader': {

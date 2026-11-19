@@ -165,6 +165,17 @@ model Company {
   /// klientovi vyzvu s odkazem, kterym hudbu vlozi sam - viz model VyzvaHudba.
   hudbuDodavaKlient Boolean @default(false)
 
+  /// TRACKLIST DODAVA KLIENT TAKY (zadani 19. 11. 2026: „u klientu Melvil,
+  /// u kterych mame nastaveno, ze dodavaji hudbu a nahravaji ji k nam na
+  /// portal, tak nam posilaji i tracklisty. Chtel bych o to pozadat v te same
+  /// notifikaci do mailu").
+  ///
+  /// Vlastni zaskrtavatko, ne odvozenina z `hudbuDodavaKlient`: hudbu dodava
+  /// vic firem nez tracklist a opacne. Kdyz je zapnute, prida se do vyzvy
+  /// odstavec o tracklistu a klient ho vyplni ve stejnem editoru jako my -
+  /// bud z odkazu v mailu, nebo primo v portale u sve zakazky.
+  tracklistOdKlienta Boolean @default(false)
+
   /// O KOLIK DNI PRED PRVNI FREKVENCI vyzva klientovi odejde. Tri dny jsou
   /// stejny predstih, jaky mame na upozorneni my; u konkretni firmy se da
   /// posunout, kdyz se ukaze, ze jim to nestaci.
@@ -3230,6 +3241,12 @@ model VyzvaHudba {
   /// Kdy klient vlozil prvni skladbu, a kdo to byl.
   vlozenoAt       DateTime?
   vlozilJmeno     String?
+
+  /// Kdy klient naposledy ulozil TRACKLIST a kdo to byl (19. 11. 2026).
+  /// Tracklist sam lezi v TrackProjektu jako ten nas - je to jeden seznam,
+  /// ne klientska kopie. Tohle je jen stopa, odkud prisel.
+  tracklistAt     DateTime?
+  tracklistJmeno  String?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

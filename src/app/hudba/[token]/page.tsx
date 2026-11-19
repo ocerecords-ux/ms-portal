@@ -2,9 +2,11 @@ import { notFound } from 'next/navigation';
 
 import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { nactiTracklist } from '@/lib/tracklistServer';
 import { projektPodleTokenu } from '@/lib/vyzvaHudbaServer';
 
 import { HudbaOdKlienta } from './HudbaOdKlienta';
+import { TracklistOdKlienta } from './TracklistOdKlienta';
 
 /**
  * HUDBA OD KLIENTA - VEŘEJNÁ STRÁNKA (zadání 17. 10. 2026: „měla by jít
@@ -36,7 +38,9 @@ export default async function HudbaOdKlientaPage({ params }: { params: { token: 
         <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-14 w-auto" />
       </header>
 
-      <div className="max-w-2xl mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col gap-6">
+      {/* Širší než dřív (19. 11. 2026): vedle vkládání hudby je tu teď
+          i tabulka tracklistu a ta se do úzkého sloupce nevejde. */}
+      <div className="max-w-4xl mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col gap-6">
         <div>
           <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
             {prelozit(jazyk, 'hudbaKlient.stitek')}
@@ -61,6 +65,21 @@ export default async function HudbaOdKlientaPage({ params }: { params: { token: 
         </div>
 
         <HudbaOdKlienta token={token} jazyk={jazyk} uzVlozeno={Boolean(projekt.vlozenoAt)} />
+
+        {/* TRACKLIST (19. 11. 2026) - jen u firem, které ho dodávají taky.
+            Stejný editor jako máme my, viz TracklistOdKlienta.tsx. */}
+        {projekt.tracklist && (
+          <>
+            <hr className="border-0 border-t border-line m-0" />
+            <TracklistOdKlienta
+              token={token}
+              caflouProjectId={projekt.caflouProjectId}
+              nazevProjektu={projekt.nazevProjektu}
+              pocatecni={await nactiTracklist(projekt.caflouProjectId)}
+              jazyk={jazyk}
+            />
+          </>
+        )}
       </div>
     </main>
   );

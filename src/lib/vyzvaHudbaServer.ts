@@ -116,11 +116,15 @@ export async function posliVyzvu(
   const meta = (await prisma.projectMeta
     .findUnique({
       where: { caflouProjectId },
-      select: { name: true, company: { select: { name: true } }, companyName: true },
+      select: {
+        name: true,
+        company: { select: { name: true, tracklistOdKlienta: true } },
+        companyName: true,
+      },
     })
     .catch(() => null)) as {
     name: string | null;
-    company: { name: string } | null;
+    company: { name: string; tracklistOdKlienta: boolean } | null;
     companyName: string | null;
   } | null;
 
@@ -140,6 +144,8 @@ export async function posliVyzvu(
     firma: meta?.company?.name ?? meta?.companyName ?? null,
     prvniFrekvence: (terminy as { start: Date }[])[0]?.start ?? null,
     odkaz: odkazNaVyzvu(token),
+    // Jedna výzva na obojí (19. 11. 2026) - rozhoduje příznak u firmy.
+    tracklist: meta?.company?.tracklistOdKlienta === true,
   });
   if (!vysledek.sent) return { ok: false, duvod: 'E-mail se nepodařilo odeslat.', duvodKlic: 'hudbaVyzva.duvodMailNeodesel' };
 
@@ -225,6 +231,8 @@ export type ProjektKVyzve = {
   firma: string | null;
   prvniFrekvence: string | null;
   vlozenoAt: string | null;
+  /** Firma dodává i tracklist (19. 11. 2026) - pak je na stránce i editor. */
+  tracklist: boolean;
 };
 
 /** Co veřejná stránka o projektu ukáže. Nic víc se z tokenu dozvědět nedá. */
@@ -237,11 +245,15 @@ export async function projektPodleTokenu(token: string): Promise<ProjektKVyzve |
   const meta = (await prisma.projectMeta
     .findUnique({
       where: { caflouProjectId: vyzva.caflouProjectId },
-      select: { name: true, company: { select: { name: true } }, companyName: true },
+      select: {
+        name: true,
+        company: { select: { name: true, tracklistOdKlienta: true } },
+        companyName: true,
+      },
     })
     .catch(() => null)) as {
     name: string | null;
-    company: { name: string } | null;
+    company: { name: string; tracklistOdKlienta: boolean } | null;
     companyName: string | null;
   } | null;
 
@@ -260,7 +272,27 @@ export async function projektPodleTokenu(token: string): Promise<ProjektKVyzve |
     firma: meta?.company?.name ?? meta?.companyName ?? null,
     prvniFrekvence: (terminy as { start: Date }[])[0]?.start?.toISOString() ?? null,
     vlozenoAt: vyzva.vlozenoAt ? vyzva.vlozenoAt.toISOString() : null,
+    tracklist: meta?.company?.tracklistOdKlienta === true,
   };
+}
+
+/**
+ * ZAPÍŠE, ŽE KLIENT ULOŽIL TRACKLIST (19. 11. 2026). Seznam sám leží
+ * v TrackProjektu jako ten náš - tohle je jen stopa, odkud přišel, ať je
+ * u projektu vidět, že to psal klient a kdy.
+ */
+export async function oznacTracklist(token: string, jmeno: string | null): Promise<void> {
+  try {
+    await prisma.vyzvaHudba.update({
+      where: { token },
+      data: {
+        tracklistAt: new Date(),
+        ...(jmeno?.trim() ? { tracklistJmeno: jmeno.trim() } : {}),
+      },
+    });
+  } catch (err) {
+    console.error('Tracklist od klienta se nepodařilo zapsat:', err);
+  }
 }
 
 /** Zapíše, že klient hudbu vložil. Jméno je nepovinné - stránka ho jen nabízí. */

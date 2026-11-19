@@ -1683,19 +1683,30 @@ export type VyzvaHudbaInput = {
   prvniFrekvence: Date | null;
   odkaz: string;
   jazyk?: Jazyk;
+  /**
+   * FIRMA DODÁVÁ I TRACKLIST (zadání 19. 11. 2026: „chtěl bych o to požádat
+   * v té samé notifikaci do mailu"). Nechodí druhý e-mail - mění se jen pár
+   * vět a tlačítko v tomhle. Rozhoduje Company.tracklistOdKlienta.
+   */
+  tracklist?: boolean;
 };
 
 export function buildVyzvaHudbaHtml(input: VyzvaHudbaInput): string {
   const jazyk = input.jazyk ?? 'cs';
+  const oboji = input.tracklist === true;
   return emailShell({
     jazyk,
-    tag: prelozitEmail(jazyk, 'mail.hudba.stitek'),
-    preheader: prelozitEmailS(jazyk, 'mail.hudba.preheader', { nazev: input.nazevProjektu }),
+    tag: prelozitEmail(jazyk, oboji ? 'mail.hudba.odznakOboji' : 'mail.hudba.stitek'),
+    preheader: prelozitEmailS(
+      jazyk,
+      oboji ? 'mail.hudba.preheaderOboji' : 'mail.hudba.preheader',
+      { nazev: input.nazevProjektu },
+    ),
     body: `
-    <span class="badge">${prelozitEmail(jazyk, 'mail.hudba.odznak')}</span>
+    <span class="badge">${prelozitEmail(jazyk, oboji ? 'mail.hudba.odznakOboji' : 'mail.hudba.odznak')}</span>
     <h2>${escapeHtml(input.nazevProjektu)}</h2>
     <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
-    <p>${prelozitEmailS(jazyk, 'mail.hudba.veta', {
+    <p>${prelozitEmailS(jazyk, oboji ? 'mail.hudba.vetaOboji' : 'mail.hudba.veta', {
       nazev: `<strong>${escapeHtml(input.nazevProjektu)}</strong>`,
     })}</p>
 
@@ -1713,10 +1724,14 @@ export function buildVyzvaHudbaHtml(input: VyzvaHudbaInput): string {
     </table>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.hudba.tlacitko')}</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(
+        jazyk,
+        oboji ? 'mail.hudba.tlacitkoOboji' : 'mail.hudba.tlacitko',
+      )}</a>
     </div>
 
     <p>${prelozitEmail(jazyk, 'mail.hudba.jakNaTo')}</p>
+    ${oboji ? `<p>${prelozitEmail(jazyk, 'mail.hudba.tracklistJakNaTo')}</p>` : ''}
     <p class="small">${prelozitEmail(jazyk, 'mail.hudba.klic')}</p>
   `,
   });
@@ -1730,13 +1745,19 @@ export async function sendVyzvaHudbaEmail(input: VyzvaHudbaInput) {
   const vysledekPosty = await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: prelozitEmailS(jazyk, 'mail.hudba.predmet', { nazev: input.nazevProjektu }),
+    subject: prelozitEmailS(
+      jazyk,
+      input.tracklist ? 'mail.hudba.predmetOboji' : 'mail.hudba.predmet',
+      { nazev: input.nazevProjektu },
+    ),
     text: [
       pozdravPosty(jazyk, input.jmenoPrijemce),
       '',
-      prelozitEmailS(jazyk, 'mail.hudba.textVeta', { nazev: input.nazevProjektu }),
+      prelozitEmailS(jazyk, input.tracklist ? 'mail.hudba.textVetaOboji' : 'mail.hudba.textVeta', {
+        nazev: input.nazevProjektu,
+      }),
       '',
-      prelozitEmail(jazyk, 'mail.hudba.textOtevrit'),
+      prelozitEmail(jazyk, input.tracklist ? 'mail.hudba.textOtevritOboji' : 'mail.hudba.textOtevrit'),
       input.odkaz,
     ].join('\n'),
     html: buildVyzvaHudbaHtml(input),

@@ -38,28 +38,33 @@ export function bezDiakritiky(text: string): string {
 }
 
 /**
- * NÁZEV TRACKU DO PŘEDPISU (zadání 15. 10. 2026: „do mezer mezi slova se musí
- * dát pomlčky. Tzn.: 01_KUCHARI-SMRTI").
+ * NÁZEV TRACKU DO PŘEDPISU.
  *
- * Z názvu tracku se stává název souboru, takže z něj jde pryč diakritika
- * a mezery nahradí pomlčky. Název kapitoly je proti tomu text pro člověka -
- * ten zůstává, jak je napsaný, a s diakritikou jde do tagu.
+ * MEZERY ZŮSTÁVAJÍ (zadání 19. 11. 2026: „odstraň prosím ‚_' a ‚-' a nahraď
+ * je mezerami" → „změň ten vzor takhle"). Do té doby se podle zadání
+ * z 15. 10. 2026 psalo `01_KUCHARI-SMRTI`: podtržítko za číslem a pomlčky
+ * místo mezer. Dnešní tvar je `01 KUCHARI SMRTI` - mezery v názvech souborů
+ * dávno nikde nevadí a tracklist se takhle čte líp.
+ *
+ * DIAKRITIKA JDE PRYČ POŘÁD. Z názvu tracku se stává název souboru a ten
+ * putuje přes cizí systémy, zálohy a FTP, kde háčky a čárky škodí. Název
+ * kapitoly je proti tomu text pro člověka a do tagu jde s diakritikou.
  */
 export function nazevTracku(text: string): string {
-  return bezDiakritiky(text).trim().replace(/\s+/g, '-');
+  return bezDiakritiky(text).replace(/\s+/g, ' ').trim();
 }
 
 /**
- * NÁZEV TRACKU U MODELU, KTERÝ MEZERY NECHÁVÁ (upřesnění 30. 10. 2026 ke vzoru
- * Audiotéky: „ještě jsem upravil vzor: 02_1938 - KAPITOLA 1.").
+ * TOTÉŽ POD STARŠÍM JMÉNEM (vzor Audiotéky, 30. 10. 2026: „ještě jsem upravil
+ * vzor: 02_1938 - KAPITOLA 1.").
  *
- * Pomlčka místo mezery je NAŠE pravidlo; klient, který si soubory pojmenovává
- * jinak, je dostane tak, jak je chce - a to je celý rozdíl mezi touhle funkcí
- * a `nazevTracku`. Diakritika jde pryč v obou případech: ta v názvech souborů
- * dělá škodu bez ohledu na model.
+ * Dokud jsme mezery měnili na pomlčky, byl tohle výjimečný tvar pro firmu,
+ * která si soubory pojmenovává po svém. Od 19. 11. 2026 platí mezery všude,
+ * takže se obě funkce chovají stejně; jméno tu zůstává, aby se nemusela
+ * přepisovat volání, která o výjimku opírají svůj smysl.
  */
 export function nazevTrackuSMezerami(text: string): string {
-  return bezDiakritiky(text).replace(/\s+/g, ' ').trim();
+  return nazevTracku(text);
 }
 
 /**
@@ -88,10 +93,11 @@ export function precislujTracky<T extends { nazevTracku: string }>(seznam: T[]):
 }
 
 /**
- * Který z těch dvou tvarů se u projektu použije. Rozhoduje příznak firmy
- * (Company.tracklistZTextu), ne obrazovka - stejné pravidlo musí platit
- * v prohlížeči i na serveru při ukládání.
+ * Tvar názvu stopy, jak se uloží. Druhý parametr byl rozcestník mezi naším
+ * tvarem s pomlčkami a tvarem Audiotéky s mezerami; od 19. 11. 2026 mají
+ * mezery obě, takže na něm nezáleží. Zůstává, protože ho volající předávají
+ * a jednou se může hodit znovu.
  */
-export function upravNazevTracku(text: string, sMezerami: boolean): string {
-  return sMezerami ? nazevTrackuSMezerami(text) : nazevTracku(text);
+export function upravNazevTracku(text: string, _sMezerami?: boolean): string {
+  return nazevTracku(text);
 }

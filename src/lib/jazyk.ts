@@ -212,6 +212,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // Zkratka do uzkeho sloupce: cesky NS, anglicky SP (standard page).
   'projekty.sl.normostranyZkratka': { cs: 'NS', en: 'SP' },
   'projekty.sl.progresNataceni': { cs: 'Progres natáčení', en: 'Recording progress' },
+  /* Tracklist u klienta v prehledu zakazek (19. 11. 2026). */
+  'projekty.sl.tracklist': { cs: 'Tracklist', en: 'Tracklist' },
+  'projekty.tracklistVyplnit': { cs: 'Vyplnit', en: 'Fill in' },
+  'projekty.tracklistNapoveda': {
+    cs: 'Seznam stop hotové audioknihy — rozbalí se pod zakázkou a rovnou se ukládá',
+    en: 'The track list of the finished audiobook — it opens under the title and saves as you type',
+  },
   'projekty.sl.dokonceni': { cs: 'Dokončení', en: 'Completion' },
   'projekty.sl.vydani': { cs: 'Vydání', en: 'Release' },
   'projekty.sl.kPreposlechu': { cs: 'K přeposlechu', en: 'To proof-listen' },
@@ -481,6 +488,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hudbaKlient.hotovo': {
     cs: 'Hotovo, hudbu už máme. Můžete přidat další, nebo stránku zavřít.',
     en: 'Done, we have the music. You can add more or simply close the page.',
+  },
+  /* Tracklist na verejne strance s hudbou (19. 11. 2026). */
+  'hudbaKlient.tracklistNadpis': { cs: 'Tracklist', en: 'Tracklist' },
+  'hudbaKlient.tracklistPopis': {
+    cs: 'Seznam stop, jak se má hotová audiokniha rozdělit. Můžete ho vypsat rovnou tady, nebo nahrát soubor TXT či PDF — portál si z něj kapitoly přečte. Ukládá se samo a vrátit se k němu můžete kdykoliv.',
+    en: 'The list of tracks the finished audiobook should be split into. You can type it straight in, or upload a TXT or PDF file and the portal will read the chapters from it. It saves as you go and you can come back to it at any time.',
   },
   'hudbaKlient.uzVlozeno': {
     cs: 'Hudbu jsme od vás už dostali. Pokud chcete přidat další skladbu, klidně ji sem vložte.',
@@ -7415,6 +7428,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Three days before the first session the portal sends the client a link to add the music themselves, and we get no reminder. It only applies from the moment you tick it — no invitations go out for books already in progress; we pick the music for those.',
   },
   'firma.hudbaKlientVolba': { cs: 'Hudbu dodává klient', en: 'The client supplies the music' },
+  /* Tracklist od klienta (19. 11. 2026) - prosba jde v teze vyzve jako hudba. */
+  'firma.tracklistKlient': { cs: 'Tracklist od klienta', en: 'Tracklist from the client' },
+  'firma.tracklistKlientVolba': {
+    cs: 'Tracklist dodává klient',
+    en: 'The client supplies the tracklist',
+  },
+  'firma.tracklistKlientHint': {
+    cs: 'Prosba o tracklist se přidá do téže výzvy, která klientovi chodí kvůli hudbě — tedy pár dní před první frekvencí. Klient ho vyplní ve stejném editoru jako my: z odkazu v mailu, nebo u sebe v portálu u té zakázky. Může ho taky nahrát jako TXT nebo PDF.',
+    en: 'The request for the tracklist is added to the same message the client gets about the music — a few days before the first recording day. The client fills it in using the same editor we do: from the link in the email, or in the portal under that title. They can also upload it as TXT or PDF.',
+  },
   'firma.sazba': {
     cs: 'Sazba za normostranu ({mena} bez DPH)',
     en: 'Rate per standard page ({mena} excl. VAT)',
@@ -8459,8 +8482,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'tracklist.pocetStop': { cs: 'Počet tracků', en: 'Number of tracks' },
   'tracklist.vzorNazvu': { cs: 'Vzor názvu tracku', en: 'Track name pattern' },
   'tracklist.vzorPopis': {
-    cs: 'Název tracku bude ve tvaru 01_NAZEV-KNIHY — bez diakritiky, mezery jako pomlčky. Další track by se jmenoval: {priklad}',
-    en: 'The track name has the form 01_BOOK-NAME — no diacritics, spaces become hyphens. The next track would be called: {priklad}',
+    cs: 'Název tracku bude ve tvaru 01 NAZEV KNIHY — bez diakritiky, mezery zůstávají. Další track by se jmenoval: {priklad}',
+    en: 'The track name has the form 01 BOOK NAME — no diacritics, spaces are kept. The next track would be called: {priklad}',
   },
   'tracklist.zalozit': { cs: 'Založit tracky', en: 'Create the tracks' },
   'tracklist.zalozeno': { cs: 'Přibylo {pocet} tracků.', en: '{pocet} tracks added.' },
@@ -8487,6 +8510,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'tracklist.cast': { cs: 'Část {cislo}', en: 'Part {cislo}' },
   'tracklist.vlozitSeznam': { cs: 'Vložit seznam kapitol', en: 'Paste a list of chapters' },
+  /* Tracklist z nahraneho souboru (19. 11. 2026). */
+  'tracklist.nahratSoubor': { cs: 'Nahrát soubor (TXT, PDF)', en: 'Upload a file (TXT, PDF)' },
+  'tracklist.ctuSoubor': { cs: 'Čtu soubor…', en: 'Reading the file…' },
+  'tracklist.zeSouboru': {
+    cs: 'Načteno ze souboru {soubor}. Projděte si to a případně vraťte zpět.',
+    en: 'Loaded from {soubor}. Look it over, or use Undo.',
+  },
+  'tracklist.vSouboruNic': {
+    cs: 'V souboru jsem žádné kapitoly nenašel.',
+    en: 'I could not find any chapters in that file.',
+  },
   'tracklist.vlozitPopis': {
     cs: 'Nalep obsah knihy, jednu kapitolu na řádek. Pořadová čísla na začátku řádků se zahodí, doplní se sama.',
     en: 'Paste the book’s table of contents, one chapter per line. Numbers at the start of the lines are dropped and added back automatically.',

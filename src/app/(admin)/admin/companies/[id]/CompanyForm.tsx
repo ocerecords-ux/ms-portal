@@ -160,6 +160,14 @@ export function CompanyForm({
     company.hudbuDodavaKlient ?? false,
   );
   /**
+   * TRACKLIST DODÁVÁ KLIENT TAKY (zadání 19. 11. 2026: „u klientů Melvil,
+   * u kterých máme nastaveno, že dodávají hudbu ..., tak nám posílají
+   * i tracklisty. Chtěl bych o to požádat v té samé notifikaci do mailu").
+   */
+  const [tracklistOdKlienta, setTracklistOdKlienta] = useState<boolean>(
+    Boolean((company as { tracklistOdKlienta?: boolean }).tracklistOdKlienta),
+  );
+  /**
    * REŽII SI DĚLÁ KLIENT (zadání 12. 10. 2026: „u klienta Jan Melvil si chodí
    * režírovat Veronika González první frekvence vždy sama. Takže já u režie
    * na dálku nejsem").
@@ -257,6 +265,7 @@ export function CompanyForm({
                 cenuUrcujeKlient: dealsAudiobooks ? cenuUrcujeKlient : false,
                 fakturujeNaCasti: naCasti,
                 hudbuDodavaKlient: dealsAudiobooks ? hudbuDodavaKlient : false,
+                tracklistOdKlienta: dealsAudiobooks ? tracklistOdKlienta : false,
                 rezieKlientaUserId: rezieKlientaUserId || null,
                 vydavatelId: vydavatelId || null,
                 mena,
@@ -650,6 +659,22 @@ export function CompanyForm({
                   onChange={(e) => setHudbuDodavaKlient(e.target.checked)}
                 />
                 {t('firma.hudbaKlientVolba')}
+              </label>
+            </AdminField>
+          )}
+
+          {/* TRACKLIST OD KLIENTA (19. 11. 2026). Prosba o něj se přidá do
+              téže výzvy, která jde o hudbu, a klient ho vyplňuje v našem
+              editoru - v odkazu z mailu i u sebe v portálu. */}
+          {dealsAudiobooks && (
+            <AdminField label={t('firma.tracklistKlient')} hint={t('firma.tracklistKlientHint')}>
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input
+                  type="checkbox"
+                  checked={tracklistOdKlienta}
+                  onChange={(e) => setTracklistOdKlienta(e.target.checked)}
+                />
+                {t('firma.tracklistKlientVolba')}
               </label>
             </AdminField>
           )}

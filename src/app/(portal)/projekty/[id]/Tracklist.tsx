@@ -59,16 +59,26 @@ export function Tracklist({
   nazevProjektu,
   pocatecni,
   zTextu = false,
+  apiAdresa,
+  sBrunem = true,
 }: {
   caflouProjectId: string;
   nazevProjektu: string;
   pocatecni: Track[];
   /** Firma má zapnuté generování z textu (Company.tracklistZTextu). */
   zTextu?: boolean;
+  /**
+   * KAM SE UKLÁDÁ (19. 11. 2026). Výchozí je naše cesta přes ID projektu;
+   * klient, který přišel odkazem z mailu, nemá účet a jde přes token své
+   * výzvy. Tatáž tabulka, tentýž editor - jen jiné dveře.
+   */
+  apiAdresa?: string;
+  /** Bruno je náš pomocník - klientovi se okno pod tabulkou neukazuje. */
+  sBrunem?: boolean;
 }) {
   const t = usePreklad();
   const router = useRouter();
-  const adresa = `/api/projekty/${encodeURIComponent(caflouProjectId)}/tracklist`;
+  const adresa = apiAdresa ?? `/api/projekty/${encodeURIComponent(caflouProjectId)}/tracklist`;
   const naRadky = (seznam: Track[]): Radek[] =>
     seznam.map((x) => ({ nazevTracku: x.nazevTracku, nazevKapitoly: x.nazevKapitoly }));
 
@@ -80,6 +90,9 @@ export function Tracklist({
   const [vlozeny, setVlozeny] = useState('');
   const [bezi, setBezi] = useState(false);
   const [ctuText, setCtuText] = useState(false);
+  /** Čtení nahraného TXT/PDF se seznamem kapitol (19. 11. 2026). */
+  const [ctuSoubor, setCtuSoubor] = useState(false);
+  const vstupSouboru = useRef<HTMLInputElement | null>(null);
   /**
    * NEJDELŠÍ STOPA (16. 11. 2026: „samozřejmě bude třeba i rozdělovat na
    * části"). Kapitola delší než tolik normostran se rozpadne na víc stop.
@@ -188,14 +201,16 @@ export function Tracklist({
   }
 
   /**
-   * Název tracku ze vzoru. TVAR JE „01_NÁZEV" (upřesnění 15. 10. 2026) -
-   * číslo napřed, podtržítko, pak název. Tak se jmenují i soubory, takže
-   * se název dá z portálu rovnou zkopírovat do DAW.
+   * Název tracku ze vzoru. TVAR JE „01 NÁZEV" (zadání 19. 11. 2026: „odstraň
+   * prosím ‚_' a ‚-' a nahraď je mezerami" → „změň ten vzor takhle") - číslo
+   * napřed, mezera, pak název. Do 19. 11. 2026 tu bylo podtržítko a pomlčky
+   * mezi slovy. Tak se jmenují i soubory, takže se název dá z portálu rovnou
+   * zkopírovat do DAW.
    */
   function podleVzoru(poradi: number): string {
     const cislo = cisloTracku(poradi);
     const text = vzor.trim();
-    return text ? `${cislo}_${upravNazevTracku(text, zTextu)}` : cislo;
+    return text ? `${cislo} ${upravNazevTracku(text, zTextu)}` : cislo;
   }
 
   /**
@@ -375,18 +390,79 @@ export function Tracklist({
 
   /** Nalepený seznam jde do NÁZVŮ KAPITOL - z obsahu knihy se kopírují ty. */
   function vlozSeznam() {
-    const radky = vlozeny
+    if (!vlozText(vlozeny)) return;
+    setVlozeny('');
+    setVkladani(false);
+  }
+
+  /**
+   * Jeden rozbor pro obě cesty: nalepený text i nahraný soubor. Vrací, jestli
+   * se z textu dalo něco vyčíst - podle toho se pozná, že se má zavřít
+   * políčko, nebo naopak napsat, že v souboru nic nebylo.
+   */
+  function vlozText(text: string): boolean {
+    const radky = text
       .split('\n')
       .map((r) => r.replace(/^\s*\d{1,3}\s*[._)\-]\s*/, '').trim())
       .filter(Boolean);
-    if (radky.length === 0) return;
+    if (radky.length === 0) return false;
     const nove: Radek[] = radky.map((kapitola, i) => ({
       nazevTracku: tracky[i]?.nazevTracku ?? podleVzoru(i + 1),
       nazevKapitoly: kapitola,
     }));
     prepis(precisluj([...nove, ...tracky.slice(radky.length)]));
-    setVlozeny('');
-    setVkladani(false);
+    return true;
+  }
+
+  /**
+   * TRACKLIST Z NAHRANÉHO SOUBORU (zadání 19. 11. 2026: „nebo případně nahrát
+   * textový soubor nebo pdf").
+   *
+   * Soubor se nikam neukládá - přečte se v prohlížeči a do tabulky spadnou
+   * jen řádky, stejně jako u nalepeného seznamu. PDF čte pdf.js, který tu
+   * portál stejně má; konec řádku se bere z `hasEOL`, jinak by z celé stránky
+   * byla jedna věta. Co se vloží, jde vzít zpátky tlačítkem Vrátit zpět.
+   */
+  async function nactiZeSouboru(soubor: File | null | undefined) {
+    if (!soubor) return;
+    setCtuSoubor(true);
+    setChyba(null);
+    setHlaska(null);
+    let adresaPdf: string | null = null;
+    try {
+      let text = '';
+      if (/\.pdf$/i.test(soubor.name) || soubor.type === 'application/pdf') {
+        adresaPdf = URL.createObjectURL(soubor);
+        const pdfjs = await nactiPdfJs();
+        await nastavPdfWorker(pdfjs);
+        const doc = await pdfjs.getDocument({ url: adresaPdf }).promise;
+        const kusy: string[] = [];
+        for (let strana = 1; strana <= doc.numPages; strana += 1) {
+          const obsah = await (await doc.getPage(strana)).getTextContent();
+          const polozky: { str?: string; hasEOL?: boolean }[] = obsah?.items ?? [];
+          for (const polozka of polozky) {
+            kusy.push(polozka.str ?? '');
+            if (polozka.hasEOL) kusy.push('\n');
+          }
+          kusy.push('\n');
+        }
+        text = kusy.join('');
+      } else {
+        text = await soubor.text();
+      }
+      if (!vlozText(text)) {
+        setChyba(t('tracklist.vSouboruNic'));
+        return;
+      }
+      setHlaska(t('tracklist.zeSouboru', { soubor: soubor.name }));
+    } catch (err) {
+      console.error('Cteni tracklistu ze souboru selhalo:', err);
+      setChyba(t('tracklist.cteniNeslo'));
+    } finally {
+      if (adresaPdf) URL.revokeObjectURL(adresaPdf);
+      if (vstupSouboru.current) vstupSouboru.current.value = '';
+      setCtuSoubor(false);
+    }
   }
 
   /** Vrací, jestli se uložení povedlo - podle toho se pozná, že se smí odejít. */
@@ -587,6 +663,23 @@ export function Tracklist({
         >
           {t('tracklist.vlozitSeznam')}
         </button>
+        {/* NAHRÁT SOUBOR (19. 11. 2026) - TXT nebo PDF se seznamem kapitol.
+            Soubor se nikam neukládá, jen se z něj přečtou řádky. */}
+        <button
+          type="button"
+          onClick={() => vstupSouboru.current?.click()}
+          disabled={ctuSoubor}
+          className="font-heading font-semibold text-sm rounded-lg px-3.5 py-2 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent disabled:opacity-50"
+        >
+          {ctuSoubor ? t('tracklist.ctuSoubor') : t('tracklist.nahratSoubor')}
+        </button>
+        <input
+          ref={vstupSouboru}
+          type="file"
+          accept=".txt,.csv,.md,.pdf,text/plain,application/pdf"
+          onChange={(e) => void nactiZeSouboru(e.target.files?.[0])}
+          className="hidden"
+        />
         {/* VRÁTIT ZPĚT místo potvrzovacího tlačítka (19. 11. 2026) - hromadné
             přepsání tabulky se ukládá samo, takže musí jít vzít zpátky. */}
         {zaloha && (
@@ -626,7 +719,9 @@ export function Tracklist({
         )}
       </div>
 
-      {/* BRUNO POD TABULKOU (30. 10. 2026) - hromadná úprava větou. */}
+      {/* BRUNO POD TABULKOU (30. 10. 2026) - hromadná úprava větou. Klientovi
+          se neukazuje: je to náš pomocník u naší práce (19. 11. 2026). */}
+      {sBrunem && (
       <div className="rounded-card border border-line bg-field p-4 flex flex-col gap-3">
         <div className="flex items-center gap-1.5">
           <span className="font-heading font-semibold text-sm text-ink">{t('tracklist.bruno')}</span>
@@ -677,6 +772,7 @@ export function Tracklist({
           </button>
         </div>
       </div>
+      )}
 
       {vkladani && (
         <div className="flex flex-col gap-2 rounded-card border border-line bg-field p-3">
