@@ -72,6 +72,8 @@ export default async function KalendarPage({
      * `solo` se vrátí zaškrtnutí, jaké bylo před kliknutím.
      */
     solo?: string;
+    /** Klouzavý týden (19. 11. 2026) - „1" = týden začíná vybraným dnem. */
+    klouzavy?: string;
     /** „0" = kalendář Porady je vypnutý (zadání 21. 9. 2026). */
     porady?: string;
     /** „0" = kalendář Další schůzky je vypnutý (zadání 23. 9. 2026). */
@@ -145,6 +147,7 @@ export default async function KalendarPage({
 
   // SÓLO (20. 9. 2026) - dočasně svítí jen jeden kalendář, původní výběr
   // zůstává v adrese a vrátí se, jakmile sólo zmizí.
+  const klouzavy = searchParams?.klouzavy === '1';
   const soloZAdresy = (searchParams?.solo ?? '').trim();
   const soloStudio = studios.find((s) => s.id === soloZAdresy) ?? null;
   const soloMimo = soloZAdresy === SOLO_MIMO;
@@ -250,7 +253,13 @@ export default async function KalendarPage({
       return { prvni: d, pocet: 1, mesic: d };
     }
     if (view === 'tyden') {
-      const d = addDays(startOfWeek(anchorLocal), 7 * posun);
+      /**
+       * KLOUZAVÝ TÝDEN (zadání 19. 11. 2026: „aby se mi prolínaly týdny.
+       * Čtvrtek 19. 11. a zároveň bych viděl část dalšího týdne do středy
+       * 25. 11."). Sedm dní od vybraného dne, posun po jednom dni; běžný
+       * režim zůstává ten druhý - týden od pondělí a posun po týdnech.
+       */
+      const d = klouzavy ? addDays(anchorLocal, posun) : addDays(startOfWeek(anchorLocal), 7 * posun);
       return { prvni: d, pocet: 7, mesic: d };
     }
     const m = new Date(anchorLocal.getFullYear(), anchorLocal.getMonth() + posun, 1);
@@ -666,6 +675,7 @@ export default async function KalendarPage({
       puvodniStudioIds={puvodni.map((s) => s.id)}
       puvodniNepritomnost={puvodniNepritomnost}
       solo={solo}
+      klouzavy={klouzavy}
       timezone={tz}
       view={view}
       anchorIso={anchorLocal.toISOString().slice(0, 10)}

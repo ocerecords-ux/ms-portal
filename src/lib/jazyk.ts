@@ -5301,6 +5301,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.jenMoje': { cs: 'Jen moje události', en: 'My events only' },
   'kalendar.jenNataceni': { cs: 'Natáčení', en: 'Recording' },
   'kalendar.jenStrih': { cs: 'Střih', en: 'Editing' },
+  'kalendar.klouzavy': { cs: 'Klouzavý týden', en: 'Rolling week' },
+  'kalendar.klouzavyZapnout': {
+    cs: 'Týden začne dnem, na kterém stojíte, a posouvá se po jednom dni - přes přelom týdne je tak vidět plynule.',
+    en: 'The week starts on the day you are standing on and moves one day at a time, so the turn of the week is visible without a jump.',
+  },
+  'kalendar.klouzavyVypnout': {
+    cs: 'Zpátky na celé týdny od pondělí.',
+    en: 'Back to whole weeks starting on Monday.',
+  },
   'kalendar.jenMojeSolo': { cs: 'Jen moje události (sólo)', en: 'My events only (solo)' },
   'kalendar.soloStitek': { cs: 'SÓLO: {nazev}', en: 'SOLO: {nazev}' },
   'kalendar.soloZpet': { cs: 'zpět na výběr', en: 'back to the selection' },

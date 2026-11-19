@@ -34,6 +34,16 @@ function IkonaMikrofonu() {
   );
 }
 
+/** Klouzavý týden - dva překrývající se pásy, co se posouvají přes sebe. */
+function IkonaKlouzani() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <rect x="1.5" y="3.5" width="8" height="5" rx="1.2" />
+      <rect x="6.5" y="7.5" width="8" height="5" rx="1.2" />
+    </svg>
+  );
+}
+
 function IkonaNuzek() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
@@ -320,6 +330,7 @@ export function CalendarBrowser({
   puvodniStudioIds,
   puvodniNepritomnost,
   solo,
+  klouzavy,
   ja,
   lidiTymu,
 }: {
@@ -327,6 +338,16 @@ export function CalendarBrowser({
   selectedStudioIds: string[];
   timezone: string;
   view: CalendarView;
+  /**
+   * KLOUZAVÝ TÝDEN (zadání 19. 11. 2026: „abych při scrolování dokázal
+   * zastavit obrazovku, aby se mi prolínaly týdny. Čtvrtek 19. 11. a zároveň
+   * bych viděl část dalšího týdne do středy 25. 11.").
+   *
+   * Vypnuto (výchozí): týden začíná v pondělí a roluje se po celých týdnech.
+   * Zapnuto: týden začíná tím dnem, na kterém zrovna stojíš, a posouvá se
+   * po jednom dni - takže přes přelom týdne je vidět plynule.
+   */
+  klouzavy: boolean;
   anchorIso: string;
   days: CalendarDay[];
   /**
@@ -939,9 +960,12 @@ export function CalendarBrowser({
       porady: puvodniPorady ? '1' : '0',
       schuzky: puvodniSchuzky ? '1' : '0',
       solo,
+      klouzavy: klouzavy ? '1' : '0',
       ...zmeny,
     });
     if (!params.get('solo')) params.delete('solo');
+    // Výchozí stav se do adresy nepíše - odkaz na kalendář má zůstat krátký.
+    if (params.get('klouzavy') !== '1') params.delete('klouzavy');
     return `/kalendar?${params.toString()}`;
   }
 
@@ -953,7 +977,8 @@ export function CalendarBrowser({
   function datumPosunu(smer: -1 | 1): string {
     const d = new Date(`${anchorIso}T12:00:00.000Z`);
     if (view === 'den') d.setUTCDate(d.getUTCDate() + smer);
-    else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + 7 * smer);
+    // V klouzavém týdnu se posouvá po jednom dni - o to tu jde.
+    else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + (klouzavy ? 1 : 7) * smer);
     else d.setUTCMonth(d.getUTCMonth() + smer);
     return d.toISOString().slice(0, 10);
   }
@@ -1057,7 +1082,7 @@ export function CalendarBrowser({
     prepisujeme.current = false;
     return () => cancelAnimationFrame(snimek);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, klouzavy, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
 
   // Když se okno zvětší nebo zmenší, prostřední období musí zůstat prostřední.
   useEffect(() => {
@@ -1109,7 +1134,7 @@ export function CalendarBrowser({
     // Závislosti musí obsahovat všechno, z čeho se skládá adresa - jinak by
     // posluchač držel starý výběr studií a švihnutí by ho vrátilo zpátky.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, klouzavy, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
 
   /** Šipky: stejný pohyb, jen ho rozjede prohlížeč sám a plynule. */
   function posun(smer: -1 | 1) {
@@ -1124,7 +1149,7 @@ export function CalendarBrowser({
     router.prefetch(adresa({ datum: datumPosunu(-1) }));
     router.prefetch(adresa({ datum: datumPosunu(1) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, klouzavy, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
 
   const nadpis = useMemo(() => {
     // Datum se bere z klíče sloupce, ne z jeho půlnoci - viz poledneDne.
@@ -1570,6 +1595,24 @@ export function CalendarBrowser({
           <IkonaNuzek />
           {t('kalendar.jenStrih')}
         </button>
+        {/* KLOUZAVÝ TÝDEN (19. 11. 2026) - jen u týdenního pohledu, jinde nedává
+            smysl: den je jeden a měsíc se po dnech neposouvá. */}
+        {view === 'tyden' && (
+          <button
+            type="button"
+            onClick={() => prejdi({ klouzavy: klouzavy ? '0' : '1' })}
+            aria-pressed={klouzavy}
+            title={klouzavy ? t('kalendar.klouzavyVypnout') : t('kalendar.klouzavyZapnout')}
+            className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
+              klouzavy
+                ? 'border-brand-purple text-brand-purple bg-tint'
+                : 'border-line text-muted hover:text-ink'
+            }`}
+          >
+            <IkonaKlouzani />
+            {t('kalendar.klouzavy')}
+          </button>
+        )}
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}
