@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { usePreklad, useJazyk } from '@/app/(portal)/components/JazykProvider';
 import { popisTerminu, stavNataceni, type StavNataceni } from '@/lib/frekvenceProjektu';
@@ -56,6 +57,16 @@ export function OdznakFrekvenci({
   const [nacitam, setNacitam] = useState(false);
   const nacteno = useRef(false);
   const obal = useRef<HTMLSpanElement | null>(null);
+  /**
+   * OKÉNKO SE KRESLÍ MIMO TABULKU (oprava 19. 11. 2026: „když kliknu na seznam
+   * frekvencí, tak je to schované v nějakém okně").
+   *
+   * Absolutně umístěná bublina uvnitř řádku se ořezávala o jeho okraj - ze
+   * šesti frekvencí byly vidět dvě. Teď se vykresluje do <body> a drží se
+   * u ikony podle jejích souřadnic, takže ji nemá co useknout.
+   */
+  const bublina = useRef<HTMLSpanElement | null>(null);
+  const [misto, setMisto] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (!otevreno || nacteno.current) return;
@@ -83,7 +94,10 @@ export function OdznakFrekvenci({
   useEffect(() => {
     if (!otevreno) return;
     function vedle(e: MouseEvent) {
-      if (!obal.current?.contains(e.target as Node)) setOtevreno(false);
+      const cil = e.target as Node;
+      // Bublina je mimo obal (vykresluje se do <body>), musí se ptát obojího.
+      if (obal.current?.contains(cil) || bublina.current?.contains(cil)) return;
+      setOtevreno(false);
     }
     function klavesa(e: KeyboardEvent) {
       if (e.key === 'Escape') setOtevreno(false);
@@ -95,6 +109,36 @@ export function OdznakFrekvenci({
       document.removeEventListener('keydown', klavesa);
     };
   }, [otevreno]);
+
+  /** Spočítá, kam bublinu postavit - a drží ji tam při rolování i zvětšení okna. */
+  useLayoutEffect(() => {
+    if (!otevreno) {
+      setMisto(null);
+      return;
+    }
+    const spocitej = () => {
+      const el = obal.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const sirka = bublina.current?.offsetWidth ?? 300;
+      const vyska = bublina.current?.offsetHeight ?? 0;
+      // Vpravo u kraje se bublina zarovná doleva, dole se překlopí nad ikonu.
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - sirka - 8));
+      const podIkonou = r.bottom + 4;
+      const top = vyska > 0 && podIkonou + vyska > window.innerHeight - 8 ? Math.max(8, r.top - vyska - 4) : podIkonou;
+      setMisto({ top, left });
+    };
+    spocitej();
+    // Druhý průchod, až je bublina vykreslená a zná svoji velikost.
+    const snimek = requestAnimationFrame(spocitej);
+    window.addEventListener('scroll', spocitej, true);
+    window.addEventListener('resize', spocitej);
+    return () => {
+      cancelAnimationFrame(snimek);
+      window.removeEventListener('scroll', spocitej, true);
+      window.removeEventListener('resize', spocitej);
+    };
+  }, [otevreno, rozpis.length, nacitam]);
 
   const termin = new Date(prvni);
   // Starší volající `zacatek` neposílá - pak se bere nejbližší termín jako
@@ -145,9 +189,18 @@ export function OdznakFrekvenci({
           <path d="M3 10h18M8 3v4M16 3v4" />
         </svg>
       </button>
-      {otevreno && (
+      {otevreno &&
+        typeof document !== 'undefined' &&
+        createPortal(
         <span
-          className={`absolute z-30 top-[calc(100%+4px)] left-0 max-w-[88vw] bg-surface border border-line rounded-card shadow-lg p-3.5 text-left block cursor-default ${
+          ref={bublina}
+          style={{
+            top: misto?.top ?? -9999,
+            left: misto?.left ?? -9999,
+            // Dokud se místo nespočítá, bublina se nesmí mihnout v rohu.
+            visibility: misto ? 'visible' : 'hidden',
+          }}
+          className={`fixed z-[60] max-w-[88vw] max-h-[70vh] overflow-y-auto bg-surface border border-line rounded-card shadow-lg p-3.5 text-left block cursor-default ${
             rozpis.length > 1 ? 'w-[460px]' : 'w-[290px]'
           }`}
         >
@@ -207,8 +260,9 @@ export function OdznakFrekvenci({
           {!nacitam && rozpis.length === 0 && (
             <span className="block text-xs font-body text-muted mt-2">{t('frekvence.zadneTerminy')}</span>
           )}
-        </span>
-      )}
+        </span>,
+          document.body,
+        )}
     </span>
   );
 }
