@@ -116,6 +116,8 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
    * jeho přehled o tom, co v portálu přibylo. Píše je Žůžo-labůžo.
    */
   '/novinky': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
+  // PR a komunikace - sekce Emy Piarove (19. 11. 2026). Interni agenda.
+  '/pr': ['ADMIN', 'PRODUKCE'],
   // Palubovka - budiky, podle kterych Ondrej ridi firmu (zadani 27. 9. 2026:
   // „vidim jen ja"). Role je jen prvni zamek; druhy je priznak vidiPalubovku
   // na karte uzivatele, ktery kontroluje sama stranka.
@@ -220,6 +222,8 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   // panel") - sekce v PAGE_ACCESS byla, ale v nabídce pod „+ Přidat stránku"
   // chyběla, takže si ji nikdo do lišty dostat nemohl.
   { href: '/novinky', label: 'Novinky' },
+  // PR a komunikace (19. 11. 2026) - kdo kampane resi, prida si odkaz sam.
+  { href: '/pr', label: 'PR' },
 ];
 
 /** Vychozi (napevno zadana) navigace pro danou roli. */

@@ -6019,3 +6019,105 @@ model PokladniDoklad {
   @@index([pokladnaId, datum])
   @@index([expenseId])
 }
+
+/// ===========================================================================
+/// PR A KOMUNIKACE - EMA (zadani 19. 11. 2026: „chci ji ovladat z MS portalu
+/// a videt, co tam dela").
+///
+/// Ema Piarova je agentka pro PR. V portalu ma vlastni sekci: kampane, v nich
+/// zadani a jeji vystupy, a seznam medii se stavem, jak daleko jsme s kym.
+///
+/// JEDEN SEZNAM MEDII NA KAMPAN, ne v hlave. Dva lide tak nenapisou temuz
+/// redaktorovi dvakrat a je videt, co uz odeslo a co se vratilo.
+/// ===========================================================================
+model PrKampan {
+  id        String   @id @default(cuid())
+  nazev     String
+  /// O co v kampani jde - tema, hoste, cil. Chodi Eme do zadani.
+  brief     String?  @db.Text
+  /// ROZPRACOVANA | BEZI | HOTOVA | ODLOZENA
+  stav      String   @default("ROZPRACOVANA")
+  /// Volitelna vazba na zakazku v portalu (title, ke kteremu kampan patri).
+  caflouProjectId String?
+  zalozilId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ukoly PrUkol[]
+  media PrMedium[]
+
+  @@index([stav])
+}
+
+/// Jedno zadani pro Emu a jeji vystup. Historie zustava cela - podle ni se da
+/// zpetne rict, co kdo chtel a co Ema vratila.
+model PrUkol {
+  id       String   @id @default(cuid())
+  kampanId String
+  kampan   PrKampan @relation(fields: [kampanId], references: [id], onDelete: Cascade)
+
+  zadani String @db.Text
+  /// CEKA | BEZI | HOTOVO | CHYBA
+  stav   String @default("CEKA")
+
+  /// Co Ema vratila (markdown). Prazdne, dokud bezi.
+  vystup String? @db.Text
+  chyba  String?
+
+  /// Co prave dela - radky prubehu, at je videt, ze se neco deje.
+  /// Pole textu v JSON; zapisuje se prubezne behem behu.
+  kroky Json?
+
+  /// Kolik si vyzadala hledani na webu - at je videt, co ukol stal.
+  hledani Int @default(0)
+  model   String?
+
+  zadalId  String?
+  createdAt DateTime @default(now())
+  hotovoAt  DateTime?
+
+  @@index([kampanId, createdAt])
+}
+
+/// Jedno medium v kampani: porad, rubrika nebo redaktor a jak daleko jsme.
+model PrMedium {
+  id       String   @id @default(cuid())
+  kampanId String
+  kampan   PrKampan @relation(fields: [kampanId], references: [id], onDelete: Cascade)
+
+  nazev   String
+  /// PODCAST | TV | RADIO | TISK | WEB | JINE
+  druh    String  @default("JINE")
+  kontakt String?
+  odkaz   String?
+  /// Proc se tam tema hodi - Emin duvod, ne vycucane z prstu.
+  duvod   String? @db.Text
+  /// Ema oznacila kontakt jako obecny nebo neovereny.
+  overeno Boolean @default(false)
+
+  /// NAVRH | NABIDNUTO | ODPOVEDELI | VYSLO | ODMITNUTO
+  stav String @default("NAVRH")
+
+  /// Pripraveny mail k tomuhle mediu.
+  predmet   String?
+  textMailu String? @db.Text
+
+  /// Co uz odeslo - portal nic sam neposila, zapisuje se po odkliknuti.
+  odeslanoAt DateTime?
+  odeslalId  String?
+  poznamka   String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kampanId, stav])
+}
+
+/// Stale podklady pro Emu (19. 11. 2026) - kdo jsme, tón komunikace, hotové
+/// tituly. Patri cele firme, ne jedne kampani, takze to lezi zvlast; upravuje
+/// se v sekci PR. Jeden radek, stejne jako Brunova prirucka.
+model EmaPodklady {
+  id        String   @id @default("default")
+  text      String   @db.Text
+  updatedAt DateTime @updatedAt
+}
