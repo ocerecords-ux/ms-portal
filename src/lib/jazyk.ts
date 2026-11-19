@@ -5602,6 +5602,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'porady.nadpisNovaSchuzka': { cs: 'Nová schůzka', en: 'New appointment' },
   'porady.nazev': { cs: 'Název', en: 'Name' },
   'porady.nazevPlaceholder': { cs: 'Porada produkce', en: 'Production meeting' },
+  'porady.nazevPlaceholderSchuzka': { cs: 'Schůzka s klientem', en: 'Meeting with a client' },
   'porady.zacatekRady': { cs: 'Začátek řady', en: 'Start of the series' },
   'porady.den': { cs: 'Den', en: 'Day' },
   'porady.od': { cs: 'Od', en: 'From' },
@@ -5615,9 +5616,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Kdo je na poradě {tise}· uvidí ji jen oni',
     en: 'Who is in the meeting {tise}· only they can see it',
   },
+  // U schůzky NE „uvidí ji jen oni" (19. 11. 2026): schůzky vidí celá
+  // produkce, zaškrtnutí rozhoduje jen o tom, komu o ní přijde zpráva.
+  'porady.kdoJeNaSchuzce': {
+    cs: 'Kdo je na schůzce {tise}· těm o ní přijde zpráva',
+    en: 'Who is at the appointment {tise}· they get a message about it',
+  },
   'porady.zakladatelVzdy': {
     cs: 'Na poradě, kterou zakládáte, jste vždycky',
     en: 'You are always in a meeting you set up yourself',
+  },
+  'porady.zakladatelVzdySchuzka': {
+    cs: 'Na schůzce, kterou zakládáte, jste vždycky',
+    en: 'You are always at an appointment you set up yourself',
   },
   'porady.jaZavorka': { cs: '{jmeno} (já)', en: '{jmeno} (me)' },
   'porady.opakovani': { cs: 'Opakování', en: 'Repeat' },
@@ -5644,6 +5655,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'porady.ulozitCelouRadu': { cs: 'Uložit celou řadu', en: 'Save the whole series' },
   'porady.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
   'porady.zalozitPoradu': { cs: 'Založit poradu', en: 'Set up the meeting' },
+  'porady.zalozitSchuzku': { cs: 'Založit schůzku', en: 'Set up the appointment' },
   'porady.opravduZrusitVyskyt': {
     cs: 'Opravdu zrušit tento termín?',
     en: 'Really cancel this occurrence?',

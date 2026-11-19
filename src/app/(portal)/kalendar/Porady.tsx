@@ -34,6 +34,11 @@ const KLICE_OPAKOVANI: Record<Opakovani, string> = {
 const casZMinut = (min: number) =>
   `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
+const minutyZCasu = (cas: string): number => {
+  const [h, m] = cas.split(':').map((c) => Number(c));
+  return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 0;
+};
+
 /**
  * OKNO PORADY (zadání 21. 9. 2026: „chci udělat poradu Já a Karolína, tak
  * když vytvářím událost, dám tam jen nás dva a vidíme to pak jen my").
@@ -109,7 +114,11 @@ export function PoradaForm({
    * a rozdělí se až tady - v angličtině může značka stát ve větě jinde
    * (pravidlo 7 v docs/preklad-portalu.md).
    */
-  const kdoJeNaPorade = prelozitKolem(jazyk, 'porady.kdoJeNaPorade', 'tise');
+  const kdoJeNaPorade = prelozitKolem(
+    jazyk,
+    druh === 'SCHUZKA' ? 'porady.kdoJeNaSchuzce' : 'porady.kdoJeNaPorade',
+    'tise',
+  );
   const opakovatDoPopisek = prelozitKolem(jazyk, 'porady.opakovatDo', 'tise');
   const odkazPopisek = prelozitKolem(jazyk, 'porady.odkazVideo', 'tise');
   const poznamkaPopisek = prelozitKolem(jazyk, 'porady.poznamka', 'tise');
@@ -201,7 +210,7 @@ export function PoradaForm({
           autoFocus={!upravovana}
           value={nazev}
           onChange={(e) => setNazev(e.target.value)}
-          placeholder={t('porady.nazevPlaceholder')}
+          placeholder={t(druh === 'SCHUZKA' ? 'porady.nazevPlaceholderSchuzka' : 'porady.nazevPlaceholder')}
           className={inputClass}
         />
       </label>
@@ -220,7 +229,25 @@ export function PoradaForm({
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">{t('porady.od')}</span>
-          <input type="time" step={900} value={casOd} onChange={(e) => setCasOd(e.target.value)} className={`${inputClass} tabular-nums`} />
+          {/* POSUN ZAČÁTKU POSUNE I KONEC (oprava 19. 11. 2026: „nerozumím, co
+              mám špatně"). Když se přepsal začátek na pozdější čas než konec,
+              okno jen vyhubovalo „konec musí být po začátku" a čekalo, až si
+              člověk domyslí, že má přepsat i druhé políčko. Teď se konec
+              posune sám a délka schůzky zůstane, jak byla - stejně jako to
+              dělá každý kalendář. */}
+          <input
+            type="time"
+            step={900}
+            value={casOd}
+            onChange={(e) => {
+              const novy = e.target.value;
+              if (!novy) return;
+              const delka = Math.max(15, minutyZCasu(casDo) - minutyZCasu(casOd));
+              setCasOd(novy);
+              setCasDo(casZMinut(Math.min(23 * 60 + 45, minutyZCasu(novy) + delka)));
+            }}
+            className={`${inputClass} tabular-nums`}
+          />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">{t('porady.do')}</span>
@@ -244,7 +271,11 @@ export function PoradaForm({
               vybrano={ucastnici.includes(l.id)}
               onZmena={() => prepni(l.id)}
               disabled={l.id === ja.id}
-              title={l.id === ja.id ? t('porady.zakladatelVzdy') : undefined}
+              title={
+                l.id === ja.id
+                  ? t(druh === 'SCHUZKA' ? 'porady.zakladatelVzdySchuzka' : 'porady.zakladatelVzdy')
+                  : undefined
+              }
             >
               {l.id === ja.id ? t('porady.jaZavorka', { jmeno: l.label }) : l.label}
             </Volba>
@@ -311,7 +342,7 @@ export function PoradaForm({
               ? opakovana
                 ? t('porady.ulozitCelouRadu')
                 : t('porady.ulozitZmeny')
-              : t('porady.zalozitPoradu')}
+              : t(druh === 'SCHUZKA' ? 'porady.zalozitSchuzku' : 'porady.zalozitPoradu')}
         </button>
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
           {t('obecne.zpet')}
