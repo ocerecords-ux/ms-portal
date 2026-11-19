@@ -289,6 +289,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // a od kdy to platí - zpětně se výzvy neposílají.
           hudbuDodavaKlient: true,
           hudbaKlientOd: true,
+          // Tracklist dodává klient taky (19. 11. 2026) - podle toho se na
+          // záložce Tracklist ukáže panel s výzvou.
+          tracklistOdKlienta: true,
         },
       })
     : zSeznamu?.caflouCompanyId
@@ -305,6 +308,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           audioknihyNaKlic: true,
           hudbuDodavaKlient: true,
           hudbaKlientOd: true,
+          // Tracklist dodává klient taky (19. 11. 2026) - podle toho se na
+          // záložce Tracklist ukáže panel s výzvou.
+          tracklistOdKlienta: true,
         },
         })
       : null;
