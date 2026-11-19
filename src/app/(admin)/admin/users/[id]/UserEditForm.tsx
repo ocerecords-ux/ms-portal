@@ -49,6 +49,8 @@ type EditableUser = {
   photoUrl: string | null;
   hourlyRate: number | null;
   mzdyEmail: string | null;
+  /** Je na dohodu (true), nebo nám fakturuje (false) - zadání 17. 11. 2026. */
+  naDohodu: boolean;
   /** Které naše firmy vidí v Dokladech (12. 10. 2026); prázdné = všechny. */
   viditelneFirmy: string[];
   /** Firmy navíc, za které klient smí vystupovat (15. 10. 2026). */
@@ -157,6 +159,12 @@ export function UserEditForm({
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [mzdyEmail, setMzdyEmail] = useState(user.mzdyEmail ?? '');
+  /**
+   * FAKTURUJE / NA DOHODU (zadání 17. 11. 2026: „tady bych dal rozlišení
+   * lidí v týmu, kteří fakturují a kteří jsou na dohodu"). Pole pro mzdovou
+   * účetní se ukazuje jen u dohody.
+   */
+  const [naDohodu, setNaDohodu] = useState(user.naDohodu ?? false);
   const [podilNaObratu, setPodilNaObratu] = useState(String(user.podilNaObratu ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
   /** Do kterých sekcí ten člověk smí (28. 9. 2026). */
@@ -314,7 +322,10 @@ export function UserEditForm({
         // Sazba se uklada i tomu, kdo jen obcas toci - pole se mu od
         // 17. 11. 2026 nabizi, takze by jinak odeslani zahodilo, co vyplnil.
         if (role === 'ZVUKAR' || takyZvukar) fd.set('hourlyRate', hourlyRate);
-        if (role === 'ZVUKAR') fd.set('mzdyEmail', mzdyEmail);
+        if (isMediaspace) fd.set('naDohodu', naDohodu ? '1' : '0');
+        // Kdo fakturuje, nemá kam posílat podklady pro mzdy - pole se mu
+        // neukazuje, takže se při přepnutí na „Fakturuje" vyprázdní.
+        if (isMediaspace) fd.set('mzdyEmail', naDohodu ? mzdyEmail : '');
         if (isMediaspace) fd.set('podilNaObratu', podilNaObratu);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
@@ -542,11 +553,45 @@ export function UserEditForm({
             </AdminField>
           </div>
         )}
+        {/* FAKTURUJE / NA DOHODU (zadání 17. 11. 2026). Dvě tlačítka místo
+            zaškrtávátka, ať je na kartě hned vidět, co platí. Jediný zvukař
+            na dohodu je Daniel Vlček - v kódu ale žádná jména nejsou,
+            drží se to na kartě člověka. */}
+        {zalozka === 'UDAJE' && isMediaspace && (
+          <div className="flex-1 min-w-[220px]">
+            <AdminField label={t('uzivatel.poleOdmenovani')} hint={t('uzivatel.odmenovaniHint')}>
+              <div role="radiogroup" className="flex gap-2">
+                {[
+                  { dohoda: false, nazev: t('uzivatel.odmenovaniFakturuje') },
+                  { dohoda: true, nazev: t('uzivatel.odmenovaniDohoda') },
+                ].map((moznost) => {
+                  const jeTo = naDohodu === moznost.dohoda;
+                  return (
+                    <button
+                      key={String(moznost.dohoda)}
+                      type="button"
+                      role="radio"
+                      aria-checked={jeTo}
+                      onClick={() => setNaDohodu(moznost.dohoda)}
+                      className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
+                        jeTo
+                          ? 'border-brand-green bg-brand-green text-onAccent'
+                          : 'border-line bg-surface text-ink hover:border-brand-green'
+                      }`}
+                    >
+                      {moznost.nazev}
+                    </button>
+                  );
+                })}
+              </div>
+            </AdminField>
+          </div>
+        )}
         {/* PODKLAD PRO MZDOVOU ÚČETNÍ (zadání 12. 10. 2026: „Daniel Vlček je
             na dohodu, takže bych potřeboval, aby to šlo rovnou na mzdovou
             účetní"). Drží se u člověka, ne natvrdo v kódu - lidí na dohodu
-            přibývá a účetní se mění. */}
-        {zalozka === 'UDAJE' && role === 'ZVUKAR' && (
+            přibývá a účetní se mění. Kdo fakturuje, pole nemá (17. 11. 2026). */}
+        {zalozka === 'UDAJE' && isMediaspace && naDohodu && (
           <div className="flex-1 min-w-[260px]">
             <AdminField label={t('uzivatel.poleMzdyEmail')} hint={t('uzivatel.mzdyEmailHint')}>
               <input

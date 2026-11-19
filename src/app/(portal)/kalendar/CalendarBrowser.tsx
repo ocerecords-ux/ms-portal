@@ -1997,6 +1997,26 @@ function MrizkaPohled({
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: pasmoMrizky }).format(new Date());
   const rolovatko = useRef<HTMLDivElement | null>(null);
   const vodorovne = useRef<HTMLDivElement | null>(null);
+  /**
+   * KLOUZAVÝ PÁS NA MOBILU NA VÝŠKU (zadání 19. 11. 2026: „na mobilu v tom
+   * klouzavém režimu, když mám mobil na výšku, nech jen tři dny ... tak jak
+   * je to v neklouzavém"). Celý týden na úzkém displeji byl nečitelný -
+   * sloupce jsou tu teď stejně široké jako v běžném týdnu.
+   */
+  const [uzkyDisplej, setUzkyDisplej] = useState(false);
+  useEffect(() => {
+    const dotaz = window.matchMedia?.('(max-width: 640px)');
+    if (!dotaz) return;
+    const srovnej = () => setUzkyDisplej(dotaz.matches);
+    srovnej();
+    dotaz.addEventListener('change', srovnej);
+    return () => dotaz.removeEventListener('change', srovnej);
+  }, []);
+  const dniNaSirku = dniNaObrazovku
+    ? uzkyDisplej
+      ? Math.min(3, dniNaObrazovku)
+      : dniNaObrazovku
+    : undefined;
   // Novy tyden v mobilu: vpred od pondeli, zpet od nedele.
   // Pri otevreni (a v tydnu s dneskem) se v mobilu ukaze dnesek.
   const prvniDen = days[0]?.key;
@@ -2009,7 +2029,7 @@ function MrizkaPohled({
     if (!uzOtevreno.current && iDnes >= 0) {
       const sloupec = (el.scrollWidth - 52) / days.length;
       el.scrollLeft = Math.max(0, iDnes * sloupec);
-    } else if (dniNaObrazovku && days.length > dniNaObrazovku) {
+    } else if (dniNaSirku && days.length > dniNaSirku) {
       /**
        * Klouzavý pás začíná TÝDEN PŘED vybraným dnem, takže se po otevření
        * narolovaná na něj - jinak by se člověk díval do minulosti. Dál už si
@@ -2076,8 +2096,8 @@ function MrizkaPohled({
         <div
           className="min-w-[720px]"
           style={
-            dniNaObrazovku && days.length > dniNaObrazovku
-              ? { minWidth: `${(days.length / dniNaObrazovku) * 100}%` }
+            dniNaSirku && days.length > dniNaSirku
+              ? { minWidth: `${(days.length / dniNaSirku) * 100}%` }
               : undefined
           }
         >
