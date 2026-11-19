@@ -26,7 +26,7 @@ const BARVA_REZIE = '#ef4444';
 /** Mikrofon = natáčení, nůžky = střih. Ikony sedí v tlačítkách filtru druhu práce. */
 function IkonaMikrofonu() {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <rect x="6" y="1.5" width="4" height="8" rx="2" />
       <path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" />
       <path d="M8 12v2.5" />
@@ -37,7 +37,7 @@ function IkonaMikrofonu() {
 /** Klouzavý týden - dva překrývající se pásy, co se posouvají přes sebe. */
 function IkonaKlouzani() {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <rect x="1.5" y="3.5" width="8" height="5" rx="1.2" />
       <rect x="6.5" y="7.5" width="8" height="5" rx="1.2" />
     </svg>
@@ -46,7 +46,7 @@ function IkonaKlouzani() {
 
 function IkonaNuzek() {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <circle cx="4" cy="12" r="2" />
       <circle cx="12" cy="12" r="2" />
       <path d="M5.4 10.6 12.5 2" />
@@ -1249,6 +1249,63 @@ export function CalendarBrowser({
               <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0 1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
             </svg>
           </button>
+          {/* DRUH PRÁCE A KLOUZAVÝ TÝDEN (19. 11. 2026: „ponechme jen ikony
+              filtru natáčení, střih a klouzavý týden a dejme je na tento řádek
+              k ostatním funkcím"). Mezi štítky kalendářů to byly cizí prvky -
+              nejsou to kalendáře, jsou to nástroje nad nimi, stejně jako sólo
+              „jen moje" a celá obrazovka. */}
+          <button
+            type="button"
+            onClick={() => jenTentoKalendar(SOLO_NATACENI)}
+            aria-pressed={solo === SOLO_NATACENI}
+            aria-label={t('kalendar.jenNataceni')}
+            title={
+              solo === SOLO_NATACENI
+                ? t('kalendar.zpetNaVyber')
+                : t('kalendar.docasneJen', { nazev: t('kalendar.jenNataceni') })
+            }
+            className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border transition-colors ${
+              solo === SOLO_NATACENI
+                ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
+                : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+            }`}
+          >
+            <IkonaMikrofonu />
+          </button>
+          <button
+            type="button"
+            onClick={() => jenTentoKalendar(SOLO_STRIH)}
+            aria-pressed={solo === SOLO_STRIH}
+            aria-label={t('kalendar.jenStrih')}
+            title={
+              solo === SOLO_STRIH
+                ? t('kalendar.zpetNaVyber')
+                : t('kalendar.docasneJen', { nazev: t('kalendar.jenStrih') })
+            }
+            className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border transition-colors ${
+              solo === SOLO_STRIH
+                ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
+                : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+            }`}
+          >
+            <IkonaNuzek />
+          </button>
+          {view === 'tyden' && (
+            <button
+              type="button"
+              onClick={() => prejdi({ klouzavy: klouzavy ? '0' : '1' })}
+              aria-pressed={klouzavy}
+              aria-label={t('kalendar.klouzavy')}
+              title={klouzavy ? t('kalendar.klouzavyVypnout') : t('kalendar.klouzavyZapnout')}
+              className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border transition-colors ${
+                klouzavy
+                  ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
+                  : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+              }`}
+            >
+              <IkonaKlouzani />
+            </button>
+          )}
           {/* CELÁ OBRAZOVKA (25. 9. 2026) - vedle sóla, ať je po ruce
               a nepřekáží. */}
           <button
@@ -1556,65 +1613,6 @@ export function CalendarBrowser({
             {nazevSchuzek(t)}
           </button>
         </span>
-        {/* JEN NATÁČENÍ / JEN STŘIHY (19. 11. 2026, připomínka Petera 18. 11.:
-            „na dlhodobé plánovanie dopredu by som potreboval v kalendári
-            vedieť vyfiltrovať zvlášť natáčanie a zvlášť strihy").
-            Nejsou to kalendáře, ale druhy práce - proto jediné tlačítko, které
-            jen sóluje, a ne dvojice vypínač + sólo jako u kalendářů. */}
-        <button
-          type="button"
-          onClick={() => jenTentoKalendar(SOLO_NATACENI)}
-          aria-pressed={solo === SOLO_NATACENI}
-          title={
-            solo === SOLO_NATACENI
-              ? t('kalendar.zpetNaVyber')
-              : t('kalendar.docasneJen', { nazev: t('kalendar.jenNataceni') })
-          }
-          className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
-            solo === SOLO_NATACENI
-              ? 'border-brand-purple text-brand-purple bg-tint'
-              : 'border-line text-muted hover:text-ink'
-          }`}
-        >
-          <IkonaMikrofonu />
-          {t('kalendar.jenNataceni')}
-        </button>
-        <button
-          type="button"
-          onClick={() => jenTentoKalendar(SOLO_STRIH)}
-          aria-pressed={solo === SOLO_STRIH}
-          title={
-            solo === SOLO_STRIH
-              ? t('kalendar.zpetNaVyber')
-              : t('kalendar.docasneJen', { nazev: t('kalendar.jenStrih') })
-          }
-          className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
-            solo === SOLO_STRIH
-              ? 'border-brand-purple text-brand-purple bg-tint'
-              : 'border-line text-muted hover:text-ink'
-          }`}
-        >
-          <IkonaNuzek />
-          {t('kalendar.jenStrih')}
-        </button>
-        {/* KLOUZAVÝ TÝDEN (19. 11. 2026) - jen u týdenního pohledu, jinde nedává
-            smysl: den je jeden a měsíc se po dnech neposouvá. */}
-        {view === 'tyden' && (
-          <button
-            type="button"
-            onClick={() => prejdi({ klouzavy: klouzavy ? '0' : '1' })}
-            aria-pressed={klouzavy}
-            title={klouzavy ? t('kalendar.klouzavyVypnout') : t('kalendar.klouzavyZapnout')}
-            className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
-              klouzavy
-                ? 'border-brand-purple text-brand-purple bg-tint'
-                : 'border-line text-muted hover:text-ink'
-            }`}
-          >
-            <IkonaKlouzani />
-            {t('kalendar.klouzavy')}
-          </button>
-        )}
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}
