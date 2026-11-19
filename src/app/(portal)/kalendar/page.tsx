@@ -668,10 +668,25 @@ export default async function KalendarPage({
 
   /**
    * VÝBĚRY HERCŮ, KTERÉ ČEKAJÍ NA NÁS (16. 11. 2026). Červený pruh nad
-   * kalendářem - viz lib/nabidkyNaPotvrzeni.ts. Jen pro ty, kdo do kalendáře
-   * zapisují; zvukař s tím nic nenadělá.
+   * kalendářem - viz lib/nabidkyNaPotvrzeni.ts.
+   *
+   * JEN TOMU, KDO TERMÍNY HLÍDÁ (19. 11. 2026: „ty červené hlášky ohledně
+   * herců nech jen Helčí"). Rozhoduje zaškrtávátko *Dostává výběr termínů* na
+   * kartě uživatele - tedy ten, komu o hercově výběru chodí i mail. Ostatním
+   * červený pruh přes půl obrazovky jen překážel; potvrdit to stejně nejde
+   * odnikud jinud než z nabídky.
    */
-  const cekajiciNabidky = muzeZapisovat ? await nabidkyKPotvrzeni() : [];
+  const hlidaTerminy = muzeZapisovat
+    ? ((
+        await prisma.user
+          .findUnique({
+            where: { id: session.user.id },
+            select: { dostavaVyberTerminu: true },
+          })
+          .catch(() => null)
+      )?.dostavaVyberTerminu ?? false)
+    : false;
+  const cekajiciNabidky = hlidaTerminy ? await nabidkyKPotvrzeni() : [];
 
   return (
     <div className="flex flex-col gap-4">
