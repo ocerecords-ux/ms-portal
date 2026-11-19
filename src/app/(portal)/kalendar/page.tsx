@@ -259,7 +259,20 @@ export default async function KalendarPage({
        * 25. 11."). Sedm dní od vybraného dne, posun po jednom dni; běžný
        * režim zůstává ten druhý - týden od pondělí a posun po týdnech.
        */
-      const d = klouzavy ? addDays(anchorLocal, posun) : addDays(startOfWeek(anchorLocal), 7 * posun);
+      /**
+       * KLOUZAVÝ TÝDEN = DLOUHÝ PÁS DNÍ (upřesnění 19. 11. 2026: „ať zůstane
+       * tam, kde si ho zastavím posunutím myši").
+       *
+       * Místo sedmi dní se vykreslí jednadvacet a mřížka je trojnásobně
+       * široká, takže na obrazovce je pořád týden - ale rolování je plynulé
+       * a zastaví se, kde ho člověk pustí, bez dorovnávání na celé týdny.
+       * Pás období pak listuje po třech týdnech.
+       */
+      if (klouzavy) {
+        const d = addDays(anchorLocal, -7 + 21 * posun);
+        return { prvni: d, pocet: 21, mesic: d };
+      }
+      const d = addDays(startOfWeek(anchorLocal), 7 * posun);
       return { prvni: d, pocet: 7, mesic: d };
     }
     const m = new Date(anchorLocal.getFullYear(), anchorLocal.getMonth() + posun, 1);

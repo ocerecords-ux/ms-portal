@@ -5303,8 +5303,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.jenStrih': { cs: 'Střih', en: 'Editing' },
   'kalendar.klouzavy': { cs: 'Klouzavý týden', en: 'Rolling week' },
   'kalendar.klouzavyZapnout': {
-    cs: 'Týden začne dnem, na kterém stojíte, a posouvá se po jednom dni - přes přelom týdne je tak vidět plynule.',
-    en: 'The week starts on the day you are standing on and moves one day at a time, so the turn of the week is visible without a jump.',
+    cs: 'Kalendář se roluje plynule a zastaví se tam, kde ho pustíte - přes přelom týdne je tak vidět vcelku.',
+    en: 'The calendar scrolls freely and stays where you let go, so the turn of the week is visible in one piece.',
   },
   'kalendar.klouzavyVypnout': {
     cs: 'Zpátky na celé týdny od pondělí.',

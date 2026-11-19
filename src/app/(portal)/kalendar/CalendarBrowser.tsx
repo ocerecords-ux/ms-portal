@@ -978,7 +978,9 @@ export function CalendarBrowser({
     const d = new Date(`${anchorIso}T12:00:00.000Z`);
     if (view === 'den') d.setUTCDate(d.getUTCDate() + smer);
     // V klouzavém týdnu se posouvá po jednom dni - o to tu jde.
-    else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + (klouzavy ? 1 : 7) * smer);
+    // Klouzavý pás drží tři týdny, takže šipka listuje o tři týdny; jemný
+    // posun po dnech obstará rolování uvnitř mřížky.
+    else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + (klouzavy ? 21 : 7) * smer);
     else d.setUTCMonth(d.getUTCMonth() + smer);
     return d.toISOString().slice(0, 10);
   }
@@ -1731,6 +1733,7 @@ export function CalendarBrowser({
                 />
               ) : (
                 <MrizkaPohled
+                  dniNaObrazovku={klouzavy && view === 'tyden' ? 7 : undefined}
                   days={pole.days}
                   podleDnu={podleDnu}
                   svatkyPodleDnu={svatkyPodleDnu}
@@ -1948,6 +1951,7 @@ function poledneDne(key: string): Date {
 
 /** Denní a týdenní mřížka: sloupce = dny, řádky = hodiny, celých 0–24. */
 function MrizkaPohled({
+  dniNaObrazovku,
   days,
   podleDnu,
   svatkyPodleDnu,
@@ -1962,6 +1966,12 @@ function MrizkaPohled({
   onNovaBlokace,
   smerPosunu = 1,
 }: {
+  /**
+   * KLOUZAVÝ PÁS (19. 11. 2026): kolik dní se má vejít na obrazovku. Když je
+   * vyplněno, mřížka je o tolik širší, kolikrát se do ní dní vejde víc -
+   * a roluje se v ní plynule, bez dorovnávání na celé týdny.
+   */
+  dniNaObrazovku?: number;
   /** Z které strany se na týden přišlo gestem/šipkou - kam vodorovně narolovat. */
   smerPosunu?: -1 | 1;
   days: CalendarDay[];
@@ -2001,6 +2011,13 @@ function MrizkaPohled({
     if (!uzOtevreno.current && iDnes >= 0) {
       const sloupec = (el.scrollWidth - 52) / days.length;
       el.scrollLeft = Math.max(0, iDnes * sloupec);
+    } else if (dniNaObrazovku && days.length > dniNaObrazovku) {
+      /**
+       * Klouzavý pás začíná TÝDEN PŘED vybraným dnem, takže se po otevření
+       * narolovaná na něj - jinak by se člověk díval do minulosti. Dál už si
+       * pás nikdo nesrovnává: zůstane tam, kde ho pustíš.
+       */
+      el.scrollLeft = smerPosunu === -1 ? el.scrollWidth - el.clientWidth : el.clientWidth;
     } else {
       el.scrollLeft = smerPosunu === -1 ? el.scrollWidth : 0;
     }
@@ -2058,7 +2075,14 @@ function MrizkaPohled({
           displej, takze ma vlastni vodorovne rolovani; pas obdobi je o uroven
           vys a prebira tah, az kdyz je tyden dorolovany ke kraji. */}
       <div ref={vodorovne} data-vodorovne className="overflow-x-auto">
-        <div className="min-w-[720px]">
+        <div
+          className="min-w-[720px]"
+          style={
+            dniNaObrazovku && days.length > dniNaObrazovku
+              ? { minWidth: `${(days.length / dniNaObrazovku) * 100}%` }
+              : undefined
+          }
+        >
           <div className="grid border-b border-line" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div />
             {days.map((den) => {
