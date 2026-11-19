@@ -4731,6 +4731,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'nabízí se mezi zvukaři u natáčení a střihu v kalendáři',
     en: 'offered among the sound engineers for recordings and editing in the calendar',
   },
+  'uzivatel.pravoVykazyJenKnihy': { cs: 'Výkazy jen u audioknih', en: 'Timesheets for audiobooks only' },
+  'uzivatel.pravoVykazyJenKnihyPopis': {
+    cs: 'v „Z kalendáře čeká na zapsání" se nenabídnou reklamy',
+    en: 'adverts are left out of “Waiting to be logged from the calendar”',
+  },
   'uzivatel.pravoDostavaObjednavky': { cs: 'Dostává objednávky', en: 'Receives orders' },
   'uzivatel.pravoDostavaObjednavkyPopis': {
     cs: 'mail i zvoneček pokaždé, když klient odešle objednávku; klient tuhle adresu nevidí',

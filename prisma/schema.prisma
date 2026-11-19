@@ -669,6 +669,15 @@ model User {
   /// roli (napr. Zuzo-labuzo), jen se navic nabizi mezi zvukari v kalendari.
   takyZvukar Boolean @default(false)
 
+  /// NAVRHY VYKAZU JEN U AUDIOKNIH (zadani 19. 11. 2026: „u Petera nenabizej
+  /// zapsat vykaz u reklam. Nech to jen u audioknih").
+  ///
+  /// Kdo to ma zaskrtnute, tomu se v „Z kalendare ceka na zapsani" ukazuji
+  /// jen prace na audioknihach - reklamy se u nej nevykazuji po hodinach.
+  /// Priznak, ne jmeno v kodu: az to bude platit pro nekoho dalsiho,
+  /// zaskrtne se mu to na karte.
+  vykazyJenAudioknihy Boolean @default(false)
+
   /// Dostava vyplnene udaje z odkazu pro herce a firmy (zadani 16. 9. 2026:
   /// „kdyz ho vyplni, tak se nam to automaticky propise do systemu a zahlasi
   /// Karoline - tohle bych chtel mit ale taky moznost menit do budoucna, komu

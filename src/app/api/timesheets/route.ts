@@ -19,7 +19,16 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const role = session?.user?.role;
-    if (!session?.user?.id || (role !== 'ZVUKAR' && role !== 'ADMIN')) {
+    // Píše je i ten, kdo jen občas točí (19. 11. 2026) - viz /api/vykazy-navrhy.
+    const takyZvukar =
+      session?.user?.id && role !== 'ZVUKAR' && role !== 'ADMIN'
+        ? ((
+            await prisma.user
+              .findUnique({ where: { id: session.user.id }, select: { takyZvukar: true } })
+              .catch(() => null)
+          )?.takyZvukar ?? false)
+        : false;
+    if (!session?.user?.id || (role !== 'ZVUKAR' && role !== 'ADMIN' && !takyZvukar)) {
       return NextResponse.json({ error: 'Nemáte oprávnění zapisovat výkazy.' }, { status: 403 });
     }
 

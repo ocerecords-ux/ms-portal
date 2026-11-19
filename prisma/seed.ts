@@ -219,6 +219,7 @@ async function main() {
   await pravoNaSeznamPotrebZnovu();
   await sazbaVsemZvukarum();
   await danielJeNaDohodu();
+  await vykazyJenKnihyPeterovi();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1849,6 +1850,27 @@ async function danielJeNaDohodu() {
     console.log(`  na dohodu je ${vysledek.count} uctu (Daniel Vlcek)`);
   } catch (err) {
     console.warn('  priznak "na dohodu" se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * VYKAZY JEN U AUDIOKNIH PETEROVI (zadani 19. 11. 2026: „u Petera nenabizej
+ * zapsat vykaz u reklam. Nech to jen u audioknih"). Priznak je na karte, tohle
+ * ho jen jednou zapne tomu, o koho slo.
+ */
+async function vykazyJenKnihyPeterovi() {
+  const ZNAMKA = 'vykazy-jen-audioknihy-peter';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: { name: { contains: 'Dratva', mode: 'insensitive' } },
+      data: { vykazyJenAudioknihy: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  vykazy jen u audioknih zapnuty u ${vysledek.count} uctu (Peter Dratva)`);
+  } catch (err) {
+    console.warn('  priznak "vykazy jen u audioknih" se nepodarilo nastavit:', err);
   }
 }
 

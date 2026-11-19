@@ -226,6 +226,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           dostavaZmenuTerminuKlient: user.dostavaZmenuTerminuKlient,
           dostavaObjednavky: user.dostavaObjednavky,
           takyZvukar: user.takyZvukar,
+          vykazyJenAudioknihy: user.vykazyJenAudioknihy ?? false,
           dostavaVyplneneUdaje: user.dostavaVyplneneUdaje,
           vychoziManazerAudioknih: user.vychoziManazerAudioknih,
           // Starsi zapisy („MS Studio - Brno II") se ctou jako mesto (15. 9. 2026).

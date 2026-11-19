@@ -51,7 +51,23 @@ function vPraze(d: Date): { datum: string; cas: string } {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || session.user.role !== 'ZVUKAR') {
+    /**
+     * PÍŠE JE I TEN, KDO JEN OBČAS TOČÍ (oprava 19. 11. 2026). Peter Dratva má
+     * roli PRODUKCE a zaškrtnuté „taky zvukař", takže v kalendáři zvukař je
+     * a návrhy výkazů mu chodí - jenže zapsat je nemohl a dostal červenou
+     * hlášku „Výkazy si píše zvukař". Od 17. 11. 2026 má i hodinovou sazbu,
+     * tak ať si je i zapíše.
+     */
+    const smiVykazy =
+      session?.user?.id &&
+      (session.user.role === 'ZVUKAR' ||
+        ((
+          await prisma.user
+            .findUnique({ where: { id: session.user.id }, select: { takyZvukar: true } })
+            .catch(() => null)
+        )?.takyZvukar ??
+          false));
+    if (!smiVykazy) {
       return NextResponse.json({ error: 'Výkazy si píše zvukař.' }, { status: 403 });
     }
 

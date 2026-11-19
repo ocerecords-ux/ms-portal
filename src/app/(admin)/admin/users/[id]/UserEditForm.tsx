@@ -48,7 +48,6 @@ type EditableUser = {
   birthDate: string | null;
   photoUrl: string | null;
   hourlyRate: number | null;
-  naDohodu: boolean;
   mzdyEmail: string | null;
   /** Které naše firmy vidí v Dokladech (12. 10. 2026); prázdné = všechny. */
   viditelneFirmy: string[];
@@ -97,6 +96,7 @@ type EditableUser = {
   dostavaZmenuTerminuKlient: boolean;
   dostavaObjednavky: boolean;
   takyZvukar: boolean;
+  vykazyJenAudioknihy: boolean;
   dostavaVyplneneUdaje: boolean;
   vychoziManazerAudioknih: boolean;
   studioLocations: string[];
@@ -156,7 +156,6 @@ export function UserEditForm({
   const [phone, setPhone] = useState(user.phone ?? '');
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
-  const [naDohodu, setNaDohodu] = useState(user.naDohodu ?? false);
   const [mzdyEmail, setMzdyEmail] = useState(user.mzdyEmail ?? '');
   const [podilNaObratu, setPodilNaObratu] = useState(String(user.podilNaObratu ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
@@ -199,6 +198,7 @@ export function UserEditForm({
   );
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
   const [takyZvukar, setTakyZvukar] = useState(user.takyZvukar);
+  const [vykazyJenKnihy, setVykazyJenKnihy] = useState(user.vykazyJenAudioknihy ?? false);
   const [dostavaVyplneneUdaje, setDostavaVyplneneUdaje] = useState(user.dostavaVyplneneUdaje);
   const [vychoziManazerAudioknih, setVychoziManazerAudioknih] = useState(user.vychoziManazerAudioknih);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
@@ -314,10 +314,7 @@ export function UserEditForm({
         // Sazba se uklada i tomu, kdo jen obcas toci - pole se mu od
         // 17. 11. 2026 nabizi, takze by jinak odeslani zahodilo, co vyplnil.
         if (role === 'ZVUKAR' || takyZvukar) fd.set('hourlyRate', hourlyRate);
-        fd.set('naDohodu', naDohodu ? '1' : '0');
-        // Kdo fakturuje, nema komu posilat podklad pro mzdy - pole se mu
-        // neukazuje, tak at se ani neulozi, co tam zbylo z drivejska.
-        fd.set('mzdyEmail', naDohodu ? mzdyEmail : '');
+        if (role === 'ZVUKAR') fd.set('mzdyEmail', mzdyEmail);
         if (isMediaspace) fd.set('podilNaObratu', podilNaObratu);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
@@ -352,6 +349,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('nabidkyReklam', nabidkyReklam ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
         if (isMediaspace && role !== 'ZVUKAR') fd.set('takyZvukar', takyZvukar ? '1' : '0');
+        if (role === 'ZVUKAR' || takyZvukar) fd.set('vykazyJenAudioknihy', vykazyJenKnihy ? '1' : '0');
         // Přístup na tabule (23. 9. 2026) - prázdný seznam se musí poslat taky.
         fd.set('tabulePristupPrazdne', '1');
         tabulePristup.forEach((id) => fd.append('tabulePristup', id));
@@ -544,43 +542,11 @@ export function UserEditForm({
             </AdminField>
           </div>
         )}
-        {/* FAKTURUJE / NA DOHODU (zadání 18. 11. 2026: „bych dal rozlišení lidí
-            v týmu, kteří fakturují a kteří jsou na dohodu. Tím pádem tam pak
-            nemusí být to pole, kam posílat podklady pro mzdy"). Dvě možnosti,
-            ne zaškrtávátko: „fakturuje" je stejně platná volba jako „dohoda"
-            a z nezaškrtnutého políčka by nebylo poznat, jestli to tak je,
-            nebo to jen nikdo nevyplnil. */}
-        {zalozka === 'UDAJE' && isMediaspace && (
-          <div className="flex-1 min-w-[220px]">
-            <AdminField label={t('uzivatel.poleOdmenovani')} hint={t('uzivatel.odmenovaniHint')}>
-              <div role="radiogroup" className="flex gap-1 p-1 bg-field border border-line rounded-pill">
-                {([false, true] as const).map((dohoda) => {
-                  const jeTu = naDohodu === dohoda;
-                  return (
-                    <button
-                      key={String(dohoda)}
-                      type="button"
-                      role="radio"
-                      aria-checked={jeTu}
-                      onClick={() => setNaDohodu(dohoda)}
-                      className={`flex-1 px-3 py-1.5 text-sm font-heading font-semibold rounded-pill transition-colors ${
-                        jeTu ? 'bg-brand-green text-onAccent' : 'text-muted hover:text-ink'
-                      }`}
-                    >
-                      {t(dohoda ? 'uzivatel.odmenovaniDohoda' : 'uzivatel.odmenovaniFakturuje')}
-                    </button>
-                  );
-                })}
-              </div>
-            </AdminField>
-          </div>
-        )}
         {/* PODKLAD PRO MZDOVOU ÚČETNÍ (zadání 12. 10. 2026: „Daniel Vlček je
             na dohodu, takže bych potřeboval, aby to šlo rovnou na mzdovou
             účetní"). Drží se u člověka, ne natvrdo v kódu - lidí na dohodu
-            přibývá a účetní se mění. Od 18. 11. 2026 se ukazuje jen tomu, kdo
-            je na dohodu - u fakturujících nemá pole smysl. */}
-        {zalozka === 'UDAJE' && isMediaspace && naDohodu && (
+            přibývá a účetní se mění. */}
+        {zalozka === 'UDAJE' && role === 'ZVUKAR' && (
           <div className="flex-1 min-w-[260px]">
             <AdminField label={t('uzivatel.poleMzdyEmail')} hint={t('uzivatel.mzdyEmailHint')}>
               <input
@@ -1308,6 +1274,27 @@ export function UserEditForm({
                 {t('uzivatel.pravoNabidkyReklam')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.pravoNabidkyReklamPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* NÁVRHY VÝKAZŮ JEN U AUDIOKNIH (19. 11. 2026: „u Petera nenabízej
+            zapsat výkaz u reklam. Nech to jen u audioknih"). */}
+        {zalozka === 'PRISTUPY' && (role === 'ZVUKAR' || takyZvukar) && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={vykazyJenKnihy}
+                onChange={(e) => setVykazyJenKnihy(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.pravoVykazyJenKnihy')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.pravoVykazyJenKnihyPopis')}
                 </span>
               </span>
             </label>

@@ -2,6 +2,7 @@ import type { WorkType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { notify } from '@/lib/notifications';
 import { posliPush } from '@/lib/pushServer';
+import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 
 /**
  * NABÍDKA VÝKAZU PO SKONČENÉ PRÁCI (zadání 20. 9. 2026: „nastavit to
@@ -168,7 +169,47 @@ export async function nactiNavrhy(userId: string): Promise<NavrhProZvukare[]> {
       orderBy: { start: 'desc' },
       take: 50,
     });
-    return radky.map((n) => ({
+
+    /**
+     * JEN AUDIOKNIHY (zadání 19. 11. 2026: „u Petera nenabízej zapsat výkaz
+     * u reklam. Nech to jen u audioknih"). Zaškrtávátko na kartě uživatele,
+     * ne jméno v kódu; kdo ho nemá, vidí návrhy jako dřív.
+     */
+    const jenKnihy =
+      (
+        await prisma.user
+          .findUnique({ where: { id: userId }, select: { vykazyJenAudioknihy: true } })
+          .catch(() => null)
+      )?.vykazyJenAudioknihy ?? false;
+    let vybrane = radky;
+    if (jenKnihy) {
+      const idProjektu = Array.from(
+        new Set(radky.map((n) => n.caflouProjectId).filter((x): x is string => !!x)),
+      );
+      const [projekty, ciselnik] = await Promise.all([
+        idProjektu.length > 0
+          ? prisma.projectMeta
+              .findMany({
+                where: { caflouProjectId: { in: idProjektu } },
+                select: {
+                  caflouProjectId: true,
+                  projectType: true,
+                  company: { select: { dealsAds: true, dealsAudiobooks: true } },
+                },
+              })
+              .catch(() => [])
+          : Promise.resolve([]),
+        nactiCiselnikReklam(),
+      ]);
+      const reklamy = new Set(
+        projekty.filter((p) => jeReklamaPodleMeta(p, ciselnik)).map((p) => p.caflouProjectId),
+      );
+      // Práce bez projektu (casting) zůstává - není to reklama, jen ještě
+      // nikdo nevybral, ke které knize patří.
+      vybrane = radky.filter((n) => !n.caflouProjectId || !reklamy.has(n.caflouProjectId));
+    }
+
+    return vybrane.map((n) => ({
       id: n.id,
       start: n.start.toISOString(),
       end: n.end.toISOString(),

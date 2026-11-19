@@ -39,6 +39,8 @@ const schema = z.object({
   hourlyRate: z.string().trim().optional(),
   /** "1" / "0" - je na dohodu (18. 11. 2026); jinak fakturuje. */
   naDohodu: z.string().trim().optional(),
+  /** "1" / "0" - navrhy vykazu jen u audioknih (19. 11. 2026). */
+  vykazyJenAudioknihy: z.string().trim().optional(),
   /** Adresa mzdové účetní (12. 10. 2026) - komu poslat holý podklad pro mzdy. */
   mzdyEmail: z.string().trim().optional(),
   /** Podil na obratu v procentech (6. 10. 2026) - Prehledy > Moje bonusy. */
@@ -113,6 +115,7 @@ function readFormData(formData: FormData) {
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
     hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
     naDohodu: has('naDohodu') ? formData.get('naDohodu') : undefined,
+    vykazyJenAudioknihy: has('vykazyJenAudioknihy') ? formData.get('vykazyJenAudioknihy') : undefined,
     mzdyEmail: has('mzdyEmail') ? formData.get('mzdyEmail') : undefined,
     podilNaObratu: has('podilNaObratu') ? formData.get('podilNaObratu') : undefined,
     manazerProjektu: has('manazerProjektu') ? formData.get('manazerProjektu') : undefined,
@@ -365,6 +368,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Prázdné pole znamená „neposílat" - null, ne prázdný řetězec, ať se na
       // něj dá ptát jedním způsobem.
       ...(data.naDohodu !== undefined ? { naDohodu: data.naDohodu === '1' } : {}),
+      ...(data.vykazyJenAudioknihy !== undefined
+        ? { vykazyJenAudioknihy: data.vykazyJenAudioknihy === '1' }
+        : {}),
       ...(data.mzdyEmail !== undefined
         ? { mzdyEmail: data.mzdyEmail || null }
         : {}),
