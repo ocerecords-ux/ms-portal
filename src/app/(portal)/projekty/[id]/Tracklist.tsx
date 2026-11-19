@@ -61,6 +61,8 @@ export function Tracklist({
   zTextu = false,
   apiAdresa,
   sBrunem = true,
+  brunoAdresa,
+  sDelenim = true,
 }: {
   caflouProjectId: string;
   nazevProjektu: string;
@@ -73,8 +75,19 @@ export function Tracklist({
    * výzvy. Tatáž tabulka, tentýž editor - jen jiné dveře.
    */
   apiAdresa?: string;
-  /** Bruno je náš pomocník - klientovi se okno pod tabulkou neukazuje. */
+  /** Okno s Brunem pod tabulkou. */
   sBrunem?: boolean;
+  /**
+   * KAM SE PTÁ BRUNO. Klient bez účtu jde přes token své výzvy, stejně jako
+   * u ukládání - tatáž obrazovka, jiné dveře (19. 11. 2026).
+   */
+  brunoAdresa?: string;
+  /**
+   * ROZDĚLOVÁNÍ STOP JE NAŠE VĚC (zadání 19. 11. 2026: „klient by tam neměl
+   * mít možnost rozdělit track. To děláme my, až podle toho, jak ty tracky
+   * vyjdou časově"). Klientovi se tlačítko u řádku vůbec nevykreslí.
+   */
+  sDelenim?: boolean;
 }) {
   const t = usePreklad();
   const router = useRouter();
@@ -283,7 +296,7 @@ export function Tracklist({
     setChyba(null);
     setHlaska(null);
     try {
-      const res = await fetch(`${adresa}/bruno`, {
+      const res = await fetch(brunoAdresa ?? `${adresa}/bruno`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zprava: text, tracky, historie }),
@@ -519,7 +532,7 @@ export function Tracklist({
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-[900px]">
+    <div className="flex flex-col gap-4 max-w-[1100px]">
       {/* NÁPOVĚDA POD OTAZNÍKEM (19. 11. 2026: „ať je portál čistý") - vysvětlující
           věty se schovaly, text zůstal na jedno klepnutí. */}
       <div className="flex justify-end -mb-2">
@@ -624,14 +637,16 @@ export function Tracklist({
                   >
                     ⧉
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => rozdel(i)}
-                    title={t('tracklist.rozdelitPopis')}
-                    className="font-heading font-semibold text-xs rounded-lg px-2.5 py-1.5 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent whitespace-nowrap"
-                  >
-                    {t('tracklist.rozdelit')}
-                  </button>
+                  {sDelenim && (
+                    <button
+                      type="button"
+                      onClick={() => rozdel(i)}
+                      title={t('tracklist.rozdelitPopis')}
+                      className="font-heading font-semibold text-xs rounded-lg px-2.5 py-1.5 border border-line text-brand-purple hover:bg-tint transition-colors cursor-pointer bg-transparent whitespace-nowrap"
+                    >
+                      {t('tracklist.rozdelit')}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setTracky(precisluj(tracky.filter((_, j) => j !== i)))}
@@ -723,9 +738,26 @@ export function Tracklist({
           se neukazuje: je to náš pomocník u naší práce (19. 11. 2026). */}
       {sBrunem && (
       <div className="rounded-card border border-line bg-field p-4 flex flex-col gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="font-heading font-semibold text-sm text-ink">{t('tracklist.bruno')}</span>
-          <Napoveda text={t('tracklist.brunoPopis')} />
+        {/* HLAVIČKA S BRUNOVOU ZNAČKOU (19. 11. 2026: „ať je jasné, že jde
+            o nástroj. Dejme tam minimálně ikonu jeho, co má v chatu").
+            Tatáž fotka, jakou má jeho účet v chatu. */}
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bruno-znacka.png"
+            alt=""
+            aria-hidden
+            className="w-9 h-9 rounded-full shrink-0 object-cover border border-line bg-surface"
+          />
+          <span className="min-w-0 flex flex-col">
+            <span className="flex items-center gap-1.5">
+              <span className="font-heading font-semibold text-sm text-ink">
+                {t('tracklist.bruno')}
+              </span>
+              <Napoveda text={t('tracklist.brunoPopis')} />
+            </span>
+            <span className="text-[11px] font-body text-muted">{t('tracklist.brunoRole')}</span>
+          </span>
         </div>
 
         {zpravyBruna.length > 0 && (
@@ -758,7 +790,10 @@ export function Tracklist({
                 void zeptejSeBruna();
               }
             }}
-            rows={2}
+            /* Vyšší pole (19. 11. 2026: „to pole dej takhle třeba defaultně,
+               ať je to širší") - dvouřádkové bylo na větu o hromadné úpravě
+               malé a každý si ho stejně roztahoval. Táhnout se dá dál. */
+            rows={6}
             placeholder={t('tracklist.brunoPole')}
             className={`${pole} flex-1 min-w-[240px] font-body resize-y`}
           />

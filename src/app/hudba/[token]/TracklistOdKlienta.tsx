@@ -15,8 +15,10 @@ import type { Track } from '@/lib/tracklist';
  * JE TO DOSLOVA TATÁŽ KOMPONENTA, kterou máme na kartě projektu - ne její
  * klientská kopie. Dvě obrazovky, které dělají totéž, se po první opravě
  * rozejdou; tady se mění jen dvě věci:
- *  - ADRESA, na kterou se ukládá: klient nemá účet, jde přes token své výzvy;
- *  - BRUNO SE NEUKAZUJE - je to náš pomocník u naší práce.
+ *  - ADRESA, na kterou se ukládá (a na kterou se ptá Bruno): klient nemá
+ *    účet, jde přes token své výzvy;
+ *  - ROZDĚLIT TRACK tu není: „to děláme my, až podle toho, jak ty tracky
+ *    vyjdou časově" (19. 11. 2026).
  *
  * Stránka stojí MIMO JazykProvider (je veřejná), takže si ho tady obalíme
  * sami - jinak by editor mluvil vždycky česky.
@@ -72,7 +74,9 @@ export function TracklistOdKlienta({
           nazevProjektu={nazevProjektu}
           pocatecni={pocatecni}
           apiAdresa={adresa}
-          sBrunem={false}
+          brunoAdresa={`/api/hudba-od-klienta/${encodeURIComponent(token)}/tracklist/bruno`}
+          /* Rozdělování stop je naše věc - děláme ho podle časů (19. 11. 2026). */
+          sDelenim={false}
         />
       </JazykProvider>
     </div>

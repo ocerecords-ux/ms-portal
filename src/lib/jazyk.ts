@@ -8577,9 +8577,15 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'tracklist.cteniNeslo': { cs: 'Text se nepodařilo přečíst.', en: 'The text could not be read.' },
   'tracklist.bruno': { cs: 'Bruno u tracklistu', en: 'Bruno at the tracklist' },
+  /* Popis psaný i pro klienta (19. 11. 2026) - musí dávat smysl i tomu,
+     kdo o Brunovi slyší poprvé. */
   'tracklist.brunoPopis': {
-    cs: 'Napiš mu větou, co se má se seznamem stát - přepsat podle vzoru, přečíslovat, doplnit kapitoly, něco uklidit. Tabulku PŘEPÍŠE a rovnou uloží - když se to netrefí, vrať to tlačítkem Vrátit zpět.',
-    en: 'Tell him in a sentence what should happen to the list - rewrite it to a pattern, renumber it, fill in the chapters, tidy something up. He rewrites the TABLE, not the database; it is stored only when you press Save.',
+    cs: 'Bruno je náš pomocník v portálu — umí hromadně přepsat celou tabulku. Napište mu obyčejnou větou, co se má se seznamem stát: přepsat podle vzoru, přečíslovat, doplnit nebo uklidit názvy kapitol, něco přidat či odebrat. Tabulku PŘEPÍŠE a ta se rovnou uloží; když se to netrefí, vrátíte to tlačítkem Vrátit zpět. Když si nebude jistý, zeptá se.',
+    en: 'Bruno is our helper in the portal — he can rewrite the whole table at once. Tell him in plain words what should happen to the list: rewrite it to a pattern, renumber it, fill in or tidy the chapter names, add or remove something. He REWRITES the table and it is saved right away; if it misses the mark, press Undo. If he is unsure, he asks.',
+  },
+  'tracklist.brunoRole': {
+    cs: 'pomocník na hromadné úpravy seznamu',
+    en: 'a helper for bulk edits of the list',
   },
   'tracklist.brunoPole': {
     cs: 'Třeba: uber tečky na konci názvů kapitol',

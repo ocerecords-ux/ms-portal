@@ -583,7 +583,8 @@ export function ProjectsTable({
                       caflouProjectId={String(p.id)}
                       nazevProjektu={p.name}
                       pocatecni={tracklisty?.[String(p.id)] ?? []}
-                      sBrunem={false}
+                      /* Rozdělování stop děláme my podle časů (19. 11. 2026). */
+                      sDelenim={false}
                     />
                   </td>
                 </tr>

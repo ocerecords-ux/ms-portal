@@ -6,13 +6,16 @@ import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { nactiPrirucku } from '@/lib/brunoPrirucka';
 import { brunoUpravTracklist, jeBrunoNastaveny } from '@/lib/brunoTracklist';
-import { generovaniZTextuPovoleno } from '@/lib/tracklistServer';
+import { generovaniZTextuPovoleno, klientSmiTracklist } from '@/lib/tracklistServer';
 
 /**
  * BRUNO U TRACKLISTU (zadání 30. 10. 2026: „u těch tracklistů by mohl být
  * Bruno… normálně chatovací okno").
  *
- * Jen náš tým - je to výrobní podklad, klient ho nevidí.
+ * SMÍ HO I KLIENT, KTERÝ TRACKLISTY DODÁVÁ (19. 11. 2026). Hromadná úprava
+ * větou je přesně to, co mu nejvíc pomůže. NAŠE PŘÍRUČKA „jak to u nás chodí"
+ * mu ale do zadání nejde - to jsou interní poznámky, ne něco, co má zaznívat
+ * ven.
  *
  * TRACKLIST CHODÍ Z PROHLÍŽEČE, ne z databáze: v tabulce bývají rozdělané
  * změny, které ještě nikdo neuložil, a Bruno má pracovat s tím, co člověk
@@ -41,7 +44,11 @@ const schema = z.object({
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !isInternalRole(session.user.role)) {
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  }
+  const interni = isInternalRole(session.user.role);
+  if (!interni && !(await klientSmiTracklist(params.id, session.user.companyId ?? null))) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
   if (!jeBrunoNastaveny()) {
@@ -60,7 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const odpoved = await brunoUpravTracklist({
     jmeno: session.user.name || session.user.email || 'kolega',
     nazevProjektu: meta?.name || '',
-    prirucka: await nactiPrirucku(),
+    prirucka: interni ? await nactiPrirucku() : '',
     tracky: parsed.data.tracky,
     zpravy: [...parsed.data.historie, { odBruna: false, text: parsed.data.zprava }],
     sMezerami: await generovaniZTextuPovoleno(params.id),
