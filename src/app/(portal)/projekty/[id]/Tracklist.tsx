@@ -414,10 +414,7 @@ export function Tracklist({
    * políčko, nebo naopak napsat, že v souboru nic nebylo.
    */
   function vlozText(text: string): boolean {
-    const radky = text
-      .split('\n')
-      .map((r) => r.replace(/^\s*\d{1,3}\s*[._)\-]\s*/, '').trim())
-      .filter(Boolean);
+    const radky = rozborSeznamu(text);
     if (radky.length === 0) return false;
     const nove: Radek[] = radky.map((kapitola, i) => ({
       nazevTracku: tracky[i]?.nazevTracku ?? podleVzoru(i + 1),
@@ -843,4 +840,52 @@ export function Tracklist({
       )}
     </div>
   );
+}
+
+/**
+ * ROZBOR NALEPENÉHO NEBO NAHRANÉHO SEZNAMU (oprava 19. 11. 2026: „klientka
+ * Veronika z Melvilu zkusila načíst PDF a píše jí to nějakou hovadinu
+ * u prvního tracku, byl to asi nadpis").
+ *
+ * Tracklist od klienta nebývá holý seznam kapitol. Nahoře je nadpis
+ * („TRACK LIST", „OBSAH"), řádky jsou očíslované a dole občas visí číslo
+ * stránky. Do té doby se brala každá řádka jako kapitola, takže se nadpis
+ * stal první stopou a celý seznam se o jednu posunul.
+ *
+ * Pravidlo je jednoduché a drží se toho, co v souboru opravdu je:
+ *  - SEZNAM JE ČÍSLOVANÝ, když většina řádků začíná pořadovým číslem. Teprve
+ *    tehdy se čísla odřezávají - u neočíslovaného seznamu by „12 opic" přišlo
+ *    o dvanáctku.
+ *  - CO JE NAD PRVNÍM ČÍSLEM, je nadpis a jde pryč. Co je mezi čísly, se
+ *    nechává: bývá to „ČÁST DRUHÁ" a je lepší, když to člověk vidí a smaže,
+ *    než aby to zmizelo potichu.
+ *  - HOLÉ ČÍSLO na řádku je číslo stránky, ne kapitola.
+ */
+function rozborSeznamu(text: string): string[] {
+  const radky = text
+    .split('\n')
+    .map((r) => r.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  if (radky.length === 0) return [];
+
+  // „01 KAPITOLA 1", „1. Jak to začalo", „2) Cesta", „03_NAZEV"
+  const shody = radky.map((r) => /^(\d{1,3})(?:\s*[._)\-]\s*|\s+)(\S.*)$/.exec(r));
+  const ocislovanych = shody.filter(Boolean).length;
+  const jeCislovany = ocislovanych >= 3 && ocislovanych >= radky.length * 0.6;
+  if (!jeCislovany) return radky;
+
+  const vysledek: string[] = [];
+  let zacalo = false;
+  for (let i = 0; i < radky.length; i += 1) {
+    const shoda = shody[i];
+    if (shoda) {
+      zacalo = true;
+      vysledek.push(shoda[2].trim());
+      continue;
+    }
+    // Nadpis nad seznamem a holá čísla stránek do tracklistu nepatří.
+    if (!zacalo || /^\d{1,4}$/.test(radky[i])) continue;
+    vysledek.push(radky[i]);
+  }
+  return vysledek;
 }
