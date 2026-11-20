@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { OzubeneKolo } from '@/components/OzubeneKolo';
 import { nastaveniSekce } from '@/lib/nastaveniSekci';
@@ -374,6 +375,26 @@ export default async function ProjektyPage() {
   const jeKlientReklam = Boolean(company?.dealsAds && !company?.dealsAudiobooks);
 
   /**
+   * CHCEME OD TÉHLE FIRMY HUDBU NEBO TRACKLIST? (20. 11. 2026). Klientský účet
+   * nemusí mít firmu vyplněnou v session, a u starších zakázek drží projekt
+   * jen její jméno textem - proto se to ověří i přes projekty, které klient
+   * vidí.
+   */
+  const chceHudbuNeboTracklist = await prisma.projectMeta
+    .count({
+      where: {
+        finished: false,
+        OR: [
+          { klientUserId: session!.user.id },
+          ...(companyId ? [{ companyId }] : []),
+        ],
+        company: { OR: [{ hudbuDodavaKlient: true }, { tracklistOdKlienta: true }] },
+      },
+    })
+    .then((n: number) => n > 0)
+    .catch(() => false);
+
+  /**
    * DOKLADY K ZAKÁZCE (zadání 1. 10. 2026: „tady budou ikony dokladů Nabídka,
    * faktura a objednávka"). Jedním dotazem pro celou stránku - doklad po
    * dokladu by to bylo padesát dotazů. Co klient smí vidět, řeší
@@ -442,6 +463,30 @@ export default async function ProjektyPage() {
           {prelozit(jazyk, 'projekty.nadpis')}
         </h1>
       </div>
+
+      {/**
+        * CESTA K VKLÁDÁNÍ HUDBY A TRACKLISTU (20. 11. 2026: „je to tam, ale
+        * Veronika to pořád nevidí").
+        *
+        * Odkaz v liště nestačí: kdo si lištu někdy upravil, má ji uloženou
+        * a nové položky se mu do ní samy nepřidají. Proto je odkaz i tady,
+        * nad přehledem projektů - na stránce, kterou klient otevírá jako
+        * první. Ukáže se jen firmě, od které hudbu nebo tracklist opravdu
+        * chceme.
+        */}
+      {(company?.hudbuDodavaKlient || company?.tracklistOdKlienta || chceHudbuNeboTracklist) && (
+        <Link
+          href="/hudba-tracklist"
+          className="rounded-card border border-brand-green bg-okTint px-5 py-4 no-underline flex flex-col gap-1 hover:brightness-95 transition-all"
+        >
+          <span className="font-heading font-semibold text-base text-ink">
+            {prelozit(jazyk, 'hudbaKlientSekce.nadpis')}
+          </span>
+          <span className="text-sm font-body text-muted">
+            {prelozit(jazyk, 'hudbaKlientSekce.popis')}
+          </span>
+        </Link>
+      )}
 
       {/* DVĚ ZÁLOŽKY (zadání 24. 9. 2026). Obě se vykreslí na serveru,
           přepínač jen mění, co je vidět - viz ZalozkyKlienta.tsx. */}

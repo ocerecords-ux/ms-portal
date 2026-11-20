@@ -39,40 +39,54 @@ export default async function HudbaTracklistPage({
   const jazyk = nactiJazyk();
   const t = (k: string) => prelozit(jazyk, k);
 
+  /**
+   * KTERÉ KNIHY SEM PATŘÍ (oprava 20. 11. 2026: „je to tam, ale Veronika to
+   * pořád nevidí").
+   *
+   * Nestačí se ptát firmy ze session - klientský účet nemusí mít firmu
+   * vyplněnou vůbec a u starších zakázek drží projekt jen její jméno textem.
+   * Bere se proto všechno, kde je člověk veden jako klient, i všechno jeho
+   * firmy, a teprve u každé knihy se kouká, jestli od ní hudbu nebo tracklist
+   * chceme.
+   */
   const companyId = session.user.companyId;
   const firma = companyId
     ? ((await prisma.company
-        .findUnique({
-          where: { id: companyId },
-          select: { name: true, hudbuDodavaKlient: true, tracklistOdKlienta: true },
-        })
-        .catch(() => null)) as {
-        name: string;
-        hudbuDodavaKlient: boolean;
-        tracklistOdKlienta: boolean;
-      } | null)
+        .findUnique({ where: { id: companyId }, select: { name: true } })
+        .catch(() => null)) as { name: string } | null)
     : null;
 
-  const dodavaHudbu = firma?.hudbuDodavaKlient === true;
-  const dodavaTracklist = firma?.tracklistOdKlienta === true;
+  type Radek = {
+    caflouProjectId: string;
+    name: string | null;
+    company: { hudbuDodavaKlient: boolean; tracklistOdKlienta: boolean } | null;
+  };
 
-  const knihy =
-    companyId && (dodavaHudbu || dodavaTracklist)
-      ? ((await prisma.projectMeta
-          .findMany({
-            where: {
-              finished: false,
-              name: { not: null },
-              OR: [
-                { companyId },
-                { companyId: null, companyName: { equals: firma?.name, mode: 'insensitive' } },
-              ],
-            },
-            select: { caflouProjectId: true, name: true },
-            orderBy: { name: 'asc' },
-          })
-          .catch(() => [])) as { caflouProjectId: string; name: string | null }[])
-      : [];
+  const vsechny = (await prisma.projectMeta
+    .findMany({
+      where: {
+        finished: false,
+        name: { not: null },
+        OR: [
+          { klientUserId: session.user.id },
+          ...(companyId ? [{ companyId }] : []),
+          ...(firma?.name
+            ? [{ companyId: null, companyName: { equals: firma.name, mode: 'insensitive' as const } }]
+            : []),
+        ],
+      },
+      select: {
+        caflouProjectId: true,
+        name: true,
+        company: { select: { hudbuDodavaKlient: true, tracklistOdKlienta: true } },
+      },
+      orderBy: { name: 'asc' },
+    })
+    .catch(() => [])) as Radek[];
+
+  const knihy = vsechny.filter(
+    (k) => k.company?.hudbuDodavaKlient === true || k.company?.tracklistOdKlienta === true,
+  );
 
   if (knihy.length === 0) {
     return (
@@ -83,8 +97,9 @@ export default async function HudbaTracklistPage({
     );
   }
 
-  const vybrany =
-    knihy.find((k) => k.caflouProjectId === searchParams.projekt) ?? knihy[0];
+  const vybrany = knihy.find((k) => k.caflouProjectId === searchParams.projekt) ?? knihy[0];
+  const dodavaHudbu = vybrany.company?.hudbuDodavaKlient === true;
+  const dodavaTracklist = vybrany.company?.tracklistOdKlienta === true;
   const token = await zajistiVyzvu(vybrany.caflouProjectId, {
     email: session.user.email ?? '',
     jmeno: session.user.name ?? null,
