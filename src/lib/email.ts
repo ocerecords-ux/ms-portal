@@ -67,12 +67,17 @@ function getTransport() {
 let transportPRCache: { klic: string; transport: nodemailer.Transporter } | null = null;
 
 function transportPR() {
-  const host = process.env.SMTP_HOST?.trim();
+  /**
+   * SCHRÁNKA PR MŮŽE BÝT NA JINÉM SERVERU než naše hlavní pošta (20. 11. 2026:
+   * pr@mediaspace.cz je na Business Mailu Active24, zatímco mediaspace@msportal.cz
+   * jinde). Proto vlastní host a port; když nejsou vyplněné, vezmou se ty hlavní.
+   */
+  const host = process.env.PR_SMTP_HOST?.trim() || process.env.SMTP_HOST?.trim();
   const user = process.env.PR_SMTP_USER?.trim();
   const heslo = process.env.PR_SMTP_PASSWORD?.trim();
   if (!host || !user || !heslo) return null;
 
-  const port = Number(process.env.SMTP_PORT?.trim()) || 587;
+  const port = Number(process.env.PR_SMTP_PORT?.trim() || process.env.SMTP_PORT?.trim()) || 587;
   const klic = `${host}:${port}:${user}`;
   if (transportPRCache?.klic === klic) return transportPRCache.transport;
 
@@ -204,8 +209,15 @@ export async function sendPrNabidkaEmail(input: {
     });
     return { sent: true as const, zJejiAdresy };
   } catch (err) {
+    /**
+     * HLÁŠKA ZE SERVERU SE VRACÍ VOLAJÍCÍMU (20. 11. 2026). „Poštovní server
+     * mail nepřijal" neřeklo, jestli je špatné heslo, server, nebo adresa
+     * v „Od" - a hledat to v logu Vercelu při zkoušení nikdo nebude. Je to
+     * naše interní obrazovka.
+     */
     console.error('PR nabidka se neodeslala:', err);
-    return { sent: false, reason: 'SEND_FAILED' as const };
+    const hlaska = err instanceof Error ? err.message.slice(0, 300) : '';
+    return { sent: false, reason: 'SEND_FAILED' as const, hlaska };
   }
 }
 

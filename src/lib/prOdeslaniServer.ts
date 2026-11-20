@@ -19,7 +19,12 @@ const ADRESA_EMY = () => process.env.PR_ODPOVED?.trim() || 'pr@mediaspace.cz';
 
 export type VysledekOdeslani =
   | { ok: true; adresa: string }
-  | { ok: false; duvod: 'nenalezeno' | 'uz-odeslano' | 'bez-adresy' | 'bez-textu' | 'posta' };
+  | {
+      ok: false;
+      duvod: 'nenalezeno' | 'uz-odeslano' | 'bez-adresy' | 'bez-textu' | 'posta';
+      /** Hláška ze serveru - jen u 'posta'. */
+      hlaska?: string;
+    };
 
 /**
  * Adresa z pole „kontakt". Píše se tam běžně celá věta („Jana Nováková,
@@ -73,7 +78,9 @@ export async function posliMedium(
     text: medium.textMailu.trim(),
     adresaEmy: ADRESA_EMY(),
   });
-  if (!vysledek.sent) return { ok: false, duvod: 'posta' };
+  if (!vysledek.sent) {
+    return { ok: false, duvod: 'posta', hlaska: 'hlaska' in vysledek ? vysledek.hlaska : '' };
+  }
 
   await prisma.prMedium
     .update({

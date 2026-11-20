@@ -363,10 +363,13 @@ function SeznamMedii({
     setOdesila(null);
     setPotvrzuje(null);
     const data = (await res?.json().catch(() => null)) as
-      | { media?: Medium[]; error?: string }
+      | { media?: Medium[]; error?: string; hlaska?: string }
       | null;
     if (data?.media) onZmena(data.media);
-    if (!res?.ok) setChybaMailu(t(`pr.chyba.${data?.error ?? 'posta'}`));
+    if (!res?.ok) {
+      const zaklad = t(`pr.chyba.${data?.error ?? 'posta'}`);
+      setChybaMailu(data?.hlaska ? `${zaklad} ${data.hlaska}` : zaklad);
+    }
     else setOtevreny(null);
   }
 

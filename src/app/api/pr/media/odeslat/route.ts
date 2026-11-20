@@ -36,7 +36,11 @@ export async function POST(req: NextRequest) {
 
   if (!vysledek.ok) {
     return NextResponse.json(
-      { error: vysledek.duvod, media: await nactiMedia(parsed.data.kampanId) },
+      {
+        error: vysledek.duvod,
+        hlaska: 'hlaska' in vysledek ? vysledek.hlaska : undefined,
+        media: await nactiMedia(parsed.data.kampanId),
+      },
       { status: 409 },
     );
   }
