@@ -403,7 +403,18 @@ export async function prectiPrilohuDokladu(
    * zůstávalo pole Splatnost prázdné, i když na faktuře datum bylo.
    */
   const splatnost = u.splatnost ? new Date(`${u.splatnost}T00:00:00.000Z`) : null;
+  /**
+   * KURZ JEN KDYŽ MÁ DATUM (oprava 20. 11. 2026: „a tady pořád nenačetl údaje
+   * z faktury").
+   *
+   * U korunové faktury vrací kurzovník kurz 1 bez data. Z prázdného data
+   * vznikne Invalid Date, Prisma zápis odmítne a CELÉ čtení spadlo - model
+   * přitom fakturu přečetl správně, jen se to nemělo kam uložit. Když datum
+   * nedává smysl, kurz se prostě nezapíše.
+   */
   const kurz = await getRateForCurrency(mena, datum).catch(() => null);
+  const kurzDatum = kurz?.date ? new Date(`${kurz.date}T00:00:00.000Z`) : null;
+  const kurzPlatny = Boolean(kurz && kurzDatum && !Number.isNaN(kurzDatum.getTime()));
 
   await prisma.expense.update({
     where: { id: doklad.id },
@@ -418,7 +429,9 @@ export async function prectiPrilohuDokladu(
       ...(splatnost ? { dueDate: splatnost } : {}),
       ...(zaklad !== null ? { amountExVatMinor: zaklad } : {}),
       ...(u.zpusobUhrady ? { paymentMethod: u.zpusobUhrady as PaymentMethod } : {}),
-      ...(kurz ? { exchangeRate: kurz.rate, exchangeRateDate: new Date(`${kurz.date}T00:00:00.000Z`) } : {}),
+      ...(kurzPlatny && kurz && kurzDatum
+        ? { exchangeRate: kurz.rate, exchangeRateDate: kurzDatum }
+        : {}),
     },
   });
   return { ok: true };
