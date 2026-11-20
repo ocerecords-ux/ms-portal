@@ -190,6 +190,8 @@ export function ProjectsTable({
   progres,
   kontakty,
   tracklisty,
+  hudbaTokeny,
+  maHudbu,
   jazyk,
   normostrany = true,
 }: {
