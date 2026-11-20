@@ -40,6 +40,9 @@ export type Kampan = {
   brief: string | null;
   stav: StavKampane;
   caflouProjectId: string | null;
+  /** Hromadná předloha mailu pro celou kampaň (20. 11. 2026). */
+  predmetMailu: string | null;
+  textMailu: string | null;
   createdAt: string;
   pocetUkolu: number;
   pocetMedii: number;

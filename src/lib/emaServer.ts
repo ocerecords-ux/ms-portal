@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { dosadMedium, nactiPredlohuMailu } from '@/lib/prHromadnyMail';
 import { nechEmuPracovat, type Nastroj, type ZadaniEme } from '@/lib/emaAgent';
 import type { Kampan, Medium, StavKampane, StavMedia, StavUkolu, Ukol } from '@/lib/ema';
 import { DRUHY_MEDIA } from '@/lib/ema';
@@ -40,6 +41,8 @@ type RadekKampane = {
   brief: string | null;
   stav: string;
   caflouProjectId: string | null;
+  predmetMailu: string | null;
+  textMailu: string | null;
   createdAt: Date;
   _count?: { ukoly: number; media: number };
   media?: { odeslanoAt: Date | null }[];
@@ -52,6 +55,8 @@ function naKampan(k: RadekKampane): Kampan {
     brief: k.brief,
     stav: (k.stav as StavKampane) ?? 'ROZPRACOVANA',
     caflouProjectId: k.caflouProjectId,
+    predmetMailu: k.predmetMailu ?? null,
+    textMailu: k.textMailu ?? null,
     createdAt: k.createdAt.toISOString(),
     pocetUkolu: k._count?.ukoly ?? 0,
     pocetMedii: k._count?.media ?? 0,
@@ -191,18 +196,29 @@ export async function nactiMedia(kampanId: string): Promise<Medium[]> {
 }
 
 export async function pridejMedium(kampanId: string, data: Partial<Medium> & { nazev: string }): Promise<void> {
+  /**
+   * NOVÉ MÉDIUM SI VEZME PŘEDLOHU KAMPANĚ (20. 11. 2026: „chci nastavovat
+   * mail hromadně u každé kampaně"). Když se mail nepředává, naplní se
+   * z předlohy - jinak by se hromadné nastavení muselo mačkat po každém
+   * přidaném pořadu znovu.
+   */
+  const nazev = data.nazev.trim();
+  const predloha = await nactiPredlohuMailu(kampanId);
+  const predmet = data.predmet ?? dosadMedium(predloha.predmet, nazev) ?? null;
+  const textMailu = data.textMailu ?? dosadMedium(predloha.text, nazev) ?? null;
+
   await prisma.prMedium
     .create({
       data: {
         kampanId,
-        nazev: data.nazev.trim(),
+        nazev,
         druh: data.druh ?? 'JINE',
         kontakt: data.kontakt ?? null,
         odkaz: data.odkaz ?? null,
         duvod: data.duvod ?? null,
         overeno: data.overeno ?? false,
-        predmet: data.predmet ?? null,
-        textMailu: data.textMailu ?? null,
+        predmet: predmet || null,
+        textMailu: textMailu || null,
       },
     })
     .catch((err: unknown) => console.error('Médium se nepodařilo přidat:', err));

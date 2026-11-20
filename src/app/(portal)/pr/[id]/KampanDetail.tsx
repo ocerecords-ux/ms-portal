@@ -303,8 +303,11 @@ export function KampanDetail({
           </div>
         </section>
 
-        {/* VPRAVO: MÉDIA A POLE */}
-        <SeznamMedii jazyk={jazyk} kampanId={kampan.id} media={media} onZmena={setMedia} />
+        {/* VPRAVO: HROMADNÝ MAIL, PAK MÉDIA A POLE */}
+        <div className="flex flex-col gap-5">
+          <HromadnyMail jazyk={jazyk} kampan={kampan} onMedia={setMedia} />
+          <SeznamMedii jazyk={jazyk} kampanId={kampan.id} media={media} onZmena={setMedia} />
+        </div>
       </div>
     </div>
   );
@@ -322,6 +325,124 @@ function Tecky() {
         />
       ))}
     </span>
+  );
+}
+
+/**
+ * MAIL PRO CELOU KAMPAŇ (zadání 20. 11. 2026: „chci nastavovat mail hromadně
+ * u každé kampaně").
+ *
+ * Jedna předloha pro všechna média - napíše se jednou a vloží se do mailů,
+ * které ještě neodešly. {medium} se cestou nahradí názvem pořadu, ať to
+ * nevypadá jako hromadný leták. Co už odešlo, se nemění.
+ */
+function HromadnyMail({
+  jazyk,
+  kampan,
+  onMedia,
+}: {
+  jazyk: Jazyk;
+  kampan: Kampan;
+  onMedia: (m: Medium[]) => void;
+}) {
+  const t = (k: string, h?: Record<string, string | number>) =>
+    h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
+  const [otevreny, setOtevreny] = useState(false);
+  const [predmet, setPredmet] = useState(kampan.predmetMailu ?? '');
+  const [text, setText] = useState(kampan.textMailu ?? '');
+  const [jenPrazdna, setJenPrazdna] = useState(false);
+  const [bezi, setBezi] = useState(false);
+  const [hlaska, setHlaska] = useState<string | null>(null);
+
+  async function uloz(vlozitDoMedii: boolean) {
+    setBezi(true);
+    setHlaska(null);
+    const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/mail`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ predmet, text, vlozitDoMedii, jenPrazdna }),
+    }).catch(() => null);
+    setBezi(false);
+    const data = (await res?.json().catch(() => null)) as
+      | { vlozeno?: number; media?: Medium[] }
+      | null;
+    if (!res?.ok) {
+      setHlaska(t('pr.emaNeslo'));
+      return;
+    }
+    if (data?.media) onMedia(data.media);
+    setHlaska(
+      vlozitDoMedii
+        ? t('pr.hromadnyMailVlozeno', { pocet: data?.vlozeno ?? 0 })
+        : t('pr.hromadnyMailUlozeno'),
+    );
+  }
+
+  return (
+    <section className="rounded-card border border-line bg-surface px-4 py-3 flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={() => setOtevreny((p) => !p)}
+        className="flex items-center justify-between gap-2 bg-transparent border-0 px-0 cursor-pointer text-left"
+      >
+        <span className="font-heading font-semibold text-sm text-muted uppercase tracking-wide">
+          {t('pr.hromadnyMail')}
+        </span>
+        <span className="text-xs font-heading text-brand-purpleLight">
+          {otevreny ? t('pr.hromadnyMailSkryt') : t('pr.hromadnyMailUkazat')}
+        </span>
+      </button>
+
+      {otevreny && (
+        <>
+          <p className="text-xs font-body text-muted m-0">{t('pr.hromadnyMailPopis')}</p>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+              {t('pr.predmetMailu')}
+            </span>
+            <input value={predmet} onChange={(e) => setPredmet(e.target.value)} className={POLE} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+              {t('pr.textMailu')}
+            </span>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={12}
+              className={`${POLE} resize-y`}
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs font-body text-ink">
+            <input
+              type="checkbox"
+              checked={jenPrazdna}
+              onChange={(e) => setJenPrazdna(e.target.checked)}
+            />
+            {t('pr.hromadnyMailJenPrazdna')}
+          </label>
+          <span className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => void uloz(true)}
+              disabled={bezi}
+              className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+            >
+              {t('pr.hromadnyMailVlozit')}
+            </button>
+            <button
+              type="button"
+              onClick={() => void uloz(false)}
+              disabled={bezi}
+              className="font-heading text-sm rounded-lg px-3 py-1.5 border border-line bg-transparent text-muted cursor-pointer disabled:opacity-50"
+            >
+              {t('pr.hromadnyMailUlozit')}
+            </button>
+            {hlaska && <span className="text-xs font-body text-status-done">{hlaska}</span>}
+          </span>
+        </>
+      )}
+    </section>
   );
 }
 

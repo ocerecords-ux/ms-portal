@@ -6057,6 +6057,12 @@ model PrKampan {
   stav      String   @default("ROZPRACOVANA")
   /// Volitelna vazba na zakazku v portalu (title, ke kteremu kampan patri).
   caflouProjectId String?
+  /// HROMADNY MAIL KAMPANE (zadani 20. 11. 2026: "chci nastavovat mail
+  /// hromadne u kazde kampane"). Predloha, ze ktere se plni mail u medii;
+  /// {medium} se nahradi nazvem poradu nebo redakce. Mail u konkretniho
+  /// media jde porad prepsat - predloha je jen vychozi zneni.
+  predmetMailu String?
+  textMailu    String?  @db.Text
   zalozilId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
