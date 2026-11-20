@@ -637,6 +637,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Filled in for {pocet} outlet(s)',
   },
   'pr.hromadnyMailUlozeno': { cs: 'Předloha uložena', en: 'Template saved' },
+  'pr.pokyny': { cs: 'Co si Ema pamatuje', en: 'What Ema remembers' },
+  'pr.pokynyPopis': {
+    cs: 'Trvalé pokyny ke kampani - drží se jich při každém zadání. Zapisuje si je sama, když jí řekneš, jak to má být; smazat je můžeš tady.',
+    en: 'Standing instructions for this campaign - she follows them on every task. She writes them down herself when you tell her how it should read; you can delete them here.',
+  },
   'pr.hromadnyMailOdEmy': { cs: 'Ať návrh napíše Ema', en: 'Let Ema draft it' },
   'pr.hromadnyMailPiseEma': { cs: 'Ema píše návrh…', en: 'Ema is drafting…' },
   'pr.hromadnyMailOdEmyHotovo': {

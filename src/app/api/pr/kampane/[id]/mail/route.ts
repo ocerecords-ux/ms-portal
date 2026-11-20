@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { authOptions } from '@/lib/auth';
 import { odpovedChyby } from '@/lib/chybyApi';
+import { prisma } from '@/lib/db';
 import { nactiKampan, nactiMedia } from '@/lib/emaServer';
 import { ulozPredlohuMailu, vlozPredlohuDoMedii } from '@/lib/prHromadnyMail';
 import { isInternalRole } from '@/lib/roles';
@@ -25,6 +26,8 @@ const schema = z.object({
   vlozitDoMedii: z.boolean().optional(),
   /** true = přepsat jen média, u kterých zatím žádný mail není. */
   jenPrazdna: z.boolean().optional(),
+  /** Co si Ema o kampani pamatuje - trvalé pokyny (20. 11. 2026). */
+  pokyny: z.string().max(4000).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +40,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   await ulozPredlohuMailu(id, parsed.data.predmet, parsed.data.text);
+  if (parsed.data.pokyny !== undefined) {
+    await prisma.prKampan
+      .update({ where: { id }, data: { pokyny: parsed.data.pokyny.trim() || null } })
+      .catch(() => undefined);
+  }
   const vlozeno = parsed.data.vlozitDoMedii
     ? await vlozPredlohuDoMedii(id, parsed.data.jenPrazdna ?? false)
     : 0;

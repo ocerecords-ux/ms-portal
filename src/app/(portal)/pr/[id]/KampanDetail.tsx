@@ -370,6 +370,7 @@ function HromadnyMail({
   const [otevreny, setOtevreny] = useState(false);
   const [predmet, setPredmet] = useState(kampan.predmetMailu ?? '');
   const [text, setText] = useState(kampan.textMailu ?? '');
+  const [pokyny, setPokyny] = useState(kampan.pokyny ?? '');
   const [jenPrazdna, setJenPrazdna] = useState(false);
   const [bezi, setBezi] = useState(false);
   const [pise, setPise] = useState(false);
@@ -405,7 +406,7 @@ function HromadnyMail({
     const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/mail`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ predmet, text, vlozitDoMedii, jenPrazdna }),
+      body: JSON.stringify({ predmet, text, pokyny, vlozitDoMedii, jenPrazdna }),
     }).catch(() => null);
     setBezi(false);
     const data = (await res?.json().catch(() => null)) as
@@ -467,6 +468,21 @@ function HromadnyMail({
             />
           </label>
           <VarovaniSpam jazyk={jazyk} predmet={predmet} text={text} />
+
+          {/* CO SI EMA PAMATUJE (20. 11. 2026) - trvalé pokyny ke kampani.
+              Zapisuje si je sama, tady je vidět a dají se smazat. */}
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+              {t('pr.pokyny')}
+            </span>
+            <span className="text-[11px] font-body text-muted">{t('pr.pokynyPopis')}</span>
+            <textarea
+              value={pokyny}
+              onChange={(e) => setPokyny(e.target.value)}
+              rows={4}
+              className={`${POLE} resize-y`}
+            />
+          </label>
           <label className="flex items-center gap-2 text-xs font-body text-ink">
             <input
               type="checkbox"

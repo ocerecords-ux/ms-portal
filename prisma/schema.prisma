@@ -6057,6 +6057,12 @@ model PrKampan {
   stav      String   @default("ROZPRACOVANA")
   /// Volitelna vazba na zakazku v portalu (title, ke kteremu kampan patri).
   caflouProjectId String?
+  /// TRVALE POKYNY PRO EMU (zadani 20. 11. 2026: "ona je uplne blba. Takhle
+  /// to nejde"). Co ji clovek jednou rekne o zneni - "oslovujeme Dobry den",
+  /// "tenhle porad vynech" - si ma pamatovat a drzet se toho, ne o tom
+  /// prednaset. Jeden radek na pokyn, pise je Ema nastrojem zapamatujPokyn.
+  pokyny       String?  @db.Text
+
   /// HROMADNY MAIL KAMPANE (zadani 20. 11. 2026: "chci nastavovat mail
   /// hromadne u kazde kampane"). Predloha, ze ktere se plni mail u medii;
   /// {medium} se nahradi nazvem poradu nebo redakce. Mail u konkretniho

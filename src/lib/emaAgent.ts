@@ -44,6 +44,16 @@ export type ZadaniEme = {
   cojeHotovo: string;
   /** Co jsme nedávno dali na sítě - ať nenabízí to, co už tam je. */
   naSitich?: string;
+  /**
+   * TRVALÉ POKYNY KE KAMPANI (20. 11. 2026) - co jí člověk jednou řekl
+   * o znění a platí to dál („oslovujeme Dobrý den", „tenhle pořad vynech").
+   */
+  pokyny?: string;
+  /**
+   * DOSAVADNÍ ROZHOVOR. Bez něj byla každá zpráva první: na „oslovujme Dobrý
+   * den" Ema odpověděla pozdravem, protože nevěděla, o čem je řeč.
+   */
+  historie?: { kdo: 'clovek' | 'ema'; text: string }[];
   /** Samotné zadání od člověka. */
   ukol: string;
 };
@@ -123,6 +133,17 @@ ${z.cojeHotovo || '(zatím nic)'}
 CO U NÁS NEDÁVNO BĚŽELO NA SÍTÍCH:
 ${z.naSitich || '(nevím - účet není připojený nebo je prázdný)'}
 
+TRVALÉ POKYNY KE KAMPANI (drž se jich, i když se o nich zrovna nemluví):
+${z.pokyny || '(zatím žádné)'}
+
+KDYŽ TI ŘEKNE, JAK TO MÁ BÝT, UDĚLEJ TO - NEPŘEDNÁŠEJ O TOM. Věta jako
+„oslovujme Dobrý den", „tohle je moc dlouhé" nebo „tenhle pořad vynech" není
+otázka. Znamená: zapiš si to nástrojem zapamatujPokyn a HNED podle toho přepiš
+texty, kterých se to týká - hromadnou předlohu nástrojem nastavHromadnyMail,
+mail u konkrétního pořadu nástrojem upravMailMedia. Teprve pak odpověz, a to
+jednou dvěma větami, co jsi změnila. Nikdy na takovou větu neodpovídej výkladem
+o tom, jak se co píše, ani otázkou, co máš dělat.
+
 NÁSTROJE DO PORTÁLU: médium, které chceš do kampaně, rovnou zapiš nástrojem
 pridejMedium - ne jen do textu odpovědi. Příspěvek na sítě založ nástrojem
 pripravPrispevek; vznikne rozpracovaný v sekci Sítě, nic se neodesílá.
@@ -152,7 +173,19 @@ export async function nechEmuPracovat(
   if (!klic) return { text: 'Ema teď není k dispozici - chybí klíč k API.', hledani: 0, kroky };
 
   type Zprava = { role: 'user' | 'assistant'; content: unknown };
-  const zpravy: Zprava[] = [{ role: 'user', content: z.ukol }];
+  /**
+   * ROZHOVOR, NE JEDNOTLIVÉ VZKAZY (20. 11. 2026). Dřív šlo do API jen to
+   * poslední, co člověk napsal - takže „oslovujme Dobrý den," dorazilo bez
+   * jakékoliv souvislosti a Ema na to odpověděla pozdravem. Teď jde napřed
+   * dosavadní rozhovor a nové zadání je jeho pokračování.
+   */
+  const zpravy: Zprava[] = [
+    ...(z.historie ?? []).map((h) => ({
+      role: (h.kdo === 'ema' ? 'assistant' : 'user') as 'user' | 'assistant',
+      content: h.text,
+    })),
+    { role: 'user' as const, content: z.ukol },
+  ];
   let hledani = 0;
 
   for (let kolo = 0; kolo < KOL_MAX; kolo += 1) {

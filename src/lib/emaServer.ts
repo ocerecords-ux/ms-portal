@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/db';
-import { dosadMedium, nactiPredlohuMailu } from '@/lib/prHromadnyMail';
+import {
+  dosadMedium,
+  nactiPredlohuMailu,
+  ulozPredlohuMailu,
+  vlozPredlohuDoMedii,
+} from '@/lib/prHromadnyMail';
 import { POKYN_PROTI_SPAMU } from '@/lib/prSpam';
 import { nechEmuPracovat, type Nastroj, type ZadaniEme } from '@/lib/emaAgent';
 import type { Kampan, Medium, StavKampane, StavMedia, StavUkolu, Ukol } from '@/lib/ema';
@@ -44,6 +49,7 @@ type RadekKampane = {
   caflouProjectId: string | null;
   predmetMailu: string | null;
   textMailu: string | null;
+  pokyny: string | null;
   createdAt: Date;
   _count?: { ukoly: number; media: number };
   media?: { odeslanoAt: Date | null }[];
@@ -58,6 +64,7 @@ function naKampan(k: RadekKampane): Kampan {
     caflouProjectId: k.caflouProjectId,
     predmetMailu: k.predmetMailu ?? null,
     textMailu: k.textMailu ?? null,
+    pokyny: k.pokyny ?? null,
     createdAt: k.createdAt.toISOString(),
     pocetUkolu: k._count?.ukoly ?? 0,
     pocetMedii: k._count?.media ?? 0,
@@ -376,7 +383,141 @@ function nastrojeEmy(kampanId: string, autorId: string): Nastroj[] {
       krok: (v) => `Připravuju příspěvek: ${typeof v.nazev === 'string' ? v.nazev : '?'}`,
       spust: async (v) => zalozNavrhEmy(autorId, v),
     },
+    /**
+     * CO SI MÁ PAMATOVAT (zadání 20. 11. 2026: „ona je úplně blbá. Takhle to
+     * nejde"). Na „oslovujme Dobrý den," odpověděla pozdravem a přednáškou
+     * o oslovení. Pokyn se teď zapíše ke kampani a jde do každého dalšího
+     * zadání - a Ema podle něj rovnou přepíše texty.
+     */
+    {
+      definice: {
+        name: 'zapamatujPokyn',
+        description:
+          'Zapíše trvalý pokyn ke kampani - jak psát, co vynechat, čeho se držet. Použij vždycky, když ti člověk řekne, jak to má být. Pak podle něj rovnou přepiš texty.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            pokyn: {
+              type: 'string',
+              description: 'Jedna věta, jak se to má dělat. Např. „Oslovujeme Dobrý den,".',
+            },
+          },
+          required: ['pokyn'],
+        },
+      },
+      krok: (v) => `Zapisuju si: ${typeof v.pokyn === 'string' ? v.pokyn : '?'}`,
+      spust: async (v) => {
+        const pokyn = typeof v.pokyn === 'string' ? v.pokyn.trim() : '';
+        if (!pokyn) return 'Prázdný pokyn si zapsat nejde.';
+        return pridejPokyn(kampanId, pokyn);
+      },
+    },
+    {
+      definice: {
+        name: 'nastavHromadnyMail',
+        description:
+          'Přepíše předlohu mailu pro celou kampaň (předmět a text). {medium} v textu se nahradí názvem pořadu. Nic se neodesílá.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            predmet: { type: 'string', description: 'Předmět mailu.' },
+            text: { type: 'string', description: 'Tělo mailu. Podpis nepiš, připojí se sám.' },
+            doMedii: {
+              type: 'boolean',
+              description: 'true = rovnou vložit i do mailů u médií, která ještě neodešla.',
+            },
+          },
+          required: ['predmet', 'text'],
+        },
+      },
+      krok: () => 'Přepisuju mail pro celou kampaň.',
+      spust: async (v) => {
+        const predmet = typeof v.predmet === 'string' ? v.predmet : '';
+        const text = typeof v.text === 'string' ? v.text : '';
+        if (!predmet.trim() && !text.trim()) return 'Prázdnou předlohu uložit nejde.';
+        await ulozPredlohuMailu(kampanId, predmet, text);
+        if (v.doMedii === false) return 'Předloha uložena.';
+        const kolik = await vlozPredlohuDoMedii(kampanId, false);
+        return `Předloha uložena a vložena do ${kolik} médií.`;
+      },
+    },
+    {
+      definice: {
+        name: 'upravMailMedia',
+        description:
+          'Přepíše mail u JEDNOHO pořadu nebo redakce v téhle kampani. Médium se hledá podle názvu. Odeslané maily se nemění.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            nazev: { type: 'string', description: 'Název pořadu nebo redakce, jak je v kampani.' },
+            predmet: { type: 'string', description: 'Nový předmět.' },
+            text: { type: 'string', description: 'Nový text mailu. Podpis nepiš.' },
+          },
+          required: ['nazev'],
+        },
+      },
+      krok: (v) => `Upravuju mail: ${typeof v.nazev === 'string' ? v.nazev : '?'}`,
+      spust: async (v) => {
+        const nazev = typeof v.nazev === 'string' ? v.nazev.trim() : '';
+        if (!nazev) return 'Bez názvu média nevím, co upravit.';
+        return upravMailPodleNazvu(kampanId, nazev, {
+          predmet: typeof v.predmet === 'string' ? v.predmet : undefined,
+          textMailu: typeof v.text === 'string' ? v.text : undefined,
+        });
+      },
+    },
   ];
+}
+
+/**
+ * Přidá trvalý pokyn ke kampani. Řádek po řádku, nic se nepřepisuje - co
+ * jednou řekl, platí dál, dokud to sám nezruší v Zadání kampaně.
+ */
+async function pridejPokyn(kampanId: string, pokyn: string): Promise<string> {
+  const kampan = (await prisma.prKampan
+    .findUnique({ where: { id: kampanId }, select: { pokyny: true } })
+    .catch(() => null)) as { pokyny: string | null } | null;
+  const uz = (kampan?.pokyny ?? '').trim();
+  const radky = uz ? uz.split('\n') : [];
+  if (radky.some((r) => r.trim().toLowerCase() === pokyn.toLowerCase())) {
+    return 'Tohle už si pamatuju.';
+  }
+  radky.push(pokyn);
+  await prisma.prKampan
+    .update({ where: { id: kampanId }, data: { pokyny: radky.join('\n').slice(0, 4000) } })
+    .catch(() => undefined);
+  return `Zapsáno: ${pokyn}`;
+}
+
+/** Najde médium podle názvu (i částečně) a přepíše u něj mail. */
+async function upravMailPodleNazvu(
+  kampanId: string,
+  nazev: string,
+  zmena: { predmet?: string; textMailu?: string },
+): Promise<string> {
+  const media = (await prisma.prMedium
+    .findMany({
+      where: { kampanId, odeslanoAt: null },
+      select: { id: true, nazev: true },
+    })
+    .catch(() => [])) as { id: string; nazev: string }[];
+
+  const hledane = nazev.toLowerCase();
+  const nalez =
+    media.find((m) => m.nazev.toLowerCase() === hledane) ??
+    media.find((m) => m.nazev.toLowerCase().includes(hledane));
+  if (!nalez) return `Médium „${nazev}" v kampani nenajdu (nebo už odeslalo).`;
+
+  await prisma.prMedium
+    .update({
+      where: { id: nalez.id },
+      data: {
+        ...(zmena.predmet !== undefined ? { predmet: zmena.predmet.trim() || null } : {}),
+        ...(zmena.textMailu !== undefined ? { textMailu: zmena.textMailu.trim() || null } : {}),
+      },
+    })
+    .catch(() => undefined);
+  return `Mail u „${nalez.nazev}" přepsán.`;
 }
 
 /**
@@ -420,12 +561,19 @@ export async function navrhniHromadnyMail(
     `- ${POKYN_PROTI_SPAMU}`,
   ].join('\n');
 
+  const pokyny = (
+    (await prisma.prKampan
+      .findUnique({ where: { id: kampanId }, select: { pokyny: true } })
+      .catch(() => null)) as { pokyny: string | null } | null
+  )?.pokyny;
+
   const zadaniEme: ZadaniEme = {
     jmeno: kdo.jmeno,
     nazevKampane: kampan.nazev,
     brief: kampan.brief ?? '',
     oStudiu: await oStudiu(),
     cojeHotovo: souhrn,
+    pokyny: pokyny ?? '',
     ukol,
   };
 
@@ -493,6 +641,35 @@ export async function zadejUkol(
         .join('\n')
     : '';
 
+  /**
+   * DOSAVADNÍ ROZHOVOR (20. 11. 2026: „ona je úplně blbá. Takhle to nejde").
+   *
+   * Do API šlo jen poslední zadání, takže každá věta byla první: na
+   * „oslovujme Dobrý den," Ema odpověděla pozdravem, protože netušila, o čem
+   * je řeč. Teď dostane posledních pár výměn - a trvalé pokyny ke kampani,
+   * které platí dál, i když se o nich zrovna nemluví.
+   */
+  const predchozi = (await prisma.prUkol
+    .findMany({
+      where: { kampanId, NOT: { id: ukol.id } },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      select: { zadani: true, vystup: true },
+    })
+    .catch(() => [])) as { zadani: string; vystup: string | null }[];
+
+  const historie: { kdo: 'clovek' | 'ema'; text: string }[] = [];
+  for (const p of predchozi.reverse()) {
+    historie.push({ kdo: 'clovek', text: p.zadani });
+    if (p.vystup?.trim()) historie.push({ kdo: 'ema', text: p.vystup });
+  }
+
+  const pokyny = (
+    (await prisma.prKampan
+      .findUnique({ where: { id: kampanId }, select: { pokyny: true } })
+      .catch(() => null)) as { pokyny: string | null } | null
+  )?.pokyny;
+
   const zadaniEme: ZadaniEme = {
     jmeno: kdo.jmeno,
     nazevKampane: kampan.nazev,
@@ -500,6 +677,8 @@ export async function zadejUkol(
     oStudiu: await oStudiu(),
     cojeHotovo: souhrn,
     naSitich: await coBezeloNaSitich(),
+    pokyny: pokyny ?? '',
+    historie,
     ukol: zadani.trim(),
   };
 

@@ -43,6 +43,8 @@ export type Kampan = {
   /** Hromadná předloha mailu pro celou kampaň (20. 11. 2026). */
   predmetMailu: string | null;
   textMailu: string | null;
+  /** Co si Ema o téhle kampani pamatuje - trvalé pokyny (20. 11. 2026). */
+  pokyny: string | null;
   createdAt: string;
   pocetUkolu: number;
   pocetMedii: number;
