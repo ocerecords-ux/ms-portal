@@ -54,6 +54,8 @@ export function KampanDetail({
    * otevření stránky a pak už se neměnil, takže na obrazovce zůstalo staré
    * znění a vypadalo to, že lže. Teď se po každém jejím úkolu načte znovu.
    */
+  const [zalozka, setZalozka] = useState<Zalozka>('mail');
+  const [filtr, setFiltr] = useState<FiltrMedii>('vse');
   const [predloha, setPredloha] = useState({
     predmet: kampan.predmetMailu ?? '',
     text: kampan.textMailu ?? '',
@@ -147,6 +149,19 @@ export function KampanDetail({
     setMedia(data.media);
   }, [kampan.id]);
 
+  /** Co má člověk zrovna otevřené - jde to Emě s každým zadáním. */
+  function kontextProEmu(): string {
+    const nazvy: Record<Zalozka, string> = {
+      mail: t('pr.zalozka.mail'),
+      media: t('pr.zalozka.media'),
+      fronta: t('pr.zalozka.fronta'),
+      pokyny: t('pr.zalozka.pokyny'),
+    };
+    const casti = [`otevřená záložka ${nazvy[zalozka]}`];
+    if (zalozka === 'media' && filtr !== 'vse') casti.push(`filtr ${filtr}`);
+    return casti.join(', ').slice(0, 500);
+  }
+
   async function posliZadani(predvolba?: string) {
     const text = (predvolba ?? zadani).trim();
     if (!text || bezi) return;
@@ -175,7 +190,12 @@ export function KampanDetail({
     const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/ukoly`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ zadani: text }),
+      /**
+       * POSÍLÁ SE I TO, NA CO SE DÍVÁ (20. 11. 2026: „chci s Emou mluvit jako
+       * s normálním členem týmu"). Kolega u stolu vidí tvoji obrazovku - díky
+       * tomu dává smysl „zkrať to" bez vysvětlování, co „to" je.
+       */
+      body: JSON.stringify({ zadani: text, kontext: kontextProEmu() }),
     }).catch(() => null);
     setBezi(false);
     if (!res?.ok) {
@@ -223,7 +243,19 @@ export function KampanDetail({
         </p>
       )}
 
-      <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
+      {/* STAVOVÝ PÁS: na jeden pohled, jak kampaň stojí. Každé číslo je
+          zároveň filtr seznamu médií. */}
+      <StavovyPas
+        jazyk={jazyk}
+        media={media}
+        filtr={filtr}
+        onFiltr={(f) => {
+          setFiltr(f);
+          setZalozka('media');
+        }}
+      />
+
+      <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,3fr)_minmax(330px,2fr)]">
         {/* VLEVO: ROZHOVOR S EMOU */}
         <section className="rounded-card border-2 border-brand-purple bg-field flex flex-col overflow-hidden">
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-line bg-surface">
@@ -364,18 +396,305 @@ export function KampanDetail({
           </div>
         </section>
 
-        {/* VPRAVO: HROMADNÝ MAIL, PAK MÉDIA A POLE */}
-        <div className="flex flex-col gap-5">
+        {/* VPRAVO: JEDNA VĚC CELÁ, NE TŘI PŮLKY (20. 11. 2026: „to prostředí
+            a ovládání je celkově takové nejasné a nepřehledné"). */}
+        <PravyPanel
+          jazyk={jazyk}
+          kampan={kampan}
+          media={media}
+          predloha={predloha}
+          onPredloha={setPredloha}
+          onMedia={setMedia}
+          zalozka={zalozka}
+          onZalozka={setZalozka}
+          filtr={filtr}
+          onFiltr={setFiltr}
+        />
+      </div>
+    </div>
+  );
+}
+
+export type Zalozka = 'mail' | 'media' | 'fronta' | 'pokyny';
+export type FiltrMedii = 'vse' | 'pripraveno' | 'fronta' | 'odeslano' | 'vyslo';
+
+/** Je u média připravený mail, ale ještě neodešel ani nečeká ve frontě? */
+function jePripraveno(m: Medium): boolean {
+  return !m.odeslanoAt && !m.odeslatAt && Boolean(m.predmet?.trim() && m.textMailu?.trim());
+}
+
+/**
+ * STAVOVÝ PÁS (zadání 20. 11. 2026: „to prostředí a ovládání je celkově
+ * takové nejasné a nepřehledné").
+ *
+ * Kolik je médií, kolik jich má hotový mail, kolik čeká ve frontě, kolik
+ * odešlo a kde to vyšlo - jedním pohledem, bez počítání řádků. Každé číslo
+ * je zároveň filtr seznamu.
+ */
+function StavovyPas({
+  jazyk,
+  media,
+  filtr,
+  onFiltr,
+}: {
+  jazyk: Jazyk;
+  media: Medium[];
+  filtr: FiltrMedii;
+  onFiltr: (f: FiltrMedii) => void;
+}) {
+  const t = (k: string) => prelozit(jazyk, k);
+  const policka: { klic: FiltrMedii; popisek: string; pocet: number }[] = [
+    { klic: 'vse', popisek: t('pr.stav.media'), pocet: media.length },
+    {
+      klic: 'pripraveno',
+      popisek: t('pr.stav.pripraveno'),
+      pocet: media.filter(jePripraveno).length,
+    },
+    {
+      klic: 'fronta',
+      popisek: t('pr.stav.veFronte'),
+      pocet: media.filter((m) => !m.odeslanoAt && m.odeslatAt).length,
+    },
+    {
+      klic: 'odeslano',
+      popisek: t('pr.stav.odeslano'),
+      pocet: media.filter((m) => m.odeslanoAt).length,
+    },
+    { klic: 'vyslo', popisek: t('pr.stav.vyslo'), pocet: media.filter((m) => m.stav === 'VYSLO').length },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {policka.map((p) => {
+        const aktivni = filtr === p.klic;
+        return (
+          <button
+            key={p.klic}
+            type="button"
+            onClick={() => onFiltr(aktivni && p.klic !== 'vse' ? 'vse' : p.klic)}
+            className={`rounded-card border px-3.5 py-2 text-left cursor-pointer transition-colors ${
+              aktivni ? 'border-brand-purple bg-tint' : 'border-line bg-surface hover:bg-field'
+            }`}
+          >
+            <span className="block font-display text-xl text-ink leading-none">{p.pocet}</span>
+            <span className="block text-[11px] font-heading uppercase tracking-wide text-muted mt-1">
+              {p.popisek}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * PRAVÝ PANEL SE ZÁLOŽKAMI. Dřív tu byly tři věci pod sebou v úzkém sloupci
+ * a žádná nebyla vidět celá; teď je vidět vždycky jedna.
+ */
+function PravyPanel({
+  jazyk,
+  kampan,
+  media,
+  predloha,
+  onPredloha,
+  onMedia,
+  zalozka,
+  onZalozka,
+  filtr,
+  onFiltr,
+}: {
+  jazyk: Jazyk;
+  kampan: Kampan;
+  media: Medium[];
+  predloha: Predloha;
+  onPredloha: (p: Predloha) => void;
+  onMedia: (m: Medium[]) => void;
+  zalozka: Zalozka;
+  onZalozka: (z: Zalozka) => void;
+  filtr: FiltrMedii;
+  onFiltr: (f: FiltrMedii) => void;
+}) {
+  const t = (k: string) => prelozit(jazyk, k);
+  const veFronte = media.filter((m) => !m.odeslanoAt && m.odeslatAt).length;
+  const zalozky: { klic: Zalozka; popisek: string; pocet?: number }[] = [
+    { klic: 'mail', popisek: t('pr.zalozka.mail') },
+    { klic: 'media', popisek: t('pr.zalozka.media'), pocet: media.length },
+    { klic: 'fronta', popisek: t('pr.zalozka.fronta'), pocet: veFronte },
+    { klic: 'pokyny', popisek: t('pr.zalozka.pokyny') },
+  ];
+
+  return (
+    <section className="rounded-card border border-line bg-surface overflow-hidden flex flex-col">
+      <div className="flex border-b border-line bg-field">
+        {zalozky.map((z) => (
+          <button
+            key={z.klic}
+            type="button"
+            onClick={() => onZalozka(z.klic)}
+            className={`grow px-3 py-2.5 text-xs font-heading font-semibold cursor-pointer border-0 transition-colors ${
+              zalozka === z.klic
+                ? 'bg-surface text-brand-purpleDark'
+                : 'bg-transparent text-muted hover:text-ink'
+            }`}
+          >
+            {z.popisek}
+            {z.pocet ? <span className="font-body text-muted"> {z.pocet}</span> : null}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-4">
+        {zalozka === 'mail' && (
           <HromadnyMail
             jazyk={jazyk}
             kampan={kampan}
             predloha={predloha}
-            onPredloha={setPredloha}
-            onMedia={setMedia}
+            onPredloha={onPredloha}
+            onMedia={onMedia}
           />
-          <SeznamMedii jazyk={jazyk} kampanId={kampan.id} media={media} onZmena={setMedia} />
-        </div>
+        )}
+        {zalozka === 'media' && (
+          <SeznamMedii
+            jazyk={jazyk}
+            kampanId={kampan.id}
+            media={media}
+            onZmena={onMedia}
+            filtr={filtr}
+            onFiltr={onFiltr}
+          />
+        )}
+        {zalozka === 'fronta' && <Fronta jazyk={jazyk} media={media} onZmena={onMedia} kampanId={kampan.id} />}
+        {zalozka === 'pokyny' && (
+          <Pokyny jazyk={jazyk} kampanId={kampan.id} predloha={predloha} onPredloha={onPredloha} />
+        )}
       </div>
+    </section>
+  );
+}
+
+/**
+ * FRONTA: co kdy odejde. Vlastní záložka proto, že „odesláno" a „odejde za
+ * dvacet minut" jsou pro člověka dvě různé věci a v jednom seznamu se to
+ * plete.
+ */
+function Fronta({
+  jazyk,
+  media,
+  kampanId,
+  onZmena,
+}: {
+  jazyk: Jazyk;
+  media: Medium[];
+  kampanId: string;
+  onZmena: (m: Medium[]) => void;
+}) {
+  const t = (k: string, h?: Record<string, string | number>) =>
+    h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
+  const cekaji = media
+    .filter((m) => !m.odeslanoAt && m.odeslatAt)
+    .sort((a, b) => (a.odeslatAt ?? '').localeCompare(b.odeslatAt ?? ''));
+
+  async function zrus(id: string) {
+    const res = await fetch(
+      `/api/pr/kampane/${encodeURIComponent(kampanId)}/media/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ odeslatAt: null }),
+      },
+    ).catch(() => null);
+    if (!res?.ok) return;
+    const data = (await res.json()) as { media: Medium[] };
+    onZmena(data.media);
+  }
+
+  if (cekaji.length === 0) {
+    return <p className="text-sm font-body text-muted m-0">{t('pr.frontaPrazdna')}</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs font-body text-muted m-0">{t('pr.veFrontePopis')}</p>
+      <ul className="list-none p-0 m-0 flex flex-col gap-2">
+        {cekaji.map((m) => (
+          <li
+            key={m.id}
+            className="rounded-card border border-line bg-field px-3 py-2 flex items-center gap-2 flex-wrap"
+          >
+            <span className="font-heading font-semibold text-sm text-ink grow min-w-[120px]">
+              {m.nazev}
+            </span>
+            <span className="text-xs font-body text-brand-purpleLight">
+              {formatDatumCas(jazyk, new Date(m.odeslatAt as string))}
+            </span>
+            <button
+              type="button"
+              onClick={() => void zrus(m.id)}
+              className="text-xs font-heading text-muted bg-transparent border-0 px-0 cursor-pointer hover:text-danger"
+            >
+              {t('pr.zrusitZFronty')}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Trvalé pokyny ke kampani - co si Ema pamatuje a drží se toho. */
+function Pokyny({
+  jazyk,
+  kampanId,
+  predloha,
+  onPredloha,
+}: {
+  jazyk: Jazyk;
+  kampanId: string;
+  predloha: Predloha;
+  onPredloha: (p: Predloha) => void;
+}) {
+  const t = (k: string) => prelozit(jazyk, k);
+  const [uklada, setUklada] = useState(false);
+  const [ulozeno, setUlozeno] = useState(false);
+
+  async function uloz() {
+    setUklada(true);
+    await fetch(`/api/pr/kampane/${encodeURIComponent(kampanId)}/mail`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        predmet: predloha.predmet,
+        text: predloha.text,
+        pokyny: predloha.pokyny,
+      }),
+    }).catch(() => null);
+    setUklada(false);
+    setUlozeno(true);
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs font-body text-muted m-0">{t('pr.pokynyPopis')}</p>
+      <textarea
+        value={predloha.pokyny}
+        onChange={(e) => {
+          onPredloha({ ...predloha, pokyny: e.target.value });
+          setUlozeno(false);
+        }}
+        rows={10}
+        className={`${POLE} resize-y`}
+      />
+      <span className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void uloz()}
+          disabled={uklada}
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+        >
+          {t('obecne.ulozit')}
+        </button>
+        {ulozeno && <span className="text-xs font-body text-status-done">{t('pr.mailUlozeno')}</span>}
+      </span>
     </div>
   );
 }
@@ -439,11 +758,9 @@ function HromadnyMail({
 }) {
   const t = (k: string, h?: Record<string, string | number>) =>
     h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
-  const [otevreny, setOtevreny] = useState(false);
-  const { predmet, text, pokyny } = predloha;
+  const { predmet, text } = predloha;
   const setPredmet = (v: string) => onPredloha({ ...predloha, predmet: v });
   const setText = (v: string) => onPredloha({ ...predloha, text: v });
-  const setPokyny = (v: string) => onPredloha({ ...predloha, pokyny: v });
   const [jenPrazdna, setJenPrazdna] = useState(false);
   const [bezi, setBezi] = useState(false);
   const [pise, setPise] = useState(false);
@@ -482,7 +799,13 @@ function HromadnyMail({
     const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/mail`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ predmet, text, pokyny, vlozitDoMedii, jenPrazdna }),
+      body: JSON.stringify({
+        predmet,
+        text,
+        pokyny: predloha.pokyny,
+        vlozitDoMedii,
+        jenPrazdna,
+      }),
     }).catch(() => null);
     setBezi(false);
     const data = (await res?.json().catch(() => null)) as
@@ -501,93 +824,62 @@ function HromadnyMail({
   }
 
   return (
-    <section className="rounded-card border border-line bg-surface px-4 py-3 flex flex-col gap-3">
+    <section className="flex flex-col gap-3">
+      <p className="text-xs font-body text-muted m-0">{t('pr.hromadnyMailPopis')}</p>
       <button
         type="button"
-        onClick={() => setOtevreny((p) => !p)}
-        className="flex items-center justify-between gap-2 bg-transparent border-0 px-0 cursor-pointer text-left"
+        onClick={() => void napisEmou()}
+        disabled={pise}
+        className="self-start font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
       >
-        <span className="font-heading font-semibold text-sm text-muted uppercase tracking-wide">
-          {t('pr.hromadnyMail')}
-        </span>
-        <span className="text-xs font-heading text-brand-purpleLight">
-          {otevreny ? t('pr.hromadnyMailSkryt') : t('pr.hromadnyMailUkazat')}
-        </span>
+        {pise ? t('pr.hromadnyMailPiseEma') : t('pr.hromadnyMailOdEmy')}
       </button>
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+          {t('pr.predmetMailu')}
+        </span>
+        <input value={predmet} onChange={(e) => setPredmet(e.target.value)} className={POLE} />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+          {t('pr.textMailu')}
+        </span>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={12}
+          className={`${POLE} resize-y`}
+        />
+      </label>
+      <VarovaniSpam jazyk={jazyk} predmet={predmet} text={text} />
 
-      {otevreny && (
-        <>
-          <p className="text-xs font-body text-muted m-0">{t('pr.hromadnyMailPopis')}</p>
-          <button
-            type="button"
-            onClick={() => void napisEmou()}
-            disabled={pise}
-            className="self-start font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
-          >
-            {pise ? t('pr.hromadnyMailPiseEma') : t('pr.hromadnyMailOdEmy')}
-          </button>
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
-              {t('pr.predmetMailu')}
-            </span>
-            <input value={predmet} onChange={(e) => setPredmet(e.target.value)} className={POLE} />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
-              {t('pr.textMailu')}
-            </span>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={12}
-              className={`${POLE} resize-y`}
-            />
-          </label>
-          <VarovaniSpam jazyk={jazyk} predmet={predmet} text={text} />
-
-          {/* CO SI EMA PAMATUJE (20. 11. 2026) - trvalé pokyny ke kampani.
-              Zapisuje si je sama, tady je vidět a dají se smazat. */}
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
-              {t('pr.pokyny')}
-            </span>
-            <span className="text-[11px] font-body text-muted">{t('pr.pokynyPopis')}</span>
-            <textarea
-              value={pokyny}
-              onChange={(e) => setPokyny(e.target.value)}
-              rows={4}
-              className={`${POLE} resize-y`}
-            />
-          </label>
-          <label className="flex items-center gap-2 text-xs font-body text-ink">
-            <input
-              type="checkbox"
-              checked={jenPrazdna}
-              onChange={(e) => setJenPrazdna(e.target.checked)}
-            />
-            {t('pr.hromadnyMailJenPrazdna')}
-          </label>
-          <span className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => void uloz(true)}
-              disabled={bezi}
-              className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
-            >
-              {t('pr.hromadnyMailVlozit')}
-            </button>
-            <button
-              type="button"
-              onClick={() => void uloz(false)}
-              disabled={bezi}
-              className="font-heading text-sm rounded-lg px-3 py-1.5 border border-line bg-transparent text-muted cursor-pointer disabled:opacity-50"
-            >
-              {t('pr.hromadnyMailUlozit')}
-            </button>
-            {hlaska && <span className="text-xs font-body text-status-done">{hlaska}</span>}
-          </span>
-        </>
-      )}
+      <label className="flex items-center gap-2 text-xs font-body text-ink">
+        <input
+          type="checkbox"
+          checked={jenPrazdna}
+          onChange={(e) => setJenPrazdna(e.target.checked)}
+        />
+        {t('pr.hromadnyMailJenPrazdna')}
+      </label>
+      <span className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => void uloz(true)}
+          disabled={bezi}
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+        >
+          {t('pr.hromadnyMailVlozit')}
+        </button>
+        <button
+          type="button"
+          onClick={() => void uloz(false)}
+          disabled={bezi}
+          className="font-heading text-sm rounded-lg px-3 py-1.5 border border-line bg-transparent text-muted cursor-pointer disabled:opacity-50"
+        >
+          {t('pr.hromadnyMailUlozit')}
+        </button>
+        {hlaska && <span className="text-xs font-body text-status-done">{hlaska}</span>}
+      </span>
     </section>
   );
 }
@@ -597,11 +889,15 @@ function SeznamMedii({
   kampanId,
   media,
   onZmena,
+  filtr,
+  onFiltr,
 }: {
   jazyk: Jazyk;
   kampanId: string;
   media: Medium[];
   onZmena: (m: Medium[]) => void;
+  filtr: FiltrMedii;
+  onFiltr: (f: FiltrMedii) => void;
 }) {
   const t = (k: string, h?: Record<string, string | number>) =>
     h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
@@ -629,6 +925,28 @@ function SeznamMedii({
   const [ulozeno, setUlozeno] = useState(false);
   const [nahled, setNahled] = useState<string | null>(null);
   const [nacitaNahled, setNacitaNahled] = useState(false);
+  /**
+   * HROMADNÉ ODESLÁNÍ (20. 11. 2026). Odkliknout dvacet médií po jednom je
+   * práce navíc - fronta je stejně rozloží v čase, takže se vybere víc naráz
+   * a pošle se jedním tlačítkem. Odesílá se po jednom za sebou, ať je vidět,
+   * co se nepovedlo.
+   */
+  const [vybrana, setVybrana] = useState<string[]>([]);
+  const [hromadne, setHromadne] = useState(false);
+
+  const kOdeslani = media.filter(
+    (m) => !m.odeslanoAt && !m.odeslatAt && m.predmet?.trim() && m.textMailu?.trim(),
+  );
+
+  async function odesliVybranym() {
+    setHromadne(true);
+    setChybaMailu(null);
+    for (const id of vybrana) {
+      await odesli(id);
+    }
+    setVybrana([]);
+    setHromadne(false);
+  }
 
   function otevri(m: Medium) {
     if (otevreny === m.id) {
@@ -717,19 +1035,68 @@ function SeznamMedii({
     onZmena(data.media);
   }
 
+  const videna = media.filter((m) => {
+    if (filtr === 'pripraveno') return jePripraveno(m);
+    if (filtr === 'fronta') return !m.odeslanoAt && m.odeslatAt;
+    if (filtr === 'odeslano') return Boolean(m.odeslanoAt);
+    if (filtr === 'vyslo') return m.stav === 'VYSLO';
+    return true;
+  });
+
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-        {t('pr.media')}
-      </h2>
+      {filtr !== 'vse' && (
+        <button
+          type="button"
+          onClick={() => onFiltr('vse')}
+          className="self-start text-xs font-heading text-brand-purpleLight bg-transparent border-0 px-0 cursor-pointer"
+        >
+          {t('pr.stav.media')} · {media.length}
+        </button>
+      )}
       <p className="text-xs font-body text-muted m-0">{t('pr.mediaPopis')}</p>
-      <p className="text-xs font-body text-muted m-0">{t('pr.veFrontePopis')}</p>
 
-      {media.length > 0 && (
+      {/* HROMADNÉ ODESLÁNÍ - fronta maily stejně rozloží v čase. */}
+      {kOdeslani.length > 0 && (
+        <span className="flex items-center gap-3 flex-wrap">
+          <label className="flex items-center gap-2 text-xs font-body text-ink">
+            <input
+              type="checkbox"
+              checked={vybrana.length > 0 && vybrana.length === kOdeslani.length}
+              onChange={(e) => setVybrana(e.target.checked ? kOdeslani.map((m) => m.id) : [])}
+            />
+            {t('pr.vybratVse')}
+          </label>
+          {vybrana.length > 0 && (
+            <button
+              type="button"
+              onClick={() => void odesliVybranym()}
+              disabled={hromadne}
+              className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+            >
+              {t('pr.vybranoOdeslat', { pocet: vybrana.length })}
+            </button>
+          )}
+        </span>
+      )}
+
+      {videna.length > 0 && (
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
-          {media.map((m) => (
+          {videna.map((m) => (
             <li key={m.id} className="rounded-card border border-line bg-surface px-4 py-3 flex flex-col gap-2">
               <span className="flex items-center gap-3 flex-wrap">
+                {!m.odeslanoAt && !m.odeslatAt && m.predmet?.trim() && m.textMailu?.trim() && (
+                  <input
+                    type="checkbox"
+                    checked={vybrana.includes(m.id)}
+                    onChange={(e) =>
+                      setVybrana((p) =>
+                        e.target.checked ? [...p, m.id] : p.filter((x) => x !== m.id),
+                      )
+                    }
+                    className="shrink-0"
+                  />
+                )}
                 <span
                   className="shrink-0 rounded-pill px-2 py-0.5 text-[10px] font-heading font-semibold text-white"
                   style={{ backgroundColor: BARVA_STAVU_MEDIA[m.stav] }}

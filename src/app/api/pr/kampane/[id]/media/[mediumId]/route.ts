@@ -25,6 +25,8 @@ const schema = z.object({
   predmet: z.string().trim().max(300).optional(),
   textMailu: z.string().trim().max(8000).optional(),
   poznamka: z.string().trim().max(4000).optional(),
+  /** null = vyhodit z fronty (20. 11. 2026). Jiná hodnota se sem neposílá. */
+  odeslatAt: z.null().optional(),
 });
 
 export async function PATCH(

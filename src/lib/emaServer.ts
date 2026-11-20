@@ -259,6 +259,8 @@ export async function upravMedium(
         ...(data.predmet !== undefined ? { predmet: data.predmet || null } : {}),
         ...(data.textMailu !== undefined ? { textMailu: data.textMailu || null } : {}),
         ...(data.poznamka !== undefined ? { poznamka: data.poznamka || null } : {}),
+        // Vyhození z fronty (20. 11. 2026) - čas se jen maže, nikdy nenastavuje.
+        ...(data.odeslatAt === null ? { odeslatAt: null } : {}),
         ...odeslano,
       },
     })
@@ -671,6 +673,8 @@ export async function zadejUkol(
   kampanId: string,
   zadani: string,
   kdo: { id: string; jmeno: string },
+  /** Na co se člověk zrovna dívá - otevřená záložka, rozkliknuté médium. */
+  kontext?: string,
 ): Promise<string | null> {
   const kampan = await nactiKampan(kampanId);
   if (!kampan) return null;
@@ -740,6 +744,7 @@ export async function zadejUkol(
     naSitich: await coBezeloNaSitich(),
     pokyny: pokyny ?? '',
     historie,
+    kontext: kontext?.trim() || '',
     ukol: zadani.trim(),
   };
 

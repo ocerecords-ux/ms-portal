@@ -29,14 +29,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const parsed = z
-    .object({ zadani: z.string().trim().min(3).max(8000) })
+    .object({
+      zadani: z.string().trim().min(3).max(8000),
+      /** Na co se člověk dívá - otevřená záložka, rozkliknuté médium (20. 11. 2026). */
+      kontext: z.string().trim().max(500).optional(),
+    })
     .safeParse(await req.json().catch(() => null));
   if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
-  const ukolId = await zadejUkol(id, parsed.data.zadani, {
-    id: session.user.id,
-    jmeno: session.user.name || session.user.email || 'kolega',
-  });
+  const ukolId = await zadejUkol(
+    id,
+    parsed.data.zadani,
+    {
+      id: session.user.id,
+      jmeno: session.user.name || session.user.email || 'kolega',
+    },
+    parsed.data.kontext,
+  );
   if (!ukolId) return odpovedChyby('chybaApi.ulohaNepodarila', 500);
   return NextResponse.json({ ukolId, ukoly: await nactiUkoly(id) });
 }

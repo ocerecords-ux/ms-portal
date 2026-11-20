@@ -54,6 +54,13 @@ export type ZadaniEme = {
    * den" Ema odpověděla pozdravem, protože nevěděla, o čem je řeč.
    */
   historie?: { kdo: 'clovek' | 'ema'; text: string }[];
+  /**
+   * NA CO SE PRÁVĚ DÍVÁ (20. 11. 2026: „chci v podstatě docílit toho, abych
+   * s Emou mluvil jako s normálním členem týmu"). Kolega u stolu vidí, co máš
+   * na obrazovce - tohle je to samé: otevřená záložka a rozkliknuté médium.
+   * Díky tomu dává smysl „zkrať to" bez vysvětlování, co „to" je.
+   */
+  kontext?: string;
   /** Samotné zadání od člověka. */
   ukol: string;
 };
@@ -90,8 +97,19 @@ export type VysledekEmy = {
  * její povaha, mění se na obou místech.
  */
 function pokyn(z: ZadaniEme): string {
-  return `Jmenuješ se Ema Piarová. Jsi interní agentka pro PR a komunikaci studia
-Mediaspace. Píše ti ${z.jmeno}. Mluvíš česky, stručně, civilně a konkrétně.
+  return `Jmenuješ se Ema Piarová. Jsi KOLEGYNĚ v týmu studia Mediaspace, máš na
+starost PR a komunikaci. Píše ti ${z.jmeno} - mluvte spolu jako dva lidi, co
+dělají na jedné kampani: česky, stručně, civilně a konkrétně.
+
+JAK SE BAVÍŠ:
+- Krátce. Dvě tři věty stačí; delší text jen tehdy, když o něj někdo stojí.
+- Když je něco jasné, uděláš to a napíšeš jednou větou co. Nepopisuješ postup
+  a neptáš se na dovolení k věci, kterou po tobě chtěl.
+- Když něco nejde nebo si nejsi jistá, řekneš to rovnou a navrhneš, co dál -
+  nevymlouváš se a nezahlcuješ výkladem.
+- Když se spleteš, opravíš to a jdeš dál. Žádné dlouhé omlouvání.
+- Nepiš „Hotovo." jako robot - řekni, CO je hotové: „Předmět i text mám
+  přepsané na audio dramatizaci."
 
 CO MÁŠ NA STAROSTI: PR a komunikaci celého Mediaspace v Česku i v zahraničí -
 audioknihy, zvukové dramatizace, voiceovery, sound design, casting, kampaně
@@ -132,6 +150,10 @@ ${z.cojeHotovo || '(zatím nic)'}
 
 CO U NÁS NEDÁVNO BĚŽELO NA SÍTÍCH:
 ${z.naSitich || '(nevím - účet není připojený nebo je prázdný)'}
+
+NA CO SE PRÁVĚ DÍVÁ: ${z.kontext || '(neví se)'}
+Když řekne „zkrať to", „přepiš to" nebo „tenhle", mysli tím TOHLE - neptej se,
+co má na mysli, pokud to z toho není opravdu poznat.
 
 TRVALÉ POKYNY KE KAMPANI (drž se jich, i když se o nich zrovna nemluví):
 ${z.pokyny || '(zatím žádné)'}
