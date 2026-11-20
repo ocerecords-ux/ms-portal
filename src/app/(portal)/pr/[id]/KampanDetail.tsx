@@ -351,8 +351,59 @@ function SeznamMedii({
   const [potvrzuje, setPotvrzuje] = useState<string | null>(null);
   const [odesila, setOdesila] = useState<string | null>(null);
   const [chybaMailu, setChybaMailu] = useState<string | null>(null);
+  /**
+   * KONCEPT MAILU (zadání 20. 11. 2026: „dej mi někde možnost, abych mohl Emě
+   * editovat ten mail, co posílá"). Co je v polích, drží obrazovka, ne
+   * databáze - ukládá se tlačítkem a odeslání si uloží samo, ať nikdy neodejde
+   * jiný text, než jaký je vidět.
+   */
+  const [koncept, setKoncept] = useState<{ predmet: string; text: string } | null>(null);
+  const [uklada, setUklada] = useState(false);
+  const [ulozeno, setUlozeno] = useState(false);
+  const [nahled, setNahled] = useState<string | null>(null);
+  const [nacitaNahled, setNacitaNahled] = useState(false);
+
+  function otevri(m: Medium) {
+    if (otevreny === m.id) {
+      setOtevreny(null);
+      setKoncept(null);
+      setNahled(null);
+      return;
+    }
+    setOtevreny(m.id);
+    setKoncept({ predmet: m.predmet ?? '', text: m.textMailu ?? '' });
+    setNahled(null);
+    setUlozeno(false);
+    setChybaMailu(null);
+  }
+
+  async function uloz(id: string) {
+    if (!koncept) return;
+    setUklada(true);
+    await zmen(id, { predmet: koncept.predmet, textMailu: koncept.text });
+    setUklada(false);
+    setUlozeno(true);
+  }
+
+  async function ukazNahled() {
+    if (nahled !== null) {
+      setNahled(null);
+      return;
+    }
+    setNacitaNahled(true);
+    const res = await fetch('/api/pr/media/nahled', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: koncept?.text ?? '' }),
+    }).catch(() => null);
+    setNacitaNahled(false);
+    const data = (await res?.json().catch(() => null)) as { html?: string } | null;
+    setNahled(data?.html ?? '');
+  }
 
   async function odesli(id: string) {
+    // Ať odejde přesně to, co je na obrazovce - i kdyby se zapomnělo uložit.
+    await uloz(id);
     setOdesila(id);
     setChybaMailu(null);
     const res = await fetch('/api/pr/media/odeslat', {
@@ -457,10 +508,14 @@ function SeznamMedii({
               {/* MAIL - co napsala Ema, ke kontrole a k odeslání. */}
               <button
                 type="button"
-                onClick={() => setOtevreny((p) => (p === m.id ? null : m.id))}
+                onClick={() => otevri(m)}
                 className="self-start text-xs font-heading text-brand-purpleLight bg-transparent border-0 px-0 cursor-pointer"
               >
-                {otevreny === m.id ? t('pr.mailSkryt') : t('pr.mailUkazat')}
+                {otevreny === m.id
+                  ? t('pr.mailSkryt')
+                  : m.odeslanoAt
+                    ? t('pr.mailUkazat')
+                    : t('pr.mailUpravit')}
               </button>
 
               {otevreny === m.id && (
@@ -470,8 +525,11 @@ function SeznamMedii({
                       {t('pr.predmetMailu')}
                     </span>
                     <input
-                      defaultValue={m.predmet ?? ''}
-                      onBlur={(e) => zmen(m.id, { predmet: e.target.value })}
+                      value={koncept?.predmet ?? ''}
+                      onChange={(e) => {
+                        setKoncept((k) => ({ predmet: e.target.value, text: k?.text ?? '' }));
+                        setUlozeno(false);
+                      }}
                       className={POLE}
                     />
                   </label>
@@ -480,12 +538,46 @@ function SeznamMedii({
                       {t('pr.textMailu')}
                     </span>
                     <textarea
-                      defaultValue={m.textMailu ?? ''}
-                      onBlur={(e) => zmen(m.id, { textMailu: e.target.value })}
-                      rows={10}
+                      value={koncept?.text ?? ''}
+                      onChange={(e) => {
+                        setKoncept((k) => ({ predmet: k?.predmet ?? '', text: e.target.value }));
+                        setUlozeno(false);
+                        setNahled(null);
+                      }}
+                      rows={14}
                       className={`${POLE} resize-y`}
                     />
                   </label>
+
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => void uloz(m.id)}
+                      disabled={uklada}
+                      className="font-heading font-semibold text-sm rounded-lg px-3 py-1.5 border border-line bg-surface text-ink cursor-pointer disabled:opacity-50"
+                    >
+                      {t('pr.mailUlozit')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void ukazNahled()}
+                      disabled={nacitaNahled}
+                      className="font-heading text-sm rounded-lg px-3 py-1.5 border border-line bg-transparent text-muted cursor-pointer disabled:opacity-50"
+                    >
+                      {nahled !== null ? t('pr.mailNahledSkryt') : t('pr.mailNahled')}
+                    </button>
+                    {ulozeno && <span className="text-xs font-body text-status-done">{t('pr.mailUlozeno')}</span>}
+                  </span>
+
+                  {nahled !== null && (
+                    <span className="flex flex-col gap-1">
+                      <span className="text-[11px] font-body text-muted">{t('pr.mailNahledPopis')}</span>
+                      <span
+                        className="rounded-card border border-line bg-white p-4 overflow-x-auto"
+                        dangerouslySetInnerHTML={{ __html: nahled }}
+                      />
+                    </span>
+                  )}
 
                   {!m.odeslanoAt && potvrzuje !== m.id && (
                     <button

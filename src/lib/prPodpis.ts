@@ -64,8 +64,12 @@ export function podpisEmyHtml(adresa: string): string {
    *
    * Portálové `mediaspace-logo-still.png` je ZELENÉ a je to čtverec 280×280
    * s velkým prázdným okrajem - v mailu z něj byla zelená cedule přes půl
-   * obrazovky. `mediaspace-podpis.png` je tentýž nápis přebarvený do fialové
-   * značky a oříznutý na samotný text, stejně jako v Ondřejově podpisu.
+   * obrazovky. `mediaspace-podpis.png` je MALÁ (jednořádková) verze loga
+   * z `scripts/rodny-list-logo.png`, přebarvená do fialové značky #7B55FF
+   * a oříznutá na samotný nápis - 219×73, v mailu vysazená na 180 px.
+   * Přebarvuje se jen barva, průhlednost zůstává původní, aby hrany nápisu
+   * nezubatěly (20. 11. 2026: „vlož jí tam normální fialové logo ve small
+   * verzi").
    */
   const logo = `${zakladPortalu()}/mediaspace-podpis.png`;
   const studia = STUDIA.map(
@@ -79,7 +83,7 @@ export function podpisEmyHtml(adresa: string): string {
       <div style="margin-top:20px;"><strong>${escapeHtml(EMA_JMENO)}</strong></div>
       <div>${escapeHtml(EMA_ROLE)}</div>
       <div style="margin:18px 0 16px;">
-        <img src="${logo}" width="240" alt="MEDIA SPACE" style="display:block;width:240px;height:auto;border:0;" />
+        <img src="${logo}" width="180" alt="MEDIA SPACE" style="display:block;width:180px;height:auto;border:0;" />
       </div>
       <div><strong>E:</strong> <a href="mailto:${escapeHtml(adresa)}" style="color:#000000;text-decoration:none;">${escapeHtml(adresa)}</a></div>
       <div><strong>W:</strong> <a href="https://${WEB}" style="color:#000000;text-decoration:none;">${WEB}</a></div>
