@@ -286,6 +286,18 @@ export function KampanDetail({
             <textarea
               value={zadani}
               onChange={(e) => setZadani(e.target.value)}
+              /**
+               * ENTER ODESÍLÁ (zadání 20. 11. 2026: „potřebuju, ať se to
+               * odesílá rovnou entrem"). Je to chat, ne formulář - sahat po
+               * myši mezi dvěma větami zdržuje. Nový řádek zůstává na
+               * Shift+Enter a na Enter při rozepsaném českém psaní
+               * (isComposing), aby se háčky nerozsekaly.
+               */
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                void posliZadani();
+              }}
               rows={3}
               placeholder={t('pr.zadaniPriklad')}
               className={`${POLE} resize-y`}

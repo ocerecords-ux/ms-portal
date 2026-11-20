@@ -582,7 +582,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Třeba: najdi pět pořadů, kde můžou mluvit oba hosté, a ke každému připrav kontakt, předmět a krátký mail.',
     en: 'For example: find five programmes where both guests can appear, and prepare a contact, subject line and short email for each.',
   },
-  'pr.zadat': { cs: 'Zadat Emě', en: 'Give it to Ema' },
+  'pr.zadat': { cs: 'Odeslat', en: 'Send' },
   'pr.posilam': { cs: 'Posílám…', en: 'Sending…' },
   'pr.zacinam': { cs: 'Beru si zadání.', en: 'Picking up the task.' },
   'pr.emaNeslo': { cs: 'Emě se to nepovedlo. Zkus to prosím znovu.', en: 'Ema could not do it. Please try again.' },
