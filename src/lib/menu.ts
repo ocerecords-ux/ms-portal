@@ -42,6 +42,13 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // Objednavka je klientska agenda.
   '/objednavka': ['CLIENT'],
   /**
+   * HUDBA A TRACKLIST OD KLIENTA (20. 11. 2026). Do detailu projektu se
+   * klient nedostane, tohle je jeho misto na vlozeni hudby a tracklistu -
+   * kdykoliv, ne az kdyz mu prijde vyzva. Nas tym to vidi taky, at je kam
+   * klientovi ukazat, co uvidi on.
+   */
+  '/hudba-tracklist': ['CLIENT', 'ADMIN', 'PRODUKCE'],
+  /**
    * NAHRAVKY UZ NEJSOU JEN PRO KLIENTA (zadani 30. 9. 2026: „mame na disku
    * slozky: Klientska zona, Dokumenty, Marketing. Potrebuju, at nekteri
    * uzivatele nevidi nektere slozky").
@@ -170,6 +177,7 @@ export function canSee(href: string, role: Role, kdo?: KdoPristupy): boolean {
 export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: number }[] = [
   { label: 'Projekty', href: '/projekty', sortOrder: 10 },
   { label: 'Objednávka', href: '/objednavka', sortOrder: 20 },
+  { label: 'Hudba a tracklist', href: '/hudba-tracklist', sortOrder: 25 },
   { label: 'Nahrávky', href: '/nahravky', sortOrder: 30 },
   { label: 'Výkazy', href: '/vykazy', sortOrder: 40 },
   { label: 'Kalendář', href: '/kalendar', sortOrder: 45 },
@@ -200,6 +208,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
    */
   { href: '/projekty', label: 'Projekty' },
   { href: '/objednavka', label: 'Objednávka' },
+  { href: '/hudba-tracklist', label: 'Hudba a tracklist' },
   { href: '/nahravky', label: 'Nahrávky' },
   { href: '/vykazy', label: 'Výkazy' },
   { href: '/kalendar', label: 'Kalendář' },

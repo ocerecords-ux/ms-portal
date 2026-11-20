@@ -305,6 +305,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekt.zalozka.tracklist': { cs: 'Tracklist', en: 'Tracklist' },
   'projekt.zalozka.hudba': { cs: 'Hudba', en: 'Music' },
   'projekt.zalozka.hudbaTracklist': { cs: 'Hudba a tracklist', en: 'Music and tracklist' },
+  'hudbaKlientSekce.nadpis': { cs: 'Hudba a tracklist', en: 'Music and tracklist' },
+  'hudbaKlientSekce.popis': {
+    cs: 'Tady vložíte hudbu a tracklist ke knihám, které pro vás natáčíme. Můžete to udělat kdykoliv - nemusíte čekat, až vám napíšeme.',
+    en: 'Add music and the tracklist for the books we are recording for you. You can do it any time - no need to wait for us to ask.',
+  },
+  'hudbaKlientSekce.zadne': {
+    cs: 'Zatím tu není žádná kniha, ke které bychom od vás hudbu nebo tracklist potřebovali.',
+    en: 'There is no book here that needs music or a tracklist from you yet.',
+  },
+  'hudbaKlientSekce.vyberte': { cs: 'Vyberte knihu', en: 'Pick a book' },
+  'hudbaKlientSekce.hotovoHudba': { cs: 'hudba vložena', en: 'music added' },
+  'hudbaKlientSekce.hotovoTracklist': { cs: 'tracklist vyplněn', en: 'tracklist filled in' },
+  'hudbaKlientSekce.chybi': { cs: 'ještě chybí', en: 'still missing' },
   /* Karta Hudba - soubory leží v Dropboxu (zadání 16. 10. 2026). */
   'hudba.popis': {
     cs: 'Hudba vybraná pro tenhle projekt. Soubory se ukládají do Dropboxu, do složky projektu — portálem neprocházejí.',

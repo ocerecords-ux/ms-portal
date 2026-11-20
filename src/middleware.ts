@@ -119,6 +119,8 @@ export const config = {
     '/palubovka',
     // Hudba k audioknihám (17. 10. 2026).
     '/hudba-audioknihy/:path*',
+    // Hudba a tracklist od klienta (20. 11. 2026) - klientská stránka.
+    '/hudba-tracklist/:path*',
     // Novinky portálu - historie modulů a vychytávek (17. 10. 2026).
     '/novinky/:path*',
     // PR a komunikace - sekce Emy Piarové (19. 11. 2026).
