@@ -54,7 +54,7 @@ export function KampanDetail({
    * otevření stránky a pak už se neměnil, takže na obrazovce zůstalo staré
    * znění a vypadalo to, že lže. Teď se po každém jejím úkolu načte znovu.
    */
-  const [zalozka, setZalozka] = useState<Zalozka>('prubeh');
+  const [zalozka, setZalozka] = useState<Zalozka>('rozhovor');
   const [filtr, setFiltr] = useState<FiltrMedii>('vse');
   const [predloha, setPredloha] = useState({
     predmet: kampan.predmetMailu ?? '',
@@ -152,6 +152,7 @@ export function KampanDetail({
   /** Co má člověk zrovna otevřené - jde to Emě s každým zadáním. */
   function kontextProEmu(): string {
     const nazvy: Record<Zalozka, string> = {
+      rozhovor: t('pr.zalozka.rozhovor'),
       prubeh: t('pr.zalozka.prubeh'),
       media: t('pr.zalozka.media'),
       fronta: t('pr.zalozka.fronta'),
@@ -255,8 +256,17 @@ export function KampanDetail({
         }}
       />
 
-      <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,3fr)_minmax(330px,2fr)]">
-        {/* VLEVO: ROZHOVOR S EMOU */}
+      {/**
+        * ZÁLOŽKY PŘES CELOU ŠÍŘKU, JAKO V DETAILU PROJEKTU (zadání 20. 11.
+        * 2026: „chci záložky jako v detailu projektu, ať to je přehledné").
+        *
+        * Dřív byl chat vlevo a vedle něj v úzkém sloupci další záložky - dvě
+        * navigace na jedné obrazovce. Teď je jedna: rozhovor s Emou je první
+        * záložka a každá se otevře přes celou šířku.
+        */}
+      <Zalozky jazyk={jazyk} media={media} zalozka={zalozka} onZalozka={setZalozka} />
+
+      <div className={zalozka === 'rozhovor' ? 'contents' : 'hidden'}>
         <section className="rounded-card border-2 border-brand-purple bg-field flex flex-col overflow-hidden">
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-line bg-surface">
             <span className="relative shrink-0 grid place-items-center">
@@ -280,7 +290,7 @@ export function KampanDetail({
 
           <div
             ref={vlakno}
-            className="flex flex-col gap-4 px-4 py-4 min-h-[260px] max-h-[58vh] overflow-y-auto"
+            className="flex flex-col gap-4 px-5 py-5 min-h-[320px] max-h-[62vh] overflow-y-auto"
           >
             {vlaknoZprav.length === 0 && (
               <p className="text-sm font-body text-muted m-0">{t('pr.zadneUkoly')}</p>
@@ -289,7 +299,7 @@ export function KampanDetail({
               <div key={u.id} className="flex flex-col gap-2">
                 {/* CO JSME CHTĚLI - bublina vpravo, jako v chatu. */}
                 <div className="flex flex-col items-end gap-1">
-                  <span className="max-w-[85%] rounded-card rounded-br-sm bg-tint px-3.5 py-2.5 text-sm font-body text-ink whitespace-pre-wrap">
+                  <span className="max-w-[68%] rounded-card rounded-br-sm bg-tint px-3.5 py-2.5 text-sm font-body text-ink whitespace-pre-wrap">
                     {u.zadani}
                   </span>
                   <span className="text-[11px] font-body text-muted">
@@ -327,7 +337,7 @@ export function KampanDetail({
 
                   {u.vystup && (
                     <>
-                      <span className="max-w-[92%] rounded-card rounded-bl-sm border border-line bg-surface px-3.5 py-2.5 text-sm font-body text-ink whitespace-pre-wrap">
+                      <span className="max-w-[72%] rounded-card rounded-bl-sm border border-line bg-surface px-3.5 py-2.5 text-sm font-body text-ink whitespace-pre-wrap">
                         {u.vystup}
                       </span>
                       {/* NABÍDKA K PROKLIKNUTÍ (20. 11. 2026: „chci, ať mi
@@ -396,8 +406,9 @@ export function KampanDetail({
           </div>
         </section>
 
-        {/* VPRAVO: JEDNA VĚC CELÁ, NE TŘI PŮLKY (20. 11. 2026: „to prostředí
-            a ovládání je celkově takové nejasné a nepřehledné"). */}
+      </div>
+
+      {zalozka !== 'rozhovor' && (
         <PravyPanel
           jazyk={jazyk}
           kampan={kampan}
@@ -410,12 +421,12 @@ export function KampanDetail({
           filtr={filtr}
           onFiltr={setFiltr}
         />
-      </div>
+      )}
     </div>
   );
 }
 
-export type Zalozka = 'prubeh' | 'media' | 'fronta' | 'nastaveni';
+export type Zalozka = 'rozhovor' | 'prubeh' | 'media' | 'fronta' | 'nastaveni';
 export type FiltrMedii = 'vse' | 'pripraveno' | 'fronta' | 'odeslano' | 'vyslo';
 
 /** Je u média připravený mail, ale ještě neodešel ani nečeká ve frontě? */
@@ -505,6 +516,57 @@ function StavovyPas({
 }
 
 /**
+ * ZÁLOŽKY KAMPANĚ (zadání 20. 11. 2026: „chci záložky jako v detailu
+ * projektu, ať to je přehledné"). Tentýž tvar i chování jako ProjectTabs -
+ * portál se nemá učit dvakrát.
+ */
+function Zalozky({
+  jazyk,
+  media,
+  zalozka,
+  onZalozka,
+}: {
+  jazyk: Jazyk;
+  media: Medium[];
+  zalozka: Zalozka;
+  onZalozka: (z: Zalozka) => void;
+}) {
+  const t = (k: string) => prelozit(jazyk, k);
+  const veFronte = media.filter((m) => !m.odeslanoAt && m.odeslatAt).length;
+  const zalozky: { klic: Zalozka; popisek: string; pocet?: number }[] = [
+    { klic: 'rozhovor', popisek: t('pr.zalozka.rozhovor') },
+    { klic: 'prubeh', popisek: t('pr.zalozka.prubeh') },
+    { klic: 'media', popisek: t('pr.zalozka.media'), pocet: media.length },
+    { klic: 'fronta', popisek: t('pr.zalozka.fronta'), pocet: veFronte },
+    { klic: 'nastaveni', popisek: t('pr.zalozka.nastaveni') },
+  ];
+
+  return (
+    <nav className="flex items-center gap-1 flex-wrap border-b border-line">
+      {zalozky.map((z) => {
+        const aktivni = zalozka === z.klic;
+        return (
+          <button
+            key={z.klic}
+            type="button"
+            onClick={() => onZalozka(z.klic)}
+            aria-current={aktivni ? 'page' : undefined}
+            className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
+              aktivni
+                ? 'bg-surface border-line text-brand-purple'
+                : 'border-transparent text-muted hover:text-ink'
+            }`}
+          >
+            {z.popisek}
+            {z.pocet ? <span className="ml-1.5 tabular-nums opacity-70">{z.pocet}</span> : null}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/**
  * PRAVÝ PANEL SE ZÁLOŽKAMI. Dřív tu byly tři věci pod sebou v úzkém sloupci
  * a žádná nebyla vidět celá; teď je vidět vždycky jedna.
  */
@@ -532,44 +594,10 @@ function PravyPanel({
   onFiltr: (f: FiltrMedii) => void;
 }) {
   const t = (k: string) => prelozit(jazyk, k);
-  const veFronte = media.filter((m) => !m.odeslanoAt && m.odeslatAt).length;
-  const zalozky: { klic: Zalozka; popisek: string; pocet?: number }[] = [
-    { klic: 'prubeh', popisek: t('pr.zalozka.prubeh') },
-    { klic: 'media', popisek: t('pr.zalozka.media'), pocet: media.length },
-    { klic: 'fronta', popisek: t('pr.zalozka.fronta'), pocet: veFronte },
-    { klic: 'nastaveni', popisek: t('pr.zalozka.nastaveni') },
-  ];
 
-  /**
-   * ZÁLOŽKY STEJNÉ JAKO U PROJEKTU (zadání 20. 11. 2026: „pojďme to udělat
-   * jako záložky, jak máme karty u projektu"). Tentýž tvar i chování jako
-   * ProjectTabs - portál se nemá učit dvakrát.
-   */
   return (
     <section className="flex flex-col gap-4">
-      <nav className="flex items-center gap-1 flex-wrap border-b border-line">
-        {zalozky.map((z) => {
-          const aktivni = zalozka === z.klic;
-          return (
-            <button
-              key={z.klic}
-              type="button"
-              onClick={() => onZalozka(z.klic)}
-              aria-current={aktivni ? 'page' : undefined}
-              className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
-                aktivni
-                  ? 'bg-surface border-line text-brand-purple'
-                  : 'border-transparent text-muted hover:text-ink'
-              }`}
-            >
-              {z.popisek}
-              {z.pocet ? <span className="ml-1.5 tabular-nums opacity-70">{z.pocet}</span> : null}
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="rounded-card border border-line bg-surface p-4">
+      <div className="rounded-card border border-line bg-surface p-5">
         {zalozka === 'prubeh' && <Prubeh jazyk={jazyk} media={media} />}
         {zalozka === 'media' && (
           <SeznamMedii
@@ -1057,6 +1085,23 @@ function SeznamMedii({
    */
   const [vybrana, setVybrana] = useState<string[]>([]);
   const [hromadne, setHromadne] = useState(false);
+  /**
+   * ZAMÍTNUTÍ NÁVRHU (zadání 20. 11. 2026: „potřebuju tam mít nějaký křížek,
+   * abych u těch návrhů médií mohl jednotlivé návrhy když tak zamítnout -
+   * vymazat"). Ema jich najde padesát a ne každý sedí. Maže se na dvě
+   * kliknutí - jedno je u padesáti řádků moc málo.
+   */
+  const [mazeSe, setMazeSe] = useState<string | null>(null);
+
+  async function smaz(id: string) {
+    const res = await fetch(`${zaklad}/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(
+      () => null,
+    );
+    setMazeSe(null);
+    if (!res?.ok) return;
+    const data = (await res.json()) as { media: Medium[] };
+    onZmena(data.media);
+  }
 
   const kOdeslani = media.filter(
     (m) => !m.odeslanoAt && !m.odeslatAt && m.predmet?.trim() && m.textMailu?.trim(),
@@ -1255,7 +1300,41 @@ function SeznamMedii({
                     </option>
                   ))}
                 </select>
+                {mazeSe !== m.id && (
+                  <button
+                    type="button"
+                    onClick={() => setMazeSe(m.id)}
+                    aria-label={t('pr.zamitnout')}
+                    title={t('pr.zamitnout')}
+                    className="shrink-0 w-7 h-7 grid place-items-center rounded-lg border border-line bg-transparent text-muted cursor-pointer hover:text-danger hover:border-danger transition-colors"
+                  >
+                    <span aria-hidden className="text-base leading-none">×</span>
+                  </button>
+                )}
               </span>
+
+              {/* POTVRZENÍ ZAMÍTNUTÍ - smazaný návrh se nevrací. */}
+              {mazeSe === m.id && (
+                <span className="flex items-center gap-2 flex-wrap rounded-card border border-danger bg-dangerTint px-3 py-2">
+                  <span className="text-xs font-body text-ink grow">
+                    {t('pr.zamitnoutOtazka', { nazev: m.nazev })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void smaz(m.id)}
+                    className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 bg-danger text-white border-0 cursor-pointer"
+                  >
+                    {t('pr.zamitnoutAno')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMazeSe(null)}
+                    className="font-heading text-xs rounded-lg px-3 py-1.5 border border-line bg-transparent text-muted cursor-pointer"
+                  >
+                    {t('obecne.zrusit')}
+                  </button>
+                </span>
+              )}
               {(m.kontakt || m.odkaz) && (
                 <span className="text-xs font-body text-muted break-words">
                   {m.kontakt}

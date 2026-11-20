@@ -660,6 +660,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'pr.zalozka.nastaveni': { cs: 'Nastavení', en: 'Settings' },
   'pr.nastaveniMail': { cs: 'Mail pro celou kampaň', en: 'E-mail for the whole campaign' },
   'pr.nastaveniOsloveni': { cs: 'Oslovení a pravidla', en: 'Salutation and rules' },
+  'pr.zalozka.rozhovor': { cs: 'Rozhovor s Emou', en: 'Talk to Ema' },
   'pr.zalozka.prubeh': { cs: 'Průběh', en: 'Progress' },
   'pr.prubehPopis': {
     cs: 'Kde kampaň stojí - od návrhu po to, že to vyšlo.',
@@ -681,6 +682,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'pr.vybratVse': { cs: 'Vybrat vše', en: 'Select all' },
   'pr.frontaPrazdna': { cs: 'Ve frontě nic nečeká.', en: 'Nothing is waiting in the queue.' },
   'pr.zrusitZFronty': { cs: 'Zrušit', en: 'Cancel' },
+  'pr.zamitnout': { cs: 'Zamítnout a smazat', en: 'Reject and delete' },
+  'pr.zamitnoutOtazka': { cs: 'Smazat „{nazev}" z kampaně?', en: 'Delete "{nazev}" from the campaign?' },
+  'pr.zamitnoutAno': { cs: 'Smazat', en: 'Delete' },
   'pr.zmenilaEma': { cs: 'právě změnila Ema', en: 'just changed by Ema' },
   'pr.pokynyPopis': {
     cs: 'Trvalé pokyny ke kampani - drží se jich při každém zadání. Zapisuje si je sama, když jí řekneš, jak to má být; smazat je můžeš tady.',
