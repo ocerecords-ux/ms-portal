@@ -16,6 +16,10 @@ import { zakladPortalu } from '@/lib/preposlechOdkaz';
  * LOGO JE ODKAZ, NE PŘÍLOHA - klient si ho stáhne sám, a když nestáhne,
  * zůstane čitelný text. Bere se statická verze; animovaný gif v podpisu
  * působí jako banner.
+ *
+ * ADRESA, ZE KTERÉ EMA PÍŠE, je v proměnné PR_ODPOVED (výchozí
+ * pr@mediaspace.cz); přihlášení k té schránce drží PR_SMTP_USER
+ * a PR_SMTP_PASSWORD - viz transportPR v lib/email.ts.
  */
 
 export const EMA_JMENO = 'Ema Piarová';
