@@ -46,6 +46,19 @@ export function KampanDetail({
     h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
   const [ukoly, setUkoly] = useState<Ukol[]>(pocatecniUkoly);
   const [media, setMedia] = useState<Medium[]>(pocatecniMedia);
+  /**
+   * PŘEDLOHA MAILU DRŽÍ RODIČ (oprava 20. 11. 2026: „a je pořád blbá. Lže.
+   * Je tam pořád zvuková").
+   *
+   * Ema předlohu opravdu přepsala - jenže panel si text načetl jednou při
+   * otevření stránky a pak už se neměnil, takže na obrazovce zůstalo staré
+   * znění a vypadalo to, že lže. Teď se po každém jejím úkolu načte znovu.
+   */
+  const [predloha, setPredloha] = useState({
+    predmet: kampan.predmetMailu ?? '',
+    text: kampan.textMailu ?? '',
+    pokyny: kampan.pokyny ?? '',
+  });
   const [zadani, setZadani] = useState('');
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -80,6 +93,7 @@ export function KampanDetail({
       if (!jeVPohybu(u.stav)) {
         setBezici(null);
         void nactiMedia();
+        void nactiPredlohu();
       }
     }, 2000);
     return () => {
@@ -112,6 +126,19 @@ export function KampanDetail({
     const casovac = setInterval(prepocti, 1000);
     return () => clearInterval(casovac);
   }, [ukolVPohybu?.id, ukolVPohybu?.createdAt]);
+
+  const nactiPredlohu = useCallback(async () => {
+    const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/mail`).catch(
+      () => null,
+    );
+    if (!res?.ok) return;
+    const data = (await res.json()) as { predmet?: string; text?: string; pokyny?: string };
+    setPredloha({
+      predmet: data.predmet ?? '',
+      text: data.text ?? '',
+      pokyny: data.pokyny ?? '',
+    });
+  }, [kampan.id]);
 
   const nactiMedia = useCallback(async () => {
     const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/media`).catch(() => null);
@@ -159,6 +186,7 @@ export function KampanDetail({
     setUkoly(data.ukoly);
     setBezici(data.ukoly.find((u) => jeVPohybu(u.stav))?.id ?? null);
     void nactiMedia();
+    void nactiPredlohu();
   }
 
   /**
@@ -318,7 +346,13 @@ export function KampanDetail({
 
         {/* VPRAVO: HROMADNÝ MAIL, PAK MÉDIA A POLE */}
         <div className="flex flex-col gap-5">
-          <HromadnyMail jazyk={jazyk} kampan={kampan} onMedia={setMedia} />
+          <HromadnyMail
+            jazyk={jazyk}
+            kampan={kampan}
+            predloha={predloha}
+            onPredloha={setPredloha}
+            onMedia={setMedia}
+          />
           <SeznamMedii jazyk={jazyk} kampanId={kampan.id} media={media} onZmena={setMedia} />
         </div>
       </div>
@@ -368,21 +402,28 @@ function VarovaniSpam({ jazyk, predmet, text }: { jazyk: Jazyk; predmet: string;
  * které ještě neodešly. {medium} se cestou nahradí názvem pořadu, ať to
  * nevypadá jako hromadný leták. Co už odešlo, se nemění.
  */
+type Predloha = { predmet: string; text: string; pokyny: string };
+
 function HromadnyMail({
   jazyk,
   kampan,
+  predloha,
+  onPredloha,
   onMedia,
 }: {
   jazyk: Jazyk;
   kampan: Kampan;
+  predloha: Predloha;
+  onPredloha: (p: Predloha) => void;
   onMedia: (m: Medium[]) => void;
 }) {
   const t = (k: string, h?: Record<string, string | number>) =>
     h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
   const [otevreny, setOtevreny] = useState(false);
-  const [predmet, setPredmet] = useState(kampan.predmetMailu ?? '');
-  const [text, setText] = useState(kampan.textMailu ?? '');
-  const [pokyny, setPokyny] = useState(kampan.pokyny ?? '');
+  const { predmet, text, pokyny } = predloha;
+  const setPredmet = (v: string) => onPredloha({ ...predloha, predmet: v });
+  const setText = (v: string) => onPredloha({ ...predloha, text: v });
+  const setPokyny = (v: string) => onPredloha({ ...predloha, pokyny: v });
   const [jenPrazdna, setJenPrazdna] = useState(false);
   const [bezi, setBezi] = useState(false);
   const [pise, setPise] = useState(false);
@@ -407,8 +448,11 @@ function HromadnyMail({
     const data = (await res.json().catch(() => null)) as
       | { predmet?: string; text?: string }
       | null;
-    if (data?.predmet) setPredmet(data.predmet);
-    if (data?.text) setText(data.text);
+    onPredloha({
+      ...predloha,
+      predmet: data?.predmet || predloha.predmet,
+      text: data?.text || predloha.text,
+    });
     setHlaska(t('pr.hromadnyMailOdEmyHotovo'));
   }
 

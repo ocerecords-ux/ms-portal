@@ -441,6 +441,25 @@ function nastrojeEmy(kampanId: string, autorId: string): Nastroj[] {
         return `Předloha uložena a vložena do ${kolik} médií.`;
       },
     },
+    /**
+     * AŤ SI TO MŮŽE PŘEČÍST (oprava 20. 11. 2026: „a je pořád blbá. Lže. Je
+     * tam pořád zvuková"). Ema psala „hotovo" podle toho, co si myslela, že
+     * poslala - ne podle toho, co v předloze doopravdy je. Tímhle se podívá.
+     */
+    {
+      definice: {
+        name: 'prectiHromadnyMail',
+        description:
+          'Vrátí AKTUÁLNÍ znění předlohy mailu kampaně (předmět a text), jak je uložené. Použij před tím, než řekneš, že je něco opravené, a po každé úpravě na kontrolu.',
+        input_schema: { type: 'object', properties: {} },
+      },
+      krok: () => 'Čtu, co je v předloze mailu.',
+      spust: async () => {
+        const p = await nactiPredlohuMailu(kampanId);
+        if (!p.predmet && !p.text) return 'Předloha je zatím prázdná.';
+        return `PŘEDMĚT: ${p.predmet || '(prázdný)'}\n\nTEXT:\n${p.text || '(prázdný)'}`;
+      },
+    },
     {
       definice: {
         name: 'upravMailMedia',

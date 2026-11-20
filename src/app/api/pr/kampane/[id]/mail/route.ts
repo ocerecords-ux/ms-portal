@@ -30,6 +30,30 @@ const schema = z.object({
   pokyny: z.string().max(4000).optional(),
 });
 
+/**
+ * AKTUÁLNÍ PŘEDLOHA (oprava 20. 11. 2026: „a je pořád blbá. Lže. Je tam
+ * pořád zvuková"). Ema předlohu přepsala, ale obrazovka si text načetla jen
+ * při otevření stránky - tohle je, odkud si ho načte znovu.
+ */
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !isInternalRole(session.user.role)) {
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
+  }
+  const { id } = await params;
+  const kampan = (await prisma.prKampan
+    .findUnique({ where: { id }, select: { predmetMailu: true, textMailu: true, pokyny: true } })
+    .catch(() => null)) as
+    | { predmetMailu: string | null; textMailu: string | null; pokyny: string | null }
+    | null;
+
+  return NextResponse.json({
+    predmet: kampan?.predmetMailu ?? '',
+    text: kampan?.textMailu ?? '',
+    pokyny: kampan?.pokyny ?? '',
+  });
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) {
