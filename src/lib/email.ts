@@ -6,6 +6,7 @@ import { bezZnacek, znackyNaHtml } from '@/lib/formatovaniZpravy';
 import { formatDatum, kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { prelozitEmail, prelozitEmailS } from '@/lib/jazykEmailu';
 import { odkazNaMapu } from '@/lib/hosteNataceni';
+import { EMA_JMENO, podpisEmyText, teloMailuHtml } from '@/lib/prPodpis';
 
 /**
  * SPOJENÍ SE SMTP SE DRŽÍ (oprava 15. 9. 2026: „smlouvy chodí na mail se
@@ -51,6 +52,43 @@ function getTransport() {
     socketTimeout: 25_000,
   });
   transportCache = { klic, transport };
+  return transport;
+}
+
+/**
+ * VLASTNÍ SPOJENÍ PRO SCHRÁNKU PR (zadání 20. 11. 2026). Ema má psát ze své
+ * adresy, a to jde jen tak, že se portál přihlásí přímo k její schránce.
+ * Host a port jsou tytéž jako u hlavní pošty, liší se jen účet:
+ *
+ *   PR_SMTP_USER, PR_SMTP_PASSWORD
+ *
+ * Když nejsou vyplněné, vrací null a mail odejde obvyklou cestou.
+ */
+let transportPRCache: { klic: string; transport: nodemailer.Transporter } | null = null;
+
+function transportPR() {
+  const host = process.env.SMTP_HOST?.trim();
+  const user = process.env.PR_SMTP_USER?.trim();
+  const heslo = process.env.PR_SMTP_PASSWORD?.trim();
+  if (!host || !user || !heslo) return null;
+
+  const port = Number(process.env.SMTP_PORT?.trim()) || 587;
+  const klic = `${host}:${port}:${user}`;
+  if (transportPRCache?.klic === klic) return transportPRCache.transport;
+
+  const transport = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass: heslo },
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 50,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 25_000,
+  });
+  transportPRCache = { klic, transport };
   return transport;
 }
 
@@ -138,26 +176,33 @@ export async function sendPrNabidkaEmail(input: {
   to: string;
   predmet: string;
   text: string;
-  /** Jméno, které se ukáže v „Od" - člověk, za kterého mail jde. */
-  odesilatelJmeno: string;
-  /** Kam má přijít odpověď. */
-  odpovedNa: string;
+  /** Adresa, ze které Ema píše - je i v jejím podpisu. */
+  adresaEmy: string;
 }) {
-  const transport = getTransport();
+  const transport = transportPR() ?? getTransport();
   if (!transport) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+
+  /**
+   * Z JEJÍ ADRESY, JEN KDYŽ SE K TÉ SCHRÁNCE UMÍME PŘIHLÁSIT. Poštovní server
+   * pustí do „Od" jen adresu účtu, kterým jsme přihlášení - cizí doménu odmítne
+   * („551 Domain name mismatch"). Bez údajů ke schránce PR tedy mail odejde
+   * naší obvyklou cestou a v „Od" bude Mediaspace; v podpisu zůstane Ema.
+   */
+  const zJejiAdresy = Boolean(transportPR());
+  const odesilatel = zJejiAdresy
+    ? { name: EMA_JMENO, address: input.adresaEmy }
+    : { name: `${EMA_JMENO} – Mediaspace`, address: adresaOdesilatele() };
 
   try {
     await transport.sendMail({
-      from: {
-        name: `${input.odesilatelJmeno} – Mediaspace`.trim(),
-        address: adresaOdesilatele(),
-      },
-      replyTo: input.odpovedNa,
+      from: odesilatel,
+      replyTo: input.adresaEmy,
       to: input.to,
       subject: input.predmet,
-      text: input.text,
+      text: `${input.text}\n\n${podpisEmyText(input.adresaEmy)}`,
+      html: teloMailuHtml(input.text, input.adresaEmy),
     });
-    return { sent: true as const };
+    return { sent: true as const, zJejiAdresy };
   } catch (err) {
     console.error('PR nabidka se neodeslala:', err);
     return { sent: false, reason: 'SEND_FAILED' as const };

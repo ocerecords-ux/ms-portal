@@ -8,12 +8,14 @@ import { sendPrNabidkaEmail } from '@/lib/email';
  * Ema mail NAPÍŠE, odeslání mačká člověk. Portál sám od sebe nikomu nepíše -
  * tohle je jediná cesta ven a vede přes tlačítko u konkrétního média.
  *
- * ODPOVĚDI CHODÍ DO SCHRÁNKY PR (pr@mediaspace.cz, založena 20. 11. 2026).
- * Adresa se dá přebít proměnnou PR_ODPOVED - ať se nemusí sahat do kódu, až
- * se schránka přejmenuje.
+ * EMA PÍŠE ZE SVÉ ADRESY (pr@mediaspace.cz, zadání 20. 11. 2026: „musí psát
+ * ze svého mailu se svým podpisem"). Tam taky chodí odpovědi. Adresa se dá
+ * přebít proměnnou PR_ODPOVED - ať se nemusí sahat do kódu, až se schránka
+ * přejmenuje.
  */
 
-const ODPOVED = () => process.env.PR_ODPOVED?.trim() || 'pr@mediaspace.cz';
+/** Adresa, ze které Ema píše a kam chodí odpovědi. */
+const ADRESA_EMY = () => process.env.PR_ODPOVED?.trim() || 'pr@mediaspace.cz';
 
 export type VysledekOdeslani =
   | { ok: true; adresa: string }
@@ -69,8 +71,7 @@ export async function posliMedium(
     to: adresa,
     predmet: medium.predmet.trim(),
     text: medium.textMailu.trim(),
-    odesilatelJmeno: kdo.jmeno,
-    odpovedNa: ODPOVED(),
+    adresaEmy: ADRESA_EMY(),
   });
   if (!vysledek.sent) return { ok: false, duvod: 'posta' };
 
