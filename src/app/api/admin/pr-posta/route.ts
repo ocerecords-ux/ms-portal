@@ -17,6 +17,11 @@ import { authOptions } from '@/lib/auth';
  * SERVER JEN Z POVOLENÉHO SEZNAMU. Jinak by šlo tímhle odkazem poslat naše
  * heslo na cizí server - stačilo by napsat jiný host.
  *
+ * POZOR NA GEO OCHRANU. Schránka na Business Mailu ji může mít zapnutou -
+ * pak server pustí SMTP jen z vyjmenovaných zemí. Portál běží na Vercelu ve
+ * Frankfurtu, takže se musí povolit i Německo; jinak přijde „535 authentication
+ * failed" i se správným heslem a vypadá to na špatné heslo (20. 11. 2026).
+ *
  * Jen pro Žůžo-labůžo a jen k ladění; až bude pošta chodit, může to zmizet.
  */
 export const dynamic = 'force-dynamic';
