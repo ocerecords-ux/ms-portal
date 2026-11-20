@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import nodemailer from 'nodemailer';
 
 import { authOptions } from '@/lib/auth';
+import { zkusOdeslatPod } from '@/lib/email';
 
 /**
  * ZKOUŠEČKA PŘIHLÁŠENÍ KE SCHRÁNCE PR (20. 11. 2026).
@@ -38,6 +39,18 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  }
+
+  /**
+   * ZKOUŠKA „ODESLAT POD JINOU ADRESOU" (20. 11. 2026). Naše hlavní schránka
+   * se přihlašuje bez potíží; otázka je, jestli z ní server pustí mail
+   * s adresou pr@mediaspace.cz v „Od". Když ano, nepotřebujeme přihlášení
+   * ke schránce PR vůbec.
+   */
+  const pod = req.nextUrl.searchParams.get('pod')?.trim();
+  const komu = req.nextUrl.searchParams.get('komu')?.trim();
+  if (pod && komu) {
+    return NextResponse.json(await zkusOdeslatPod(pod, komu));
   }
 
   const heslo = process.env.PR_SMTP_PASSWORD?.trim();

@@ -231,6 +231,34 @@ export async function sendPrNabidkaEmail(input: {
 }
 
 /**
+ * ZKOUŠKA, JESTLI SERVER PUSTÍ CIZÍ ADRESU V „OD" (20. 11. 2026).
+ *
+ * Přihlásí se NAŠÍ obvyklou schránkou a zkusí poslat krátkou zprávu pod
+ * zadanou adresou. Jen k ladění; adresu i příjemce zadává admin.
+ */
+export async function zkusOdeslatPod(pod: string, komu: string) {
+  const transport = getTransport();
+  if (!transport) return { ok: false, duvod: 'SMTP není nastavené.' };
+  try {
+    await transport.sendMail({
+      from: { name: 'Ema Piarová', address: pod },
+      replyTo: pod,
+      to: komu,
+      subject: `Zkouška odesílatele (${pod})`,
+      text: `Tohle je zkouška, jestli poštovní server pustí do „Od" adresu ${pod}.`,
+    });
+    return { ok: true, pod, komu };
+  } catch (err) {
+    return {
+      ok: false,
+      pod,
+      komu,
+      duvod: err instanceof Error ? err.message.slice(0, 300) : 'neznámá chyba',
+    };
+  }
+}
+
+/**
  * Stav odesílání pošty pro diagnostiku (zadání 11. 9. 2026: „zvukař si
  * vyresetoval heslo a nepřišel mu žádný e-mail").
  *
