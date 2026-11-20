@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
       stav: 'NEZARAZENY',
       zdroj: 'VYKAZ',
       // Nez to ucetni otevre, at je v seznamu poznat, od koho to je.
-      description: `Faktura – ${jmeno}`,
+      // NÁZEV JE JMÉNO ZVUKAŘE (20. 11. 2026: „název dokladu by měl být podle
+      // jména zvukaře. Tzn. jen Richard Hanula"). V seznamu dokladů je pak
+      // hned vidět, čí faktura to je - slovo „Faktura" tam nic nepřidává.
+      description: jmeno,
       supplierName: jmeno,
       issueDate: new Date(),
       paid: false,

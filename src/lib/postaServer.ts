@@ -422,7 +422,16 @@ export async function prectiPrilohuDokladu(
       navrhJson: JSON.stringify(u),
       number: u.cislo ?? doklad.number,
       supplierName: u.dodavatel ?? doklad.supplierName,
-      description: u.popis ?? doklad.description,
+      /**
+       * U FAKTURY OD ZVUKAŘE SE NÁZEV NEPŘEPISUJE (20. 11. 2026: „název
+       * dokladu by měl být podle jména zvukaře"). Model by tam dal předmět
+       * fakturace („Postprodukce audioknih"), jenže v seznamu dokladů je
+       * potřeba vidět, čí faktura to je.
+       */
+      description:
+        doklad.zdroj === 'VYKAZ' && doklad.nahralJmeno
+          ? doklad.nahralJmeno
+          : (u.popis ?? doklad.description),
       issueDate: datum,
       currency: mena,
       vatRate: sazba,
