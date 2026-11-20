@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { dosadMedium, nactiPredlohuMailu } from '@/lib/prHromadnyMail';
+import { POKYN_PROTI_SPAMU } from '@/lib/prSpam';
 import { nechEmuPracovat, type Nastroj, type ZadaniEme } from '@/lib/emaAgent';
 import type { Kampan, Medium, StavKampane, StavMedia, StavUkolu, Ukol } from '@/lib/ema';
 import { DRUHY_MEDIA } from '@/lib/ema';
@@ -171,6 +172,7 @@ type RadekMedia = {
   stav: string;
   predmet: string | null;
   textMailu: string | null;
+  odeslatAt: Date | null;
   odeslanoAt: Date | null;
   poznamka: string | null;
 };
@@ -190,6 +192,7 @@ export async function nactiMedia(kampanId: string): Promise<Medium[]> {
     stav: (m.stav as StavMedia) ?? 'NAVRH',
     predmet: m.predmet,
     textMailu: m.textMailu,
+    odeslatAt: m.odeslatAt ? m.odeslatAt.toISOString() : null,
     odeslanoAt: m.odeslanoAt ? m.odeslanoAt.toISOString() : null,
     poznamka: m.poznamka,
   }));
@@ -414,6 +417,7 @@ export async function navrhniHromadnyMail(
     '- Česky, vykat, bez superlativů a bez marketingových frází.',
     '- PODPIS NEPIŠ - připojí se sám. Nepiš ani oslovení s konkrétním jménem.',
     '- V textu nic nevymýšlej, drž se briefu kampaně.',
+    `- ${POKYN_PROTI_SPAMU}`,
   ].join('\n');
 
   const zadaniEme: ZadaniEme = {

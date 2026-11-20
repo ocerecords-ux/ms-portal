@@ -6126,6 +6126,12 @@ model PrMedium {
   predmet   String?
   textMailu String? @db.Text
 
+  /// KDY MA MAIL ODEJIT (zadani 20. 11. 2026: "aby se z Emy nestal spam,
+  /// kdyz bude rozesilat hromadne maily v jeden den"). Clovek odeslani
+  /// odklikne, portal ho ale rozlozi v case - viz lib/prTempo.ts. Prazdne
+  /// znamena, ze mail ve fronte neceka.
+  odeslatAt  DateTime?
+
   /// Co uz odeslo - portal nic sam neposila, zapisuje se po odkliknuti.
   odeslanoAt DateTime?
   odeslalId  String?
@@ -6135,6 +6141,7 @@ model PrMedium {
   updatedAt DateTime @updatedAt
 
   @@index([kampanId, stav])
+  @@index([odeslatAt])
   /// KDY EMA SAMA NAVRHLA PŘÍSPĚVEK NA SÍTĚ (zadání 19. 11. 2026: „když se
   /// u média přehodí stav na Vyšlo, Ema sama navrhne příspěvek"). Datum tu
   /// je proto, aby se návrh neopakoval při každé další úpravě řádku.

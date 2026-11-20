@@ -20,9 +20,20 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   const session = await requireAdmin();
   if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
-  const vysledek = await prectiPrilohuDokladu(params.id);
-  if (!vysledek.ok) {
-    return NextResponse.json({ error: 'cteni', hlaska: vysledek.chyba }, { status: 409 });
+  /**
+   * CHYBA SE MUSÍ DOSTAT NA OBRAZOVKU. Když tohle spadlo, vracela se prázdná
+   * pětistovka a účetní viděla jen „nepodařilo se" - z toho se nedá poznat,
+   * jestli je problém v úložišti, v klíči k API, nebo v samotné faktuře.
+   */
+  try {
+    const vysledek = await prectiPrilohuDokladu(params.id);
+    if (!vysledek.ok) {
+      return NextResponse.json({ error: 'cteni', hlaska: vysledek.chyba }, { status: 409 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    const hlaska = err instanceof Error ? err.message : 'neznámá chyba';
+    console.error('Čtení přílohy dokladu spadlo:', hlaska);
+    return NextResponse.json({ error: 'cteni', hlaska }, { status: 409 });
   }
-  return NextResponse.json({ ok: true });
 }

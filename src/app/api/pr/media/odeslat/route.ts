@@ -46,6 +46,9 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({
     adresa: vysledek.adresa,
+    // Když se mail zařadil do fronty (proti spamu, 20. 11. 2026), vrací se
+    // čas, kdy odejde - obrazovka ho ukáže u média.
+    fronta: 'fronta' in vysledek ? vysledek.fronta : undefined,
     media: await nactiMedia(parsed.data.kampanId),
   });
 }

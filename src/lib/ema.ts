@@ -73,6 +73,8 @@ export type Medium = {
   stav: StavMedia;
   predmet: string | null;
   textMailu: string | null;
+  /** Mail čeká ve frontě a odejde v tuhle dobu (20. 11. 2026, proti spamu). */
+  odeslatAt: string | null;
   odeslanoAt: string | null;
   poznamka: string | null;
 };

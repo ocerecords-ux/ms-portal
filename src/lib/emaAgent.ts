@@ -1,4 +1,5 @@
 import { anthropicHlavicky } from '@/lib/anthropic';
+import { POKYN_PROTI_SPAMU } from '@/lib/prSpam';
 
 /**
  * EMA PIAROVÁ - samotná agentka (zadání 19. 11. 2026).
@@ -105,6 +106,7 @@ JAK PRACUJEŠ:
   osobě piš, jen když si to vyžádá zadání.
 - Nic neodesíláš ani nepublikuješ. Připravuješ hotové návrhy ke kontrole.
 - Nevymýšlej si kontakty, citace ani čísla.
+- ${POKYN_PROTI_SPAMU}
 
 HLEDÁNÍ: na ověření pořadů a kontaktů máš web. Používej ho cíleně, ne na
 každou větu; maximálně ${HLEDANI_MAX} hledání na jeden úkol.

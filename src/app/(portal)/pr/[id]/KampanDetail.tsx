@@ -14,6 +14,7 @@ import {
   type Ukol,
 } from '@/lib/ema';
 import { formatDatumCas, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+import { zkontrolujSpam } from '@/lib/prSpam';
 
 /**
  * KAMPAŇ V SEKCI PR (zadání 19. 11. 2026: „chci ji ovládat z MS portálu
@@ -329,6 +330,25 @@ function Tecky() {
 }
 
 /**
+ * CO VEDE DO SPAMU (zadání 20. 11. 2026: „měla by vynechat i klíčová slova,
+ * která vedou k tomu, že to skončí ve spamu").
+ *
+ * Nic neblokuje - jen řekne, čeho si filtry všimnou. Rozhodnout má člověk;
+ * někdy je slovo v textu prostě na místě.
+ */
+function VarovaniSpam({ jazyk, predmet, text }: { jazyk: Jazyk; predmet: string; text: string }) {
+  const nalezy = zkontrolujSpam(predmet, text);
+  if (nalezy.length === 0) return null;
+  return (
+    <span className="text-xs font-body text-status-progress">
+      {prelozitS(jazyk, 'pr.spamPozor', {
+        slova: nalezy.map((n) => `${n.co} (${n.proc})`).join(', '),
+      })}
+    </span>
+  );
+}
+
+/**
  * MAIL PRO CELOU KAMPAŇ (zadání 20. 11. 2026: „chci nastavovat mail hromadně
  * u každé kampaně").
  *
@@ -446,6 +466,7 @@ function HromadnyMail({
               className={`${POLE} resize-y`}
             />
           </label>
+          <VarovaniSpam jazyk={jazyk} predmet={predmet} text={text} />
           <label className="flex items-center gap-2 text-xs font-body text-ink">
             <input
               type="checkbox"
@@ -610,6 +631,7 @@ function SeznamMedii({
         {t('pr.media')}
       </h2>
       <p className="text-xs font-body text-muted m-0">{t('pr.mediaPopis')}</p>
+      <p className="text-xs font-body text-muted m-0">{t('pr.veFrontePopis')}</p>
 
       {media.length > 0 && (
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
@@ -658,6 +680,13 @@ function SeznamMedii({
                   {t('pr.odeslano')} {formatDatumCas(jazyk, new Date(m.odeslanoAt))}
                 </span>
               )}
+              {/* VE FRONTĚ (20. 11. 2026) - mail je odkliknutý, ale odejde
+                  s odstupem, ať z nás pošta nemá rozesílku. */}
+              {!m.odeslanoAt && m.odeslatAt && (
+                <span className="text-[11px] font-body text-brand-purpleLight">
+                  {t('pr.veFronte', { kdy: formatDatumCas(jazyk, new Date(m.odeslatAt)) })}
+                </span>
+              )}
 
               {/* MAIL - co napsala Ema, ke kontrole a k odeslání. */}
               <button
@@ -703,6 +732,11 @@ function SeznamMedii({
                     />
                   </label>
 
+                  <VarovaniSpam
+                    jazyk={jazyk}
+                    predmet={koncept?.predmet ?? ''}
+                    text={koncept?.text ?? ''}
+                  />
                   <span className="flex items-center gap-2 flex-wrap">
                     <button
                       type="button"
@@ -733,7 +767,7 @@ function SeznamMedii({
                     </span>
                   )}
 
-                  {!m.odeslanoAt && potvrzuje !== m.id && (
+                  {!m.odeslanoAt && !m.odeslatAt && potvrzuje !== m.id && (
                     <button
                       type="button"
                       onClick={() => {
@@ -745,7 +779,7 @@ function SeznamMedii({
                       {t('pr.odeslat')}
                     </button>
                   )}
-                  {!m.odeslanoAt && potvrzuje === m.id && (
+                  {!m.odeslanoAt && !m.odeslatAt && potvrzuje === m.id && (
                     <span className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-body text-ink">
                         {t('pr.opravduOdeslat', { adresa: m.kontakt ?? '' })}

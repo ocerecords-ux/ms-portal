@@ -604,6 +604,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'pr.zdroj': { cs: 'zdroj', en: 'source' },
   'pr.neovereno': { cs: 'kontakt neověřený', en: 'contact unverified' },
   'pr.odeslano': { cs: 'Odesláno', en: 'Sent' },
+  'pr.veFronte': { cs: 'Ve frontě - odejde {kdy}', en: 'Queued - goes out {kdy}' },
+  'pr.veFronteZrusit': { cs: 'Zrušit z fronty', en: 'Remove from the queue' },
+  'pr.veFrontePopis': {
+    cs: 'Maily odcházejí po jednom s odstupem a jen v pracovní době, aby nás pošta nevzala jako rozesílku.',
+    en: 'E-mails go out one at a time, spaced apart and only during working hours, so mail servers do not take us for a bulk sender.',
+  },
+  'pr.spamPozor': {
+    cs: 'Pozor, tohle vede do spamu: {slova}',
+    en: 'Careful, this leads to the spam folder: {slova}',
+  },
   'pr.mailUkazat': { cs: 'Ukázat mail', en: 'Show the e-mail' },
   'pr.mailSkryt': { cs: 'Skrýt mail', en: 'Hide the e-mail' },
   'pr.predmetMailu': { cs: 'Předmět', en: 'Subject' },

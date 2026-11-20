@@ -403,7 +403,7 @@ export async function prectiPrilohuDokladu(
    * zůstávalo pole Splatnost prázdné, i když na faktuře datum bylo.
    */
   const splatnost = u.splatnost ? new Date(`${u.splatnost}T00:00:00.000Z`) : null;
-  const kurz = await getRateForCurrency(mena, datum);
+  const kurz = await getRateForCurrency(mena, datum).catch(() => null);
 
   await prisma.expense.update({
     where: { id: doklad.id },

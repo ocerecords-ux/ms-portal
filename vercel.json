@@ -63,6 +63,10 @@
     {
       "path": "/api/cron/studio-pripominky",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/pr-fronta",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
