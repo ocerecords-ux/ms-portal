@@ -31,6 +31,7 @@ import {
   nactiRozpocetProjektu,
   sPolozkamiZRozpoctu,
   type PolozkaRozpoctu,
+  type StavRozpoctu,
 } from '@/lib/polozkyZRozpoctu';
 
 type Item = {
@@ -271,14 +272,19 @@ export function OfferEditor({
    * projekt; tlačítko se ukáže, jen když je co přidat.
    */
   const [rozpocet, setRozpocet] = useState<PolozkaRozpoctu[]>([]);
+  const [rozpocetStav, setRozpocetStav] = useState<StavRozpoctu>('nic');
   useEffect(() => {
     let platne = true;
     if (!form.caflouProjectId) {
       setRozpocet([]);
+      setRozpocetStav('nic');
       return;
     }
-    void nactiRozpocetProjektu(form.caflouProjectId).then((p) => {
-      if (platne) setRozpocet(p);
+    setRozpocetStav('nacitam');
+    void nactiRozpocetProjektu(form.caflouProjectId).then((v) => {
+      if (!platne) return;
+      setRozpocet(v.polozky);
+      setRozpocetStav(v.ok ? 'hotovo' : 'chyba');
     });
     return () => {
       platne = false;
@@ -286,6 +292,22 @@ export function OfferEditor({
   }, [form.caflouProjectId]);
 
   const chybejiciZRozpoctuDokladu = chybejiciZRozpoctu(rozpocet, items);
+  /**
+   * CO NA TLAČÍTKU STOJÍ. Dřív se schovávalo, když nebylo co vložit - a to
+   * vypadalo, jako by funkce vůbec neexistovala (19. 11. 2026: „ale já to
+   * potřebuju hlavně i u nabídky!!"). Teď je vidět vždycky, když je vybraný
+   * projekt, a říká, proč se zrovna nedá nic vzít.
+   */
+  const rozpocetPopis =
+    rozpocetStav === 'nacitam'
+      ? t('doklad.rozpocetNacitam')
+      : rozpocetStav === 'chyba'
+        ? t('doklad.rozpocetChyba')
+        : chybejiciZRozpoctuDokladu.length > 0
+          ? t('doklad.zRozpoctu', { pocet: chybejiciZRozpoctuDokladu.length })
+          : rozpocet.length > 0
+            ? t('doklad.rozpocetVseVlozeno')
+            : t('doklad.rozpocetPrazdny');
   function pridatZRozpoctu() {
     setItems((current) => sPolozkamiZRozpoctu(current, rozpocet, emptyItem));
     setInfo(null);
@@ -981,14 +1003,19 @@ export function OfferEditor({
                   {t('nabidka.herciZProjektu', { pocet: chybejiciHerci.length })}
                 </button>
               )}
-              {chybejiciZRozpoctuDokladu.length > 0 && (
+              {form.caflouProjectId && (
                 <button
                   type="button"
                   onClick={pridatZRozpoctu}
-                  title={chybejiciZRozpoctuDokladu.map((r) => r.nazev).join(', ')}
-                  className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple"
+                  disabled={chybejiciZRozpoctuDokladu.length === 0}
+                  title={
+                    chybejiciZRozpoctuDokladu.length > 0
+                      ? chybejiciZRozpoctuDokladu.map((r) => r.nazev).join(', ')
+                      : t('doklad.rozpocetKdeSePise')
+                  }
+                  className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple disabled:opacity-50 disabled:hover:border-line"
                 >
-                  {t('doklad.zRozpoctu', { pocet: chybejiciZRozpoctuDokladu.length })}
+                  {rozpocetPopis}
                 </button>
               )}
             </div>

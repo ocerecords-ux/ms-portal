@@ -3152,6 +3152,23 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Z rozpočtu projektu ({pocet})',
     en: 'From the project budget ({pocet})',
   },
+  'doklad.rozpocetNacitam': { cs: 'Načítám rozpočet…', en: 'Loading the budget…' },
+  'doklad.rozpocetPrazdny': {
+    cs: 'Rozpočet projektu je prázdný',
+    en: 'The project budget is empty',
+  },
+  'doklad.rozpocetVseVlozeno': {
+    cs: 'Rozpočet je už vložený',
+    en: 'The budget is already in',
+  },
+  'doklad.rozpocetChyba': {
+    cs: 'Rozpočet se nepodařilo načíst',
+    en: 'The budget could not be loaded',
+  },
+  'doklad.rozpocetKdeSePise': {
+    cs: 'Položky rozpočtu se píšou na kartě projektu v sekci Rozpočet.',
+    en: 'Budget lines are written on the project card, in the Budget section.',
+  },
   'nabidka.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'The quote could not be saved.' },
   'nabidka.odeslanoNa': {
     cs: 'Nabídka odeslána na {email}.',

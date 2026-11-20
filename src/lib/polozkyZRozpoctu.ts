@@ -20,15 +20,24 @@ export type PolozkaDokladu = {
   vatRate: number;
 };
 
-/** Načte rozpočet projektu. Když se to nepovede, vrátí prázdno - nic nespadne. */
-export async function nactiRozpocetProjektu(caflouProjectId: string): Promise<PolozkaRozpoctu[]> {
-  if (!caflouProjectId) return [];
+/**
+ * Stav načítání rozpočtu. Doklad podle něj umí říct, PROČ se nedá nic vložit -
+ * „prázdný rozpočet" a „nepovedlo se načíst" jsou dvě různé věci a schované
+ * tlačítko neřeklo ani jedno (oprava 20. 11. 2026).
+ */
+export type StavRozpoctu = 'nic' | 'nacitam' | 'hotovo' | 'chyba';
+
+/** Načte rozpočet projektu. Nikdy nevyhazuje - neúspěch se pozná z `ok`. */
+export async function nactiRozpocetProjektu(
+  caflouProjectId: string,
+): Promise<{ ok: boolean; polozky: PolozkaRozpoctu[] }> {
+  if (!caflouProjectId) return { ok: true, polozky: [] };
   const res = await fetch(`/api/projekty/${encodeURIComponent(caflouProjectId)}/naklady`).catch(
     () => null,
   );
-  if (!res?.ok) return [];
+  if (!res?.ok) return { ok: false, polozky: [] };
   const data = (await res.json().catch(() => null)) as { polozky?: PolozkaRozpoctu[] } | null;
-  return data?.polozky ?? [];
+  return { ok: true, polozky: data?.polozky ?? [] };
 }
 
 /**
