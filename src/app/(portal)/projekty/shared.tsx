@@ -13,6 +13,7 @@ import { OdznakSerie } from '@/components/OdznakSerie';
 import { OdznakFrekvenci } from '@/components/OdznakFrekvenci';
 import { projectTypeLabel } from '@/lib/projectTypes';
 import { ValecProgresu } from '@/components/ValecProgresu';
+import { HudbaOdKlienta } from '@/app/hudba/[token]/HudbaOdKlienta';
 import type { ProgresNataceni } from '@/lib/progresNataceni';
 import { IkonaPriority } from '@/components/IkonaPriority';
 import {
@@ -273,6 +274,17 @@ export function ProjectsTable({
    * (Company.tracklistOdKlienta).
    */
   tracklisty?: Record<string, Track[]>;
+  /**
+   * HUDBA PŘÍMO V ŘÁDKU (zadání 20. 11. 2026, varianta C: „klient nikam
+   * neodchází - kniha se rozbalí přímo v seznamu a hned pod názvem vkládá").
+   *
+   * Klíč je ID projektu, hodnota odkazový token téhle zakázky - tentýž, jaký
+   * vede z e-mailu. Bez tohohle propu se hudba v rozbaleném řádku nevykreslí;
+   * nabízí se jen firmám, které hudbu dodávají (Company.hudbuDodavaKlient).
+   */
+  hudbaTokeny?: Record<string, string>;
+  /** U kterých zakázek už nějaká hudba je - podle toho se popisuje tlačítko. */
+  maHudbu?: Record<string, boolean>;
 }) {
   const showKontakt = kontakty !== undefined;
   const showTerminy = terminy !== undefined;
@@ -281,7 +293,7 @@ export function ProjectsTable({
   const showDoklady = doklady !== undefined;
   const showSchvaleni = schvaleni !== undefined;
   const showProgres = progres !== undefined;
-  const showTracklist = tracklisty !== undefined;
+  const showTracklist = tracklisty !== undefined || hudbaTokeny !== undefined;
 
   /**
    * ROZBALENÝ NATÁČECÍ PLÁN (upřesnění 1. 10. 2026: „chci, aby se posunul
@@ -340,7 +352,10 @@ export function ProjectsTable({
               )}
               {showTracklist && (
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">
-                  {prelozit(jazyk, 'projekty.sl.tracklist')}
+                  {prelozit(
+                    jazyk,
+                    hudbaTokeny !== undefined ? 'projekty.sl.hudbaTracklist' : 'projekty.sl.tracklist',
+                  )}
                 </th>
               )}
               {showProgres && (
@@ -480,6 +495,9 @@ export function ProjectsTable({
                   <td className="px-4 py-2 align-middle overflow-hidden">
                     <TlacitkoTracklistu
                       pocet={tracklisty?.[String(p.id)]?.length ?? 0}
+                      chybiHudba={
+                        hudbaTokeny !== undefined && !maHudbu?.[String(p.id)]
+                      }
                       otevreno={otevrenyTracklist === String(p.id)}
                       jazyk={jazyk}
                       onPrepnout={() =>
@@ -578,14 +596,29 @@ export function ProjectsTable({
                   dolů. Editor je TENTÝŽ, jaký máme my na kartě projektu. */}
               {showTracklist && otevrenyTracklist === String(p.id) && (
                 <tr className="border-t border-line bg-surfaceSoft">
-                  <td colSpan={pocetSloupcu} className="px-4 py-3">
-                    <Tracklist
-                      caflouProjectId={String(p.id)}
-                      nazevProjektu={p.name}
-                      pocatecni={tracklisty?.[String(p.id)] ?? []}
-                      /* Rozdělování stop děláme my podle časů (19. 11. 2026). */
-                      sDelenim={false}
-                    />
+                  <td colSpan={pocetSloupcu} className="px-4 py-4">
+                    <div className="flex flex-col gap-5">
+                      {/* HUDBA (20. 11. 2026) - tentýž panel jako za odkazem
+                          z mailu, jen tady v řádku zakázky. */}
+                      {hudbaTokeny?.[String(p.id)] && (
+                        <HudbaOdKlienta
+                          token={hudbaTokeny[String(p.id)]}
+                          jazyk={jazyk}
+                          uzVlozeno={Boolean(maHudbu?.[String(p.id)])}
+                        />
+                      )}
+                      {tracklisty !== undefined && (
+                        <div className={hudbaTokeny?.[String(p.id)] ? 'border-t border-line pt-5' : ''}>
+                          <Tracklist
+                            caflouProjectId={String(p.id)}
+                            nazevProjektu={p.name}
+                            pocatecni={tracklisty?.[String(p.id)] ?? []}
+                            /* Rozdělování stop děláme my podle časů (19. 11. 2026). */
+                            sDelenim={false}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )}
@@ -605,11 +638,14 @@ export function ProjectsTable({
  */
 function TlacitkoTracklistu({
   pocet,
+  chybiHudba,
   otevreno,
   jazyk,
   onPrepnout,
 }: {
   pocet: number;
+  /** Firma dodává hudbu a u téhle zakázky ještě žádná není. */
+  chybiHudba?: boolean;
   otevreno: boolean;
   jazyk: Jazyk;
   onPrepnout: () => void;
@@ -620,14 +656,20 @@ function TlacitkoTracklistu({
       onClick={onPrepnout}
       aria-expanded={otevreno}
       title={prelozit(jazyk, 'projekty.tracklistNapoveda')}
-      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border border-line bg-surface px-2.5 py-1 text-xs font-heading text-ink cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border px-2.5 py-1 text-xs font-heading cursor-pointer transition-colors ${
+        chybiHudba && !otevreno
+          ? 'border-brand-green bg-okTint text-status-done hover:brightness-95'
+          : 'border-line bg-surface text-ink hover:text-brand-purple hover:border-brand-purple'
+      }`}
     >
       <span>
         {otevreno
           ? prelozit(jazyk, 'terminy.skrytKratce')
-          : pocet > 0
-            ? prelozit(jazyk, 'terminy.zobrazitKratce')
-            : prelozit(jazyk, 'projekty.tracklistVyplnit')}
+          : chybiHudba
+            ? prelozit(jazyk, 'projekty.hudbaVlozit')
+            : pocet > 0
+              ? prelozit(jazyk, 'terminy.zobrazitKratce')
+              : prelozit(jazyk, 'projekty.tracklistVyplnit')}
       </span>
       {pocet > 0 && <span className="shrink-0 tabular-nums text-muted">{pocet}</span>}
       <span aria-hidden className={`shrink-0 text-[9px] transition-transform ${otevreno ? 'rotate-180' : ''}`}>

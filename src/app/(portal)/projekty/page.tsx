@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { zajistiVyzvu } from '@/lib/vyzvaHudbaServer';
 import { getServerSession } from 'next-auth';
 import { OzubeneKolo } from '@/components/OzubeneKolo';
 import { nastaveniSekce } from '@/lib/nastaveniSekci';
@@ -380,6 +381,50 @@ export default async function ProjektyPage() {
    * jen její jméno textem - proto se to ověří i přes projekty, které klient
    * vidí.
    */
+  /**
+   * HUDBA PŘÍMO V ŘÁDKU ZAKÁZKY (zadání 20. 11. 2026, varianta C: „klient
+   * nikam neodchází - kniha se rozbalí přímo v seznamu a hned pod názvem
+   * vkládá").
+   *
+   * Ke každé rozpracované knize se připraví odkazový token - tentýž, jaký
+   * vede z e-mailu - a k němu se zjistí, jestli už nějaká hudba dorazila.
+   * Nabízí se jen firmám, které hudbu dodávají; u ostatních by to byl
+   * sloupec navíc, do kterého nemají co vkládat.
+   */
+  const hudbaIds = company?.hudbuDodavaKlient
+    ? active.map((p) => String(p.id)).concat(firemniActive.map((p) => String(p.id)))
+    : [];
+
+  const hudbaTokeny: Record<string, string> | undefined = company?.hudbuDodavaKlient
+    ? Object.fromEntries(
+        (
+          await Promise.all(
+            hudbaIds.map(async (id) => {
+              const token = await zajistiVyzvu(id, {
+                email: session!.user.email ?? '',
+                jmeno: session!.user.name ?? null,
+              });
+              return token ? ([id, token] as const) : null;
+            }),
+          )
+        ).filter(Boolean) as (readonly [string, string])[],
+      )
+    : undefined;
+
+  const maHudbu: Record<string, boolean> | undefined = company?.hudbuDodavaKlient
+    ? await (async () => {
+        if (hudbaIds.length === 0) return {};
+        const radky = (await prisma.hudbaProjektu
+          .findMany({
+            where: { caflouProjectId: { in: hudbaIds } },
+            select: { caflouProjectId: true },
+          })
+          .catch(() => [])) as { caflouProjectId: string }[];
+        const je = new Set(radky.map((r) => r.caflouProjectId));
+        return Object.fromEntries(hudbaIds.map((id) => [id, je.has(id)]));
+      })()
+    : undefined;
+
   const chceHudbuNeboTracklist = await prisma.projectMeta
     .count({
       where: {
@@ -538,6 +583,8 @@ export default async function ProjektyPage() {
                 progres={progres}
                 doklady={dokladyKlienta}
                 tracklisty={tracklisty}
+                hudbaTokeny={hudbaTokeny}
+                maHudbu={maHudbu}
                 jazyk={jazyk}
                 normostrany={ukazNormostrany}
               />
@@ -585,6 +632,8 @@ export default async function ProjektyPage() {
                 kontakty={firemniKontakty}
                 doklady={dokladyKlienta}
                 tracklisty={tracklisty}
+                hudbaTokeny={hudbaTokeny}
+                maHudbu={maHudbu}
                 jazyk={jazyk}
                 normostrany={ukazNormostrany}
               />

@@ -215,6 +215,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekty.sl.progresNataceni': { cs: 'Progres natáčení', en: 'Recording progress' },
   /* Tracklist u klienta v prehledu zakazek (19. 11. 2026). */
   'projekty.sl.tracklist': { cs: 'Tracklist', en: 'Tracklist' },
+  'projekty.sl.hudbaTracklist': { cs: 'Hudba a tracklist', en: 'Music and tracklist' },
+  'projekty.hudbaVlozit': { cs: 'Vložit hudbu', en: 'Add music' },
   'projekty.tracklistVyplnit': { cs: 'Vyplnit', en: 'Fill in' },
   'projekty.tracklistNapoveda': {
     cs: 'Seznam stop hotové audioknihy — rozbalí se pod zakázkou a rovnou se ukládá',
