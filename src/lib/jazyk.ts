@@ -304,6 +304,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekt.zalozka.tagy': { cs: 'Tagy', en: 'Tags' },
   'projekt.zalozka.tracklist': { cs: 'Tracklist', en: 'Tracklist' },
   'projekt.zalozka.hudba': { cs: 'Hudba', en: 'Music' },
+  'projekt.zalozka.hudbaTracklist': { cs: 'Hudba a tracklist', en: 'Music and tracklist' },
   /* Karta Hudba - soubory leží v Dropboxu (zadání 16. 10. 2026). */
   'hudba.popis': {
     cs: 'Hudba vybraná pro tenhle projekt. Soubory se ukládají do Dropboxu, do složky projektu — portálem neprocházejí.',

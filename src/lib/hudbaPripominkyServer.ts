@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { projektyBezHudby } from '@/lib/hudbaKnihovnaServer';
 import { notifyMany } from '@/lib/notifications';
-import { posliVyzvu } from '@/lib/vyzvaHudbaServer';
+import { posliVyzvu, projektyBezTracklistuOdKlienta } from '@/lib/vyzvaHudbaServer';
 
 /**
  * UPOZORNĚNÍ, ŽE K AUDIOKNIZE CHYBÍ HUDBA (zadání 17. 10. 2026: „potřebuju
@@ -90,6 +90,20 @@ export async function pripomenChybejiciHudbu(): Promise<{
     await prisma.projectMeta
       .update({ where: { caflouProjectId: projekt.id }, data: { hudbaUpozornenoAt: new Date() } })
       .catch(() => undefined);
+  }
+
+  /**
+   * A JEŠTĚ TRACKLISTY (zadání 20. 11. 2026: „když vloží jen tracklist, tak
+   * jim pojde prosba jen o vložení hudby" - a naopak).
+   *
+   * Seznam výš jsou projekty BEZ HUDBY. Projekt, kterému klient hudbu vložil
+   * dopředu sám, z něj vypadne i s nevyplněným tracklistem - proto druhá
+   * cesta: stejný předstih, ale ptá se jen na tracklist.
+   */
+  for (const id of await projektyBezTracklistuOdKlienta(PREDSTIH_DNI)) {
+    const vysledek = await posliVyzvu(id, false, 'tracklist');
+    if (vysledek.ok) vyzev += 1;
+    else preskoceno += 1;
   }
 
   return { upozorneno, vyzev, preskoceno };

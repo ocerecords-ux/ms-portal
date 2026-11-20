@@ -43,7 +43,9 @@ import { Tracklist } from './Tracklist';
 import { VyzvaTracklistu } from './VyzvaTracklistu';
 import { HudbaSekce } from './HudbaSekce';
 import { nactiHudbu } from '@/lib/hudbaProjektuServer';
-import { stavVyzvy } from '@/lib/vyzvaHudbaServer';
+import { coUzJeVlozeno, stavVyzvy, zajistiVyzvu } from '@/lib/vyzvaHudbaServer';
+import { HudbaOdKlienta } from '@/app/hudba/[token]/HudbaOdKlienta';
+import { TracklistOdKlienta } from '@/app/hudba/[token]/TracklistOdKlienta';
 import { srovnejSerii } from '@/lib/hudbaSerieServer';
 import { firmaDodavaHudbu, vyzvaPujdeSama } from '@/lib/hudbaOdKlienta';
 import { jeTypBezHudby } from '@/lib/priceList';
@@ -1370,6 +1372,53 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         );
       })(),
     });
+  }
+
+  /**
+   * KLIENT SI HUDBU A TRACKLIST VLOŽÍ SÁM, KDYKOLIV (zadání 20. 11. 2026:
+   * „klienti, kteří nám dodávají tracklist i hudbu, měli možnost vložit
+   * tracklist i hudbu přímo na svém profilu v portálu už klidně dříve než tři
+   * dny před první frekvencí").
+   *
+   * Dosud k tomu vedl jen odkaz z e-mailu, který odcházel tři dny předem -
+   * kdo chtěl dodat dřív, neměl kam. Je to TÁŽ OBRAZOVKA jako za odkazem,
+   * takže vložené soubory i tracklist padají na stejné místo a výzva se
+   * pozná, že už je hotovo. Token se založí při prvním otevření; když projekt
+   * nemá u firmy kontakt, dosadí se přihlášený klient.
+   */
+  if (
+    session.user.role === 'CLIENT' &&
+    (firmaDodavaHudbu(company) || (company as { tracklistOdKlienta?: boolean } | null)?.tracklistOdKlienta)
+  ) {
+    const token = await zajistiVyzvu(caflouProjectId, {
+      email: session.user.email ?? '',
+      jmeno: session.user.name ?? null,
+    });
+    if (token) {
+      const dodavaTracklist =
+        (company as { tracklistOdKlienta?: boolean } | null)?.tracklistOdKlienta === true;
+      const uzJe = await coUzJeVlozeno(caflouProjectId);
+      tabs.push({
+        key: 'hudba-tracklist',
+        label: prelozit(jazyk, 'projekt.zalozka.hudbaTracklist'),
+        content: (
+          <div className="flex flex-col gap-6">
+            {firmaDodavaHudbu(company) && (
+              <HudbaOdKlienta token={token} jazyk={jazyk} uzVlozeno={uzJe.hudba} />
+            )}
+            {dodavaTracklist && (
+              <TracklistOdKlienta
+                token={token}
+                caflouProjectId={caflouProjectId}
+                nazevProjektu={metaPoSync?.name || project?.name || ''}
+                pocatecni={await nactiTracklist(caflouProjectId)}
+                jazyk={jazyk}
+              />
+            )}
+          </div>
+        ),
+      });
+    }
   }
 
   /**

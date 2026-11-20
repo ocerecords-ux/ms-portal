@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 
 import { prisma } from '@/lib/db';
 import { sendVyzvaHudbaEmail } from '@/lib/email';
+import { dniDo, prvniFrekvence } from '@/lib/hudbaKnihovnaServer';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 
 /**
@@ -70,7 +71,15 @@ async function prijemce(caflouProjectId: string): Promise<{ email: string; jmeno
  * uběhnout i týden a token se mezitím hodí na to, aby se dal odkaz poslat
  * ručně.
  */
-export async function zajistiVyzvu(caflouProjectId: string): Promise<string | null> {
+export async function zajistiVyzvu(
+  caflouProjectId: string,
+  /**
+   * NÁHRADNÍ ADRESÁT (20. 11. 2026) - když si klient otevře vkládání sám ve
+   * svém profilu, token musí vzniknout i u projektu, který nemá u firmy
+   * vyplněný kontakt. Dosadí se ten, kdo je zrovna přihlášený.
+   */
+  nahradni?: { email: string; jmeno: string | null } | null,
+): Promise<string | null> {
   try {
     const uz = (await prisma.vyzvaHudba.findUnique({
       where: { caflouProjectId },
@@ -78,7 +87,7 @@ export async function zajistiVyzvu(caflouProjectId: string): Promise<string | nu
     })) as { token: string } | null;
     if (uz) return uz.token;
 
-    const komu = await prijemce(caflouProjectId);
+    const komu = (await prijemce(caflouProjectId)) ?? nahradni ?? null;
     if (!komu) return null;
 
     const token = randomBytes(24).toString('base64url');
@@ -90,6 +99,30 @@ export async function zajistiVyzvu(caflouProjectId: string): Promise<string | nu
     console.error('Výzvu k hudbě se nepodařilo založit:', err);
     return null;
   }
+}
+
+
+/**
+ * CO UŽ U PROJEKTU JE (zadání 20. 11. 2026: „v případě, že to tam vloží, tak
+ * jim už nepůjde notifikace. Nebo když vloží jen tracklist, tak jim pojde
+ * prosba jen o vložení hudby").
+ *
+ * Čte se SKUTEČNÝ STAV, ne jen stopa po výzvě: hudbu může k projektu vložit
+ * klient odkazem, ale i my ručně z karty, a tracklist leží v TrackProjektu
+ * bez ohledu na to, kdo ho psal. Výzva se pak ptá jen na to, co doopravdy
+ * chybí.
+ */
+export async function coUzJeVlozeno(
+  caflouProjectId: string,
+): Promise<{ hudba: boolean; tracklist: boolean }> {
+  const [hudba, tracky, vyzva] = await Promise.all([
+    prisma.hudbaProjektu.count({ where: { caflouProjectId } }).catch(() => 0),
+    prisma.trackProjektu.count({ where: { caflouProjectId } }).catch(() => 0),
+    prisma.vyzvaHudba
+      .findUnique({ where: { caflouProjectId }, select: { vlozenoAt: true } })
+      .catch(() => null) as Promise<{ vlozenoAt: Date | null } | null>,
+  ]);
+  return { hudba: hudba > 0 || Boolean(vyzva?.vlozenoAt), tracklist: tracky > 0 };
 }
 
 /**
@@ -130,10 +163,11 @@ export async function posliVyzvu(
    * vložil, u tracklistu to, že ho vyplnil. Ruční výzvu na tracklist proto
    * nebrzdí vložená hudba - a naopak.
    */
-  if (co !== 'tracklist' && vyzva.vlozenoAt) {
+  const uzJe = await coUzJeVlozeno(caflouProjectId);
+  if (co !== 'tracklist' && uzJe.hudba && !(co === 'auto' && !uzJe.tracklist)) {
     return { ok: false, duvod: 'Klient hudbu už vložil.', duvodKlic: 'hudbaVyzva.duvodUzVlozil' };
   }
-  if (co !== 'tracklist' && vyzva.odeslanoAt && !znovu) {
+  if (co !== 'tracklist' && vyzva.odeslanoAt && !znovu && !(co === 'auto' && uzJe.hudba)) {
     return { ok: false, duvod: 'Výzva už odešla.', duvodKlic: 'hudbaVyzva.duvodUzOdesla' };
   }
 
@@ -174,7 +208,27 @@ export async function posliVyzvu(
    * „v automatickém módu dohromady v jedné notifikaci ... v tom ručním módu
    * bych to udělal zvlášť na hudbu a zvlášť na tracklist").
    */
-  const oCo = co === 'auto' ? (dodavaTracklist ? 'oboji' : 'hudba') : co;
+  /**
+   * A PTÁ SE JEN NA TO, CO CHYBÍ (20. 11. 2026). Když si klient hudbu
+   * i tracklist vložil sám dopředu, neodejde nic; když vložil jen jedno,
+   * přijde prosba jen o to druhé.
+   */
+  let oCo: 'hudba' | 'tracklist' | 'oboji';
+  if (co === 'auto') {
+    const chybiTracklist = dodavaTracklist && !uzJe.tracklist;
+    if (!uzJe.hudba && chybiTracklist) oCo = 'oboji';
+    else if (!uzJe.hudba) oCo = 'hudba';
+    else if (chybiTracklist) oCo = 'tracklist';
+    else {
+      return {
+        ok: false,
+        duvod: 'Klient hudbu i tracklist už vložil.',
+        duvodKlic: 'hudbaVyzva.duvodUzVlozil',
+      };
+    }
+  } else {
+    oCo = co;
+  }
 
   const vysledek = await sendVyzvaHudbaEmail({
     to: vyzva.email,
@@ -372,4 +426,51 @@ export async function oznacVlozeni(token: string, jmeno: string | null): Promise
   } catch (err) {
     console.error('Vložení hudby klientem se nepodařilo zapsat:', err);
   }
+}
+
+
+/**
+ * PROJEKTY, KDE UŽ HUDBA JE, ALE CHYBÍ TRACKLIST OD KLIENTA (20. 11. 2026).
+ *
+ * Úloha na pozadí jinak chodí jen přes seznam projektů BEZ hudby - a ten
+ * projekt, kterému klient hudbu vložil dopředu, by z něj vypadl i s tím
+ * nevyplněným tracklistem. Tohle je druhá cesta: stejný předstih, ale ptá se
+ * jen na tracklist.
+ */
+export async function projektyBezTracklistuOdKlienta(predstihDni: number): Promise<string[]> {
+  const meta = (await prisma.projectMeta
+    .findMany({
+      where: { finished: false, company: { tracklistOdKlienta: true } },
+      select: { caflouProjectId: true },
+    })
+    .catch(() => [])) as { caflouProjectId: string }[];
+  if (meta.length === 0) return [];
+
+  const ids = meta.map((m) => m.caflouProjectId);
+  const [terminy, tracky, vyzvy] = await Promise.all([
+    prvniFrekvence(ids),
+    prisma.trackProjektu
+      .findMany({ where: { caflouProjectId: { in: ids } }, select: { caflouProjectId: true } })
+      .catch(() => []) as Promise<{ caflouProjectId: string }[]>,
+    prisma.vyzvaHudba
+      .findMany({
+        where: { caflouProjectId: { in: ids } },
+        select: { caflouProjectId: true, tracklistVyzvaAt: true },
+      })
+      .catch(() => []) as Promise<{ caflouProjectId: string; tracklistVyzvaAt: Date | null }[]>,
+  ]);
+
+  const maTracklist = new Set(tracky.map((t) => t.caflouProjectId));
+  const uzSeptano = new Set(
+    vyzvy.filter((v) => v.tracklistVyzvaAt).map((v) => v.caflouProjectId),
+  );
+  const dnes = new Date();
+
+  return ids.filter((id) => {
+    if (maTracklist.has(id) || uzSeptano.has(id)) return false;
+    const kdy = terminy.get(id);
+    if (!kdy) return false;
+    const zaDni = dniDo(dnes, kdy);
+    return zaDni >= 0 && zaDni <= predstihDni;
+  });
 }

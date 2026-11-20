@@ -54,6 +54,22 @@ export async function POST(req: NextRequest) {
   const jmeno = session.user.name || session.user.email || 'zvukař';
   const poznamka = String(formular?.get('poznamka') ?? '').trim().slice(0, 300);
 
+  /**
+   * KATEGORIE JE VŽDYCKY MZDY (zadání 20. 11. 2026: „a ještě u těch dokladů
+   * u zvukařů bude vždy kategorie Mzdy"). Faktura zvukaře je vždycky za
+   * odvedenou práci - účetní to nemusí u každé vybírat znovu. Když kategorie
+   * v číselníku ještě není, založí se; ruční změna v dokladu zůstává možná.
+   */
+  const kategorie = await prisma.expenseCategory
+    .findFirst({ where: { name: { contains: 'Mzdy', mode: 'insensitive' } }, select: { id: true } })
+    .catch(() => null);
+  const kategorieId =
+    kategorie?.id ??
+    (await prisma.expenseCategory
+      .create({ data: { name: 'Mzdy', sortOrder: 15 }, select: { id: true } })
+      .then((k: { id: string }) => k.id)
+      .catch(() => null));
+
   await prisma.expense.create({
     data: {
       stav: 'NEZARAZENY',
@@ -64,6 +80,7 @@ export async function POST(req: NextRequest) {
       // hned vidět, čí faktura to je - slovo „Faktura" tam nic nepřidává.
       description: jmeno,
       supplierName: jmeno,
+      ...(kategorieId ? { categoryId: kategorieId } : {}),
       issueDate: new Date(),
       paid: false,
       attachmentUrl: ulozeno.url,
