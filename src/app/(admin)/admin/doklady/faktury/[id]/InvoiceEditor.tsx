@@ -956,7 +956,6 @@ export function InvoiceEditor({
                       položkou z ceníku, ne nový na konci. */}
                   {!locked && (
                     <VyberZCeniku
-                      maly
                       mena={form.currency}
                       onVlozit={(popis, cenaMinor) =>
                         updateItem(index, { description: popis, unitPriceMinor: cenaMinor })

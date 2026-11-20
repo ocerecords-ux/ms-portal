@@ -3171,11 +3171,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'doklad.zCeniku': { cs: 'Z ceníku', en: 'From the price list' },
   'doklad.cenikNacitam': { cs: 'Načítám ceník…', en: 'Loading the price list…' },
-  'doklad.cenikProMenuNeni': {
-    cs: 'V téhle měně žádný ceník není. Ceníky se spravují v sekci Ceníky.',
-    en: 'There is no price list in this currency. Price lists live in the Price lists section.',
+  'doklad.cenikPrazdny': {
+    cs: 'V ceníku zatím nic není. Položky se přidávají v sekci Ceníky.',
+    en: 'The price list is empty. Items are added in the Price lists section.',
   },
-  'doklad.cenikOd': { cs: 'od', en: 'from' },
+  'doklad.cenikJenKoruny': {
+    cs: 'Ceník je v korunách — vloží se jen popis, cenu doplň ručně.',
+    en: 'The price list is in CZK — only the description is inserted; fill in the price yourself.',
+  },
   'nabidka.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'The quote could not be saved.' },
   'nabidka.odeslanoNa': {
     cs: 'Nabídka odeslána na {email}.',

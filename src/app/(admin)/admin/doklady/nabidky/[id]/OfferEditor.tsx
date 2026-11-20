@@ -922,7 +922,6 @@ export function OfferEditor({
                       v ceníku"). Vyplní TENHLE řádek, ne nový na konci. */}
                   {!locked && (
                     <VyberZCeniku
-                      maly
                       mena={form.currency}
                       onVlozit={(popis, cenaMinor) =>
                         updateItem(index, { description: popis, unitPriceMinor: cenaMinor })
