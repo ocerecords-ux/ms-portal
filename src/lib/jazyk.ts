@@ -626,6 +626,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Filled in for {pocet} outlet(s)',
   },
   'pr.hromadnyMailUlozeno': { cs: 'Předloha uložena', en: 'Template saved' },
+  'pr.hromadnyMailOdEmy': { cs: 'Ať návrh napíše Ema', en: 'Let Ema draft it' },
+  'pr.hromadnyMailPiseEma': { cs: 'Ema píše návrh…', en: 'Ema is drafting…' },
+  'pr.hromadnyMailOdEmyHotovo': {
+    cs: 'Návrh od Emy je v polích - uprav ho a ulož.',
+    en: "Ema's draft is in the fields - edit it and save.",
+  },
   'pr.mailUlozit': { cs: 'Uložit mail', en: 'Save the e-mail' },
   'pr.mailUlozeno': { cs: 'Uloženo', en: 'Saved' },
   'pr.mailNahled': { cs: 'Náhled', en: 'Preview' },
@@ -3794,6 +3800,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'vydaj.schrankaCteniCeka': {
     cs: 'Údaje se z přílohy ještě nečetly. Zkuste za chvíli obnovit stránku.',
     en: 'The details have not been read from the attachment yet. Try refreshing the page in a moment.',
+  },
+  'vydaj.nacistZPrilohy': { cs: 'Načíst údaje z přílohy', en: 'Read the details from the attachment' },
+  'vydaj.nacitamZPrilohy': { cs: 'Čtu přílohu…', en: 'Reading the attachment…' },
+  'vydaj.nacistZPrilohyChyba': {
+    cs: 'Z přílohy se číst nepodařilo: {chyba}',
+    en: 'The attachment could not be read: {chyba}',
   },
 
   // --- výdaje: úhrady na vícekrát ---

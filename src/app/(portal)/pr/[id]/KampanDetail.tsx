@@ -352,7 +352,32 @@ function HromadnyMail({
   const [text, setText] = useState(kampan.textMailu ?? '');
   const [jenPrazdna, setJenPrazdna] = useState(false);
   const [bezi, setBezi] = useState(false);
+  const [pise, setPise] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
+
+  /**
+   * NÁVRH OD EMY (20. 11. 2026: „a tady musí být návrh toho mailu, abych ho
+   * jen upravil"). Text spadne do polí; uloží se, až se zmáčkne uložení -
+   * prázdné pole není místo, kde začínat.
+   */
+  async function napisEmou() {
+    setPise(true);
+    setHlaska(null);
+    const res = await fetch(`/api/pr/kampane/${encodeURIComponent(kampan.id)}/mail/navrh`, {
+      method: 'POST',
+    }).catch(() => null);
+    setPise(false);
+    if (!res?.ok) {
+      setHlaska(t('pr.emaNeslo'));
+      return;
+    }
+    const data = (await res.json().catch(() => null)) as
+      | { predmet?: string; text?: string }
+      | null;
+    if (data?.predmet) setPredmet(data.predmet);
+    if (data?.text) setText(data.text);
+    setHlaska(t('pr.hromadnyMailOdEmyHotovo'));
+  }
 
   async function uloz(vlozitDoMedii: boolean) {
     setBezi(true);
@@ -396,6 +421,14 @@ function HromadnyMail({
       {otevreny && (
         <>
           <p className="text-xs font-body text-muted m-0">{t('pr.hromadnyMailPopis')}</p>
+          <button
+            type="button"
+            onClick={() => void napisEmou()}
+            disabled={pise}
+            className="self-start font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+          >
+            {pise ? t('pr.hromadnyMailPiseEma') : t('pr.hromadnyMailOdEmy')}
+          </button>
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
               {t('pr.predmetMailu')}

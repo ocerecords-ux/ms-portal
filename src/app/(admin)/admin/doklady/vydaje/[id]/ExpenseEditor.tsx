@@ -167,7 +167,27 @@ export function ExpenseEditor({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cte, setCte] = useState(false);
   const nezarazeny = expense.stav === 'NEZARAZENY';
+
+  /**
+   * Přečte přílohu znovu a stránku načte s tím, co z ní model vyčetl. Co má
+   * rozepsané účetní, se tím zahodí, takže se to děje jen na její kliknutí.
+   */
+  async function nactiZPrilohy() {
+    setCte(true);
+    setError(null);
+    const res = await fetch(`/api/admin/expenses/${expense.id}/precti`, { method: 'POST' }).catch(
+      () => null,
+    );
+    setCte(false);
+    if (!res?.ok) {
+      const data = (await res?.json().catch(() => null)) as { hlaska?: string } | null;
+      setError(t('vydaj.nacistZPrilohyChyba', { chyba: data?.hlaska ?? '' }));
+      return;
+    }
+    router.refresh();
+  }
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -381,6 +401,19 @@ export function ExpenseEditor({
               }`}
             >
               {expense.paid ? t('vydaj.zrusitUhradu') : t('vydaj.oznacitUhrazeny')}
+            </button>
+          )}
+          {/* ČTENÍ Z PŘÍLOHY NA TLAČÍTKO (20. 11. 2026: „potřebuju ještě, ať
+              si to načte z faktury ty údaje"). Dřív se četlo jen jednou
+              v dávce u schránky; když to neprošlo, nebylo jak to zopakovat. */}
+          {expense.attachmentUrl && (
+            <button
+              type="button"
+              onClick={nactiZPrilohy}
+              disabled={saving || cte}
+              className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
+            >
+              {cte ? t('vydaj.nacitamZPrilohy') : t('vydaj.nacistZPrilohy')}
             </button>
           )}
           <button

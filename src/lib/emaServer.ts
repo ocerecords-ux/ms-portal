@@ -377,6 +377,78 @@ function nastrojeEmy(kampanId: string, autorId: string): Nastroj[] {
 }
 
 /**
+ * NÁVRH HROMADNÉHO MAILU OD EMY (zadání 20. 11. 2026: „a tady musí být návrh
+ * toho mailu, abych ho jen upravil").
+ *
+ * Prázdné pole je špatný začátek - mail má Ema napsat a člověk ho jen
+ * doladit. Nic se tím neukládá: text spadne do polí a uloží se, až ho
+ * někdo pošle dál tlačítkem.
+ *
+ * Běží BEZ NÁSTROJŮ a bez hledání na webu - tohle není rešerše médií, jen
+ * jedno zněn, takže není proč platit kola navíc.
+ */
+export async function navrhniHromadnyMail(
+  kampanId: string,
+  kdo: { id: string; jmeno: string },
+): Promise<{ predmet: string; text: string } | null> {
+  const kampan = await nactiKampan(kampanId);
+  if (!kampan) return null;
+
+  const media = await nactiMedia(kampanId);
+  const souhrn = media.length
+    ? media.map((m) => `- ${m.nazev} (${m.druh})`).join('\n')
+    : '';
+
+  const ukol = [
+    'Napiš NABÍDKOVÝ MAIL, který půjde všem médiím v téhle kampani.',
+    'Místo názvu konkrétního pořadu piš do textu značku {medium} - portál ji',
+    'nahradí názvem pořadu nebo redakce.',
+    '',
+    'Vrať JEDINÝ objekt JSON, nic jiného, bez značek pro kód:',
+    '{"predmet": "...", "text": "..."}',
+    '',
+    'Pravidla:',
+    '- Předmět krátký a konkrétní, ať se pozná, o co jde, i v přeplněné schránce.',
+    '- Text čtyři až šest vět: co nabízíme, proč je to pro jejich posluchače',
+    '  zajímavé a co od nich chceme.',
+    '- Česky, vykat, bez superlativů a bez marketingových frází.',
+    '- PODPIS NEPIŠ - připojí se sám. Nepiš ani oslovení s konkrétním jménem.',
+    '- V textu nic nevymýšlej, drž se briefu kampaně.',
+  ].join('\n');
+
+  const zadaniEme: ZadaniEme = {
+    jmeno: kdo.jmeno,
+    nazevKampane: kampan.nazev,
+    brief: kampan.brief ?? '',
+    oStudiu: await oStudiu(),
+    cojeHotovo: souhrn,
+    ukol,
+  };
+
+  const vysledek = await nechEmuPracovat(zadaniEme).catch((err) => {
+    console.error('Ema nenapsala hromadný mail:', err);
+    return null;
+  });
+  if (!vysledek) return null;
+
+  const zacatek = vysledek.text.indexOf('{');
+  const konec = vysledek.text.lastIndexOf('}');
+  if (zacatek < 0 || konec <= zacatek) return null;
+  try {
+    const data = JSON.parse(vysledek.text.slice(zacatek, konec + 1)) as {
+      predmet?: unknown;
+      text?: unknown;
+    };
+    return {
+      predmet: typeof data.predmet === 'string' ? data.predmet.trim().slice(0, 300) : '',
+      text: typeof data.text === 'string' ? data.text.trim().slice(0, 8000) : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * ZADÁ ÚKOL EMĚ A NECHÁ JI PRACOVAT.
  *
  * Záznam vznikne hned (stav BEZI), takže obrazovka má co ukazovat, a průběh

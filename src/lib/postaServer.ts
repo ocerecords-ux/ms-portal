@@ -2,7 +2,7 @@ import type { Currency, PaymentMethod } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getRateForCurrency } from '@/lib/cnb';
 import { CURRENCIES, parseMoneyToMinor } from '@/lib/doklady';
-import { uploadExpenseBuffer } from '@/lib/storage';
+import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu, uploadExpenseBuffer } from '@/lib/storage';
 import { prectiDoklad } from '@/lib/uctenkaServer';
 import type { PrectenaUctenka } from '@/lib/uctenka';
 import {
@@ -301,7 +301,16 @@ async function zalozDoklady(prilohy: NalezenaPriloha[]): Promise<number> {
   return zalozeno;
 }
 
-/** Vytáhne uloženou přílohu zpátky - z databáze (data URL) i z úložiště. */
+/**
+ * Vytáhne uloženou přílohu zpátky - z databáze (data URL) i z úložiště.
+ *
+ * ÚLOŽIŠTĚ SE MUSÍ ODEMKNOUT (oprava 20. 11. 2026: „potřebuju ještě, ať si to
+ * načte z faktury ty údaje. Všechno to tam je."). Adresa v `attachmentUrl` je
+ * ROZHRANÍ R2, ne veřejný odkaz - holý fetch na ni vrací chybu, takže čtení
+ * vždycky skončilo hláškou „Přílohu se nepodařilo načíst" a faktura zůstala
+ * prázdná. Stejně jako obrazovka s náhledem si tu teď portál vyrobí krátkodobý
+ * podepsaný odkaz; holá adresa zůstává jako záloha pro veřejná úložiště.
+ */
 async function nactiPrilohu(url: string): Promise<{ data: Buffer; typ: string } | null> {
   try {
     if (url.startsWith('data:')) {
@@ -310,10 +319,17 @@ async function nactiPrilohu(url: string): Promise<{ data: Buffer; typ: string } 
       const typ = url.slice(5, carka).split(';')[0] || 'application/pdf';
       return { data: Buffer.from(url.slice(carka + 1), 'base64'), typ };
     }
-    const odpoved = await fetch(url);
-    if (!odpoved.ok) return null;
-    const typ = (odpoved.headers.get('content-type') || 'application/pdf').split(';')[0];
-    return { data: Buffer.from(await odpoved.arrayBuffer()), typ };
+
+    const klic = klicZAdresyUloziste(url);
+    const podepsany = klic ? await podepsanyOdkazNaPrilohu(klic, 'doklad', false) : null;
+
+    for (const adresa of [podepsany, url].filter(Boolean) as string[]) {
+      const odpoved = await fetch(adresa).catch(() => null);
+      if (!odpoved?.ok) continue;
+      const typ = (odpoved.headers.get('content-type') || 'application/pdf').split(';')[0];
+      return { data: Buffer.from(await odpoved.arrayBuffer()), typ };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -329,6 +345,86 @@ function zakladDane(uctenka: PrectenaUctenka, sazba: number): number | null {
 }
 
 /**
+ * Přečte přílohu JEDNOHO dokladu a doplní, co z ní model vyčetl.
+ *
+ * Vyčleněné z dávky schválně (20. 11. 2026: „potřebuju ještě, ať si to načte
+ * z faktury ty údaje"). Stejný kus práce se teď dá spustit i ručně
+ * tlačítkem u dokladu, když čtení poprvé neprošlo nebo když přílohu někdo
+ * vyměnil - účetní nemusí čekat na další kolo schránky.
+ *
+ * Přepisují se jen údaje, které model na dokladu opravdu našel; co u dokladu
+ * zůstalo z mailu nebo co už účetní opravila, se nepřemazává prázdnem.
+ */
+export async function prectiPrilohuDokladu(
+  expenseId: string,
+): Promise<{ ok: boolean; chyba?: string }> {
+  const doklad = await prisma.expense.findUnique({ where: { id: expenseId } }).catch(() => null);
+  if (!doklad) return { ok: false, chyba: 'Doklad nenalezen.' };
+  if (!doklad.attachmentUrl) return { ok: false, chyba: 'Doklad nemá přílohu.' };
+
+  const soubor = await nactiPrilohu(doklad.attachmentUrl);
+  if (!soubor) {
+    const chyba = 'Přílohu se nepodařilo načíst.';
+    await prisma.expense.update({
+      where: { id: doklad.id },
+      data: { navrhJson: JSON.stringify({ chyba }) },
+    });
+    return { ok: false, chyba };
+  }
+
+  const kontext = [
+    doklad.mailOd ? `Od: ${doklad.mailOd}` : null,
+    doklad.mailPredmet ? `Předmět: ${doklad.mailPredmet}` : null,
+    doklad.attachmentName ? `Soubor: ${doklad.attachmentName}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const vysledek = await prectiDoklad(soubor.data, soubor.typ, kontext || null);
+
+  if (vysledek.stav !== 'ok') {
+    const chyba =
+      vysledek.stav === 'vypnuto' ? 'Čtení dokladů není nastavené.' : vysledek.zprava;
+    await prisma.expense.update({
+      where: { id: doklad.id },
+      data: { navrhJson: JSON.stringify({ chyba }) },
+    });
+    return { ok: false, chyba };
+  }
+
+  const u = vysledek.uctenka;
+  const sazba = u.sazbaDph ?? doklad.vatRate;
+  const zaklad = zakladDane(u, sazba);
+  const mena = (u.mena && (CURRENCIES as readonly string[]).includes(u.mena) ? u.mena : doklad.currency) as Currency;
+  const datum = u.datum ? new Date(`${u.datum}T00:00:00.000Z`) : doklad.issueDate;
+  /**
+   * SPLATNOST SE TAKY ZAPISUJE (20. 11. 2026: „Číslo faktury, splatnost…").
+   * Model ji umí přečíst už dlouho a formulář Nový výdaj ji z ní plní, do
+   * dokladů ze schránky se ale nikdy nedostala - proto u faktur z mailu
+   * zůstávalo pole Splatnost prázdné, i když na faktuře datum bylo.
+   */
+  const splatnost = u.splatnost ? new Date(`${u.splatnost}T00:00:00.000Z`) : null;
+  const kurz = await getRateForCurrency(mena, datum);
+
+  await prisma.expense.update({
+    where: { id: doklad.id },
+    data: {
+      navrhJson: JSON.stringify(u),
+      number: u.cislo ?? doklad.number,
+      supplierName: u.dodavatel ?? doklad.supplierName,
+      description: u.popis ?? doklad.description,
+      issueDate: datum,
+      currency: mena,
+      vatRate: sazba,
+      ...(splatnost ? { dueDate: splatnost } : {}),
+      ...(zaklad !== null ? { amountExVatMinor: zaklad } : {}),
+      ...(u.zpusobUhrady ? { paymentMethod: u.zpusobUhrady as PaymentMethod } : {}),
+      ...(kurz ? { exchangeRate: kurz.rate, exchangeRateDate: new Date(`${kurz.date}T00:00:00.000Z`) } : {}),
+    },
+  });
+  return { ok: true };
+}
+
+/**
  * Pošle pár nepřečtených dokladů modelu a doplní, co z nich přečetl.
  *
  * Přepisují se jen pole, která u dokladu nic neříkají - popis z předmětu
@@ -339,62 +435,14 @@ async function doplnNavrhy(limit: number): Promise<number> {
     where: { stav: 'NEZARAZENY', navrhJson: null, attachmentUrl: { not: null } },
     orderBy: { createdAt: 'asc' },
     take: limit,
+    select: { id: true },
   });
 
   let precteno = 0;
-
   for (const doklad of cekaji) {
-    const soubor = doklad.attachmentUrl ? await nactiPrilohu(doklad.attachmentUrl) : null;
-    if (!soubor) {
-      await prisma.expense.update({
-        where: { id: doklad.id },
-        data: { navrhJson: JSON.stringify({ chyba: 'Přílohu se nepodařilo načíst.' }) },
-      });
-      continue;
-    }
-
-    const kontext = [doklad.mailOd ? `Od: ${doklad.mailOd}` : null, doklad.mailPredmet ? `Předmět: ${doklad.mailPredmet}` : null]
-      .filter(Boolean)
-      .join('\n');
-    const vysledek = await prectiDoklad(soubor.data, soubor.typ, kontext || null);
-
-    if (vysledek.stav !== 'ok') {
-      await prisma.expense.update({
-        where: { id: doklad.id },
-        data: {
-          navrhJson: JSON.stringify({
-            chyba: vysledek.stav === 'vypnuto' ? 'Čtení dokladů není nastavené.' : vysledek.zprava,
-          }),
-        },
-      });
-      continue;
-    }
-
-    const u = vysledek.uctenka;
-    const sazba = u.sazbaDph ?? doklad.vatRate;
-    const zaklad = zakladDane(u, sazba);
-    const mena = (u.mena && (CURRENCIES as readonly string[]).includes(u.mena) ? u.mena : doklad.currency) as Currency;
-    const datum = u.datum ? new Date(`${u.datum}T00:00:00.000Z`) : doklad.issueDate;
-    const kurz = await getRateForCurrency(mena, datum);
-
-    await prisma.expense.update({
-      where: { id: doklad.id },
-      data: {
-        navrhJson: JSON.stringify(u),
-        number: u.cislo ?? doklad.number,
-        supplierName: u.dodavatel ?? doklad.supplierName,
-        description: u.popis ?? doklad.description,
-        issueDate: datum,
-        currency: mena,
-        vatRate: sazba,
-        ...(zaklad !== null ? { amountExVatMinor: zaklad } : {}),
-        ...(u.zpusobUhrady ? { paymentMethod: u.zpusobUhrady as PaymentMethod } : {}),
-        ...(kurz ? { exchangeRate: kurz.rate, exchangeRateDate: new Date(`${kurz.date}T00:00:00.000Z`) } : {}),
-      },
-    });
-    precteno += 1;
+    const vysledek = await prectiPrilohuDokladu(doklad.id);
+    if (vysledek.ok) precteno += 1;
   }
-
   return precteno;
 }
 
