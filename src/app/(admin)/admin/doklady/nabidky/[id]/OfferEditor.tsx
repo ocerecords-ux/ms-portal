@@ -310,15 +310,6 @@ export function OfferEditor({
             ? t('doklad.rozpocetVseVlozeno')
             : t('doklad.rozpocetPrazdny');
 
-  /** Vloží jeden řádek (z ceníku). Prázdný řádek po založení se zahodí. */
-  function vlozPolozku(popis: string, cenaMinor: number) {
-    setItems((current) => {
-      const bezPrazdnych = current.filter((p) => p.description.trim() || p.unitPriceMinor);
-      return [...bezPrazdnych, { ...emptyItem(), description: popis, unitPriceMinor: cenaMinor }];
-    });
-    setInfo(null);
-  }
-
   function pridatZRozpoctu() {
     setItems((current) => sPolozkamiZRozpoctu(current, rozpocet, emptyItem));
     setInfo(null);
@@ -926,6 +917,18 @@ export function OfferEditor({
                     placeholder={t('nabidka.popisPolozky')}
                     className={cellClass}
                   />
+                  {/* PLUS U ŘÁDKU (zadání 20. 11. 2026: „dejme někde u toho řádku,
+                      kde píšu položku +, a já tam přidám položku, kterou mám
+                      v ceníku"). Vyplní TENHLE řádek, ne nový na konci. */}
+                  {!locked && (
+                    <VyberZCeniku
+                      maly
+                      mena={form.currency}
+                      onVlozit={(popis, cenaMinor) =>
+                        updateItem(index, { description: popis, unitPriceMinor: cenaMinor })
+                      }
+                    />
+                  )}
                   {!locked && (
                     <button
                       type="button"
@@ -1014,7 +1017,6 @@ export function OfferEditor({
                   {t('nabidka.herciZProjektu', { pocet: chybejiciHerci.length })}
                 </button>
               )}
-              <VyberZCeniku mena={form.currency} onVlozit={vlozPolozku} />
               {form.caflouProjectId && (
                 <button
                   type="button"

@@ -22,9 +22,12 @@ import type { Currency } from '@prisma/client';
 export function VyberZCeniku({
   mena,
   onVlozit,
+  maly = false,
 }: {
   mena: Currency;
   onVlozit: (popis: string, cenaMinor: number) => void;
+  /** Malé „+" přímo u řádku položky (zadání 20. 11. 2026). */
+  maly?: boolean;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -68,13 +71,21 @@ export function VyberZCeniku({
       <button
         type="button"
         onClick={() => void otevri()}
-        className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple"
+        title={maly ? t('doklad.zCeniku') : undefined}
+        aria-label={maly ? t('doklad.zCeniku') : undefined}
+        className={
+          maly
+            ? 'shrink-0 text-muted hover:text-brand-purple text-lg font-heading leading-none px-1 bg-transparent border-0 cursor-pointer'
+            : 'text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple'
+        }
       >
-        {t('doklad.zCeniku')}
+        {maly ? '+' : t('doklad.zCeniku')}
       </button>
 
       {otevreno && (
-        <span className="absolute z-30 top-full left-0 mt-1 w-[360px] max-h-[340px] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-2 flex flex-col gap-1">
+        <span
+          className={`absolute z-30 top-full mt-1 w-[360px] ${maly ? 'right-0' : 'left-0'} max-h-[340px] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-2 flex flex-col gap-1`}
+        >
           {ceniky === null && (
             <span className="text-xs font-body text-muted px-2 py-1.5">{t('doklad.cenikNacitam')}</span>
           )}
