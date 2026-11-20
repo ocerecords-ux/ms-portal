@@ -3169,6 +3169,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Položky rozpočtu se píšou na kartě projektu v sekci Rozpočet.',
     en: 'Budget lines are written on the project card, in the Budget section.',
   },
+  'doklad.zCeniku': { cs: 'Z ceníku', en: 'From the price list' },
+  'doklad.cenikNacitam': { cs: 'Načítám ceník…', en: 'Loading the price list…' },
+  'doklad.cenikProMenuNeni': {
+    cs: 'V téhle měně žádný ceník není. Ceníky se spravují v sekci Ceníky.',
+    en: 'There is no price list in this currency. Price lists live in the Price lists section.',
+  },
+  'doklad.cenikOd': { cs: 'od', en: 'from' },
   'nabidka.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'The quote could not be saved.' },
   'nabidka.odeslanoNa': {
     cs: 'Nabídka odeslána na {email}.',

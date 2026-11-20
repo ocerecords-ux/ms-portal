@@ -7,6 +7,7 @@ import { AddButton } from '@/components/AddButton';
 import type { Currency, OfferStatus } from '@prisma/client';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { VyberFirmy, type FirmaVolba } from '../../VyberFirmy';
+import { VyberZCeniku } from '../../VyberZCeniku';
 import { NahledDokladu } from '../../NahledDokladu';
 import { SlevaPole } from '../../SlevaPole';
 import {
@@ -308,6 +309,16 @@ export function OfferEditor({
           : rozpocet.length > 0
             ? t('doklad.rozpocetVseVlozeno')
             : t('doklad.rozpocetPrazdny');
+
+  /** Vloží jeden řádek (z ceníku). Prázdný řádek po založení se zahodí. */
+  function vlozPolozku(popis: string, cenaMinor: number) {
+    setItems((current) => {
+      const bezPrazdnych = current.filter((p) => p.description.trim() || p.unitPriceMinor);
+      return [...bezPrazdnych, { ...emptyItem(), description: popis, unitPriceMinor: cenaMinor }];
+    });
+    setInfo(null);
+  }
+
   function pridatZRozpoctu() {
     setItems((current) => sPolozkamiZRozpoctu(current, rozpocet, emptyItem));
     setInfo(null);
@@ -1003,6 +1014,7 @@ export function OfferEditor({
                   {t('nabidka.herciZProjektu', { pocet: chybejiciHerci.length })}
                 </button>
               )}
+              <VyberZCeniku mena={form.currency} onVlozit={vlozPolozku} />
               {form.caflouProjectId && (
                 <button
                   type="button"
