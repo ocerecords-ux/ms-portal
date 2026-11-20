@@ -147,8 +147,8 @@ export function KampanDetail({
     setMedia(data.media);
   }, [kampan.id]);
 
-  async function posliZadani() {
-    const text = zadani.trim();
+  async function posliZadani(predvolba?: string) {
+    const text = (predvolba ?? zadani).trim();
     if (!text || bezi) return;
     setBezi(true);
     setChyba(null);
@@ -163,6 +163,7 @@ export function KampanDetail({
       vystup: null,
       chyba: null,
       kroky: [t('pr.zacinam')],
+      moznosti: [],
       hledani: 0,
       zadalJmeno: null,
       createdAt: new Date().toISOString(),
@@ -297,6 +298,25 @@ export function KampanDetail({
                       <span className="max-w-[92%] rounded-card rounded-bl-sm border border-line bg-surface px-3.5 py-2.5 text-sm font-body text-ink whitespace-pre-wrap">
                         {u.vystup}
                       </span>
+                      {/* NABÍDKA K PROKLIKNUTÍ (20. 11. 2026: „chci, ať mi
+                          nabízí možnosti, jako ty, na které jen kliknu
+                          a nemusím to psát"). Jen u poslední odpovědi - starší
+                          volby už neplatí. */}
+                      {u.moznosti.length > 0 && u.id === ukoly[0]?.id && (
+                        <span className="flex flex-wrap gap-2">
+                          {u.moznosti.map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => void posliZadani(m)}
+                              disabled={bezi || Boolean(bezici)}
+                              className="font-heading text-xs rounded-pill px-3 py-1.5 border border-brand-purple bg-tint text-brand-purpleDark cursor-pointer disabled:opacity-50 hover:bg-brand-purple hover:text-white transition-colors"
+                            >
+                              {m}
+                            </button>
+                          ))}
+                        </span>
+                      )}
                       <span className="text-[11px] font-body text-muted">
                         {t('pr.ema')}
                         {u.hotovoAt ? ` · ${formatDatumCas(jazyk, new Date(u.hotovoAt))}` : ''}
@@ -333,7 +353,7 @@ export function KampanDetail({
             <span className="flex items-center gap-3 flex-wrap">
               <button
                 type="button"
-                onClick={posliZadani}
+                onClick={() => void posliZadani()}
                 disabled={bezi || !zadani.trim()}
                 className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
               >

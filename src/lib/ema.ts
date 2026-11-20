@@ -58,6 +58,8 @@ export type Ukol = {
   vystup: string | null;
   chyba: string | null;
   kroky: string[];
+  /** Volby k prokliknutí, které Ema nabídla místo otázky (20. 11. 2026). */
+  moznosti: string[];
   hledani: number;
   zadalJmeno: string | null;
   createdAt: string;

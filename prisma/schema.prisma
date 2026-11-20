@@ -6098,6 +6098,11 @@ model PrUkol {
   /// Pole textu v JSON; zapisuje se prubezne behem behu.
   kroky Json?
 
+  /// NABIDKA K PROKLIKNUTI (zadani 20. 11. 2026: "chci, at mi nabizi
+  /// moznosti, jako ty, na ktere jen kliknu a nemusim to psat"). Kratke
+  /// volby, ktere Ema nabidla misto otazky v textu; pole retezcu v JSON.
+  moznosti Json?
+
   /// Kolik si vyzadala hledani na webu - at je videt, co ukol stal.
   hledani Int @default(0)
   model   String?

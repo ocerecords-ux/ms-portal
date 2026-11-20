@@ -128,6 +128,7 @@ type RadekUkolu = {
   vystup: string | null;
   chyba: string | null;
   kroky: unknown;
+  moznosti: unknown;
   hledani: number;
   zadalId: string | null;
   createdAt: Date;
@@ -142,6 +143,7 @@ function naUkol(u: RadekUkolu, jmena: Map<string, string>): Ukol {
     vystup: u.vystup,
     chyba: u.chyba,
     kroky: Array.isArray(u.kroky) ? (u.kroky as string[]) : [],
+    moznosti: Array.isArray(u.moznosti) ? (u.moznosti as string[]) : [],
     hledani: u.hledani ?? 0,
     zadalJmeno: u.zadalId ? (jmena.get(u.zadalId) ?? null) : null,
     createdAt: u.createdAt.toISOString(),
@@ -315,7 +317,7 @@ export async function smazMedium(id: string): Promise<void> {
  * jako ROZPRACOVANÉ - portál sám nic neodesílá ani nepublikuje. Příspěvek
  * patří tomu, kdo úkol zadal; sekce Sítě je osobní.
  */
-function nastrojeEmy(kampanId: string, autorId: string): Nastroj[] {
+function nastrojeEmy(kampanId: string, autorId: string, ukolId: string): Nastroj[] {
   return [
     {
       definice: {
@@ -439,6 +441,46 @@ function nastrojeEmy(kampanId: string, autorId: string): Nastroj[] {
         if (v.doMedii === false) return 'Předloha uložena.';
         const kolik = await vlozPredlohuDoMedii(kampanId, false);
         return `Předloha uložena a vložena do ${kolik} médií.`;
+      },
+    },
+    /**
+     * NABÍDKA MÍSTO OTÁZKY (zadání 20. 11. 2026: „chci, ať mi nabízí
+     * možnosti, jako ty, na které jen kliknu a nemusím to psát").
+     *
+     * Ema se ptávala v textu („Která varianta?") a člověk musel odpověď
+     * vypsat. Teď volby zapíše sem, obrazovka je ukáže jako tlačítka a kliknutí
+     * je pošle zpátky jako další zadání.
+     */
+    {
+      definice: {
+        name: 'nabidniMoznosti',
+        description:
+          'Nabídne hotové odpovědi k prokliknutí. Použij VŽDYCKY, když se ptáš na výběr - varianty znění, co dál, ano/ne. Volby piš tak, jak je má člověk odkliknout, ne jako otázku.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            moznosti: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Dvě až pět krátkých voleb, každá jako hotová odpověď.',
+            },
+          },
+          required: ['moznosti'],
+        },
+      },
+      krok: () => 'Chystám možnosti na výběr.',
+      spust: async (v) => {
+        const seznam = Array.isArray(v.moznosti)
+          ? (v.moznosti as unknown[])
+              .filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+              .map((m) => m.trim().slice(0, 200))
+              .slice(0, 5)
+          : [];
+        if (seznam.length === 0) return 'Prázdnou nabídku ukázat nejde.';
+        await prisma.prUkol
+          .update({ where: { id: ukolId }, data: { moznosti: seznam } })
+          .catch(() => undefined);
+        return `Nabídka připravená: ${seznam.join(' / ')}. V odpovědi se už neptej, volby vidí na tlačítkách.`;
       },
     },
     /**
@@ -708,7 +750,7 @@ export async function zadejUkol(
       kroky.push(krok);
       await prisma.prUkol.update({ where: { id: ukol.id }, data: { kroky } }).catch(() => undefined);
     },
-    nastrojeEmy(kampanId, kdo.id),
+    nastrojeEmy(kampanId, kdo.id, ukol.id),
   ).catch((err) => {
     console.error('Ema spadla:', err);
     return null;
