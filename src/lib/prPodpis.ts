@@ -58,23 +58,32 @@ export function podpisEmyText(adresa: string): string {
 }
 
 export function podpisEmyHtml(adresa: string): string {
-  const logo = `${zakladPortalu()}/mediaspace-logo-still.png`;
+  /**
+   * LOGO V BAREVNOSTI PODPISU (20. 11. 2026: „ten podpis je hrozný,
+   * potřebuju to nastavit přesně podle toho našeho podpisu").
+   *
+   * Portálové `mediaspace-logo-still.png` je ZELENÉ a je to čtverec 280×280
+   * s velkým prázdným okrajem - v mailu z něj byla zelená cedule přes půl
+   * obrazovky. `mediaspace-podpis.png` je tentýž nápis přebarvený do fialové
+   * značky a oříznutý na samotný text, stejně jako v Ondřejově podpisu.
+   */
+  const logo = `${zakladPortalu()}/mediaspace-podpis.png`;
   const studia = STUDIA.map(
     ([k, v]) =>
-      `<div><strong>${escapeHtml(k)}</strong> ${escapeHtml(v)}</div>`,
+      `<div style="margin:0;"><strong>${escapeHtml(k)}</strong> ${escapeHtml(v)}</div>`,
   ).join('');
 
   return `
-    <div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:#201A33;">
-      <div style="margin-top:22px;">S pozdravem</div>
-      <div style="margin-top:18px;"><strong>${escapeHtml(EMA_JMENO)}</strong></div>
+    <div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;color:#000000;">
+      <div style="margin-top:20px;">S pozdravem</div>
+      <div style="margin-top:20px;"><strong>${escapeHtml(EMA_JMENO)}</strong></div>
       <div>${escapeHtml(EMA_ROLE)}</div>
-      <div style="margin:22px 0;">
-        <img src="${logo}" width="220" alt="MEDIA SPACE" style="display:block;width:220px;height:auto;border:0;" />
+      <div style="margin:18px 0 16px;">
+        <img src="${logo}" width="240" alt="MEDIA SPACE" style="display:block;width:240px;height:auto;border:0;" />
       </div>
-      <div><strong>E:</strong> <a href="mailto:${escapeHtml(adresa)}" style="color:#201A33;text-decoration:none;">${escapeHtml(adresa)}</a></div>
-      <div><strong>W:</strong> <a href="https://${WEB}" style="color:#201A33;text-decoration:none;">${WEB}</a></div>
-      <div style="margin-top:16px;">${studia}</div>
+      <div><strong>E:</strong> <a href="mailto:${escapeHtml(adresa)}" style="color:#000000;text-decoration:none;">${escapeHtml(adresa)}</a></div>
+      <div><strong>W:</strong> <a href="https://${WEB}" style="color:#000000;text-decoration:none;">${WEB}</a></div>
+      <div style="margin-top:14px;">${studia}</div>
     </div>`;
 }
 
