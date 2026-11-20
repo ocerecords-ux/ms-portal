@@ -180,8 +180,20 @@ export async function nechEmuPracovat(
     if (!odpoved.ok) {
       const proc = await odpoved.text().catch(() => '');
       console.error('Ema: API odpovedelo', odpoved.status, proc.slice(0, 400));
+      /**
+       * DŮVOD SE UKÁŽE V PORTÁLU (20. 11. 2026). Hláška „nepovedlo se (400)"
+       * neřekla nic a důvod zůstal jen v logu Vercelu, kam se při zkoušení
+       * nikdo nedívá. Je to naše interní obrazovka, ne něco pro klienty.
+       */
+      let duvod = '';
+      try {
+        const telo = JSON.parse(proc) as { error?: { message?: string } };
+        duvod = telo.error?.message?.slice(0, 300) ?? '';
+      } catch {
+        duvod = proc.slice(0, 300);
+      }
       return {
-        text: `Hledání se nepovedlo (${odpoved.status}). Zkus to prosím znovu.`,
+        text: `Hledání se nepovedlo (${odpoved.status}).${duvod ? ` ${duvod}` : ''}`,
         hledani,
         kroky,
       };
