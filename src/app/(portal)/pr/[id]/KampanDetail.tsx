@@ -336,11 +336,40 @@ function SeznamMedii({
   media: Medium[];
   onZmena: (m: Medium[]) => void;
 }) {
-  const t = (k: string) => prelozit(jazyk, k);
+  const t = (k: string, h?: Record<string, string | number>) =>
+    h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
   const [nazev, setNazev] = useState('');
   const [druh, setDruh] = useState<DruhMedia>('PODCAST');
   const [kontakt, setKontakt] = useState('');
   const zaklad = `/api/pr/kampane/${encodeURIComponent(kampanId)}/media`;
+  /**
+   * MAIL U MÉDIA (zadání 20. 11. 2026). Předmět a text, co napsala Ema, se
+   * dají přečíst i přepsat a teprve pak se mačká Odeslat. Portál sám nic
+   * neposílá - odeslání je vždycky lidské kliknutí.
+   */
+  const [otevreny, setOtevreny] = useState<string | null>(null);
+  const [potvrzuje, setPotvrzuje] = useState<string | null>(null);
+  const [odesila, setOdesila] = useState<string | null>(null);
+  const [chybaMailu, setChybaMailu] = useState<string | null>(null);
+
+  async function odesli(id: string) {
+    setOdesila(id);
+    setChybaMailu(null);
+    const res = await fetch('/api/pr/media/odeslat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kampanId, mediumId: id }),
+    }).catch(() => null);
+    setOdesila(null);
+    setPotvrzuje(null);
+    const data = (await res?.json().catch(() => null)) as
+      | { media?: Medium[]; error?: string }
+      | null;
+    if (data?.media) onZmena(data.media);
+    if (!res?.ok) setChybaMailu(t(`pr.chyba.${data?.error ?? 'posta'}`));
+    else setOtevreny(null);
+  }
+
 
   async function pridej() {
     if (!nazev.trim()) return;
@@ -419,6 +448,79 @@ function SeznamMedii({
               {m.odeslanoAt && (
                 <span className="text-[11px] font-body text-muted">
                   {t('pr.odeslano')} {formatDatumCas(jazyk, new Date(m.odeslanoAt))}
+                </span>
+              )}
+
+              {/* MAIL - co napsala Ema, ke kontrole a k odeslání. */}
+              <button
+                type="button"
+                onClick={() => setOtevreny((p) => (p === m.id ? null : m.id))}
+                className="self-start text-xs font-heading text-brand-purpleLight bg-transparent border-0 px-0 cursor-pointer"
+              >
+                {otevreny === m.id ? t('pr.mailSkryt') : t('pr.mailUkazat')}
+              </button>
+
+              {otevreny === m.id && (
+                <span className="flex flex-col gap-2 border-t border-line pt-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+                      {t('pr.predmetMailu')}
+                    </span>
+                    <input
+                      defaultValue={m.predmet ?? ''}
+                      onBlur={(e) => zmen(m.id, { predmet: e.target.value })}
+                      className={POLE}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+                      {t('pr.textMailu')}
+                    </span>
+                    <textarea
+                      defaultValue={m.textMailu ?? ''}
+                      onBlur={(e) => zmen(m.id, { textMailu: e.target.value })}
+                      rows={10}
+                      className={`${POLE} resize-y`}
+                    />
+                  </label>
+
+                  {!m.odeslanoAt && potvrzuje !== m.id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPotvrzuje(m.id);
+                        setChybaMailu(null);
+                      }}
+                      className="self-start font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer"
+                    >
+                      {t('pr.odeslat')}
+                    </button>
+                  )}
+                  {!m.odeslanoAt && potvrzuje === m.id && (
+                    <span className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-body text-ink">
+                        {t('pr.opravduOdeslat', { adresa: m.kontakt ?? '' })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void odesli(m.id)}
+                        disabled={odesila === m.id}
+                        className="font-heading font-semibold text-sm rounded-lg px-3 py-1.5 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+                      >
+                        {odesila === m.id ? t('pr.odesilam') : t('pr.odeslatAno')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPotvrzuje(null)}
+                        className="font-heading text-sm rounded-lg px-3 py-1.5 border border-line bg-transparent text-muted cursor-pointer"
+                      >
+                        {t('obecne.zrusit')}
+                      </button>
+                    </span>
+                  )}
+                  {chybaMailu && potvrzuje === null && otevreny === m.id && (
+                    <span className="text-xs font-body text-danger">{chybaMailu}</span>
+                  )}
                 </span>
               )}
             </li>

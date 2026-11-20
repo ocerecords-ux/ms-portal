@@ -122,6 +122,49 @@ export function odesilatelMediaspace(odpovedNa?: string | null): {
 }
 
 /**
+ * NABÍDKA MÉDIU OD EMY (zadání 20. 11. 2026: „co ten její email? Už může
+ * psát?").
+ *
+ * ZÁMĚRNĚ HOLÝ TEXT, bez naší obálky s logem a patičkou. Tohle není zpráva
+ * klientovi z portálu, ale mail redaktorovi - a ten má vypadat, jako by ho
+ * napsal člověk. Fialová hlavička a tlačítka by ho poslaly rovnou do koše.
+ *
+ * ODESÍLÁ SE Z NAŠÍ SCHRÁNKY, protože jinou doménu poštovní server do „Od"
+ * nepustí (viz komentář u odesilatelMediaspace). Liší se ale JMÉNO odesílatele
+ * - stojí tam konkrétní člověk, ne „Mediaspace" - a REPLY-TO, které vede do
+ * schránky PR. Odpověď novináře tedy přijde tam, kde se čte.
+ */
+export async function sendPrNabidkaEmail(input: {
+  to: string;
+  predmet: string;
+  text: string;
+  /** Jméno, které se ukáže v „Od" - člověk, za kterého mail jde. */
+  odesilatelJmeno: string;
+  /** Kam má přijít odpověď. */
+  odpovedNa: string;
+}) {
+  const transport = getTransport();
+  if (!transport) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+
+  try {
+    await transport.sendMail({
+      from: {
+        name: `${input.odesilatelJmeno} – Mediaspace`.trim(),
+        address: adresaOdesilatele(),
+      },
+      replyTo: input.odpovedNa,
+      to: input.to,
+      subject: input.predmet,
+      text: input.text,
+    });
+    return { sent: true as const };
+  } catch (err) {
+    console.error('PR nabidka se neodeslala:', err);
+    return { sent: false, reason: 'SEND_FAILED' as const };
+  }
+}
+
+/**
  * Stav odesílání pošty pro diagnostiku (zadání 11. 9. 2026: „zvukař si
  * vyresetoval heslo a nepřišel mu žádný e-mail").
  *

@@ -604,6 +604,34 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'pr.zdroj': { cs: 'zdroj', en: 'source' },
   'pr.neovereno': { cs: 'kontakt neověřený', en: 'contact unverified' },
   'pr.odeslano': { cs: 'Odesláno', en: 'Sent' },
+  'pr.mailUkazat': { cs: 'Ukázat mail', en: 'Show the e-mail' },
+  'pr.mailSkryt': { cs: 'Skrýt mail', en: 'Hide the e-mail' },
+  'pr.predmetMailu': { cs: 'Předmět', en: 'Subject' },
+  'pr.textMailu': { cs: 'Text mailu', en: 'Message' },
+  'pr.odeslat': { cs: 'Odeslat', en: 'Send' },
+  'pr.odeslatAno': { cs: 'Ano, odeslat', en: 'Yes, send it' },
+  'pr.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'pr.opravduOdeslat': {
+    cs: 'Odejde na {adresa}. Odvolat to nepůjde.',
+    en: 'It will go to {adresa}. This cannot be undone.',
+  },
+  'pr.chyba.bez-adresy': {
+    cs: 'V kontaktu není e-mailová adresa. Doplň ji a zkus to znovu.',
+    en: 'There is no e-mail address in the contact. Add one and try again.',
+  },
+  'pr.chyba.bez-textu': {
+    cs: 'Mail nemá předmět nebo text.',
+    en: 'The e-mail has no subject or body.',
+  },
+  'pr.chyba.uz-odeslano': {
+    cs: 'Tomuhle médiu už jsme psali.',
+    en: 'We have already written to this outlet.',
+  },
+  'pr.chyba.nenalezeno': { cs: 'Médium se nenašlo.', en: 'The outlet was not found.' },
+  'pr.chyba.posta': {
+    cs: 'Poštovní server mail nepřijal. Zkus to prosím znovu.',
+    en: 'The mail server refused the message. Please try again.',
+  },
   'pr.podklady': { cs: 'Stálé podklady pro Emu', en: 'Ema’s standing briefing' },
   'pr.podkladyPopis': {
     cs: 'Kdo jsme, jak mluvíme, co máme za sebou. Ema to dostane ke každému úkolu, takže se to nemusí psát do každé kampaně znovu.',
