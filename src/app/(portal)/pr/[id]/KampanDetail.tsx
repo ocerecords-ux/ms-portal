@@ -54,7 +54,7 @@ export function KampanDetail({
    * otevření stránky a pak už se neměnil, takže na obrazovce zůstalo staré
    * znění a vypadalo to, že lže. Teď se po každém jejím úkolu načte znovu.
    */
-  const [zalozka, setZalozka] = useState<Zalozka>('mail');
+  const [zalozka, setZalozka] = useState<Zalozka>('prubeh');
   const [filtr, setFiltr] = useState<FiltrMedii>('vse');
   const [predloha, setPredloha] = useState({
     predmet: kampan.predmetMailu ?? '',
@@ -152,10 +152,10 @@ export function KampanDetail({
   /** Co má člověk zrovna otevřené - jde to Emě s každým zadáním. */
   function kontextProEmu(): string {
     const nazvy: Record<Zalozka, string> = {
-      mail: t('pr.zalozka.mail'),
+      prubeh: t('pr.zalozka.prubeh'),
       media: t('pr.zalozka.media'),
       fronta: t('pr.zalozka.fronta'),
-      pokyny: t('pr.zalozka.pokyny'),
+      nastaveni: t('pr.zalozka.nastaveni'),
     };
     const casti = [`otevřená záložka ${nazvy[zalozka]}`];
     if (zalozka === 'media' && filtr !== 'vse') casti.push(`filtr ${filtr}`);
@@ -415,7 +415,7 @@ export function KampanDetail({
   );
 }
 
-export type Zalozka = 'mail' | 'media' | 'fronta' | 'pokyny';
+export type Zalozka = 'prubeh' | 'media' | 'fronta' | 'nastaveni';
 export type FiltrMedii = 'vse' | 'pripraveno' | 'fronta' | 'odeslano' | 'vyslo';
 
 /** Je u média připravený mail, ale ještě neodešel ani nečeká ve frontě? */
@@ -443,7 +443,8 @@ function StavovyPas({
   onFiltr: (f: FiltrMedii) => void;
 }) {
   const t = (k: string) => prelozit(jazyk, k);
-  const policka: { klic: FiltrMedii; popisek: string; pocet: number }[] = [
+  /** Zelená je u toho, co je dotažené - odesláno a vyšlo. */
+  const policka: { klic: FiltrMedii; popisek: string; pocet: number; zelene?: boolean }[] = [
     { klic: 'vse', popisek: t('pr.stav.media'), pocet: media.length },
     {
       klic: 'pripraveno',
@@ -459,8 +460,14 @@ function StavovyPas({
       klic: 'odeslano',
       popisek: t('pr.stav.odeslano'),
       pocet: media.filter((m) => m.odeslanoAt).length,
+      zelene: true,
     },
-    { klic: 'vyslo', popisek: t('pr.stav.vyslo'), pocet: media.filter((m) => m.stav === 'VYSLO').length },
+    {
+      klic: 'vyslo',
+      popisek: t('pr.stav.vyslo'),
+      pocet: media.filter((m) => m.stav === 'VYSLO').length,
+      zelene: true,
+    },
   ];
 
   return (
@@ -473,10 +480,20 @@ function StavovyPas({
             type="button"
             onClick={() => onFiltr(aktivni && p.klic !== 'vse' ? 'vse' : p.klic)}
             className={`rounded-card border px-3.5 py-2 text-left cursor-pointer transition-colors ${
-              aktivni ? 'border-brand-purple bg-tint' : 'border-line bg-surface hover:bg-field'
+              aktivni
+                ? p.zelene
+                  ? 'border-brand-green bg-okTint'
+                  : 'border-brand-purple bg-tint'
+                : 'border-line bg-surface hover:bg-field'
             }`}
           >
-            <span className="block font-display text-xl text-ink leading-none">{p.pocet}</span>
+            <span
+              className={`block font-display text-xl leading-none ${
+                p.zelene && p.pocet > 0 ? 'text-status-done' : 'text-ink'
+              }`}
+            >
+              {p.pocet}
+            </span>
             <span className="block text-[11px] font-heading uppercase tracking-wide text-muted mt-1">
               {p.popisek}
             </span>
@@ -517,42 +534,43 @@ function PravyPanel({
   const t = (k: string) => prelozit(jazyk, k);
   const veFronte = media.filter((m) => !m.odeslanoAt && m.odeslatAt).length;
   const zalozky: { klic: Zalozka; popisek: string; pocet?: number }[] = [
-    { klic: 'mail', popisek: t('pr.zalozka.mail') },
+    { klic: 'prubeh', popisek: t('pr.zalozka.prubeh') },
     { klic: 'media', popisek: t('pr.zalozka.media'), pocet: media.length },
     { klic: 'fronta', popisek: t('pr.zalozka.fronta'), pocet: veFronte },
-    { klic: 'pokyny', popisek: t('pr.zalozka.pokyny') },
+    { klic: 'nastaveni', popisek: t('pr.zalozka.nastaveni') },
   ];
 
+  /**
+   * ZÁLOŽKY STEJNÉ JAKO U PROJEKTU (zadání 20. 11. 2026: „pojďme to udělat
+   * jako záložky, jak máme karty u projektu"). Tentýž tvar i chování jako
+   * ProjectTabs - portál se nemá učit dvakrát.
+   */
   return (
-    <section className="rounded-card border border-line bg-surface overflow-hidden flex flex-col">
-      <div className="flex border-b border-line bg-field">
-        {zalozky.map((z) => (
-          <button
-            key={z.klic}
-            type="button"
-            onClick={() => onZalozka(z.klic)}
-            className={`grow px-3 py-2.5 text-xs font-heading font-semibold cursor-pointer border-0 transition-colors ${
-              zalozka === z.klic
-                ? 'bg-surface text-brand-purpleDark'
-                : 'bg-transparent text-muted hover:text-ink'
-            }`}
-          >
-            {z.popisek}
-            {z.pocet ? <span className="font-body text-muted"> {z.pocet}</span> : null}
-          </button>
-        ))}
-      </div>
+    <section className="flex flex-col gap-4">
+      <nav className="flex items-center gap-1 flex-wrap border-b border-line">
+        {zalozky.map((z) => {
+          const aktivni = zalozka === z.klic;
+          return (
+            <button
+              key={z.klic}
+              type="button"
+              onClick={() => onZalozka(z.klic)}
+              aria-current={aktivni ? 'page' : undefined}
+              className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
+                aktivni
+                  ? 'bg-surface border-line text-brand-purple'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
+            >
+              {z.popisek}
+              {z.pocet ? <span className="ml-1.5 tabular-nums opacity-70">{z.pocet}</span> : null}
+            </button>
+          );
+        })}
+      </nav>
 
-      <div className="p-4">
-        {zalozka === 'mail' && (
-          <HromadnyMail
-            jazyk={jazyk}
-            kampan={kampan}
-            predloha={predloha}
-            onPredloha={onPredloha}
-            onMedia={onMedia}
-          />
-        )}
+      <div className="rounded-card border border-line bg-surface p-4">
+        {zalozka === 'prubeh' && <Prubeh jazyk={jazyk} media={media} />}
         {zalozka === 'media' && (
           <SeznamMedii
             jazyk={jazyk}
@@ -564,11 +582,117 @@ function PravyPanel({
           />
         )}
         {zalozka === 'fronta' && <Fronta jazyk={jazyk} media={media} onZmena={onMedia} kampanId={kampan.id} />}
-        {zalozka === 'pokyny' && (
-          <Pokyny jazyk={jazyk} kampanId={kampan.id} predloha={predloha} onPredloha={onPredloha} />
+        {zalozka === 'nastaveni' && (
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+                {t('pr.nastaveniMail')}
+              </h3>
+              <HromadnyMail
+                jazyk={jazyk}
+                kampan={kampan}
+                predloha={predloha}
+                onPredloha={onPredloha}
+                onMedia={onMedia}
+              />
+            </div>
+            <div className="flex flex-col gap-3 border-t border-line pt-5">
+              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+                {t('pr.nastaveniOsloveni')}
+              </h3>
+              <Pokyny jazyk={jazyk} kampanId={kampan.id} predloha={predloha} onPredloha={onPredloha} />
+            </div>
+          </div>
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * PRŮBĚH KAMPANĚ (zadání 20. 11. 2026: „a nějaké grafy s progresem").
+ *
+ * Tři pruhy, žádná knihovna: kolik médií má napsaný mail, kolika z nich už
+ * jsme se ozvali a u kolika to vyšlo. Pod tím rozpad po stavech v barvách,
+ * které má seznam médií - ať se nemusí luštit, co která barva znamená.
+ */
+function Prubeh({ jazyk, media }: { jazyk: Jazyk; media: Medium[] }) {
+  const t = (k: string, h?: Record<string, string | number>) =>
+    h ? prelozitS(jazyk, k, h) : prelozit(jazyk, k);
+  const celkem = media.length;
+  if (celkem === 0) {
+    return <p className="text-sm font-body text-muted m-0">{t('pr.prubehPrazdno')}</p>;
+  }
+
+  const sMailem = media.filter((m) => m.predmet?.trim() && m.textMailu?.trim()).length;
+  const osloveno = media.filter((m) => m.odeslanoAt).length;
+  const vyslo = media.filter((m) => m.stav === 'VYSLO').length;
+
+  const pruhy = [
+    { popisek: t('pr.prubehMaily'), pocet: sMailem, barva: '#7B55FF' },
+    { popisek: t('pr.prubehOsloveno'), pocet: osloveno, barva: '#6B2AF0' },
+    { popisek: t('pr.stav.vyslo'), pocet: vyslo, barva: '#1FDF67' },
+  ];
+
+  const poStavech = STAVY_MEDIA.map((s) => ({
+    stav: s,
+    pocet: media.filter((m) => m.stav === s).length,
+  })).filter((r) => r.pocet > 0);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-xs font-body text-muted m-0">{t('pr.prubehPopis')}</p>
+
+      <div className="flex flex-col gap-3">
+        {pruhy.map((p) => (
+          <div key={p.popisek} className="flex flex-col gap-1">
+            <span className="flex items-baseline justify-between text-xs font-heading text-ink">
+              <span>{p.popisek}</span>
+              <span className="tabular-nums text-muted">
+                {p.pocet} / {celkem}
+              </span>
+            </span>
+            <span className="block h-2.5 rounded-pill bg-field overflow-hidden">
+              <span
+                className="block h-full rounded-pill transition-all"
+                style={{ width: `${Math.round((p.pocet / celkem) * 100)}%`, backgroundColor: p.barva }}
+              />
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ROZPAD PO STAVECH - jeden pruh, barvy jako u odznaků v seznamu. */}
+      <div className="flex flex-col gap-2">
+        <span className="flex h-3 rounded-pill overflow-hidden bg-field">
+          {poStavech.map((r) => (
+            <span
+              key={r.stav}
+              style={{
+                width: `${(r.pocet / celkem) * 100}%`,
+                backgroundColor: BARVA_STAVU_MEDIA[r.stav],
+              }}
+              title={`${t(`pr.stavMedia.${r.stav}`)}: ${r.pocet}`}
+            />
+          ))}
+        </span>
+        <span className="flex flex-wrap gap-x-4 gap-y-1">
+          {poStavech.map((r) => (
+            <span key={r.stav} className="flex items-center gap-1.5 text-[11px] font-body text-muted">
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: BARVA_STAVU_MEDIA[r.stav] }}
+              />
+              {t(`pr.stavMedia.${r.stav}`)} · {r.pocet}
+            </span>
+          ))}
+        </span>
+      </div>
+
+      <p className="text-sm font-body text-ink m-0">
+        {t('pr.prubehHotovo', { pocet: vyslo, celkem })}
+      </p>
+    </div>
   );
 }
 
@@ -689,7 +813,7 @@ function Pokyny({
           type="button"
           onClick={() => void uloz()}
           disabled={uklada}
-          className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-green text-onAccent border-0 cursor-pointer disabled:opacity-50"
         >
           {t('obecne.ulozit')}
         </button>
@@ -866,7 +990,7 @@ function HromadnyMail({
           type="button"
           onClick={() => void uloz(true)}
           disabled={bezi}
-          className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-green text-onAccent border-0 cursor-pointer disabled:opacity-50"
         >
           {t('pr.hromadnyMailVlozit')}
         </button>
@@ -1072,7 +1196,7 @@ function SeznamMedii({
               type="button"
               onClick={() => void odesliVybranym()}
               disabled={hromadne}
-              className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 bg-brand-purple text-white border-0 cursor-pointer disabled:opacity-50"
+              className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 bg-brand-green text-onAccent border-0 cursor-pointer disabled:opacity-50"
             >
               {t('pr.vybranoOdeslat', { pocet: vybrana.length })}
             </button>
@@ -1083,8 +1207,15 @@ function SeznamMedii({
       {videna.length > 0 && (
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
           {videna.map((m) => (
-            <li key={m.id} className="rounded-card border border-line bg-surface px-4 py-3 flex flex-col gap-2">
-              <span className="flex items-center gap-3 flex-wrap">
+            /**
+             * NÁZEV POŘADU JE NADPIS (zadání 20. 11. 2026: „ta média, která
+             * najde, musí být jasné velké nadpisy, a pod tím doplňující info,
+             * ať je to fakt výrazné"). Dřív to byl drobný tučný text v jednom
+             * řádku s odznakem a rozbalovátkem - při deseti médiích se to
+             * slilo v jednu šedou plochu.
+             */
+            <li key={m.id} className="rounded-card border border-line bg-surface px-4 py-4 flex flex-col gap-3">
+              <span className="flex items-start gap-3">
                 {!m.odeslanoAt && !m.odeslatAt && m.predmet?.trim() && m.textMailu?.trim() && (
                   <input
                     type="checkbox"
@@ -1094,23 +1225,29 @@ function SeznamMedii({
                         e.target.checked ? [...p, m.id] : p.filter((x) => x !== m.id),
                       )
                     }
-                    className="shrink-0"
+                    className="shrink-0 mt-2"
                   />
                 )}
-                <span
-                  className="shrink-0 rounded-pill px-2 py-0.5 text-[10px] font-heading font-semibold text-white"
-                  style={{ backgroundColor: BARVA_STAVU_MEDIA[m.stav] }}
-                >
-                  {t(`pr.stavMedia.${m.stav}`)}
-                </span>
-                <span className="font-heading font-semibold text-sm text-ink grow min-w-[160px]">
-                  {m.nazev}
-                  <span className="font-body font-normal text-muted"> · {t(`pr.druh.${m.druh}`)}</span>
+                <span className="grow min-w-0 flex flex-col gap-1.5">
+                  <span className="font-display text-xl sm:text-2xl text-ink leading-tight break-words">
+                    {m.nazev}
+                  </span>
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className="shrink-0 rounded-pill px-2.5 py-1 text-[10px] font-heading font-semibold uppercase tracking-wide text-white"
+                      style={{ backgroundColor: BARVA_STAVU_MEDIA[m.stav] }}
+                    >
+                      {t(`pr.stavMedia.${m.stav}`)}
+                    </span>
+                    <span className="text-xs font-heading uppercase tracking-wide text-muted">
+                      {t(`pr.druh.${m.druh}`)}
+                    </span>
+                  </span>
                 </span>
                 <select
                   value={m.stav}
                   onChange={(e) => zmen(m.id, { stav: e.target.value as StavMedia })}
-                  className="rounded-lg border border-line bg-surface px-2 py-1 text-xs font-heading text-ink"
+                  className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1 text-xs font-heading text-ink"
                 >
                   {STAVY_MEDIA.map((s) => (
                     <option key={s} value={s}>
@@ -1133,7 +1270,11 @@ function SeznamMedii({
                   {!m.overeno && <span className="text-status-progress"> · {t('pr.neovereno')}</span>}
                 </span>
               )}
-              {m.duvod && <span className="text-xs font-body text-ink">{m.duvod}</span>}
+              {m.duvod && (
+                <span className="text-sm font-body text-ink border-l-2 border-brand-green pl-3">
+                  {m.duvod}
+                </span>
+              )}
               {m.odeslanoAt && (
                 <span className="text-[11px] font-body text-muted">
                   {t('pr.odeslano')} {formatDatumCas(jazyk, new Date(m.odeslanoAt))}
