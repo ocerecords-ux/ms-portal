@@ -172,10 +172,9 @@ export function odesilatelMediaspace(odpovedNa?: string | null): {
  * klientovi z portálu, ale mail redaktorovi - a ten má vypadat, jako by ho
  * napsal člověk. Fialová hlavička a tlačítka by ho poslaly rovnou do koše.
  *
- * ODESÍLÁ SE Z NAŠÍ SCHRÁNKY, protože jinou doménu poštovní server do „Od"
- * nepustí (viz komentář u odesilatelMediaspace). Liší se ale JMÉNO odesílatele
- * - stojí tam konkrétní člověk, ne „Mediaspace" - a REPLY-TO, které vede do
- * schránky PR. Odpověď novináře tedy přijde tam, kde se čte.
+ * ODESÍLÁ SE Z JEJÍ SCHRÁNKY, když se k ní portál umí přihlásit; jinak naší
+ * cestou s jejím jménem v „Od" (poštovní server pustí do „Od" jen adresu
+ * účtu, kterým jsme přihlášení). REPLY-TO vede vždycky k ní.
  */
 export async function sendPrNabidkaEmail(input: {
   to: string;
@@ -184,37 +183,47 @@ export async function sendPrNabidkaEmail(input: {
   /** Adresa, ze které Ema píše - je i v jejím podpisu. */
   adresaEmy: string;
 }) {
-  const transport = transportPR() ?? getTransport();
-  if (!transport) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  const zprava = {
+    to: input.to,
+    subject: input.predmet,
+    text: `${input.text}\n\n${podpisEmyText(input.adresaEmy)}`,
+    html: teloMailuHtml(input.text, input.adresaEmy),
+  };
 
   /**
-   * Z JEJÍ ADRESY, JEN KDYŽ SE K TÉ SCHRÁNCE UMÍME PŘIHLÁSIT. Poštovní server
-   * pustí do „Od" jen adresu účtu, kterým jsme přihlášení - cizí doménu odmítne
-   * („551 Domain name mismatch"). Bez údajů ke schránce PR tedy mail odejde
-   * naší obvyklou cestou a v „Od" bude Mediaspace; v podpisu zůstane Ema.
+   * NEJDŘÍV Z JEJÍ ADRESY, A KDYŽ TO NEJDE, TAK NAŠÍ CESTOU (20. 11. 2026).
+   *
+   * Posílat z pr@mediaspace.cz jde jen přes přihlášení k té schránce. Když
+   * server přihlášení odmítne - špatné heslo, zamčený účet - nesmí to
+   * znamenat, že nabídka neodejde vůbec: spadne se zpátky na naši obvyklou
+   * schránku, v „Od" bude Mediaspace a podpis zůstane Emin. Jakmile bude
+   * heslo sedět, začne se posílat z její adresy samo, bez zásahu do kódu.
    */
-  const zJejiAdresy = Boolean(transportPR());
-  const odesilatel = zJejiAdresy
-    ? { name: EMA_JMENO, address: input.adresaEmy }
-    : { name: `${EMA_JMENO} – Mediaspace`, address: adresaOdesilatele() };
+  const jejiSchranka = transportPR();
+  if (jejiSchranka) {
+    try {
+      await jejiSchranka.sendMail({
+        ...zprava,
+        from: { name: EMA_JMENO, address: input.adresaEmy },
+        replyTo: input.adresaEmy,
+      });
+      return { sent: true as const, zJejiAdresy: true };
+    } catch (err) {
+      console.error('PR: schranka Emy odmitla prihlaseni, posilam nasi cestou:', err);
+    }
+  }
+
+  const nase = getTransport();
+  if (!nase) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const, hlaska: '' };
 
   try {
-    await transport.sendMail({
-      from: odesilatel,
+    await nase.sendMail({
+      ...zprava,
+      from: { name: `${EMA_JMENO} – Mediaspace`, address: adresaOdesilatele() },
       replyTo: input.adresaEmy,
-      to: input.to,
-      subject: input.predmet,
-      text: `${input.text}\n\n${podpisEmyText(input.adresaEmy)}`,
-      html: teloMailuHtml(input.text, input.adresaEmy),
     });
-    return { sent: true as const, zJejiAdresy };
+    return { sent: true as const, zJejiAdresy: false };
   } catch (err) {
-    /**
-     * HLÁŠKA ZE SERVERU SE VRACÍ VOLAJÍCÍMU (20. 11. 2026). „Poštovní server
-     * mail nepřijal" neřeklo, jestli je špatné heslo, server, nebo adresa
-     * v „Od" - a hledat to v logu Vercelu při zkoušení nikdo nebude. Je to
-     * naše interní obrazovka.
-     */
     console.error('PR nabidka se neodeslala:', err);
     const hlaska = err instanceof Error ? err.message.slice(0, 300) : '';
     return { sent: false, reason: 'SEND_FAILED' as const, hlaska };
