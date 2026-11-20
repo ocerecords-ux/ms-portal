@@ -6276,6 +6276,22 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- výkazy: záložky nad stránkou ---
   'vykaz.nadpis': { cs: 'Výkazy', en: 'Timesheets' },
+  'vykazFaktura.nadpis': { cs: 'Moje faktury', en: 'My invoices' },
+  'vykazFaktura.popis': {
+    cs: 'Nahraj fakturu a objeví se nám v dokladech. Pak tu uvidíš, kde stojí.',
+    en: 'Upload your invoice and it lands in our documents. You will see its status here.',
+  },
+  'vykazFaktura.nahrat': { cs: 'Nahrát fakturu', en: 'Upload the invoice' },
+  'vykazFaktura.nahravam': { cs: 'Nahrávám…', en: 'Uploading…' },
+  'vykazFaktura.zadne': { cs: 'Zatím jsi žádnou fakturu nenahrál.', en: 'You have not uploaded an invoice yet.' },
+  'vykazFaktura.bezNazvu': { cs: 'Faktura', en: 'Invoice' },
+  'vykazFaktura.chyba': {
+    cs: 'Nahrání se nepovedlo. Zkus to prosím znovu.',
+    en: 'The upload failed. Please try again.',
+  },
+  'vykazFaktura.stav.ceka': { cs: 'Nahráno – čeká na zařazení', en: 'Uploaded – waiting to be filed' },
+  'vykazFaktura.stav.zpracovana': { cs: 'Zařazeno – čeká na úhradu', en: 'Filed – waiting for payment' },
+  'vykazFaktura.stav.uhrazena': { cs: 'Uhrazeno', en: 'Paid' },
   'vykaz.zalozkaBonusyKeSchvaleni': { cs: 'Bonusy ke schválení', en: 'Bonuses awaiting approval' },
   'vykaz.zalozkaMojeBonusy': { cs: 'Moje bonusy', en: 'My bonuses' },
 

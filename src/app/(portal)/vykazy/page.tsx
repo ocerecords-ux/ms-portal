@@ -9,6 +9,7 @@ import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { TimesheetEditor } from './TimesheetEditor';
 import { BonusyPanel, type Bonus } from './BonusyPanel';
 import { NavrhyZKalendare } from './NavrhyZKalendare';
+import { FakturyZvukare, type MojeFaktura } from './FakturyZvukare';
 import { nactiNavrhy, pripravNavrhy } from '@/lib/vykazNavrhyServer';
 import type { BonusRadek } from './TimesheetEditor';
 import { nactiJazyk } from '@/lib/jazykServer';
@@ -177,6 +178,44 @@ export default async function TimesheetsPage({
       aktivni ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
     }`;
 
+  /**
+   * MOJE FAKTURY (zadání 20. 11. 2026). Doklady, které si zvukař nahrál
+   * tady ve výkazech - jen svoje, filtruje se v dotazu. Stav se nedrží
+   * zvlášť, odvozuje se z dokladu: nezařazený čeká na účetní, zařazený
+   * čeká na úhradu, zaplacený je hotový.
+   */
+  const mojeFaktury: MojeFaktura[] = (
+    await prisma.expense
+      .findMany({
+        where: { nahralId: session.user.id },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        select: {
+          id: true,
+          attachmentName: true,
+          createdAt: true,
+          amountExVatMinor: true,
+          vatRate: true,
+          currency: true,
+          stav: true,
+          paid: true,
+          paidAt: true,
+          dueDate: true,
+        },
+      })
+      .catch(() => [])
+  ).map((f) => ({
+    id: f.id,
+    nazev: f.attachmentName,
+    nahranoAt: f.createdAt.toISOString(),
+    // Zvukare zajima castka, kterou dostane - tedy vcetne DPH.
+    castkaMinor: Math.round(f.amountExVatMinor * (1 + (f.vatRate ?? 0) / 100)),
+    mena: String(f.currency),
+    stav: f.paid ? ('uhrazena' as const) : f.stav === 'NEZARAZENY' ? ('ceka' as const) : ('zpracovana' as const),
+    uhrazenoAt: f.paidAt ? f.paidAt.toISOString() : null,
+    splatnost: f.dueDate ? f.dueDate.toISOString() : null,
+  }));
+
   return (
     <div className="flex flex-col gap-6">
       {/* Zalozky nad celou strankou. Drzi se v adrese, ne ve stavu - odznak
@@ -202,6 +241,8 @@ export default async function TimesheetsPage({
           hourlyRate={me?.hourlyRate ?? DEFAULT_HOURLY_RATE}
         />
       )}
+
+      {!naBonusech && canWrite && <FakturyZvukare faktury={mojeFaktury} />}
 
       {naBonusech ? (
         <BonusyPanel

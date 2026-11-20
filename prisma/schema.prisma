@@ -2434,6 +2434,15 @@ model Expense {
   fakturaCislo String?
   fakturaAt    DateTime?
 
+  /// KDO DOKLAD NAHRÁL Z PORTÁLU (zadání 20. 11. 2026: „potřebuju, aby mohli
+  /// fakturu vkládat zvukaři tam, kde mají výkazy… a třeba tam i viděli stav,
+  /// v jakém to je").
+  ///
+  /// Podle toho se zvukaři ve výkazech ukazují JEHO faktury a jejich stav.
+  /// Jméno se drží textem, aby řádek zůstal čitelný i po smazání účtu.
+  nahralId    String?
+  nahralJmeno String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
