@@ -3148,6 +3148,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Řádek {radek} má cenu, ale chybí mu popis. Doplňte ho — bez popisu by se celý řádek ztratil.',
     en: 'Line {radek} has a price but no description. Fill it in — without it the whole line would be lost.',
   },
+  'doklad.zRozpoctu': {
+    cs: 'Z rozpočtu projektu ({pocet})',
+    en: 'From the project budget ({pocet})',
+  },
   'nabidka.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'The quote could not be saved.' },
   'nabidka.odeslanoNa': {
     cs: 'Nabídka odeslána na {email}.',

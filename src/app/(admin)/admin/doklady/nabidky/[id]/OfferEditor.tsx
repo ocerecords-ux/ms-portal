@@ -1,7 +1,7 @@
 'use client';
 
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Currency, OfferStatus } from '@prisma/client';
@@ -26,6 +26,12 @@ import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { DatumPole } from '@/components/DatumPole';
 import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { VyberPole } from '@/components/VyberPole';
+import {
+  chybejiciZRozpoctu,
+  nactiRozpocetProjektu,
+  sPolozkamiZRozpoctu,
+  type PolozkaRozpoctu,
+} from '@/lib/polozkyZRozpoctu';
 
 type Item = {
   description: string;
@@ -259,6 +265,32 @@ export function OfferEditor({
    * a já si k nim napíšu jen ceny"). Každý herec = jedna položka bez ceny;
    * kdo už v položkách je, nepřidá se znovu. Prázdný první řádek se nahradí.
    */
+  /**
+   * POLOŽKY Z ROZPOČTU PROJEKTU (zadání 19. 11. 2026: „u dokladů nemůžu stále
+   * přidat položku z rozpočtu"). Rozpočet se načte, jakmile je vybraný
+   * projekt; tlačítko se ukáže, jen když je co přidat.
+   */
+  const [rozpocet, setRozpocet] = useState<PolozkaRozpoctu[]>([]);
+  useEffect(() => {
+    let platne = true;
+    if (!form.caflouProjectId) {
+      setRozpocet([]);
+      return;
+    }
+    void nactiRozpocetProjektu(form.caflouProjectId).then((p) => {
+      if (platne) setRozpocet(p);
+    });
+    return () => {
+      platne = false;
+    };
+  }, [form.caflouProjectId]);
+
+  const chybejiciZRozpoctuDokladu = chybejiciZRozpoctu(rozpocet, items);
+  function pridatZRozpoctu() {
+    setItems((current) => sPolozkamiZRozpoctu(current, rozpocet, emptyItem));
+    setInfo(null);
+  }
+
   const herciVybranehoProjektu = form.caflouProjectId ? herciProjektu[form.caflouProjectId] ?? [] : [];
   const popisHerce = (jmeno: string) => (form.jazyk === 'EN' ? `Voice-over – ${jmeno}` : `Hlasový výkon – ${jmeno}`);
   const chybejiciHerci = herciVybranehoProjektu.filter(
@@ -947,6 +979,16 @@ export function OfferEditor({
                   className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple"
                 >
                   {t('nabidka.herciZProjektu', { pocet: chybejiciHerci.length })}
+                </button>
+              )}
+              {chybejiciZRozpoctuDokladu.length > 0 && (
+                <button
+                  type="button"
+                  onClick={pridatZRozpoctu}
+                  title={chybejiciZRozpoctuDokladu.map((r) => r.nazev).join(', ')}
+                  className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple"
+                >
+                  {t('doklad.zRozpoctu', { pocet: chybejiciZRozpoctuDokladu.length })}
                 </button>
               )}
             </div>

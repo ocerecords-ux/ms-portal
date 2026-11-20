@@ -1,7 +1,7 @@
 'use client';
 
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Currency, InvoiceStatus } from '@prisma/client';
@@ -26,6 +26,12 @@ import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, formatDatumCas, kodJazyka, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 import { CASTI_FAKTURY, popisCasti, type CastFaktury } from '@/lib/fakturaCast';
+import {
+  chybejiciZRozpoctu,
+  nactiRozpocetProjektu,
+  sPolozkamiZRozpoctu,
+  type PolozkaRozpoctu,
+} from '@/lib/polozkyZRozpoctu';
 
 type Item = {
   description: string;
@@ -251,6 +257,32 @@ export function InvoiceEditor({
 
   function updateItem(index: number, patch: Partial<Item>) {
     setItems((current) => current.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+    setInfo(null);
+  }
+
+  /**
+   * POLOŽKY Z ROZPOČTU PROJEKTU (zadání 19. 11. 2026: „u dokladů nemůžu stále
+   * přidat položku z rozpočtu"). Tytéž řádky, jaké si produkce píše u projektu
+   * - ať se neopisují ručně. Částka se předvyplní a dá se přepsat.
+   */
+  const [rozpocet, setRozpocet] = useState<PolozkaRozpoctu[]>([]);
+  useEffect(() => {
+    let platne = true;
+    if (!form.caflouProjectId) {
+      setRozpocet([]);
+      return;
+    }
+    void nactiRozpocetProjektu(form.caflouProjectId).then((p) => {
+      if (platne) setRozpocet(p);
+    });
+    return () => {
+      platne = false;
+    };
+  }, [form.caflouProjectId]);
+
+  const chybejiciZRozpoctuDokladu = chybejiciZRozpoctu(rozpocet, items);
+  function pridatZRozpoctu() {
+    setItems((current) => sPolozkamiZRozpoctu(current, rozpocet, emptyItem));
     setInfo(null);
   }
 
@@ -973,13 +1005,25 @@ export function InvoiceEditor({
           </div>
 
           {!locked && (
-            <AddButton
-              type="button"
-              onClick={() => setItems((current) => [...current, emptyItem()])}
-              className="self-start"
-            >
-              {t('faktura.pridatPolozku')}
-            </AddButton>
+            <div className="flex items-center gap-3 flex-wrap">
+              <AddButton
+                type="button"
+                onClick={() => setItems((current) => [...current, emptyItem()])}
+                className="self-start"
+              >
+                {t('faktura.pridatPolozku')}
+              </AddButton>
+              {chybejiciZRozpoctuDokladu.length > 0 && (
+                <button
+                  type="button"
+                  onClick={pridatZRozpoctu}
+                  title={chybejiciZRozpoctuDokladu.map((r) => r.nazev).join(', ')}
+                  className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple"
+                >
+                  {t('doklad.zRozpoctu', { pocet: chybejiciZRozpoctuDokladu.length })}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
