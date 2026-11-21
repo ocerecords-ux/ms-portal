@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { notify } from '@/lib/notifications';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 import { adresaWiki } from '@/lib/wikipedie';
 
 /**
@@ -14,6 +15,24 @@ import { adresaWiki } from '@/lib/wikipedie';
 
 const UA = 'MSPortal-Wikipedie/1.0 (https://www.msportal.cz)';
 
+/**
+ * CHYBA, KTERÁ NESE KLÍČ (dávka 7aa, vzor z dávky 7w).
+ *
+ * `vykresliNahled` a `stavClanku` chybu vyhazují - čte ji routa (ta má klíč
+ * poslat obrazovce) i hodinová kontrola (ta si větu ukládá do databáze ke
+ * článku). Výjimka proto nese obojí: `klic` pro routu a českou větu
+ * v `message` pro databázi. Čeština zůstává zdrojem pravdy (pravidlo 1).
+ */
+export class ChybaWiki extends Error {
+  readonly klic: string;
+  readonly hodnoty?: Record<string, string | number>;
+  constructor(klic: string, hodnoty?: Record<string, string | number>) {
+    super(hodnoty ? prelozitS('cs', klic, hodnoty) : prelozit('cs', klic));
+    this.klic = klic;
+    this.hodnoty = hodnoty;
+  }
+}
+
 function api(jazyk: string): string {
   return `https://${jazyk}.wikipedia.org/w/api.php`;
 }
@@ -27,7 +46,7 @@ export async function vykresliNahled(jazyk: string, nazev: string, wikitext: str
     body: JSON.stringify({ wikitext, body_only: true }),
     cache: 'no-store',
   });
-  if (!res.ok) throw new Error(`Wikipedie náhled nevykreslila (${res.status}).`);
+  if (!res.ok) throw new ChybaWiki('chybaApi.wikiNahledNevykreslenS', { stav: res.status });
   return res.text();
 }
 
@@ -55,7 +74,7 @@ export async function stavClanku(jazyk: string, nazev: string, kolik = 10): Prom
     formatversion: '2',
   });
   const res = await fetch(`${api(jazyk)}?${p.toString()}`, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA }, cache: 'no-store' });
-  if (!res.ok) throw new Error(`Wikipedie neodpověděla (${res.status}).`);
+  if (!res.ok) throw new ChybaWiki('chybaApi.wikiNeodpovedelaS', { stav: res.status });
   const data = (await res.json()) as {
     query?: { pages?: { title: string; missing?: boolean; revisions?: { revid: number; timestamp: string; user?: string; comment?: string; size?: number }[] }[] };
   };
@@ -133,7 +152,10 @@ export async function odesliNaWiki(vstup: {
   wikitext: string;
   shrnuti: string;
   token: string;
-}): Promise<{ ok: true; url: string; revid: number | null } | { ok: false; chyba: string }> {
+}): Promise<
+  | { ok: true; url: string; revid: number | null }
+  | { ok: false; klic: string; hodnoty?: Record<string, string | number> }
+> {
   const { jazyk, titul, wikitext, shrnuti, token } = vstup;
   const hlavicky = { 'User-Agent': UA, 'Api-User-Agent': UA, Authorization: `Bearer ${token}` };
   try {
@@ -147,7 +169,11 @@ export async function odesliNaWiki(vstup: {
     };
     const csrf = dt.query?.tokens?.csrftoken;
     if (!csrf || csrf === '+\\') {
-      return { ok: false, chyba: dt.error?.info || 'Wikipedie token nepřijala - zkontrolujte přístupový token v Odesílání.' };
+      // Vysvětlení od Wikipedie chodí jejím jazykem - jde proto do značky, ne
+      // do věty (pravidlo 7). Když žádné není, jde prostý klíč.
+      return dt.error?.info
+        ? { ok: false, klic: 'chybaApi.wikiTokenNeprijataS', hodnoty: { zprava: dt.error.info } }
+        : { ok: false, klic: 'chybaApi.wikiTokenNeprijata' };
     }
 
     const telo = new URLSearchParams({
@@ -170,10 +196,21 @@ export async function odesliNaWiki(vstup: {
       error?: { code?: string; info?: string };
     };
     if (de.error || de.edit?.result !== 'Success') {
-      return { ok: false, chyba: de.error?.info || `Úpravu se nepodařilo uložit (${de.edit?.result ?? re.status}).` };
+      return de.error?.info
+        ? { ok: false, klic: 'chybaApi.wikiUpravuOdmitlaS', hodnoty: { zprava: de.error.info } }
+        : {
+            ok: false,
+            klic: 'chybaApi.wikiUpravaNeulozenaS',
+            hodnoty: { zprava: de.edit?.result ?? re.status },
+          };
     }
     return { ok: true, url: adresaWiki(jazyk, de.edit.title ?? titul), revid: de.edit.newrevid ?? null };
   } catch (err) {
-    return { ok: false, chyba: (err as Error).message || 'Wikipedie neodpověděla.' };
+    // Věta se značkou jen tehdy, když zpráva z výjimky je - jinak by
+    // v anglické větě svítila česká závorka (vzor z dávky 7y).
+    const zprava = err instanceof Error ? err.message : '';
+    return zprava
+      ? { ok: false, klic: 'chybaApi.wikiNeodpovedelaZpravaS', hodnoty: { zprava } }
+      : { ok: false, klic: 'chybaApi.wikiNeodpovedela' };
   }
 }

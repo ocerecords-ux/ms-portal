@@ -19,5 +19,4 @@ src/app/api/admin/invoices/route.ts: error TS2339: Property 'slevaProcent' does 
 src/app/api/admin/invoices/route.ts: error TS2339: Property 'status' does not exist on type 'never'.
 src/app/api/admin/invoices/route.ts: error TS2339: Property 'subject' does not exist on type 'never'.
 src/app/api/klient/doklady/nahled/route.ts: error TS2741: Property 'sluzby' is missing in type 'Order' but required in type 'ObjednavkaProPopis'.
-src/lib/email.ts: error TS2503: Cannot find namespace 'nodemailer'.
 src/lib/rozliseniHercu.ts: error TS2352: Conversion of type 'User[]' to type '{ id: string; name: string | null; email: string; code: string | null; studioLocations: string[]; }[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.

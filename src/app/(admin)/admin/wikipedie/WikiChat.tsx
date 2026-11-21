@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
@@ -74,7 +75,7 @@ export function WikiChat({
       const data = (await res.json().catch(() => ({}))) as { moje?: Zprava; odpoved?: Zprava; error?: string };
       if (data.moje) setZpravy((s) => [...s, data.moje!]);
       if (!res.ok || !data.odpoved) {
-        setChyba(data.error || t('wiki.odpovedNeziskana'));
+        setChyba(hlaskaChyby(data, t, t('wiki.odpovedNeziskana')));
         return;
       }
       setZpravy((s) => [...s, data.odpoved!]);

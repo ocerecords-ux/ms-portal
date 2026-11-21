@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/adminGuard';
 import { prisma } from '@/lib/db';
 import { odesliNaWiki } from '@/lib/wikipedieServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /**
  * Odeslání konceptu na Wikipedii pod účtem uživatele (zadání 22. 9. 2026:
@@ -19,18 +20,21 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    // Hlášky ze `zod` zůstávají česky (rozhodnutí z dávky 7s); klíč dostává
+    // jen záložní věta, která chodí, když `zod` žádnou svou nedal.
+    const zprava = parsed.error.issues[0]?.message;
+    return zprava
+      ? NextResponse.json({ error: zprava }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
 
   const clanek = await prisma.wikiClanek.findUnique({ where: { userId: session.user.id } });
-  if (!clanek) return NextResponse.json({ error: 'Nejdřív koncept uložte.' }, { status: 400 });
-  if (!clanek.token) {
-    return NextResponse.json({ error: 'Chybí přístupový token - vyplňte ho v Odesílání na Wikipedii.' }, { status: 400 });
-  }
+  if (!clanek) return odpovedChyby('chybaApi.wikiNejdrivUlozte', 400);
+  if (!clanek.token) return odpovedChyby('chybaApi.wikiChybiToken', 400);
 
   const vysledek = await odesliNaWiki({
     jazyk: clanek.jazyk,
@@ -39,7 +43,11 @@ export async function POST(req: NextRequest) {
     shrnuti: parsed.data.shrnuti || 'Úprava z MS Portalu',
     token: clanek.token,
   });
-  if (!vysledek.ok) return NextResponse.json({ error: vysledek.chyba }, { status: 502 });
+  if (!vysledek.ok) {
+    return vysledek.hodnoty
+      ? odpovedChybyS(vysledek.klic, vysledek.hodnoty, 502)
+      : odpovedChyby(vysledek.klic, 502);
+  }
 
   await prisma.wikiClanek
     .update({ where: { id: clanek.id }, data: { cilStranka: parsed.data.cil } })

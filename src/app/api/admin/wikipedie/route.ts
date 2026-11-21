@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/adminGuard';
 import { prisma } from '@/lib/db';
 import { JAZYKY_WIKI } from '@/lib/wikipedie';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Koncept článku na Wikipedii (zadání 22. 9. 2026). Každý si ukládá jen svůj
@@ -23,10 +24,15 @@ const schema = z.object({
 
 export async function PUT(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    // Hlášky ze `zod` zůstávají česky (rozhodnutí z dávky 7s); klíč dostává
+    // jen záložní věta, která chodí, když `zod` žádnou svou nedal.
+    const zprava = parsed.error.issues[0]?.message;
+    return zprava
+      ? NextResponse.json({ error: zprava }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
   const d = parsed.data;
   const userId = session.user.id;
@@ -87,11 +93,11 @@ export async function PUT(req: NextRequest) {
 /** Text jedné uložené verze (?verze=id) - jen z vlastního článku. */
 export async function GET(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const id = req.nextUrl.searchParams.get('verze');
-  if (!id) return NextResponse.json({ error: 'Chybí verze.' }, { status: 400 });
+  if (!id) return odpovedChyby('chybaApi.wikiChybiVerze', 400);
   const clanek = await prisma.wikiClanek.findUnique({ where: { userId: session.user.id }, select: { id: true } });
   const verze = clanek ? await prisma.wikiVerze.findFirst({ where: { id, clanekId: clanek.id } }) : null;
-  if (!verze) return NextResponse.json({ error: 'Verze nenalezena.' }, { status: 404 });
+  if (!verze) return odpovedChyby('chybaApi.wikiVerzeNenalezena', 404);
   return NextResponse.json({ wikitext: verze.wikitext });
 }

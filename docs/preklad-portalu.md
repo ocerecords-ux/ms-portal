@@ -101,6 +101,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7x | 13. 11. | Hlášky rout smluv klíčem — `api/admin/contracts/**` (7 rout, 3 obrazovky); šestá agenda z `api/admin/**` a první, kde chybu z routy čte i odkaz na PDF | [x] |
 | 7y | 14. 11. | Hlášky rout firem klíčem — `api/admin/companies/**` (5 rout, 5 obrazovek); sedmá agenda z `api/admin/**`, největší zbylý kus | [x] |
 | 7z | 15. 11. | Hlášky rout studií klíčem — `api/admin/studia/**` a k nim `api/studio/sprava` (6 rout, 4 obrazovky) a důvody odmítnuté pozvánky z `lib/pozvankaBooking.ts` | [x] |
+| 7aa | 16. 11. (nasazeno 21. 11.) | Hlášky rout Wikipedie klíčem — `api/admin/wikipedie/**` (6 rout, 2 obrazovky) a k tomu důvody z `lib/wikipedieServer.ts` a `lib/wikipedieChatServer.ts`; nově `ChybaWiki` pro chybu, kterou čte routa i hodinová kontrola | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2235,6 +2236,85 @@ grep -rn "error:" src/app/api/admin --include=*.ts \
   | grep -E "[ěščřžýáíéúůňťďó]" | grep -vE "^[^:]+:[0-9]+:\s*(//|\*)" \
   | grep -v "console\." | wc -l
 ```
+
+### Dávka 7aa je HOTOVÁ (16. 11. 2026, nasazeno 21. 11. 2026)
+
+**Devátá agenda z `api/admin/**`: Wikipedie.** Vzor je pořád z dávky 7o
+(`odpovedChyby(klíč, status)`, věta se značkou přes `odpovedChybyS`), obrazovka
+čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **6 rout, 2 knihovny,
+2 obrazovky, 20 přepsaných míst a slovník +20 klíčů (6 301 → 6 321)**.
+Klíče `chybaApi.bezOpravneni` a `chybaApi.neplatnaData` ve slovníku už byly
+z dávek 7o–7z, takže se nezakládaly znovu.
+
+**Routy:** `wikipedie` (uložení konceptu a text starší verze), `wikipedie/chat`
+(chat nad konceptem), `wikipedie/odeslat` (odeslání na Wikipedii),
+`wikipedie/nahled` (náhled konceptu), `wikipedie/stav` (poslední úpravy živého
+článku) a `wikipedie/token` (osobní přístupový token).
+
+**Obrazovky:** `WikipedieEditor.tsx` (šest míst — uložení, náhled, starší verze,
+token, odeslání a stav) a `WikiChat.tsx` (jedno místo).
+
+**Nově `ChybaWiki` — výjimka, která nese klíč.** `vykresliNahled` a `stavClanku`
+chybu vyhazují a čtou ji DVA různí volající: routa (ta má klíč poslat
+obrazovce) a hodinová kontrola `zkontrolujClanky()` (ta si větu ukládá
+do databáze do `chybaKontroly`). Výjimka proto nese obojí — `klic` i českou
+větu v `message`, kterou si poskládá z `prelozitS('cs', …)`, takže věta má
+ve slovníku jediné místo. Routa ji pozná přes `instanceof` a pošle klíč,
+kontrola si dál ukládá, co ukládala.
+
+**Vysvětlení od Wikipedie jde do značky, ne do věty.** `dt.error?.info`
+a `de.error?.info` z MediaWiki chodí jazykem té Wikipedie, na kterou se píše —
+jsou to cizí data (pravidlo 4), takže je dosazuje až obrazovka do své jazykové
+verze věty (`wikiTokenNeprijataS`, `wikiUpravuOdmitlaS`). Když žádné info
+nepřijde, jde prostý klíč — ve stejném větvení jako „Neznámá chyba." v dávkách
+7y a 7z.
+
+**Pokyn pro model zůstává český.** `pokyn()` v `lib/wikipedieChatServer.ts` je
+systémový prompt pro chat, který s člověkem mluví česky o článku na české
+Wikipedii — není to text rozhraní a slovník do něj nemá co mluvit.
+
+**Termíny podle slovníčku:** koncept = draft, náhled = preview, přístupový
+token = access token, odeslání na Wikipedii = sending to Wikipedia, verze
+konceptu = version, hlídaný článek = watched article.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7z):**
+
+1. **Hlášky ze `zod` schémat** — `Vyplňte název článku.`, `Napište zprávu.`
+   a `Vyplňte, kam se má text uložit.` zůstávají česky. Záložní
+   `'Neplatná data.'` vedle nich klíč dostalo: routa nejdřív pošle větu
+   od `zod`, a až když žádná není, jde klíč.
+2. **`chybaKontroly` v databázi** — `Stránka na Wikipedii zatím neexistuje.`
+   zapisuje hodinová kontrola ke článku a obrazovka ji jen vypíše. Co je
+   jednou uložené, už jazyk nezmění — **je to tatáž třída problému jako
+   oznámení pod zvonkem** (viz dávka 6): správné řešení je ukládat klíč
+   a vykreslovat text až při čtení, a to je vlastní úkol, ne vedlejší efekt
+   překladu.
+3. **Kostra konceptu ve `lib/wikipedie.ts`** — šablona `{{Infobox}}`, názvy
+   kategorií a citace jsou WIKITEXT pro českou Wikipedii, tedy obsah, ne
+   rozhraní (pravidlo 4). Pískoviště má svůj název pro `cs`, `sk` i `en` už
+   od začátku.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (23 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po Wikipedii zůstává **243 českých hlášek** —
+největší kusy jsou ukázky (17), technika (17), pokladna (16), vlastní firmy
+(14), ceník (13), pozvánky údajů (13) a návody (13). Dál po agendách, jedna
+za večer.
+
+**Commit a nasazení až 21. 11. 2026.** Večerní běh 16. 11. práci dopsal
+a dávku v tabulce odškrtl, ale **nezacommitoval** — soubory pět dní ležely
+v pracovní kopii, zatímco Ondřej nad nimi commitoval jinou práci (hudba
+u klienta, kampaně, Ema). Tentýž omyl jako u dávky 7r v říjnu. Dnešní běh
+tedy nic nového nepřekládal: zkontroloval, co tam leží, a poslal to do
+produkce. **Pro příští dávky: dokud není commit a Vercel Ready, dávka není
+odškrtnutá.**
+
+**Typová kontrola potřebovala záplatu, a ne kvůli překladu.** Pošta Emy
+(listopadová práce) píše `nodemailer.Transporter` jako typ, tedy nodemailer
+jako jmenný prostor — stub měl jen `declare module`, takže kontrola hlásila
+`TS2503` dvakrát. Doplněna `declare namespace nodemailer` do `ENV_D_TS`
+v `gen-prisma-stub.py` i do `stubs/env.d.ts`; hláška proto zmizela ze
+seznamu známých (23 → 22 řádků). Diff proti známým hláškám je prázdný.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

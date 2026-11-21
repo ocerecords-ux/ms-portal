@@ -13,6 +13,7 @@ import {
   pravidlaWiki,
   type JazykWiki,
 } from '@/lib/wikipedie';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { kodJazyka, prelozitKolem, prelozitNaKusy, type Jazyk } from '@/lib/jazyk';
 
@@ -170,7 +171,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; ulozeno?: string; verze?: Verze[] };
       if (!res.ok) {
-        setChyba(data.error || t('firma.ulozeniNezdarilo'));
+        setChyba(hlaskaChyby(data, t, t('firma.ulozeniNezdarilo')));
         return;
       }
       setUlozeno(data.ulozeno ?? new Date().toISOString());
@@ -195,7 +196,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { html?: string; error?: string };
       if (!res.ok || !data.html) {
-        setNahledChyba(data.error || t('wiki.nahledNepodaril'));
+        setNahledChyba(hlaskaChyby(data, t, t('wiki.nahledNepodaril')));
         return;
       }
       setNahled(data.html);
@@ -220,7 +221,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
     const res = await fetch(`/api/admin/wikipedie?verze=${encodeURIComponent(id)}`);
     const data = (await res.json().catch(() => ({}))) as { wikitext?: string; error?: string };
     if (!res.ok || data.wikitext === undefined) {
-      setChyba(data.error || t('wiki.verziNeulozena'));
+      setChyba(hlaskaChyby(data, t, t('wiki.verziNeulozena')));
       return;
     }
     setWikitext(data.wikitext);
@@ -247,7 +248,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; ulozen?: boolean };
       if (!res.ok) {
-        setChyba(data.error || t('wiki.tokenNeulozen'));
+        setChyba(hlaskaChyby(data, t, t('wiki.tokenNeulozen')));
         return;
       }
       setMaToken(Boolean(data.ulozen));
@@ -294,7 +295,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
       if (!res.ok || !data.url) {
-        setChyba(data.error || t('wiki.odeslaniNepovedlo'));
+        setChyba(hlaskaChyby(data, t, t('wiki.odeslaniNepovedlo')));
         return;
       }
       setOdeslano(data.url);
@@ -315,7 +316,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       const res = await fetch(`/api/admin/wikipedie/stav?jazyk=${jazyk}&nazev=${encodeURIComponent(sledovany.trim())}`);
       const data = (await res.json().catch(() => ({}))) as { existuje?: boolean; revize?: Revize[]; error?: string };
       if (!res.ok) {
-        setStavChyba(data.error || t('wiki.neodpovedela'));
+        setStavChyba(hlaskaChyby(data, t, t('wiki.neodpovedela')));
         return;
       }
       setExistuje(Boolean(data.existuje));

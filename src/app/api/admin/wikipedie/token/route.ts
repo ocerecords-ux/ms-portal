@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/adminGuard';
 import { prisma } from '@/lib/db';
 import { vychoziKoncept } from '@/lib/wikipedie';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * Přístupový token k Wikipedii (zadání 22. 9. 2026). Uloží se a už se nikdy
@@ -16,9 +17,9 @@ const schema = z.object({ token: z.string().trim().max(8000) });
 
 export async function PUT(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
 
   const token = parsed.data.token || null;
   const userId = session.user.id;

@@ -179,6 +179,11 @@ declare module 'nodemailer' {
   const nodemailer: any;
   export default nodemailer;
 }
+/* Posta Emy (listopad 2026) pise `nodemailer.Transporter` jako typ, tedy
+   nodemailer jako jmenny prostor - bez teto deklarace hlasi kontrola TS2503. */
+declare namespace nodemailer {
+  type Transporter = any;
+}
 '''
 
 METODY = """      findUnique(args?: any): Promise<{T} | null>;

@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { prisma } from '@/lib/db';
 import type { UdajeOsoby } from '@/lib/wikipedieUdaje';
 import { odpovezVeChatu, navrhZOdpovedi } from '@/lib/wikipedieChatServer';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 /** Chat nad konceptem článku (zadání 22. 9. 2026). Historie je u článku. */
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ const schema = z.object({ zprava: z.string().trim().min(1, 'Napište zprávu.').
 
 export async function GET() {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const clanek = await prisma.wikiClanek.findUnique({ where: { userId: session.user.id }, select: { id: true } });
   if (!clanek) return NextResponse.json({ zpravy: [] });
   const zpravy = await prisma.wikiZprava.findMany({
@@ -28,14 +29,19 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    // Hlášky ze `zod` zůstávají česky (rozhodnutí z dávky 7s); klíč dostává
+    // jen záložní věta, která chodí, když `zod` žádnou svou nedal.
+    const zprava = parsed.error.issues[0]?.message;
+    return zprava
+      ? NextResponse.json({ error: zprava }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
 
   const clanek = await prisma.wikiClanek.findUnique({ where: { userId: session.user.id } });
-  if (!clanek) return NextResponse.json({ error: 'Nejdřív koncept uložte.' }, { status: 400 });
+  if (!clanek) return odpovedChyby('chybaApi.wikiNejdrivUlozte', 400);
 
   const historieRaw = await prisma.wikiZprava.findMany({
     where: { clanekId: clanek.id },
@@ -57,7 +63,9 @@ export async function POST(req: NextRequest) {
   });
   if (!vysledek.ok) {
     // Zpráva uživatele zůstane v historii, ať se nemusí psát znovu.
-    return NextResponse.json({ error: vysledek.chyba }, { status: 502 });
+    return vysledek.hodnoty
+      ? odpovedChybyS(vysledek.klic, vysledek.hodnoty, 502)
+      : odpovedChyby(vysledek.klic, 502);
   }
 
   const bot = await prisma.wikiZprava.create({

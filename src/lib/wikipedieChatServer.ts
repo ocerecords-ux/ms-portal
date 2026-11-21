@@ -68,9 +68,12 @@ export async function odpovezVeChatu(vstup: {
   wikitext: string;
   historie: ZpravaChatu[];
   zprava: string;
-}): Promise<{ ok: true; text: string } | { ok: false; chyba: string }> {
-  const klic = process.env.ANTHROPIC_API_KEY;
-  if (!klic) return { ok: false, chyba: 'Na Vercelu chybí ANTHROPIC_API_KEY.' };
+}): Promise<
+  | { ok: true; text: string }
+  | { ok: false; klic: string; hodnoty?: Record<string, string | number> }
+> {
+  const klicApi = process.env.ANTHROPIC_API_KEY;
+  if (!klicApi) return { ok: false, klic: 'chybaApi.wikiChatBezKlice' };
 
   const zpravy = [...vstup.historie.slice(-20), { role: 'ja' as const, text: vstup.zprava }].map((z) => ({
     role: z.role === 'ja' ? ('user' as const) : ('assistant' as const),
@@ -80,7 +83,7 @@ export async function odpovezVeChatu(vstup: {
   try {
     const odpoved = await fetch(ADRESA, {
       method: 'POST',
-      headers: anthropicHlavicky(klic),
+      headers: anthropicHlavicky(klicApi),
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 1500,
@@ -92,14 +95,17 @@ export async function odpovezVeChatu(vstup: {
     if (!odpoved.ok) {
       const proc = await odpoved.text().catch(() => '');
       console.error('[wikipedie-chat] API', odpoved.status, proc.slice(0, 300));
-      return { ok: false, chyba: `Model neodpověděl (${odpoved.status}).` };
+      return { ok: false, klic: 'chybaApi.wikiModelNeodpovedelS', hodnoty: { stav: odpoved.status } };
     }
     const telo = (await odpoved.json()) as { content?: { type: string; text?: string }[] };
     const text = telo.content?.find((c) => c.type === 'text')?.text?.trim() ?? '';
-    if (!text) return { ok: false, chyba: 'Model vrátil prázdnou odpověď.' };
+    if (!text) return { ok: false, klic: 'chybaApi.wikiModelPrazdny' };
     return { ok: true, text };
   } catch (err) {
-    return { ok: false, chyba: (err as Error).message || 'Model se nepodařilo zavolat.' };
+    const zprava = err instanceof Error ? err.message : '';
+    return zprava
+      ? { ok: false, klic: 'chybaApi.wikiModelNezavolanS', hodnoty: { zprava } }
+      : { ok: false, klic: 'chybaApi.wikiModelNezavolan' };
   }
 }
 
