@@ -13157,6 +13157,40 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Model se nepodařilo zavolat ({zprava}).',
     en: 'The model could not be called ({zprava}).',
   },
+
+  /* Knihovna ukázek - routy `api/admin/ukazky/**` (dávka 7ab, 21. 11. 2026). */
+  'chybaApi.ukazkyBezUloziste': {
+    cs: 'Ukázky zatím nejdou - portál nemá nastavené úložiště souborů.',
+    en: 'Samples are not available yet — the portal has no file storage set up.',
+  },
+  'chybaApi.ukazkaTypNebereme': {
+    cs: 'Tenhle typ souboru jako ukázku nebereme.',
+    en: 'We do not take this type of file as a sample.',
+  },
+  'chybaApi.ukazkaAdresaNepripravena': {
+    cs: 'Adresu pro nahrání se nepodařilo připravit.',
+    en: 'The upload address could not be prepared.',
+  },
+  'chybaApi.ukazkaNenahrana': {
+    cs: 'Soubor se do úložiště nenahrál.',
+    en: 'The file was not uploaded to storage.',
+  },
+  'chybaApi.ukazkaMocVelka': {
+    cs: 'Soubor je na ukázku moc velký.',
+    en: 'The file is too large for a sample.',
+  },
+  'chybaApi.ukazkaNeulozena': {
+    cs: 'Ukázku se nepodařilo uložit.',
+    en: 'The sample could not be saved.',
+  },
+  'chybaApi.ukazkaNeupravena': {
+    cs: 'Ukázku se nepodařilo upravit.',
+    en: 'The sample could not be edited.',
+  },
+  'chybaApi.ukazkaNevyrazena': {
+    cs: 'Ukázku se nepodařilo vyřadit.',
+    en: 'The sample could not be removed.',
+  },
 };
 
 /**

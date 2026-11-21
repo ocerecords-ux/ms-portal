@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
 import { MAX_UKAZKA_BYTES, TYPY_UKAZEK } from '@/lib/prezentaceNabidky';
 import { isStorageConfigured, podepsanyUploadUkazky } from '@/lib/storage';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * ADRESA, NA KTEROU PROHLÍŽEČ POŠLE UKÁZKU (11. 10. 2026). Soubor nejde přes
@@ -22,25 +23,25 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   if (!isStorageConfigured()) {
-    return NextResponse.json(
-      { error: 'Ukázky zatím nejdou - portál nemá nastavené úložiště souborů.' },
-      { status: 503 },
-    );
+    return odpovedChyby('chybaApi.ukazkyBezUloziste', 503);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    // Věta od `zod` jde první, a když žádná není, jde klíč (vzor z dávky 7s).
+    return parsed.error.issues[0]?.message
+      ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
   if (!TYPY_UKAZEK.includes(parsed.data.typ)) {
-    return NextResponse.json({ error: 'Tenhle typ souboru jako ukázku nebereme.' }, { status: 400 });
+    return odpovedChyby('chybaApi.ukazkaTypNebereme', 400);
   }
 
   const podpis = await podepsanyUploadUkazky(parsed.data.nazev, parsed.data.typ);
-  if (!podpis) return NextResponse.json({ error: 'Adresu pro nahrání se nepodařilo připravit.' }, { status: 500 });
+  if (!podpis) return odpovedChyby('chybaApi.ukazkaAdresaNepripravena', 500);
 
   return NextResponse.json(podpis);
 }

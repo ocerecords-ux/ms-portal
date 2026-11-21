@@ -6,6 +6,7 @@ import { isInternalRole } from '@/lib/roles';
 import { MAX_UKAZKA_BYTES, SEKCE, TYPY_UKAZEK } from '@/lib/prezentaceNabidky';
 import { nactiKnihovnu, zalozUkazku } from '@/lib/ukazkyServer';
 import { overPrilohu } from '@/lib/storage';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /** KNIHOVNA UKÁZEK - seznam a zápis nové (11. 10. 2026). */
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ const schema = z.object({
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
   return NextResponse.json({ ukazky: await nactiKnihovnu(true) });
 }
@@ -33,15 +34,18 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !isInternalRole(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    // Věta od `zod` jde první, a když žádná není, jde klíč (vzor z dávky 7s).
+    return parsed.error.issues[0]?.message
+      ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
   if (!TYPY_UKAZEK.includes(parsed.data.typSouboru)) {
-    return NextResponse.json({ error: 'Tenhle typ souboru jako ukázku nebereme.' }, { status: 400 });
+    return odpovedChyby('chybaApi.ukazkaTypNebereme', 400);
   }
 
   /**
@@ -50,9 +54,9 @@ export async function POST(req: NextRequest) {
    * odchytí nahrání, které se v půlce rozpadlo.
    */
   const v = await overPrilohu(parsed.data.klic);
-  if (!v) return NextResponse.json({ error: 'Soubor se do úložiště nenahrál.' }, { status: 400 });
+  if (!v) return odpovedChyby('chybaApi.ukazkaNenahrana', 400);
   if (v.size > MAX_UKAZKA_BYTES) {
-    return NextResponse.json({ error: 'Soubor je na ukázku moc velký.' }, { status: 400 });
+    return odpovedChyby('chybaApi.ukazkaMocVelka', 400);
   }
 
   const ukazka = await zalozUkazku({
@@ -68,7 +72,7 @@ export async function POST(req: NextRequest) {
     stitky: parsed.data.stitky ?? '',
     nahralId: session.user.id,
   });
-  if (!ukazka) return NextResponse.json({ error: 'Ukázku se nepodařilo uložit.' }, { status: 500 });
+  if (!ukazka) return odpovedChyby('chybaApi.ukazkaNeulozena', 500);
 
   return NextResponse.json({ ukazka });
 }

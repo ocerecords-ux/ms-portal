@@ -14,6 +14,7 @@ import {
   type Sekce,
   type UkazkaData,
 } from '@/lib/prezentaceNabidky';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
@@ -70,7 +71,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
           error?: string;
         };
         if (!podpis.ok || !data.uploadUrl || !data.key) {
-          setChyba(data.error || t('ukazky.chybaAdresa'));
+          setChyba(hlaskaChyby(data, t, t('ukazky.chybaAdresa')));
           continue;
         }
 
@@ -102,7 +103,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
           error?: string;
         };
         if (!zapis.ok || !zapsano.ukazka) {
-          setChyba(zapsano.error || t('ukazky.chybaZapis'));
+          setChyba(hlaskaChyby(zapsano, t, t('ukazky.chybaZapis')));
           continue;
         }
         setUkazky((s) => [zapsano.ukazka as UkazkaData, ...s]);
@@ -125,7 +126,7 @@ export function KnihovnaUkazek({ pocatecni }: { pocatecni: UkazkaData[] }) {
     });
     const data = (await res.json().catch(() => ({}))) as { ukazka?: UkazkaData; error?: string };
     if (!res.ok || !data.ukazka) {
-      setChyba(data.error || t('ukazky.neulozeno'));
+      setChyba(hlaskaChyby(data, t, t('ukazky.neulozeno')));
       return;
     }
     setUkazky((s) => s.map((u) => (u.id === id ? (data.ukazka as UkazkaData) : u)));

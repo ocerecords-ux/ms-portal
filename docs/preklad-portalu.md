@@ -102,6 +102,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7y | 14. 11. | Hlášky rout firem klíčem — `api/admin/companies/**` (5 rout, 5 obrazovek); sedmá agenda z `api/admin/**`, největší zbylý kus | [x] |
 | 7z | 15. 11. | Hlášky rout studií klíčem — `api/admin/studia/**` a k nim `api/studio/sprava` (6 rout, 4 obrazovky) a důvody odmítnuté pozvánky z `lib/pozvankaBooking.ts` | [x] |
 | 7aa | 16. 11. (nasazeno 21. 11.) | Hlášky rout Wikipedie klíčem — `api/admin/wikipedie/**` (6 rout, 2 obrazovky) a k tomu důvody z `lib/wikipedieServer.ts` a `lib/wikipedieChatServer.ts`; nově `ChybaWiki` pro chybu, kterou čte routa i hodinová kontrola | [x] |
+| 7ab | 21. 11. | Hlášky rout knihovny ukázek klíčem — `api/admin/ukazky/**` (3 routy, 1 obrazovka); osmá agenda z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2315,6 +2316,36 @@ jako jmenný prostor — stub měl jen `declare module`, takže kontrola hlásil
 `TS2503` dvakrát. Doplněna `declare namespace nodemailer` do `ENV_D_TS`
 v `gen-prisma-stub.py` i do `stubs/env.d.ts`; hláška proto zmizela ze
 seznamu známých (23 → 22 řádků). Diff proti známým hláškám je prázdný.
+
+### Dávka 7ab je HOTOVÁ (21. 11. 2026)
+
+**Osmá agenda z `api/admin/**`: knihovna ukázek.** Vzor pořád z dávky 7o
+(`odpovedChyby(klíč, status)`), obrazovka čte chybu přes
+`hlaskaChyby(data, t, záloha)`. Rozsah: **3 routy, 1 obrazovka, 17 přepsaných
+míst a slovník +8 klíčů**. `chybaApi.bezOpravneni` (5×) a
+`chybaApi.neplatnaData` (3×) už ve slovníku byly z dávek 7o–7aa.
+
+**Routy:** `ukazky` (seznam knihovny a zápis nové), `ukazky/[id]` (úprava
+a vyřazení) a `ukazky/podpis` (podepsaná adresa, na kterou prohlížeč pošle
+soubor rovnou do úložiště, mimo portál).
+
+**Obrazovka:** `KnihovnaUkazek.tsx` (tři místa — podepsaná adresa, zápis
+ukázky a uložení úprav). Vlastní hlášky prohlížeče (špatný typ, velký soubor,
+nahrání do úložiště) tam byly přes `usePreklad` už od dávky 7i; teď se k nim
+přidaly i věty ze serveru.
+
+**Termíny podle slovníčku:** ukázka = sample, knihovna ukázek = sample library,
+úložiště = storage, vyřadit = remove.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7aa):** hlášky ze `zod` schémat.
+Routy posílají větu od `zod` první a klíč `chybaApi.neplatnaData` až tehdy,
+když žádná není.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (22 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po ukázkách zůstává **226 českých hlášek** —
+největší kusy jsou technika (17), pokladna (16), vlastní firmy (14), ceník
+(13), pozvánky údajů (13) a návody (13). Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 
