@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { useJazyk } from '@/app/(portal)/components/JazykProvider';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * TECHNIKA (zadání 22. 10. 2026). Seznam kusů rozdělený do kategorií, u
@@ -141,6 +142,8 @@ export function TechnikaSprava({
 }) {
   const jazyk = useJazyk();
   const t = TEXTY[jazyk === 'en' ? 'en' : 'cs'];
+  // Hlášky z rout chodí klíčem (dávka 7ac) - popisky obrazovky zůstávají v TEXTY.
+  const tk = usePreklad();
 
   const [kategorie, setKategorie] = useState<Kategorie[]>(pocatecniKategorie);
   const [kusy, setKusy] = useState<Kus[]>(pocatecniKusy);
@@ -228,7 +231,7 @@ export function TechnikaSprava({
       );
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setChyba(data?.error || t.chyba);
+        setChyba(hlaskaChyby(data, tk, t.chyba));
         return;
       }
       setFormular(null);
@@ -627,6 +630,7 @@ function SpravaKategorii({
   const [nova, setNova] = useState('');
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
+  const tk = usePreklad();
 
   async function pridej() {
     if (!nova.trim() || pracuje) return;
@@ -640,7 +644,7 @@ function SpravaKategorii({
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setChyba(data?.error || t.chyba);
+        setChyba(hlaskaChyby(data, tk, t.chyba));
         return;
       }
       setNova('');

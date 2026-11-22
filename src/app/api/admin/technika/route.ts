@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * TECHNIKA (zadání 22. 10. 2026: „potřebuju vytvořit kategorii, kde bude
@@ -31,7 +32,7 @@ const schema = z.object({
 
 export async function GET() {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const [kategorie, kusy] = await Promise.all([
     prisma.technikaKategorie.findMany({ orderBy: [{ poradi: 'asc' }, { nazev: 'asc' }] }),
@@ -57,14 +58,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message || 'Neplatná data.' },
-      { status: 400 },
-    );
+    // Věta od `zod` jde první, a když žádná není, jde klíč (vzor z dávky 7s).
+    return parsed.error.issues[0]?.message
+      ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
   const d = parsed.data;
 
@@ -85,6 +86,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, id: kus.id });
   } catch (err) {
     console.error('POST /api/admin/technika selhalo:', err);
-    return NextResponse.json({ error: 'Uložení se nepodařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.ulozeniNepodarilo', 500);
   }
 }

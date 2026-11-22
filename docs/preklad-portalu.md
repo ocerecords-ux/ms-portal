@@ -103,6 +103,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7z | 15. 11. | Hlášky rout studií klíčem — `api/admin/studia/**` a k nim `api/studio/sprava` (6 rout, 4 obrazovky) a důvody odmítnuté pozvánky z `lib/pozvankaBooking.ts` | [x] |
 | 7aa | 16. 11. (nasazeno 21. 11.) | Hlášky rout Wikipedie klíčem — `api/admin/wikipedie/**` (6 rout, 2 obrazovky) a k tomu důvody z `lib/wikipedieServer.ts` a `lib/wikipedieChatServer.ts`; nově `ChybaWiki` pro chybu, kterou čte routa i hodinová kontrola | [x] |
 | 7ab | 21. 11. | Hlášky rout knihovny ukázek klíčem — `api/admin/ukazky/**` (3 routy, 1 obrazovka); osmá agenda z `api/admin/**` | [x] |
+| 7ac | 22. 11. | Hlášky rout techniky klíčem — `api/admin/technika/**` (4 routy, 1 obrazovka); devátá agenda z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2346,6 +2347,43 @@ když žádná není.
 **Co zbývá v `api/admin/**`:** po ukázkách zůstává **226 českých hlášek** —
 největší kusy jsou technika (17), pokladna (16), vlastní firmy (14), ceník
 (13), pozvánky údajů (13) a návody (13). Dál po agendách, jedna za večer.
+
+### Dávka 7ac je HOTOVÁ (22. 11. 2026)
+
+**Devátá agenda z `api/admin/**`: technika.** Vzor pořád z dávky 7o
+(`odpovedChyby(klíč, status)`), obrazovka čte chybu přes
+`hlaskaChyby(data, t, záloha)`. Rozsah: **4 routy, 1 obrazovka, 17 přepsaných
+míst a slovník +3 klíče**. `chybaApi.bezOpravneni` (6×),
+`chybaApi.neplatnaData` (4×) a `chybaApi.ulozeniNepodarilo` (2×) už ve
+slovníku byly z dávek 7o–7ab.
+
+**Routy:** `technika` (inventura a zápis nového kusu), `technika/[id]`
+(úprava, vyřazení a smazání kusu), `technika/kategorie` (zakládání kategorií)
+a `technika/kategorie/[id]` (přejmenování, pořadí a smazání kategorie).
+
+**Nové klíče:** `chybaApi.smazaniNepodarilo` (obecná, použitá 2× a bude se
+hodit dál), `chybaApi.technikaKategorieNezalozena` a
+`chybaApi.technikaKategorieNeulozena` — obě se ptají na shodu názvu, takže
+věta zůstala celá jedním klíčem (pravidlo 7).
+
+**Obrazovka:** `TechnikaSprava.tsx` (dvě místa — uložení kusu a založení
+kategorie). Pozor: **popisky téhle obrazovky pořád stojí v místní tabulce
+`TEXTY`, ne ve slovníku** — tak je psaná od 22. 10. 2026. Přidal se k nim
+jen `usePreklad()` pro klíče ze serveru; přesun `TEXTY` do `lib/jazyk.ts`
+zůstává samostatný úkol (dvě ruce v jednom souboru = přepsaná práce).
+
+**Termíny podle slovníčku:** technika = equipment, kategorie = category,
+kus = item, vyřadit = remove, studio = studio.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7ab):** hlášky ze `zod` schémat
+(`Název je povinný.`). Routy posílají větu od `zod` první a klíč
+`chybaApi.neplatnaData` až tehdy, když žádná není.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (22 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po technice zůstává **209 českých hlášek** —
+největší kusy jsou pokladna (16), vlastní firmy (14), ceník (13), pozvánky
+údajů (13) a návody (13). Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

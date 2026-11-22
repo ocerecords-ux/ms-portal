@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /** Úprava a vyřazení jednoho kusu techniky (22. 10. 2026) - viz ../route.ts. */
 export const dynamic = 'force-dynamic';
@@ -20,10 +21,10 @@ const schema = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  if (!parsed.success) return odpovedChyby('chybaApi.neplatnaData', 400);
   const d = parsed.data;
 
   try {
@@ -44,19 +45,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PATCH /api/admin/technika/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Uložení se nepodařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.ulozeniNepodarilo', 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   try {
     await prisma.technika.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/admin/technika/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Smazání se nepodařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.smazaniNepodarilo', 500);
   }
 }

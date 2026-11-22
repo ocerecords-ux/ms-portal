@@ -13191,6 +13191,17 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Ukázku se nepodařilo vyřadit.',
     en: 'The sample could not be removed.',
   },
+
+  /* Technika - routy `api/admin/technika/**` (dávka 7ac, 22. 11. 2026). */
+  'chybaApi.smazaniNepodarilo': { cs: 'Smazání se nepodařilo.', en: 'The deletion failed.' },
+  'chybaApi.technikaKategorieNezalozena': {
+    cs: 'Kategorii se nepodařilo založit - nemá už takový název?',
+    en: 'The category could not be created — does one with that name already exist?',
+  },
+  'chybaApi.technikaKategorieNeulozena': {
+    cs: 'Uložení se nepodařilo - nemá už takový název jiná kategorie?',
+    en: 'Saving failed — does another category already have that name?',
+  },
 };
 
 /**
