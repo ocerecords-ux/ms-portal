@@ -4,6 +4,7 @@ import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { prisma } from '@/lib/db';
 import { oznamNoveStopy } from '@/lib/preposlechPosluchaciServer';
 import { zjistiMezeryZeStop, zkontrolujUplnostStop } from '@/lib/kontrolaStopServer';
+import { nactiMetaStop } from '@/lib/stopaMetaServer';
 
 /**
  * Stopy a text pro přeposlech, načtené ze složky projektu na Disku
@@ -52,9 +53,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     ? await zjistiMezeryZeStop(params.id, vysledek.stopy).catch(() => null)
     : null;
 
+  /**
+   * HOTOVÁ KŘIVKA A DÉLKA (23. 11. 2026). Co už někdo spočítal, se posílá
+   * rovnou se seznamem - prohlížeč pak nemusí stahovat a dekódovat zvuk
+   * znovu a celkový čas je úplný hned.
+   */
+  const meta = await nactiMetaStop(
+    (vysledek.stopy as { id: string; velikost: number | null }[]).map((s) => ({
+      id: s.id,
+      velikost: s.velikost ?? null,
+    })),
+  ).catch(() => ({}));
+
   return NextResponse.json({
     slozkaUrl: vysledek.slozkaUrl,
-    stopy: vysledek.stopy,
+    stopy: (vysledek.stopy as { id: string }[]).map((s) => ({
+      ...s,
+      delka: meta[s.id]?.delka ?? null,
+      peaks: meta[s.id]?.peaks ?? null,
+    })),
     text: vysledek.text,
     poznamkaKTextu: vysledek.poznamkaKTextu,
     mezery: nalez

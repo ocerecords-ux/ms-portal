@@ -1031,6 +1031,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Procento přeposlechu se počítá podle stran textu, na kterých při přehrávání jste.',
     en: 'The proof-listening percentage is worked out from the text pages you are on while the recording plays.',
   },
+  'preposlech.postupZvuk': {
+    cs: 'Počítá se z odposlechnutého zvuku - kolik sekund ze všech nahraných stop už zaznělo.',
+    en: 'Counted from the audio actually heard - how many seconds of all uploaded tracks have played.',
+  },
   'preposlech.stitekPreposlechnuto': { cs: 'Přeposlechnuto', en: 'Proof-listened' },
   'preposlech.stitekKlient': { cs: 'Klient', en: 'Customer' },
   'preposlech.strana': { cs: 'strana', en: 'page' },

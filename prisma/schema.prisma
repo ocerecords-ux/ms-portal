@@ -6167,3 +6167,32 @@ model EmaPodklady {
   text      String   @db.Text
   updatedAt DateTime @updatedAt
 }
+
+/// SPOCITANA KRIVKA A DELKA STOPY (zpetna vazba preposlouchavacky
+/// 23. 11. 2026: "kresli se krivka stop pri kazdem otevreni stranky
+/// a pocita delka nahravky - prijde mi, ze by se dalo odbourat ulozenim
+/// do databaze nebo cache").
+///
+/// Krivka se pocitala v prohlizeci pri KAZDEM otevreni: stahnout cely
+/// zvukovy soubor a dekodovat ho. U dvanactihodinove knihy to jsou
+/// gigabajty pokazde. Delka se zjistovala stejne a kdyz se nepodarila,
+/// stopa do souctu vubec nespadla - odtud "celkovy cas nesedi".
+///
+/// Pocita to porad prohlizec (na serveru neni Web Audio), ale jen jednou:
+/// kdo knihu otevre prvni, vysledek sem zapise a vsichni dalsi ho dostanou
+/// hotovy. Klic je ID souboru na Disku; velikost se hlida proto, aby se po
+/// vymene souboru pod stejnym ID pouzila nova krivka.
+model StopaMeta {
+  id       String @id @default(cuid())
+  /// ID souboru na Google Disku.
+  souborId String @unique
+  /// Velikost v bajtech pri vypoctu - jina velikost = jiny soubor.
+  velikost Int?
+  /// Delka stopy v sekundach.
+  delka    Float?
+  /// Dvojice [min, max] na kazdy sloupec krivky; pole v JSON.
+  peaks    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

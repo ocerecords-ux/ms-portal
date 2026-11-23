@@ -113,6 +113,11 @@ type Stopa = {
   name: string;
   /** Odkaz, ze kterého se stopa přehrává (Disk přes portál, nebo blob z disku). */
   url: string;
+  /**
+   * ID souboru na Disku - klíč k uložené křivce a délce (23. 11. 2026).
+   * U stopy otevřené z počítače je prázdné: ta se nikam neukládá.
+   */
+  souborId?: string | null;
   /** Velikost v bajtech — podle ní se rozhoduje, jestli kreslit křivku. */
   velikost: number | null;
   peaks: [number, number][] | null;
@@ -616,27 +621,78 @@ export function Preposlech({
    * další délka se nezjišťuje.
    */
   const [delkyStop, setDelkyStop] = useState<Record<number, number>>({});
+  const delkyStopRef = useRef<Record<number, number>>({});
+  delkyStopRef.current = delkyStop;
   const zjistujiDelky = useRef<Set<string>>(new Set());
 
+  /**
+   * ZAPSÁNÍ SPOČÍTANÉHO NA SERVER (23. 11. 2026). Kdo knihu otevře první,
+   * spočítá křivku i délku a pošle je dál - všichni ostatní je pak dostanou
+   * hotové se seznamem stop. Stopa otevřená z počítače (bez ID na Disku) se
+   * neukládá, patří jen tomu, kdo ji má u sebe.
+   */
+  const ulozMeta = useCallback(
+    (stopa: Stopa, co: { delka?: number; peaks?: [number, number][] }) => {
+      if (!stopa.souborId) return;
+      void fetch(sKlicem(`${zaklad}/meta`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ souborId: stopa.souborId, velikost: stopa.velikost ?? null, ...co }),
+      }).catch(() => undefined);
+    },
+    [sKlicem, zaklad],
+  );
+  const ulozMetaRef = useRef(ulozMeta);
+  ulozMetaRef.current = ulozMeta;
+
+  /**
+   * NEÚSPĚCH SE ZKUSÍ ZNOVU (oprava 23. 11. 2026: „polovina stop se
+   * nenačte/nespočítá délka, takže se ani nezapočítají do celkového času").
+   *
+   * Dřív se stopa označila za vyřízenou JEŠTĚ PŘED tím, než se délka zjistila,
+   * takže jeden výpadek Disku znamenal, že se už nikdy nezkusila - a hodiny
+   * zvuku v součtu chyběly. Teď se značka po neúspěchu zase uvolní a kolo se
+   * po chvíli zopakuje, nejvýš třikrát.
+   */
   useEffect(() => {
     let zrusit = false;
     const pockej = (ms: number) => new Promise((h) => setTimeout(h, ms));
-    const nactiPostupne = async () => {
+
+    const kolo = async (): Promise<number> => {
+      let chybi = 0;
       for (let i = 0; i < stopy.length; i += 1) {
-        if (zrusit) return;
+        if (zrusit) return 0;
+        if (delkyStopRef.current[i + 1]) continue;
         // Dokud přehrávač načítá, počká se. Strop je kvůli tomu, aby délky
         // nezůstaly nezjištěné navždycky, kdyby se stav načítání zasekl.
         for (let cekani = 0; zaneprazdnenRef.current && cekani < 40; cekani += 1) {
           await pockej(500);
-          if (zrusit) return;
+          if (zrusit) return 0;
         }
         const stopa = stopy[i];
         const klic = `${i + 1}:${stopa.url}`;
         if (zjistujiDelky.current.has(klic)) continue;
         zjistujiDelky.current.add(klic);
         const delkaStopy = await delkaZvuku(stopa.url);
+        if (zrusit) return 0;
+        if (delkaStopy) {
+          setDelkyStop((p) => ({ ...p, [i + 1]: delkaStopy }));
+          ulozMetaRef.current(stopa, { delka: delkaStopy });
+        } else {
+          // Ať se to dá zkusit znovu - výpadek Disku není trvalý stav.
+          zjistujiDelky.current.delete(klic);
+          chybi += 1;
+        }
+      }
+      return chybi;
+    };
+
+    const nactiPostupne = async () => {
+      for (let pokus = 0; pokus < 3; pokus += 1) {
+        const chybi = await kolo();
+        if (zrusit || chybi === 0) return;
+        await pockej(4000);
         if (zrusit) return;
-        if (delkaStopy) setDelkyStop((p) => ({ ...p, [i + 1]: delkaStopy }));
       }
     };
     void nactiPostupne();
@@ -687,6 +743,46 @@ export function Preposlech({
     }
     return { sekundy, uplne: stopy.length > 0 && zname === stopy.length };
   }, [stopy, delkyStop]);
+
+  /**
+   * KOLIK JE DOPOSLECHNUTO (oprava 23. 11. 2026: „pořád nefunguje celkový
+   * procentuální progres přeposlechu nahoře v záhlaví. Procenta přibývají
+   * náhodně pomalu a na konci knihy tam bývá tak 22 %").
+   *
+   * Dosud se počítalo, KOLIK STRAN PDF měl člověk na obrazovce, zatímco hrála
+   * nahrávka - každých deset vteřin se zapsala jedna. Kdo poslouchá a textem
+   * roluje jen občas (nebo po větších skocích), nenasbíral skoro nic, i když
+   * knihu doposlechl celou. Měřilo to čtení, ne poslech.
+   *
+   * Teď se bere to, co opravdu zaznělo: u každé stopy víme, kam až došlo
+   * přehrávání, a nově i její délku. Procento je tedy podíl odposlechnutých
+   * sekund ze všech. Odškrtnutá stopa se počítá celá - kdo ji označil za
+   * hotovou, ten ji slyšel. Strany PDF zůstávají jako záloha pro případ, že
+   * délky ještě nejsou známé.
+   */
+  const postupZvuku = useMemo(() => {
+    if (stopy.length === 0) return null;
+    let celkemSekund = 0;
+    let slysenoSekund = 0;
+    let zname = 0;
+    for (let i = 0; i < stopy.length; i += 1) {
+      const delkaStopy = delkyStop[i + 1];
+      if (!delkaStopy) continue;
+      zname += 1;
+      celkemSekund += delkaStopy;
+      const podil = hotoveStopy.has(i + 1) ? 1 : Math.min(1, Math.max(0, dosazeno[i + 1] ?? 0));
+      slysenoSekund += delkaStopy * podil;
+    }
+    // Pod polovinou známých délek by číslo lhalo víc než strany PDF.
+    if (celkemSekund <= 0 || zname * 2 < stopy.length) return null;
+    return {
+      procent: Math.min(100, Math.floor((slysenoSekund / celkemSekund) * 100)),
+      uplne: zname === stopy.length,
+    };
+  }, [stopy, delkyStop, dosazeno, hotoveStopy]);
+
+  /** Co se ukáže nahoře: poslech, když ho umíme spočítat, jinak strany PDF. */
+  const procentHotovo = postupZvuku?.procent ?? postup?.procent ?? 0;
 
   const prepniHotovo = useCallback(
     (index: number) => {
@@ -859,9 +955,25 @@ export function Preposlech({
     stopyRef.current.forEach((_, i) => kresliStopu(i));
   }, [kresliStopu]);
 
+  /**
+   * PŘI PŘEHRÁVÁNÍ SE PŘEKRESLUJE JEN HRAJÍCÍ STOPA (zpětná vazba
+   * přeposlouchávačky 23. 11. 2026: „pořád se to hodně seká... když chci
+   * vyhledávat v textu, musím zastavit přehrávání").
+   *
+   * Posun kurzoru měnil obrázek u VŠECH stop několikrát za vteřinu - u třiceti
+   * stop třicet překreslení místo jednoho. Ostatní stopy se při posunu kurzoru
+   * měnit nemůžou, takže se jich to netýká; všechny se překreslí jen tehdy,
+   * když se opravdu změní něco společného (seznam stop, značky chyb, záložka,
+   * probarvení).
+   */
   useEffect(() => {
     kresliVse();
-  }, [kresliVse, stopy, pozice, delka, stav.chyby, zalozka, dosazeno]);
+  }, [kresliVse, stopy, stav.chyby, zalozka, dosazeno]);
+
+  useEffect(() => {
+    if (aktivni === null) return;
+    kresliStopu(aktivni);
+  }, [kresliStopu, aktivni, pozice, delka]);
 
   useEffect(() => {
     window.addEventListener('resize', kresliVse);
@@ -913,6 +1025,8 @@ export function Preposlech({
       .then((peaks) => {
         if (!zivyRef.current) return;
         setStopy((s) => s.map((x, i) => (i === naRade ? { ...x, peaks, krivkaStav: 'hotovo' } : x)));
+        // Ať ji nikdo nemusí počítat znovu (23. 11. 2026).
+        ulozMetaRef.current(stopa, { peaks });
       })
       .catch(() => {
         if (!zivyRef.current) return;
@@ -1039,13 +1153,32 @@ export function Preposlech({
         return;
       }
 
-      const nove: Stopa[] = (data.stopy ?? []).map((s: { id: string; name: string; velikost: number | null }) => ({
+      /**
+       * HOTOVÁ KŘIVKA A DÉLKA ZE SERVERU (23. 11. 2026). Co už někdo spočítal,
+       * přijde se seznamem - nestahuje se a nedekóduje znovu.
+       */
+      type StopaZeServeru = {
+        id: string;
+        name: string;
+        velikost: number | null;
+        delka?: number | null;
+        peaks?: [number, number][] | null;
+      };
+      const zeServeru: StopaZeServeru[] = data.stopy ?? [];
+      const nove: Stopa[] = zeServeru.map((s) => ({
         name: s.name,
+        souborId: s.id,
         url: sKlicem(`${zaklad}/soubor?soubor=${encodeURIComponent(s.id)}`),
         velikost: s.velikost,
-        peaks: null,
-        krivkaStav: 'ceka' as const,
+        peaks: s.peaks ?? null,
+        krivkaStav: (s.peaks ? 'hotovo' : 'ceka') as Stopa['krivkaStav'],
       }));
+
+      const znameDelky: Record<number, number> = {};
+      zeServeru.forEach((s, i) => {
+        if (typeof s.delka === 'number' && s.delka > 0) znameDelky[i + 1] = s.delka;
+      });
+      setDelkyStop((p) => ({ ...znameDelky, ...p }));
 
       setStopy(nove);
       stopyRef.current = nove;
@@ -2205,27 +2338,33 @@ export function Preposlech({
               se mu ukazovala procenta, kolik má přeposlechnuto ... celkový
               počet stran / kde zrovna je"). Podle stran PDF, ne podle stop -
               ty chodí po kouscích. Vidí to klient i my. */}
-          {pdfStran > 0 && (
+          {(pdfStran > 0 || postupZvuku) && (
             <span
               className="flex items-center gap-2 text-[11px] font-heading text-white/80"
               title={
-                postup
-                  ? t(jenPoslech ? 'preposlech.postupJa' : 'preposlech.postupKlient', {
-                      slyseno: postup.slyseno,
-                      stran: postup.stran,
-                    })
-                  : t('preposlech.postupBezDat')
+                postupZvuku
+                  ? t('preposlech.postupZvuk')
+                  : postup
+                    ? t(jenPoslech ? 'preposlech.postupJa' : 'preposlech.postupKlient', {
+                        slyseno: postup.slyseno,
+                        stran: postup.stran,
+                      })
+                    : t('preposlech.postupBezDat')
               }
             >
               <span className="w-16 h-1.5 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
-                <span className="block h-full bg-brand-green" style={{ width: `${postup?.procent ?? 0}%` }} />
+                <span className="block h-full bg-brand-green" style={{ width: `${procentHotovo}%` }} />
               </span>
               <span>
                 {jenPoslech ? t('preposlech.stitekPreposlechnuto') : t('preposlech.stitekKlient')}{' '}
-                <b className="text-white tabular-nums">{postup?.procent ?? 0} %</b>
-                {' · '}
-                {t('preposlech.strana')} <b className="text-white tabular-nums">{pdfStrana}</b>{' '}
-                {t('obecne.z')} {pdfStran}
+                <b className="text-white tabular-nums">{procentHotovo} %</b>
+                {pdfStran > 0 && (
+                  <>
+                    {' · '}
+                    {t('preposlech.strana')} <b className="text-white tabular-nums">{pdfStrana}</b>{' '}
+                    {t('obecne.z')} {pdfStran}
+                  </>
+                )}
               </span>
             </span>
           )}
@@ -2475,18 +2614,18 @@ export function Preposlech({
               </ul>
               {/* Žlutý řádek, když není přeposlechnuto skoro všechno - právě kvůli
                   spletení s pauzou (13. 10. 2026). Nebrání uzavřít, jen to řekne. */}
-              {postup && postup.procent < PRAH_VAROVANI ? (
+              {procentHotovo < PRAH_VAROVANI ? (
                 <p className="flex items-start gap-2 text-xs font-body text-ink bg-warnTint border border-line rounded-lg px-3.5 py-2.5 m-0">
                   <span aria-hidden="true" className="text-status-progress font-bold">
                     ⚠
                   </span>
-                  <span>{t('preposlech.uzavritVarovani', { procent: postup.procent })}</span>
+                  <span>{t('preposlech.uzavritVarovani', { procent: procentHotovo })}</span>
                 </p>
               ) : (
                 <p className="text-xs font-body text-ink bg-tint border border-line rounded-lg px-3.5 py-2.5 m-0">
                   {t('preposlech.uzavritSouhrn', {
                     chyb: stav.chyby.length,
-                    procent: postup?.procent ?? 0,
+                    procent: procentHotovo,
                   })}
                 </p>
               )}
