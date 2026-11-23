@@ -174,6 +174,44 @@ async function sHudbouZKarty(
 }
 
 /**
+ * DÉLKA Z VÝSTUPU, KDYŽ U PROJEKTU ŽÁDNÁ NENÍ (23. 11. 2026: „když vyplním
+ * délku výstupu, tak by se to mělo propsat do RL").
+ *
+ * Od zavedení výstupů (26. 9. 2026) se délka zadává u výstupu - pole na
+ * záložce Rodný list je pozůstatek doby, kdy byl projekt jeden spot. Hotový
+ * dokument už délku z výstupu bere (viz fieldsZVystupu), ale náhled a kontrola
+ * chybějících polí koukaly pořád jen na ProjectMetu a hlásily „chybí Délka
+ * spotu" i u projektu, kde byla délka u každého výstupu vyplněná.
+ *
+ * Ručně vyplněná délka u projektu má pořád přednost; downcut se bere až
+ * tehdy, když hlavní výstup délku nemá.
+ */
+export async function delkaHlavnihoVystupu(
+  caflouProjectId: string,
+  typProjektu: string | null | undefined,
+): Promise<number | null> {
+  try {
+    const vystupy = await vystupySRodnymListem(caflouProjectId, typProjektu);
+    const sDelkou = vystupy.filter((v) => v.delkaSekund != null && v.delkaSekund > 0);
+    const hlavni = sDelkou.find((v) => !v.odvozenoZId) ?? sDelkou[0];
+    return hlavni?.delkaSekund ?? null;
+  } catch (err) {
+    console.error(`Délku výstupu u projektu ${caflouProjectId} se nepodařilo načíst:`, err);
+    return null;
+  }
+}
+
+async function sDelkouZVystupu(
+  fields: RodnyListFields,
+  caflouProjectId: string,
+  typProjektu: string | null | undefined,
+): Promise<RodnyListFields> {
+  if (fields.spotLengthSeconds != null && fields.spotLengthSeconds > 0) return fields;
+  const delka = await delkaHlavnihoVystupu(caflouProjectId, typProjektu);
+  return delka == null ? fields : { ...fields, spotLengthSeconds: delka };
+}
+
+/**
  * Kolik změn stavu se vyřídí v rámci jednoho zobrazení stránky. Zbytek se
  * dorovná při dalším načtení - je lepší, když se stránka vždycky rychle
  * ukáže, než aby se čekalo na dávku o stovkách zápisů.
@@ -745,9 +783,13 @@ export async function nahledRodnehoListu(
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
     }
 
-    const ulozene = await sHudbouZKarty(
-      fieldsFromMeta(meta as Record<string, unknown> | null, projectName),
+    const ulozene = await sDelkouZVystupu(
+      await sHudbouZKarty(
+        fieldsFromMeta(meta as Record<string, unknown> | null, projectName),
+        caflouProjectId,
+      ),
       caflouProjectId,
+      meta?.projectType ?? null,
     );
     // Rozepsane hodnoty prebijou ulozene. Jinak receno: co ve formulari
     // neni, zustava tak, jak je ulozene.

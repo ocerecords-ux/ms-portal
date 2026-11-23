@@ -946,6 +946,35 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    */
   const hudbaZKarty = await hudbaProRodnyList(caflouProjectId);
 
+  /**
+   * VÝSTUPY PROJEKTU (zadání 26. 9. 2026: „u jednoho projektu máme více
+   * výstupů… u Strabagu jsme teď dělali 4 různé délky a v každém spotu jiní
+   * herci").
+   *
+   * Záložka je u reklam - tedy tam, kde se dělají spoty a voiceovery. Projekt,
+   * který vznikl ještě před výstupy, si při prvním otevření založí jeden
+   * výstup ze svých dosavadních polí (viz vystupyProProjekt).
+   */
+  const jeReklamniProjekt = jeRadiovySpot || druhNotifikaceFirmy(company) === 'REKLAMA';
+  const vystupy = jeReklamniProjekt
+    ? await vystupyProProjekt(caflouProjectId, metaPoSync?.name || project?.name || '')
+    : [];
+  // Rodné listy: u rádiového spotu jsou načtené výš, u ostatních reklam se
+  // dotáhnou až tady - bez nich by u výstupu nebylo vidět, co už je hotové.
+  const rodneListyProjektu =
+    rodneListy.length > 0 || !jeReklamniProjekt ? rodneListy : await loadRodneListy(caflouProjectId);
+
+  /**
+   * DÉLKA SPOTU SE ZADÁVÁ U VÝSTUPU (23. 11. 2026: „když vyplním délku
+   * výstupu, tak by se to mělo propsat do RL"). Pole na záložce Rodný list
+   * zůstává z doby jednoho spotu na projekt - když je prázdné, předvyplní se
+   * délkou hlavního výstupu, ať záložka nehlásí chybějící údaj, který je
+   * o kus vedle vyplněný. Ručně zadaná délka u projektu má přednost.
+   */
+  const delkaZVystupu =
+    (vystupy.find((v) => !v.odvozenoZId && (v.delkaSekund ?? 0) > 0) ??
+      vystupy.find((v) => (v.delkaSekund ?? 0) > 0))?.delkaSekund ?? null;
+
   const rodnyList = (
     <RodnyListSection
       caflouProjectId={caflouProjectId}
@@ -974,7 +1003,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           metaPoSync?.spotName || vychoziNazevSpotu(metaPoSync?.name || project?.name || ''),
           metaPoSync?.name || project?.name || '',
         ),
-        spotLengthSeconds: metaPoSync?.spotLengthSeconds != null ? String(metaPoSync.spotLengthSeconds) : '',
+        spotLengthSeconds:
+          metaPoSync?.spotLengthSeconds != null
+            ? String(metaPoSync.spotLengthSeconds)
+            : delkaZVystupu != null
+              ? String(delkaZVystupu)
+              : '',
         // Rezie se predvyplnuje (zadani 10. 9. 2026) - jen kdyz u projektu
         // jeste zadna neni, at se rucne zadana nikdy neprepise.
         directorName: metaPoSync?.directorName || VYCHOZI_REZIE,
@@ -989,24 +1023,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       }}
     />
   );
-
-  /**
-   * VÝSTUPY PROJEKTU (zadání 26. 9. 2026: „u jednoho projektu máme více
-   * výstupů… u Strabagu jsme teď dělali 4 různé délky a v každém spotu jiní
-   * herci").
-   *
-   * Záložka je u reklam - tedy tam, kde se dělají spoty a voiceovery. Projekt,
-   * který vznikl ještě před výstupy, si při prvním otevření založí jeden
-   * výstup ze svých dosavadních polí (viz vystupyProProjekt).
-   */
-  const jeReklamniProjekt = jeRadiovySpot || druhNotifikaceFirmy(company) === 'REKLAMA';
-  const vystupy = jeReklamniProjekt
-    ? await vystupyProProjekt(caflouProjectId, metaPoSync?.name || project?.name || '')
-    : [];
-  // Rodné listy: u rádiového spotu jsou načtené výš, u ostatních reklam se
-  // dotáhnou až tady - bez nich by u výstupu nebylo vidět, co už je hotové.
-  const rodneListyProjektu =
-    rodneListy.length > 0 || !jeReklamniProjekt ? rodneListy : await loadRodneListy(caflouProjectId);
 
   const vystupySekce = (
     <VystupySection
