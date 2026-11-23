@@ -21,14 +21,22 @@ export type MojeFaktura = {
   nahranoAt: string;
   castkaMinor: number;
   mena: string;
-  stav: 'ceka' | 'zpracovana' | 'uhrazena';
+  stav: 'ceka' | 'zpracovana' | 'castecne' | 'uhrazena';
   uhrazenoAt: string | null;
   splatnost: string | null;
+  /**
+   * ČÁSTEČNÁ ÚHRADA (zadání 23. 11. 2026: „dej zvukařům i stav faktury jejich
+   * jako uhrazeno částečně - kolik a kdy, ať mají přehled"). Kolik už dorazilo
+   * a jednotlivé splátky, od nejstarší.
+   */
+  uhrazenoMinor: number;
+  uhrady: { castkaMinor: number; datum: string }[];
 };
 
 const BAREVNOST: Record<MojeFaktura['stav'], string> = {
   ceka: 'bg-warnTint text-status-progress',
   zpracovana: 'bg-tint text-brand-purple',
+  castecne: 'bg-warnTint text-status-progress',
   uhrazena: 'bg-okTint text-status-ok',
 };
 
@@ -58,13 +66,13 @@ export function FakturyZvukare({ faktury }: { faktury: MojeFaktura[] }) {
     router.refresh();
   }
 
-  const castka = (f: MojeFaktura) =>
-    f.castkaMinor > 0
-      ? `${(f.castkaMinor / 100).toLocaleString(jazyk === 'en' ? 'en-GB' : 'cs-CZ', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })} ${f.mena}`
-      : '—';
+  const penize = (minor: number, mena: string) =>
+    `${(minor / 100).toLocaleString(jazyk === 'en' ? 'en-GB' : 'cs-CZ', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${mena}`;
+
+  const castka = (f: MojeFaktura) => (f.castkaMinor > 0 ? penize(f.castkaMinor, f.mena) : '—');
 
   return (
     <div className="rounded-card border border-line bg-surface p-4 flex flex-col gap-3">
@@ -100,19 +108,49 @@ export function FakturyZvukare({ faktury }: { faktury: MojeFaktura[] }) {
       ) : (
         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
           {faktury.map((f) => (
-            <li key={f.id} className="flex items-center gap-3 flex-wrap text-sm font-body">
-              <span
-                className={`shrink-0 rounded-pill px-2.5 py-0.5 text-[11px] font-heading font-semibold ${BAREVNOST[f.stav]}`}
-              >
-                {t(`vykazFaktura.stav.${f.stav}`)}
+            <li key={f.id} className="flex flex-col gap-1 text-sm font-body">
+              <span className="flex items-center gap-3 flex-wrap">
+                <span
+                  className={`shrink-0 rounded-pill px-2.5 py-0.5 text-[11px] font-heading font-semibold ${BAREVNOST[f.stav]}`}
+                >
+                  {t(`vykazFaktura.stav.${f.stav}`)}
+                </span>
+                <span className="text-ink grow min-w-0 truncate">
+                  {f.nazev || t('vykazFaktura.bezNazvu')}
+                </span>
+                <span className="text-xs text-muted tabular-nums shrink-0">{castka(f)}</span>
+                <span className="text-xs text-muted shrink-0">
+                  {formatDatum(jazyk, new Date(f.nahranoAt))}
+                </span>
               </span>
-              <span className="text-ink grow min-w-0 truncate">
-                {f.nazev || t('vykazFaktura.bezNazvu')}
-              </span>
-              <span className="text-xs text-muted tabular-nums shrink-0">{castka(f)}</span>
-              <span className="text-xs text-muted shrink-0">
-                {formatDatum(jazyk, new Date(f.nahranoAt))}
-              </span>
+
+              {/* KOLIK A KDY DORAZILO (23. 11. 2026). U částečné úhrady je
+                  vidět, co už přišlo a co zbývá; u splátek i jednotlivé dny. */}
+              {f.uhrazenoMinor > 0 && f.castkaMinor > 0 && (
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-1 text-xs font-body text-muted">
+                  <span className="tabular-nums">
+                    {t('vykazFaktura.uhrazenoZ', {
+                      uhrazeno: penize(f.uhrazenoMinor, f.mena),
+                      celkem: penize(f.castkaMinor, f.mena),
+                    })}
+                  </span>
+                  {f.castkaMinor > f.uhrazenoMinor && (
+                    <span className="tabular-nums text-status-progress">
+                      {t('vykazFaktura.zbyva', {
+                        castka: penize(f.castkaMinor - f.uhrazenoMinor, f.mena),
+                      })}
+                    </span>
+                  )}
+                  {f.uhrady.map((u, i) => (
+                    <span key={`${f.id}-${i}`} className="tabular-nums">
+                      {formatDatum(jazyk, new Date(u.datum))} · {penize(u.castkaMinor, f.mena)}
+                    </span>
+                  ))}
+                  {f.uhrady.length === 0 && f.uhrazenoAt && (
+                    <span>{formatDatum(jazyk, new Date(f.uhrazenoAt))}</span>
+                  )}
+                </span>
+              )}
             </li>
           ))}
         </ul>

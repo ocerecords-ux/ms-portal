@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { jeVPriprave } from '@/lib/stavyProjektu';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
+import { stavUhrady, uhrazenoMinor } from '@/lib/expenses';
 import { TimesheetEditor } from './TimesheetEditor';
 import { BonusyPanel, type Bonus } from './BonusyPanel';
 import { NavrhyZKalendare } from './NavrhyZKalendare';
@@ -201,20 +202,43 @@ export default async function TimesheetsPage({
           paid: true,
           paidAt: true,
           dueDate: true,
+          /**
+           * ČÁSTEČNÁ ÚHRADA (zadání 23. 11. 2026: „dej zvukařům i stav faktury
+           * jejich jako uhrazeno částečně - kolik a kdy, ať mají přehled").
+           * Doklad placený na vícekrát má jednotlivé splátky; zaškrtávátko
+           * `paid` samo o sobě o částce nic neříká.
+           */
+          uhrady: { select: { castkaMinor: true, datum: true }, orderBy: { datum: 'asc' } },
         },
       })
       .catch(() => [])
-  ).map((f) => ({
-    id: f.id,
-    nazev: f.attachmentName,
-    nahranoAt: f.createdAt.toISOString(),
+  ).map((f) => {
     // Zvukare zajima castka, kterou dostane - tedy vcetne DPH.
-    castkaMinor: Math.round(f.amountExVatMinor * (1 + (f.vatRate ?? 0) / 100)),
-    mena: String(f.currency),
-    stav: f.paid ? ('uhrazena' as const) : f.stav === 'NEZARAZENY' ? ('ceka' as const) : ('zpracovana' as const),
-    uhrazenoAt: f.paidAt ? f.paidAt.toISOString() : null,
-    splatnost: f.dueDate ? f.dueDate.toISOString() : null,
-  }));
+    const castkaMinor = Math.round(f.amountExVatMinor * (1 + (f.vatRate ?? 0) / 100));
+    const uhrady = (f.uhrady ?? []) as { castkaMinor: number; datum: Date }[];
+    const uhrazeno = uhrazenoMinor(uhrady, castkaMinor, f.paid);
+    const platba = stavUhrady(castkaMinor, uhrazeno);
+
+    return {
+      id: f.id,
+      nazev: f.attachmentName,
+      nahranoAt: f.createdAt.toISOString(),
+      castkaMinor,
+      mena: String(f.currency),
+      stav:
+        platba === 'CELE'
+          ? ('uhrazena' as const)
+          : platba === 'CAST'
+            ? ('castecne' as const)
+            : f.stav === 'NEZARAZENY'
+              ? ('ceka' as const)
+              : ('zpracovana' as const),
+      uhrazenoAt: f.paidAt ? f.paidAt.toISOString() : null,
+      splatnost: f.dueDate ? f.dueDate.toISOString() : null,
+      uhrazenoMinor: uhrazeno,
+      uhrady: uhrady.map((u) => ({ castkaMinor: u.castkaMinor, datum: u.datum.toISOString() })),
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">

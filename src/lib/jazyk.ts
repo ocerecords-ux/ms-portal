@@ -6399,6 +6399,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'vykazFaktura.stav.ceka': { cs: 'Nahráno – čeká na zařazení', en: 'Uploaded – waiting to be filed' },
   'vykazFaktura.stav.zpracovana': { cs: 'Zařazeno – čeká na úhradu', en: 'Filed – waiting for payment' },
   'vykazFaktura.stav.uhrazena': { cs: 'Uhrazeno', en: 'Paid' },
+  'vykazFaktura.stav.castecne': {
+    cs: 'Uhrazeno částečně',
+    en: 'Partly paid',
+  },
+  'vykazFaktura.uhrazenoZ': { cs: 'Uhrazeno {uhrazeno} z {celkem}', en: 'Paid {uhrazeno} of {celkem}' },
+  'vykazFaktura.zbyva': { cs: 'zbývá {castka}', en: '{castka} remaining' },
   'vykaz.zalozkaBonusyKeSchvaleni': { cs: 'Bonusy ke schválení', en: 'Bonuses awaiting approval' },
   'vykaz.zalozkaMojeBonusy': { cs: 'Moje bonusy', en: 'My bonuses' },
 
