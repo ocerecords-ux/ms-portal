@@ -227,7 +227,7 @@ function RadekKonverzace({
   const aktualni = zacatek.current ? posun : odsunuto ? -SIRKA : 0;
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
+    <div className="relative shrink-0 overflow-hidden rounded-lg">
       {popisekAkce && (
         <button
           type="button"
@@ -4073,7 +4073,17 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
+            {/* ŘÁDKY SE NESMÍ SMRSKNOUT (23. 11. 2026: „tady na mobilu jsou
+                useklé jména").
+                Seznam je svislý flex a jeho položky mají ve výchozím stavu
+                `flex-shrink: 1`. Jakmile se jich do výšky nevejde dost -
+                na telefonu stačí patnáct skupin - rozpočítá si je prohlížeč
+                menší, místo aby nechal seznam rolovat. Řádek si pak udrží
+                jen zlomek své výšky, `overflow-hidden` na něm usekne jméno
+                i kolečko s iniciálami v půlce výšky a vypadá to jako rozbité
+                písmo. `[&>*]:shrink-0` drží každou položku v její
+                vlastní výšce a přebytek řeší rolování, které tu už je. */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5 [&>*]:shrink-0">
               {/* ÚKOLY MÍSTO DOTAZŮ (zadání 18. 9. 2026). Není to konverzace,
                   ale vlastní to-do list - proto vlastní komponenta a ne
                   seznam níž. */}
