@@ -137,15 +137,20 @@ export type NovyDoklad = {
   kdoJmeno?: string | null;
 };
 
+/**
+ * Důvod, proč doklad nevznikl, chodí KLÍČEM do slovníku (dávka 7ad,
+ * vzor z 7w): hlášku vyrábí knihovna, ale přeložit si ji má až obrazovka -
+ * tady není z čeho zjistit, kdo se ptá a v jakém jazyce.
+ */
 export async function zalozDoklad(
   issuerCompanyId: string,
   vstup: NovyDoklad,
-): Promise<{ ok: boolean; chyba?: string }> {
+): Promise<{ ok: boolean; klic?: string }> {
   const pokladna = await zajistiPokladnu(issuerCompanyId);
-  if (!pokladna) return { ok: false, chyba: 'Pokladna téhle firmy se nenašla.' };
+  if (!pokladna) return { ok: false, klic: 'chybaApi.pokladnaFirmyNenalezena' };
 
   const cislo = await pridelCislo(pokladna, vstup.smer, vstup.datum);
-  if (!cislo) return { ok: false, chyba: 'Nepodařilo se přidělit číslo dokladu.' };
+  if (!cislo) return { ok: false, klic: 'chybaApi.cisloPokladnihoDokladuNeprideleno' };
 
   const zalozeno = await prisma.pokladniDoklad
     .create({
@@ -169,7 +174,7 @@ export async function zalozDoklad(
       return null;
     });
 
-  return zalozeno ? { ok: true } : { ok: false, chyba: 'Doklad se nepodařilo uložit.' };
+  return zalozeno ? { ok: true } : { ok: false, klic: 'chybaApi.pokladniDokladNeulozen' };
 }
 
 /** Popis výdaje na pokladní doklad. Číslo dokladu napřed - podle něj se hledá. */

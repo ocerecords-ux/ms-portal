@@ -13212,6 +13212,34 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Uložení se nepodařilo - nemá už takový název jiná kategorie?',
     en: 'Saving failed — does another category already have that name?',
   },
+
+  /* Pokladna - routy `api/admin/pokladna/**` a `lib/pokladnaServer.ts`
+     (dávka 7ad, 23. 11. 2026). Termíny podle obrazovky: pokladna = cash box,
+     pokladní doklad = voucher. */
+  'chybaApi.pokladnaNenalezena': {
+    cs: 'Pokladna se nenašla.',
+    en: 'The cash box was not found.',
+  },
+  'chybaApi.pokladnaFirmyNenalezena': {
+    cs: 'Pokladna téhle firmy se nenašla.',
+    en: 'This company has no cash box.',
+  },
+  'chybaApi.pokladniDokladNeulozen': {
+    cs: 'Doklad se nepodařilo uložit.',
+    en: 'The voucher could not be saved.',
+  },
+  'chybaApi.cisloPokladnihoDokladuNeprideleno': {
+    cs: 'Nepodařilo se přidělit číslo dokladu.',
+    en: 'A voucher number could not be assigned.',
+  },
+  'chybaApi.pokladniDokladZVydaje': {
+    cs: 'Tenhle doklad patří k výdaji — upravte ho ve Výdajích.',
+    en: 'This voucher belongs to an expense — edit it under Expenses.',
+  },
+  'chybaApi.nastaveniPokladnyNeulozeno': {
+    cs: 'Nastavení se nepodařilo uložit.',
+    en: 'The settings could not be saved.',
+  },
 };
 
 /**

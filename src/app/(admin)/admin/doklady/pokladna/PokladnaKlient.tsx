@@ -6,6 +6,8 @@ import Link from 'next/link';
 import type { Currency } from '@prisma/client';
 import { parseMoneyToMinor } from '@/lib/doklady';
 import { SAZBY_DPH } from '@/lib/pokladna';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * POKLADNÍ KNIHA NA OBRAZOVCE (zadání 23. 10. 2026).
@@ -191,6 +193,9 @@ export function PokladnaKlient({
   nastaveni: Nastaveni;
 }) {
   const t = TEXTY[jazyk === 'en' ? 'en' : 'cs'];
+  // Popisky stojí v místní tabulce `TEXTY` (viz hlavička), slovník je tu jen
+  // pro klíče, které posílají routy pokladny (dávka 7ad).
+  const tk = usePreklad();
   const router = useRouter();
 
   const [formular, setFormular] = useState<'PRIJEM' | 'VYDEJ' | null>(null);
@@ -267,9 +272,9 @@ export function PokladnaKlient({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...telo, issuerCompanyId: firma.id, smer: formular }),
           });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || t.chyba);
+        setChyba(hlaskaChyby(data, tk, t.chyba));
         return;
       }
       vycisti();
@@ -286,9 +291,9 @@ export function PokladnaKlient({
     setPracuje(true);
     try {
       const res = await fetch(`/api/admin/pokladna/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || t.chyba);
+        setChyba(hlaskaChyby(data, tk, t.chyba));
         return;
       }
       router.refresh();
@@ -317,9 +322,9 @@ export function PokladnaKlient({
           dalsiVydej: nast.dalsiVydej,
         }),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || t.chyba);
+        setChyba(hlaskaChyby(data, tk, t.chyba));
         return;
       }
       setNastaveniOtevreno(false);

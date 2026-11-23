@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { smiDoPokladny } from '@/lib/pokladnaPristup';
 import { zajistiPokladnu, zalozDoklad } from '@/lib/pokladnaServer';
 import { SMERY } from '@/lib/pokladna';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * POKLADNA - zápis dokladu a nastavení (zadání 23. 10. 2026).
@@ -47,19 +48,19 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
     if (!session || !(await smiDoPokladny())) {
-      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+      return odpovedChyby('chybaApi.bezOpravneni', 403);
     }
 
     const parsed = novy.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'Neplatná data.' },
-        { status: 400 },
-      );
+      // Věta od `zod` jde první, a když žádná není, jde klíč (vzor z dávky 7s).
+      return parsed.error.issues[0]?.message
+        ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+        : odpovedChyby('chybaApi.neplatnaData', 400);
     }
 
     const datum = naDatum(parsed.data.datum);
-    if (!datum) return NextResponse.json({ error: 'Neplatné datum dokladu.' }, { status: 400 });
+    if (!datum) return odpovedChyby('chybaApi.neplatneDatumDokladu', 400);
 
     const vysledek = await zalozDoklad(parsed.data.issuerCompanyId, {
       smer: parsed.data.smer === 'PRIJEM' ? SMERY.prijem : SMERY.vydej,
@@ -74,12 +75,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (!vysledek.ok) {
-      return NextResponse.json({ error: vysledek.chyba || 'Uložení se nezdařilo.' }, { status: 500 });
+      return odpovedChyby(vysledek.klic || 'chybaApi.ulozeniNezdarilo', 500);
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('POST /api/admin/pokladna selhalo:', err);
-    return NextResponse.json({ error: 'Doklad se nepodařilo uložit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.pokladniDokladNeulozen', 500);
   }
 }
 
@@ -87,20 +88,19 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await requireAdmin();
     if (!session || !(await smiDoPokladny())) {
-      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+      return odpovedChyby('chybaApi.bezOpravneni', 403);
     }
 
     const parsed = nastaveni.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'Neplatná data.' },
-        { status: 400 },
-      );
+      return parsed.error.issues[0]?.message
+        ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+        : odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const d = parsed.data;
 
     const pokladna = await zajistiPokladnu(d.issuerCompanyId);
-    if (!pokladna) return NextResponse.json({ error: 'Pokladna se nenašla.' }, { status: 404 });
+    if (!pokladna) return odpovedChyby('chybaApi.pokladnaNenalezena', 404);
 
     const data: Record<string, unknown> = {};
     if (d.nazev !== undefined) data.nazev = d.nazev || null;
@@ -111,7 +111,7 @@ export async function PATCH(req: NextRequest) {
     if (d.dalsiVydej !== undefined) data.dalsiVydej = d.dalsiVydej;
     if (d.pocatecniDatum !== undefined) {
       const datum = naDatum(d.pocatecniDatum);
-      if (!datum) return NextResponse.json({ error: 'Neplatné datum.' }, { status: 400 });
+      if (!datum) return odpovedChyby('chybaApi.neplatneDatum', 400);
       data.pocatecniDatum = datum;
     }
 
@@ -119,6 +119,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PATCH /api/admin/pokladna selhalo:', err);
-    return NextResponse.json({ error: 'Nastavení se nepodařilo uložit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.nastaveniPokladnyNeulozeno', 500);
   }
 }

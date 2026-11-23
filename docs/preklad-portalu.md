@@ -104,6 +104,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7aa | 16. 11. (nasazeno 21. 11.) | Hlášky rout Wikipedie klíčem — `api/admin/wikipedie/**` (6 rout, 2 obrazovky) a k tomu důvody z `lib/wikipedieServer.ts` a `lib/wikipedieChatServer.ts`; nově `ChybaWiki` pro chybu, kterou čte routa i hodinová kontrola | [x] |
 | 7ab | 21. 11. | Hlášky rout knihovny ukázek klíčem — `api/admin/ukazky/**` (3 routy, 1 obrazovka); osmá agenda z `api/admin/**` | [x] |
 | 7ac | 22. 11. | Hlášky rout techniky klíčem — `api/admin/technika/**` (4 routy, 1 obrazovka); devátá agenda z `api/admin/**` | [x] |
+| 7ad | 23. 11. | Hlášky rout pokladny klíčem — `api/admin/pokladna/**` (2 routy, 1 obrazovka) a k tomu důvody z `lib/pokladnaServer.ts`, které chodily na obrazovku hotové česky; desátá agenda z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2384,6 +2385,66 @@ kus = item, vyřadit = remove, studio = studio.
 **Co zbývá v `api/admin/**`:** po technice zůstává **209 českých hlášek** —
 největší kusy jsou pokladna (16), vlastní firmy (14), ceník (13), pozvánky
 údajů (13) a návody (13). Dál po agendách, jedna za večer.
+
+### Dávka 7ad je HOTOVÁ (23. 11. 2026)
+
+**Desátá agenda z `api/admin/**`: pokladna.** Vzor pořád z dávky 7o
+(`odpovedChyby(klíč, status)`), obrazovka čte chybu přes
+`hlaskaChyby(data, t, záloha)`. Rozsah: **2 routy, 1 obrazovka, 1 knihovna,
+21 přepsaných míst a slovník +6 klíčů**. `chybaApi.bezOpravneni` (4×),
+`chybaApi.neplatnaData` (3×), `chybaApi.neplatneDatumDokladu` (2×),
+`chybaApi.neplatneDatum`, `chybaApi.dokladNeexistuje` (2×),
+`chybaApi.ulozeniNezdarilo` (2×) a `chybaApi.smazaniNezdarilo` už ve slovníku
+byly z dávek 7o–7ac.
+
+**Routy:** `pokladna` (zápis příjmového i výdajového dokladu a nastavení
+pokladny — řady, počáteční stav) a `pokladna/[id]` (úprava a smazání ručně
+zapsaného dokladu).
+
+**Knihovna, protože hláška vzniká tam, ne v routě** (stejné jako banka
+v dávce 7w): `lib/pokladnaServer.ts` — `zalozDoklad()` vracel
+`{ ok: false, chyba: 'Pokladna téhle firmy se nenašla.' }` a routa to
+posílala ven, jak to přišlo. Teď vrací `{ ok: false, klic }` a routa z něj
+udělá `odpovedChyby(…, 500)`. Tři důvody (pokladna firmy, nepřidělené číslo,
+neuložený doklad).
+
+**Stav se pozná podle klíče, ne podle věty.** `rucni()` v `pokladna/[id]`
+rozhodovala 404 vs. 409 porovnáním s českou VĚTOU
+(`chyba === 'Doklad neexistuje.'`) — s překladem by to tichounce přestalo
+platit, proto se teď porovnává klíč. Stejná past jako `zprava.includes('ABO')`
+v dávce 7w.
+
+**Nové klíče:** `chybaApi.pokladnaNenalezena`,
+`chybaApi.pokladnaFirmyNenalezena`, `chybaApi.pokladniDokladNeulozen`,
+`chybaApi.cisloPokladnihoDokladuNeprideleno`,
+`chybaApi.pokladniDokladZVydaje` a `chybaApi.nastaveniPokladnyNeulozeno`.
+
+**Obrazovka:** `PokladnaKlient.tsx` (tři místa — zápis a úprava dokladu,
+smazání, uložení nastavení). Pozor: **popisky téhle obrazovky pořád stojí
+v místní tabulce `TEXTY`, ne ve slovníku** — tak je psaná od 23. 10. 2026,
+stejně jako `TechnikaSprava.tsx`. Přidal se k nim jen `usePreklad()` pro klíče
+ze serveru; přesun `TEXTY` do `lib/jazyk.ts` zůstává samostatný úkol.
+
+**Termíny podle obrazovky, ne podle slovníčku:** pokladna = cash box,
+pokladní doklad = voucher (obrazovka to tak má od 23. 10. 2026: *Receipt
+voucher*, *Payment voucher*). Obecné „doklad = document" ze slovníčku platí
+dál u faktur a nabídek; reusovaný `chybaApi.neplatneDatumDokladu` proto mluví
+o *document date* — na jeden klíč pro dvě agendy to stačí.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7ac):**
+
+1. **Hlášky ze `zod` schémat.** Routy posílají větu od `zod` první a klíč
+   `chybaApi.neplatnaData` až tehdy, když žádná není.
+2. **`ucelZVydaje()` v `lib/pokladnaServer.ts`** — záloha `'Hotovostní
+   výdaj'` se zapisuje do `ucel` v databázi, tedy do DAT dokladu, ne na
+   obrazovku. Co je jednou uložené, jazyk nezmění (stejná třída jako oznámení
+   pod zvonkem v dávce 6).
+
+**Typová kontrola: diff proti známým hláškám prázdný** (22 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po pokladně zůstává kolem **193 českých
+hlášek** — největší kusy jsou vlastní firmy (14), ceník (13), pozvánky údajů
+(13) a návody (13). Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { smiDoPokladny } from '@/lib/pokladnaPristup';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * ÚPRAVA A SMAZÁNÍ JEDNOHO POKLADNÍHO DOKLADU (23. 10. 2026).
@@ -30,36 +31,37 @@ function naDatum(value: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * Důvod chodí KLÍČEM do slovníku (dávka 7ad) - stav se podle něj pozná
+ * stejně jako dřív podle věty, takže 404 a 409 zůstávají, kde byly.
+ */
 async function rucni(id: string) {
   const doklad = await prisma.pokladniDoklad
     .findUnique({ where: { id }, select: { id: true, expenseId: true } })
     .catch(() => null);
-  if (!doklad) return { doklad: null, chyba: 'Doklad neexistuje.' as const };
+  if (!doklad) return { doklad: null, klic: 'chybaApi.dokladNeexistuje' as const };
   if (doklad.expenseId) {
-    return {
-      doklad: null,
-      chyba: 'Tenhle doklad patří k výdaji — upravte ho ve Výdajích.' as const,
-    };
+    return { doklad: null, klic: 'chybaApi.pokladniDokladZVydaje' as const };
   }
-  return { doklad, chyba: null };
+  return { doklad, klic: null };
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
     if (!session || !(await smiDoPokladny())) {
-      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+      return odpovedChyby('chybaApi.bezOpravneni', 403);
     }
 
-    const { doklad, chyba } = await rucni(params.id);
-    if (!doklad) return NextResponse.json({ error: chyba }, { status: chyba === 'Doklad neexistuje.' ? 404 : 409 });
+    const { doklad, klic } = await rucni(params.id);
+    if (!doklad) return odpovedChyby(klic, klic === 'chybaApi.dokladNeexistuje' ? 404 : 409);
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'Neplatná data.' },
-        { status: 400 },
-      );
+      // Věta od `zod` jde první, a když žádná není, jde klíč (vzor z dávky 7s).
+      return parsed.error.issues[0]?.message
+        ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+        : odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const d = parsed.data;
 
@@ -71,7 +73,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.poznamka !== undefined) data.poznamka = d.poznamka || null;
     if (d.datum !== undefined) {
       const datum = naDatum(d.datum);
-      if (!datum) return NextResponse.json({ error: 'Neplatné datum dokladu.' }, { status: 400 });
+      if (!datum) return odpovedChyby('chybaApi.neplatneDatumDokladu', 400);
       data.datum = datum;
     }
 
@@ -79,7 +81,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PATCH /api/admin/pokladna/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Uložení se nezdařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.ulozeniNezdarilo', 500);
   }
 }
 
@@ -87,16 +89,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   try {
     const session = await requireAdmin();
     if (!session || !(await smiDoPokladny())) {
-      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+      return odpovedChyby('chybaApi.bezOpravneni', 403);
     }
 
-    const { doklad, chyba } = await rucni(params.id);
-    if (!doklad) return NextResponse.json({ error: chyba }, { status: chyba === 'Doklad neexistuje.' ? 404 : 409 });
+    const { doklad, klic } = await rucni(params.id);
+    if (!doklad) return odpovedChyby(klic, klic === 'chybaApi.dokladNeexistuje' ? 404 : 409);
 
     await prisma.pokladniDoklad.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/admin/pokladna/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Smazání se nezdařilo.' }, { status: 500 });
+    return odpovedChyby('chybaApi.smazaniNezdarilo', 500);
   }
 }
