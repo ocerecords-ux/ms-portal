@@ -4,7 +4,7 @@ import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { prisma } from '@/lib/db';
 import { oznamNoveStopy } from '@/lib/preposlechPosluchaciServer';
 import { zjistiMezeryZeStop, zkontrolujUplnostStop } from '@/lib/kontrolaStopServer';
-import { nactiMetaStop } from '@/lib/stopaMetaServer';
+import { nactiMetaStop, type MetaStopy } from '@/lib/stopaMetaServer';
 
 /**
  * Stopy a text pro přeposlech, načtené ze složky projektu na Disku
@@ -58,12 +58,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
    * rovnou se seznamem - prohlížeč pak nemusí stahovat a dekódovat zvuk
    * znovu a celkový čas je úplný hned.
    */
-  const meta = await nactiMetaStop(
+  const meta: Record<string, MetaStopy> = await nactiMetaStop(
     (vysledek.stopy as { id: string; velikost: number | null }[]).map((s) => ({
       id: s.id,
       velikost: s.velikost ?? null,
     })),
-  ).catch(() => ({}));
+  ).catch(() => ({}) as Record<string, MetaStopy>);
 
   return NextResponse.json({
     slozkaUrl: vysledek.slozkaUrl,
