@@ -57,5 +57,11 @@ declare module 'next-auth/jwt' {
      * firmou. V tokenu schvalne, aby se kvuli prepnuti nechodilo do databaze.
      */
     dalsiFirmy?: string[];
+    /**
+     * VEDE ASPOŇ JEDNU POBOČKU (24. 11. 2026). V tokenu schválně: middleware
+     * podle toho pouští vedoucího pobočky na Techniku a do databáze z něj
+     * sáhnout nejde. Obnovuje se spolu s rolí, tedy do pěti minut od změny.
+     */
+    vedouciStudii?: boolean;
   }
 }

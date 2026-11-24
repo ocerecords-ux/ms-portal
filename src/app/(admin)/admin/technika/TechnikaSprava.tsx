@@ -135,10 +135,20 @@ export function TechnikaSprava({
   kategorie: pocatecniKategorie,
   kusy: pocatecniKusy,
   studia,
+  spravce = true,
+  mojeStudia = [],
 }: {
   kategorie: Kategorie[];
   kusy: Kus[];
   studia: Studio[];
+  /**
+   * SPRÁVCE MĚNÍ VŠECHNO (24. 11. 2026) - Žůžo-labůžo nebo zaškrtnutá
+   * *Technika* na kartě. Vedoucí pobočky dostane `false` a píše jen do studií
+   * v `mojeStudia`; vidí ale celou evidenci, viz lib/technikaPristup.ts.
+   */
+  spravce?: boolean;
+  /** Studia, která ten člověk vede. U správce prázdné - smí všude. */
+  mojeStudia?: string[];
 }) {
   const jazyk = useJazyk();
   const t = TEXTY[jazyk === 'en' ? 'en' : 'cs'];
@@ -158,6 +168,15 @@ export function TechnikaSprava({
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const souborRef = useRef<HTMLInputElement | null>(null);
+
+  /**
+   * Studia, do kterých ten člověk smí zapsat. Správce všechna, vedoucí ta
+   * svoje - a protože kus „bez umístění" patří celé firmě, vedoucí ho
+   * v nabídce vůbec nemá (server to hlídá stejně, viz lib/technikaPristup.ts).
+   */
+  const zapisovatelna = spravce ? studia : studia.filter((s) => mojeStudia.includes(s.id));
+  /** Smí sáhnout na tenhle kus? Rozhoduje studio, ve kterém stojí. */
+  const smiKus = (kus: Kus) => spravce || (kus.studioId ? mojeStudia.includes(kus.studioId) : false);
 
   const nazevStudia = (id: string | null) =>
     studia.find((s) => s.id === id)?.name ?? t.bezUmisteni;
@@ -310,18 +329,25 @@ export function TechnikaSprava({
           <p className="text-sm font-body text-muted m-0 mt-1">{t.popis}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setKategorieOtevrene((v) => !v)}
-            className="rounded-pill border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple font-heading font-semibold text-xs px-3.5 py-2 transition-colors"
-          >
-            {t.kategorieSprava}
-          </button>
+          {/* KATEGORIE JSOU SPOLEČNÉ CELÉ FIRMĚ (24. 11. 2026), proto zůstávají
+              správcům. Vedoucí pobočky je k přidání kusu nepotřebuje - co se
+              nikam nehodí, spadne do „Bez kategorie". */}
+          {spravce && (
+            <button
+              type="button"
+              onClick={() => setKategorieOtevrene((v) => !v)}
+              className="rounded-pill border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple font-heading font-semibold text-xs px-3.5 py-2 transition-colors"
+            >
+              {t.kategorieSprava}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
               setChyba(null);
-              setFormular({ ...PRAZDNY });
+              // Vedoucí pobočky má v nabídce jen svoje studia, takže prázdné
+              // „bez umístění" by u něj zůstalo nevybrané - předvyplní se.
+              setFormular({ ...PRAZDNY, studioId: spravce ? '' : (zapisovatelna[0]?.id ?? '') });
             }}
             className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-3.5 py-2 border-0 cursor-pointer"
           >
@@ -374,8 +400,8 @@ export function TechnikaSprava({
                 onChange={(e) => setFormular({ ...formular, studioId: e.target.value })}
                 className="admin-input"
               >
-                <option value="">{t.bezUmisteni}</option>
-                {studia.map((s) => (
+                {spravce && <option value="">{t.bezUmisteni}</option>}
+                {zapisovatelna.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -561,7 +587,10 @@ export function TechnikaSprava({
                   </span>
                 )}
 
-                <div className="shrink-0 flex items-center gap-2">
+                {/* CIZÍ POBOČKA JEN KE ČTENÍ (24. 11. 2026). Vedoucí z Brna
+                    vidí i pražský mikrofon - aby se dohledal - ale upravit ho
+                    může jen ten, kdo tu pobočku vede. */}
+                <div className={`shrink-0 flex items-center gap-2 ${smiKus(kus) ? '' : 'hidden'}`}>
                   <button
                     type="button"
                     onClick={() => {

@@ -77,6 +77,20 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        /**
+         * VEDE NĚJAKOU POBOČKU? (24. 11. 2026: „potřebuji, ať vedoucí poboček
+         * mají oprávnění přidávat techniku".)
+         *
+         * Middleware běží na edge a do databáze nesahá - zná jen token. Bez
+         * téhle vlajky by vedoucího pobočky poslal z /admin/technika na
+         * přihlášení, stejně jako kdysi zvukaře se zaškrtnutou sekcí Studia.
+         * Je to jen ANO/NE; do kterých studií smí psát, se ptá server
+         * (lib/technikaPristup.ts).
+         */
+        const vedeStudii = await prisma.studio
+          .count({ where: { vedouci: { some: { id: user.id } } } })
+          .catch(() => 0);
+
         return {
           id: user.id,
           email: user.email,
@@ -91,6 +105,7 @@ export const authOptions: NextAuthOptions = {
           // at se na ne middleware muze ptat hned, ne az po prvnim overeni.
           pristupy: user.pristupy ?? [],
           superadmin: user.superadmin === true,
+          vedouciStudii: vedeStudii > 0,
         };
       },
     }),
@@ -134,6 +149,7 @@ export const authOptions: NextAuthOptions = {
          */
         token.pristupy = ((user as any).pristupy ?? []) as string[];
         token.superadmin = (user as any).superadmin === true;
+        token.vedouciStudii = (user as any).vedouciStudii === true;
         token.overenoAt = Date.now();
         token.neaktivni = false;
         return token;
@@ -159,6 +175,9 @@ export const authOptions: NextAuthOptions = {
             // middleware, viz vys.
             pristupy: true,
             superadmin: true,
+            // Vedouci pobocky (24. 11. 2026) - podle toho ho middleware pusti
+            // na Techniku, viz nize a src/middleware.ts.
+            vedeStudia: { select: { id: true } },
           },
         });
         if (!ucet || !ucet.active) {
@@ -172,6 +191,7 @@ export const authOptions: NextAuthOptions = {
         token.jenNahled = ucet.jenNahled === true;
         token.pristupy = (ucet.pristupy ?? []) as string[];
         token.superadmin = ucet.superadmin === true;
+        token.vedouciStudii = ((ucet.vedeStudia ?? []) as { id: string }[]).length > 0;
         token.neaktivni = false;
         token.overenoAt = Date.now();
       } catch (err) {

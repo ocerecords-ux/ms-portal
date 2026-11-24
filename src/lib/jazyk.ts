@@ -9849,6 +9849,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'booking.spravaKlientu.jeden': { cs: '{pocet} pozvaný klient', en: '{pocet} customer invited' },
   'booking.spravaKlientu.vic': { cs: '{pocet} pozvaných klientů', en: '{pocet} customers invited' },
   'booking.cenikStudiaOdkaz': { cs: 'Ceník studia →', en: 'Studio price list →' },
+  'booking.technikaOdkaz': { cs: 'Technika ve studiu →', en: 'Studio equipment →' },
   'booking.nejkratsiRezervace': { cs: 'Nejkratší rezervace (min)', en: 'Shortest booking (min)' },
   'booking.dniDopredu': { cs: 'Dní dopředu (0 = bez limitu)', en: 'Days ahead (0 = no limit)' },
   'booking.emailPlaceholder': { cs: 'jméno@kapela.co.uk', en: 'name@band.co.uk' },
@@ -12459,6 +12460,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The attachment could not be prepared.',
   },
   'chybaApi.prilohaNenalezena': { cs: 'Příloha nenalezena.', en: 'Attachment not found.' },
+  'chybaApi.kusNenalezen': { cs: 'Kus techniky nenalezen.', en: 'Equipment item not found.' },
   'chybaApi.prilohaNenactena': {
     cs: 'Přílohu se nepodařilo načíst.',
     en: 'The attachment could not be loaded.',

@@ -79,6 +79,16 @@ export default withAuth(
            * archiv, Bruno, návody - zůstává jen pro Žůžo-labůžo.
            */
           if (token.role === 'ADMIN') return true;
+          /**
+           * VEDOUCÍ POBOČKY NA TECHNIKU (zadání 24. 11. 2026: „potřebuji, ať
+           * vedoucí poboček mají oprávnění přidávat techniku").
+           *
+           * Evidence techniky je sice pod /admin, ale patří ke studiu -
+           * a vedoucí pobočky nemusí mít zaškrtnutou žádnou sekci. Co tam
+           * uvidí a na co smí sáhnout, rozhoduje server
+           * (lib/technikaPristup.ts); tohle je jen vrátnice.
+           */
+          if (cesta.startsWith('/admin/technika') && token.vedouciStudii === true) return true;
           if (!podlehaPristupum(String(token.role))) return false;
           const sekce = sekceCesty(cesta);
           if (!sekce) return false;

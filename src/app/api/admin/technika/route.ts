@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { requireTechniku, smiDoStudia } from '@/lib/technikaPristup';
 import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
@@ -57,8 +58,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
-  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
+  /**
+   * PŘIDÁVAJÍ I VEDOUCÍ POBOČEK (24. 11. 2026). Správce zakládá kus kdekoliv,
+   * vedoucí jen ve studiu, které vede - viz lib/technikaPristup.ts.
+   */
+  const pristup = await requireTechniku();
+  if (!pristup) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -68,6 +73,9 @@ export async function POST(req: NextRequest) {
       : odpovedChyby('chybaApi.neplatnaData', 400);
   }
   const d = parsed.data;
+  if (!smiDoStudia(pristup, d.studioId ?? null)) {
+    return odpovedChyby('chybaApi.bezOpravneni', 403);
+  }
 
   try {
     const kus = await prisma.technika.create({

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { smiNaStranku } from '@/lib/pristupyServer';
+import { pristupKTechnice, smiNaTechniku } from '@/lib/technikaPristup';
 import { TechnikaSprava } from './TechnikaSprava';
 
 /**
@@ -20,9 +20,13 @@ export const dynamic = 'force-dynamic';
 export default async function TechnikaPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/login');
-  if (!(await smiNaStranku({ id: session.user.id, role: session.user.role }, '/admin/technika'))) {
-    redirect('/projekty');
-  }
+  /**
+   * VEDOUCÍ POBOČKY SEM TAKY PATŘÍ (24. 11. 2026) - viz lib/technikaPristup.ts.
+   * Dřív rozhodovala jen zaškrtávátka na kartě; kdo vede studio, má techniku
+   * své pobočky zapsat, aniž by mu to někdo musel zvlášť povolovat.
+   */
+  const pristup = await pristupKTechnice(session.user.id, session.user.role);
+  if (!smiNaTechniku(pristup)) redirect('/projekty');
 
   const [kategorie, kusy, studia] = await Promise.all([
     prisma.technikaKategorie
@@ -63,6 +67,8 @@ export default async function TechnikaPage() {
       }))}
       kusy={kusy as never}
       studia={studia as never}
+      spravce={pristup.spravce}
+      mojeStudia={pristup.vedeStudia}
     />
   );
 }

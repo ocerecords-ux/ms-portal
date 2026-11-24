@@ -142,6 +142,17 @@ export function SpravaStudia({
             {t('booking.cenikStudiaOdkaz')}
           </a>
 
+          {/* TECHNIKA (24. 11. 2026: „potřebuji, ať vedoucí poboček mají
+              oprávnění přidávat techniku"). Odkaz sedí u ceníku ze stejného
+              důvodu: vedoucí pobočky spravuje studio tady, ne v administraci,
+              a evidenci techniky by jinde nehledal. */}
+          <a
+            href="/admin/technika"
+            className="self-start text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
+          >
+            {t('booking.technikaOdkaz')}
+          </a>
+
           <div className="flex items-end gap-3 flex-wrap">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-heading text-muted">{t('booking.nejkratsiRezervace')}</span>
