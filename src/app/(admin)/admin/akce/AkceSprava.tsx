@@ -1,14 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DRUHY_PITI, nazevPiti, souhrnAkce, type Kandidat, type PozvankaPrehled } from '@/lib/akce';
+import { FormularPozvanky } from '@/app/pozvanka/[token]/FormularPozvanky';
 
 /**
  * FIREMNÍ AKCE - obrazovka pořadatele (zadání 25. 11. 2026).
  *
  * Tři kroky pod sebou, jak to člověk dělá: napsat pozvánku, vybrat koho, pak
- * rozeslat a koukat, kdo odpověděl.
+ * rozeslat a koukat, kdo odpověděl. Vedle toho stojí NÁHLED (zadání
+ * 25. 11. 2026: „chci vidět rovnou grafický náhled toho mailu… chci i mít
+ * rovnou u toho anketu") - mail tak, jak odejde, a pod ním tytéž otázky,
+ * které pozvaný dostane v odkazu. Obojí se překresluje při psaní, takže se
+ * nemusí nic odesílat naslepo.
  *
  * POPISKY JSOU PSANÉ TADY, ne přes lib/jazyk.ts: ten má rozdělanou práci
  * překladová dávka a dvě ruce v jednom souboru končí přepsanou prací.
@@ -49,11 +54,60 @@ export function AkceSprava({
   const [rucniJmeno, setRucniJmeno] = useState('');
   const [rucniMail, setRucniMail] = useState('');
   const [pracuje, setPracuje] = useState(false);
+  const [nahledHtml, setNahledHtml] = useState<string | null>(null);
+  const [kreslim, setKreslim] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
 
   const pole =
     'rounded-lg border border-line bg-field px-3 py-2.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full';
+
+  /**
+   * NÁHLED MAILU. Skládá ho server toutéž funkcí, která mail doopravdy
+   * posílá - jinak by náhled dřív nebo později ukazoval něco jiného, než co
+   * odejde. Vteřina po posledním úhozu, ať se nevolá na každé písmeno.
+   */
+  const otiskDetailu = JSON.stringify({
+    nazev: detail.nazev,
+    kdy: detail.kdy,
+    misto: detail.misto,
+    text: detail.text,
+    odpovedDo: detail.odpovedDo,
+  });
+  useEffect(() => {
+    let platne = true;
+    setKreslim(true);
+    const casovac = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch('/api/admin/akce/nahled', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: otiskDetailu,
+          });
+          const data = (await res.json().catch(() => ({}))) as { html?: string };
+          if (platne && data?.html) setNahledHtml(data.html);
+        } catch (err) {
+          console.error('Nahled pozvanky se nepodaril:', err);
+        } finally {
+          if (platne) setKreslim(false);
+        }
+      })();
+    }, 700);
+    return () => {
+      platne = false;
+      window.clearTimeout(casovac);
+    };
+  }, [otiskDetailu]);
+
+  /** Datum „odpovězte do" tak, jak ho uvidí pozvaný. */
+  const doKdyText = (() => {
+    if (!detail.odpovedDo) return null;
+    const d = new Date(`${detail.odpovedDo}T00:00:00`);
+    return Number.isNaN(d.getTime())
+      ? null
+      : new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'long' }).format(d);
+  })();
   const popisek = 'text-[11px] font-heading uppercase tracking-wide text-muted';
 
   const pozvaneMaily = useMemo(
@@ -229,6 +283,12 @@ export function AkceSprava({
         <p className="text-sm font-body text-danger bg-dangerTint rounded-lg px-3 py-2 m-0">{chyba}</p>
       )}
       {hlaska && <p className="text-sm font-body text-brand-greenDeep m-0">{hlaska}</p>}
+
+      {/* VŠECHNO NA JEDNÉ STRÁNCE (25. 11. 2026): vlevo se píše a vybírá,
+          vpravo je vidět, co z toho vznikne. Na úzké obrazovce jde náhled
+          pod ovládání, ať se nic nemačká. */}
+      <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
+        <div className="flex flex-col gap-5 min-w-0">
 
       {/* 1. POZVÁNKA */}
       <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
@@ -497,6 +557,51 @@ export function AkceSprava({
           </section>
         </>
       )}
+        </div>
+
+        {/* NÁHLED - mail a anketa pohromadě. */}
+        <div className="flex flex-col gap-4 min-w-0 lg:sticky lg:top-24">
+          <section className="rounded-card border border-line bg-surface p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-heading font-semibold text-base text-ink m-0">Jak přijde mail</h2>
+              {kreslim && <span className="text-xs font-body text-muted">překresluju…</span>}
+            </div>
+            {nahledHtml ? (
+              <iframe
+                title="Náhled pozvánky"
+                srcDoc={nahledHtml}
+                sandbox=""
+                className="w-full h-[440px] rounded-lg border border-line bg-white"
+              />
+            ) : (
+              <p className="text-sm font-body text-muted m-0">
+                Napiš název a text; náhled se vykreslí sám.
+              </p>
+            )}
+            <p className="text-xs font-body text-muted m-0">
+              Skládá ho tatáž funkce, která mail doopravdy posílá - co vidíš, to odejde.
+            </p>
+          </section>
+
+          <section className="rounded-card border border-line bg-surface p-4 flex flex-col gap-3">
+            <h2 className="font-heading font-semibold text-base text-ink m-0">
+              Anketa v odkazu
+            </h2>
+            <p className="text-xs font-body text-muted m-0">
+              Tohle vyplní pozvaný po kliknutí na tlačítko v mailu. Klidně si to proklikej -
+              odsud se nic neukládá.
+            </p>
+            <FormularPozvanky
+              nahled
+              token=""
+              jmeno={pozvanky[0]?.jmeno ?? 'Jméno pozvaného'}
+              doKdy={doKdyText}
+              uzOdpovedel={false}
+              puvodni={{ dorazi: null, ubytovani: null, piti: [], pitiText: null, poznamka: null }}
+            />
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

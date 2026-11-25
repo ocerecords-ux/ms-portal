@@ -19,12 +19,19 @@ export function FormularPozvanky({
   doKdy,
   uzOdpovedel,
   puvodni,
+  nahled = false,
 }: {
   token: string;
   jmeno: string;
   doKdy: string | null;
   uzOdpovedel: boolean;
   puvodni: OdpovedNaPozvanku;
+  /**
+   * NÁHLED PRO POŘADATELE (25. 11. 2026: „chci i mít rovnou u toho anketu").
+   * Tytéž otázky, jen se nic neodesílá - pořadatel si je proklikat může,
+   * nikomu tím ale odpověď nezapíše.
+   */
+  nahled?: boolean;
 }) {
   const [dorazi, setDorazi] = useState<boolean | null>(puvodni.dorazi);
   const [ubytovani, setUbytovani] = useState<boolean | null>(puvodni.ubytovani);
@@ -43,6 +50,8 @@ export function FormularPozvanky({
   }
 
   async function odesli() {
+    // V náhledu se nikam nic neposílá - viz prop `nahled`.
+    if (nahled) return;
     if (dorazi === null) {
       setChyba('Dejte nám prosím vědět, jestli dorazíte.');
       return;
@@ -180,11 +189,16 @@ export function FormularPozvanky({
         <button
           type="button"
           onClick={() => void odesli()}
-          disabled={uklada}
+          disabled={uklada || nahled}
           className="rounded-lg bg-brand-green text-onAccent font-heading font-semibold text-sm px-5 py-2.5 border-0 cursor-pointer disabled:opacity-60"
         >
           {uklada ? 'Ukládám…' : hotovo ? 'Upravit odpověď' : 'Odeslat odpověď'}
         </button>
+        {nahled && (
+          <span className="font-body text-xs text-muted">
+            Náhled - takhle to uvidí pozvaný. Odsud se nic neodesílá.
+          </span>
+        )}
         {hotovo && !uklada && (
           <span className="font-body text-sm text-brand-greenDeep">
             Díky, máme to. Změnit to můžete kdykoliv tímhle odkazem.
