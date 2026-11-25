@@ -146,7 +146,8 @@ export function FormularPozvanky({
 
             {o.typ === 'VYBER' && (
               <div className="flex flex-wrap gap-2 mt-1">
-                {(o.moznosti ?? []).map((m) => {
+                {/* Rozepsaná prázdná možnost z editoru se nekreslí. */}
+                {(o.moznosti ?? []).filter(Boolean).map((m) => {
                   const vybrano = Array.isArray(odpovedi[o.id]) && (odpovedi[o.id] as string[]).includes(m);
                   return (
                     <button

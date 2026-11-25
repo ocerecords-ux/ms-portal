@@ -275,6 +275,38 @@ export function AkceSprava({
     setOtazky((o) => o.map((x) => (x.id === id ? { ...x, ...zmena } : x)));
   }
 
+  /**
+   * MOŽNOSTI JSOU ŘÁDKY, NE JEDNO POLE (oprava 25. 11. 2026: „u ankety nemůžu
+   * přidat možnosti pro odpověď… je tam jen jedno pole").
+   *
+   * Do té doby to byla textová plocha, kde měla být každá možnost na vlastním
+   * řádku - jenže prázdné řádky se zahazovaly hned při psaní, takže Enter
+   * nový řádek nezaložil a dál než k jedné možnosti se nikdo nedostal.
+   */
+  function pridejMoznost(id: string) {
+    setOtazky((o) =>
+      o.map((x) => (x.id === id ? { ...x, moznosti: [...(x.moznosti ?? []), ''] } : x)),
+    );
+  }
+
+  function upravMoznost(id: string, poradi: number, hodnota: string) {
+    setOtazky((o) =>
+      o.map((x) =>
+        x.id === id
+          ? { ...x, moznosti: (x.moznosti ?? []).map((m, i) => (i === poradi ? hodnota : m)) }
+          : x,
+      ),
+    );
+  }
+
+  function smazMoznost(id: string, poradi: number) {
+    setOtazky((o) =>
+      o.map((x) =>
+        x.id === id ? { ...x, moznosti: (x.moznosti ?? []).filter((_, i) => i !== poradi) } : x,
+      ),
+    );
+  }
+
   function pridejOtazku(typ: Otazka['typ']) {
     setOtazky((o) => [
       ...o,
@@ -535,29 +567,53 @@ export function AkceSprava({
 
               {o.typ === 'VYBER' && (
                 <div className="flex flex-col gap-2">
-                  <textarea
-                    value={(o.moznosti ?? []).join('\n')}
-                    onChange={(e) =>
-                      upravOtazku(o.id, {
-                        moznosti: e.target.value
-                          .split('\n')
-                          .map((m) => m.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                    rows={4}
-                    placeholder={'Jedna možnost na řádek\nBílé víno\nPivo\nNealko'}
-                    className={pole}
-                  />
-                  <label className="flex items-center gap-2 text-xs font-body text-muted">
-                    <input
-                      type="checkbox"
-                      checked={o.vicMoznosti !== false}
-                      onChange={(e) => upravOtazku(o.id, { vicMoznosti: e.target.checked })}
-                      className="w-4 h-4 accent-brand-green"
-                    />
-                    Smí zaškrtnout víc možností
-                  </label>
+                  <span className="text-[11px] font-heading uppercase tracking-wide text-muted">
+                    Možnosti na výběr
+                  </span>
+                  {(o.moznosti ?? []).length === 0 && (
+                    <span className="text-xs font-body text-muted">
+                      Zatím žádná možnost - přidej první.
+                    </span>
+                  )}
+                  <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
+                    {(o.moznosti ?? []).map((m, poradi) => (
+                      <li key={poradi} className="flex items-center gap-2">
+                        <input
+                          value={m}
+                          onChange={(e) => upravMoznost(o.id, poradi, e.target.value)}
+                          placeholder={`Možnost ${poradi + 1}`}
+                          className={`${pole} flex-1`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => smazMoznost(o.id, poradi)}
+                          aria-label="Smazat možnost"
+                          title="Smazat možnost"
+                          className="rounded-lg border border-line px-2 py-1.5 text-sm text-danger hover:border-danger"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => pridejMoznost(o.id)}
+                      className="rounded-pill border border-line px-3 py-1.5 text-xs font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+                    >
+                      + Přidat možnost
+                    </button>
+                    <label className="flex items-center gap-2 text-xs font-body text-muted">
+                      <input
+                        type="checkbox"
+                        checked={o.vicMoznosti !== false}
+                        onChange={(e) => upravOtazku(o.id, { vicMoznosti: e.target.checked })}
+                        className="w-4 h-4 accent-brand-green"
+                      />
+                      Smí zaškrtnout víc možností
+                    </label>
+                  </div>
                 </div>
               )}
             </li>
