@@ -79,9 +79,19 @@ export async function pripomenChybejiciHudbu(): Promise<{
             ? `K audioknize ${projekt.nazev} nedorazila hudba od klienta`
             : `K audioknize ${projekt.nazev} chybí hudba`,
           body: projekt.hudbuDodavaKlient
-            ? `První frekvence je ${popisDne(projekt.zaDni ?? 0)}. Hudbu dodává klient — pošlete mu výzvu z karty projektu.`
-            : `První frekvence je ${popisDne(projekt.zaDni ?? 0)}. Vyberte hudbu a vložte ji do karty projektu.`,
-          url: `/projekty/${projekt.id}`,
+            ? `První frekvence je ${popisDne(projekt.zaDni ?? 0)}. Hudbu dodává klient — pošlete mu výzvu z karty projektu. V Hudbě → Chybí hudba je celý seznam.`
+            : `První frekvence je ${popisDne(projekt.zaDni ?? 0)}. Vyberte hudbu a vložte ji do karty projektu. V Hudbě → Chybí hudba je celý seznam.`,
+          /**
+           * ODKAZ VEDE NA CELÝ SEZNAM, NE NA JEDEN PROJEKT (zadání
+           * 25. 11. 2026: „když mi to zazvoní zvonečkem a já to v tu chvíli
+           * neudělám, tak už to pak zpětně nedohledám… nevím, kde teď není
+           * hudba vybraná").
+           *
+           * Kdo zvoneček odbaví hned, otevře si projekt z prvního řádku -
+           * seznam je řazený podle toho, co hoří. Kdo ho odbaví za týden,
+           * uvidí všechno, co mezitím přibylo, místo jedné staré knihy.
+           */
+          url: '/hudba-audioknihy',
         },
       );
       upozorneno += 1;
