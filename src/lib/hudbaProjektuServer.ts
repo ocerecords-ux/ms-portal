@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 import {
   bezpecnyNazev,
   korenHudby,
@@ -144,6 +145,12 @@ export async function nactiHudbu(caflouProjectId: string): Promise<SkladbaProjek
  * DÍLY JEDNÉ SÉRIE SE NEHLÁSÍ. Tam je opakování záměr - série má svou hudbu
  * a každý další díl ji dostane; upozorňovat na to by znamenalo varování
  * u každé knihy, která vyjde.
+ *
+ * REKLAMY SE NEHLÁSÍ ANI V JEDNOM SMĚRU (upřesnění 25. 11. 2026: „taky můžeme
+ * použít stejnou hudbu u reklamy a audioknihy"). Hlídá se opakování MEZI
+ * KNIHAMI - aby dvě audioknihy nehrály na stejnou hudbu. Spot a kniha vedle
+ * sebe nikdy nestojí, takže je to v pořádku a varování by jen zvyklo lidi
+ * mačkat „však to nevadí".
  */
 async function doplnPouzitiJinde(
   caflouProjectId: string,
@@ -155,9 +162,17 @@ async function doplnPouzitiJinde(
   try {
     const cesty = [...new Set(radky.map((r) => r.cesta))];
 
-    const [muj, jinde] = await Promise.all([
+    const [ciselnik, muj, jinde] = await Promise.all([
+      nactiCiselnikReklam(),
       prisma.projectMeta
-        .findUnique({ where: { caflouProjectId }, select: { serie: true } })
+        .findUnique({
+          where: { caflouProjectId },
+          select: {
+            serie: true,
+            projectType: true,
+            company: { select: { dealsAds: true, dealsAudiobooks: true } },
+          },
+        })
         .catch(() => null),
       prisma.hudbaProjektu
         .findMany({
@@ -173,17 +188,37 @@ async function doplnPouzitiJinde(
     const nalezene = jinde as { caflouProjectId: string; cesta: string }[];
     if (nalezene.length === 0) return skladby;
 
+    // U spotu se na opakování neupozorňuje vůbec - viz poznámka výš.
+    const mojeMeta = muj as {
+      serie: string | null;
+      projectType: string | null;
+      company: { dealsAds: boolean; dealsAudiobooks: boolean } | null;
+    } | null;
+    if (mojeMeta && jeReklamaPodleMeta(mojeMeta, ciselnik)) return skladby;
+
     // Názvy a série protějšků jedním dotazem.
     const idJinych = [...new Set(nalezene.map((r) => r.caflouProjectId))];
     const metaJinych = (await prisma.projectMeta
       .findMany({
         where: { caflouProjectId: { in: idJinych } },
-        select: { caflouProjectId: true, name: true, serie: true },
+        select: {
+          caflouProjectId: true,
+          name: true,
+          serie: true,
+          projectType: true,
+          company: { select: { dealsAds: true, dealsAudiobooks: true } },
+        },
       })
-      .catch(() => [])) as { caflouProjectId: string; name: string | null; serie: string | null }[];
+      .catch(() => [])) as {
+      caflouProjectId: string;
+      name: string | null;
+      serie: string | null;
+      projectType: string | null;
+      company: { dealsAds: boolean; dealsAudiobooks: boolean } | null;
+    }[];
     const popisProjektu = new Map(metaJinych.map((m) => [m.caflouProjectId, m]));
 
-    const mojeSerie = ((muj as { serie: string | null } | null)?.serie ?? '').trim().toLowerCase();
+    const mojeSerie = (mojeMeta?.serie ?? '').trim().toLowerCase();
 
     return skladby.map((s, i) => {
       const radek = radky[i];
@@ -196,6 +231,8 @@ async function doplnPouzitiJinde(
         const jehoSerie = (meta?.serie ?? '').trim().toLowerCase();
         // Stejná série = opakování je záměr, nehlásí se.
         if (mojeSerie && jehoSerie && mojeSerie === jehoSerie) continue;
+        // Spot taky ne - ten s knihou nikdy nestojí vedle sebe.
+        if (meta && jeReklamaPodleMeta(meta, ciselnik)) continue;
         if (kde.some((p) => p.projektId === r.caflouProjectId)) continue;
 
         kde.push({
