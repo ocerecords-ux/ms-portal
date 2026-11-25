@@ -940,8 +940,14 @@ function Psatko({
                 if (i === aktivni) el?.scrollIntoView({ block: 'nearest' });
               }}
               aria-selected={i === aktivni}
-              className={`w-full text-left px-3 py-1.5 text-sm font-body text-ink flex items-center gap-2 ${
-                i === aktivni ? 'bg-field' : 'hover:bg-field'
+              /* ZELENĚ, AŤ JE VIDĚT, KOHO ZROVNA VYBÍRÁM (Peter Drátva
+                 25. 11. 2026: „výber mien zelenou aby som videl koho
+                 vyberám"). Do teď se řádek pod kurzorem jen nepatrně
+                 ztmavil - na tmavém pozadí to byl rozdíl, který se hledal.
+                 Zelená je v portálu barva potvrzení a písmo na ní je tmavé
+                 (text-onAccent), bílé se na zelenou nedává. */
+              className={`w-full text-left px-3 py-1.5 text-sm font-body flex items-center gap-2 ${
+                i === aktivni ? 'bg-brand-green text-onAccent' : 'text-ink hover:bg-brand-green/15'
               }`}
             >
               <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
