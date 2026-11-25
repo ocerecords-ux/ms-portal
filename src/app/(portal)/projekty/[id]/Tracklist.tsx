@@ -382,12 +382,25 @@ export function Tracklist({
      * prazdny zaklad VSECHNY stopy, takze by precislovani udelalo z cele
      * knihy "Cast 1" az "Cast 50". U prazdne kapitoly se proto deli jen ta
      * jedna dvojice.
+     *
+     * DO SKUPINY PATRI JEN STOPY, KTERE UZ CASTI JSOU (oprava 25. 11. 2026:
+     * „tohle se stalo, kdyz jsme dali rozdelit track 6" - a z jedne stopy
+     * bylo rozdelenych vsech patnact).
+     *
+     * Stejny zaklad kapitoly totiz neznamena tutez kapitolu: kdyz je v celem
+     * seznamu jmeno knihy (a tak vypada tracklist hned po zalozeni), maji
+     * stejny zaklad uplne vsechny stopy a precislovani se rozlezlo po cele
+     * knize. Soused se proto pripoji, jen kdyz uz ma za jmenem „, Cast X" -
+     * tedy kdyz je to opravdu kus teze rozdelene kapitoly.
      */
+    const jeCast = (kapitola: string) => zakladKapitoly(kapitola) !== kapitola.trim();
+    const patriKSkupine = (kapitola: string) => jeCast(kapitola) && zakladKapitoly(kapitola) === base;
+
     let od = i;
     let doKonce = i + 1;
     if (base) {
-      while (od > 0 && zakladKapitoly(nove[od - 1].nazevKapitoly) === base) od -= 1;
-      while (doKonce + 1 < nove.length && zakladKapitoly(nove[doKonce + 1].nazevKapitoly) === base) doKonce += 1;
+      while (od > 0 && patriKSkupine(nove[od - 1].nazevKapitoly)) od -= 1;
+      while (doKonce + 1 < nove.length && patriKSkupine(nove[doKonce + 1].nazevKapitoly)) doKonce += 1;
     }
 
     for (let k = od; k <= doKonce; k += 1) {
