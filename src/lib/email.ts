@@ -4567,7 +4567,6 @@ export function buildPozvankaAkceHtml(input: PozvankaAkceInput): string {
       }
     </table>
 
-    <p>${prelozitEmail(jazyk, 'mail.akce.dotaznik')}</p>
     <div class="cta-row">
       <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.akce.tlacitko')}</a>
     </div>

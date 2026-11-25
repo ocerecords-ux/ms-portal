@@ -1217,12 +1217,8 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
   'mail.akce.kdy': { cs: 'Kdy', en: 'When' },
   'mail.akce.kde': { cs: 'Kde', en: 'Where' },
   'mail.akce.odpovedDo': { cs: 'Odpovězte prosím do', en: 'Please reply by' },
-  'mail.akce.dotaznik': {
-    cs: 'V odkazu je pár otázek: jestli dorazíte, jestli potřebujete přespat a co pijete.',
-    en: 'The link asks a few questions: whether you are coming, whether you need a bed and what you drink.',
-  },
-  'mail.akce.tlacitko': { cs: 'Odpovědět na pozvánku', en: 'Reply to the invitation' },
-  'mail.akce.textOtevrit': { cs: 'Odpovědět můžete tady:', en: 'You can reply here:' },
+  'mail.akce.tlacitko': { cs: 'Otevřít pozvánku', en: 'Open the invitation' },
+  'mail.akce.textOtevrit': { cs: 'Pozvánku otevřete tady:', en: 'Open the invitation here:' },
   'mail.akce.odkazJeTvuj': {
     cs: 'Odkaz je jen váš, nikam ho prosím nepřeposílejte.',
     en: 'The link is yours alone, please do not forward it.',
