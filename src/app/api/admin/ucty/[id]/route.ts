@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { odpovedChyby, odpovedChybyS } from '@/lib/chybyApi';
 
 // Uprava a smazani bankovniho uctu vlastni firmy.
 const schema = z.object({
@@ -16,16 +17,19 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+      // Věta od `zod` jde první, a když žádná není, jde klíč (vzor z dávky 7s).
+      return parsed.error.issues[0]?.message
+        ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+        : odpovedChyby('chybaApi.neplatnaData', 400);
     }
     const d = parsed.data;
 
     const account = await prisma.bankAccount.findUnique({ where: { id: params.id } });
-    if (!account) return NextResponse.json({ error: 'Účet nenalezen.' }, { status: 404 });
+    if (!account) return odpovedChyby('chybaApi.ucetNenalezen', 404);
 
     const data: Record<string, unknown> = {};
     if (d.label !== undefined) data.label = d.label;
@@ -49,21 +53,31 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json(updated);
   } catch (err) {
     console.error('PATCH /api/admin/ucty/[id] selhalo:', err);
-    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+    // Technická zpráva z výjimky jde do značky jako hodnota (dávka 7q); když
+    // žádná není, odejde věta bez ní - 'Neznámá chyba.' ve značce by zůstala
+    // česky i v anglické větě.
+    const message = err instanceof Error ? err.message : '';
+    return message
+      ? odpovedChybyS('chybaApi.ulozeniNezdariloS', { zprava: message }, 500)
+      : odpovedChyby('chybaApi.ulozeniNezdarilo', 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
     await prisma.bankAccount.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/admin/ucty/[id] selhalo:', err);
-    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
-    return NextResponse.json({ error: `Smazání se nezdařilo (${message}).` }, { status: 500 });
+    // Technická zpráva z výjimky jde do značky jako hodnota (dávka 7q); když
+    // žádná není, odejde věta bez ní - 'Neznámá chyba.' ve značce by zůstala
+    // česky i v anglické větě.
+    const message = err instanceof Error ? err.message : '';
+    return message
+      ? odpovedChybyS('chybaApi.smazaniNezdariloS', { zprava: message }, 500)
+      : odpovedChyby('chybaApi.smazaniNezdarilo', 500);
   }
 }

@@ -105,6 +105,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7ab | 21. 11. | Hlášky rout knihovny ukázek klíčem — `api/admin/ukazky/**` (3 routy, 1 obrazovka); osmá agenda z `api/admin/**` | [x] |
 | 7ac | 22. 11. | Hlášky rout techniky klíčem — `api/admin/technika/**` (4 routy, 1 obrazovka); devátá agenda z `api/admin/**` | [x] |
 | 7ad | 23. 11. | Hlášky rout pokladny klíčem — `api/admin/pokladna/**` (2 routy, 1 obrazovka) a k tomu důvody z `lib/pokladnaServer.ts`, které chodily na obrazovku hotové česky; desátá agenda z `api/admin/**` | [x] |
+| 7ae | 24. 11. | Hlášky rout vlastních firem klíčem — `api/admin/issuers/**` a k nim `api/admin/ucty/[id]` (4 routy, 4 obrazovky); jedenáctá agenda z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2445,6 +2446,60 @@ o *document date* — na jeden klíč pro dvě agendy to stačí.
 **Co zbývá v `api/admin/**`:** po pokladně zůstává kolem **193 českých
 hlášek** — největší kusy jsou vlastní firmy (14), ceník (13), pozvánky údajů
 (13) a návody (13). Dál po agendách, jedna za večer.
+
+### Dávka 7ae je HOTOVÁ (24. 11. 2026)
+
+**Jedenáctá agenda z `api/admin/**`: vlastní firmy („Moje firmy").** Vzor
+pořád z dávky 7o (`odpovedChyby(klíč, status)` / `odpovedChybyS`), obrazovka
+čte chybu přes `hlaskaChyby(data, t, záloha)`. Rozsah: **4 routy,
+4 obrazovky, 18 přepsaných míst a slovník +4 klíče**.
+`chybaApi.bezOpravneni` (6×), `chybaApi.neplatnaData` (4×),
+`chybaApi.ulozeniNezdarilo(S)` (4×), `chybaApi.smazaniNezdarilo(S)` (2×)
+a `chybaApi.firmaNenalezena` už ve slovníku byly z dávek 7o–7ad.
+
+**Routy:** `issuers` (založení vlastní fakturační firmy), `issuers/[id]`
+(karta firmy včetně číselných řad a podpisu + vyřazení/smazání),
+`issuers/[id]/ucty` (přidání bankovního účtu) a `ucty/[id]` (úprava a smazání
+účtu). Čtvrtá routa nestojí v `issuers/**`, ale patří k téže obrazovce —
+`BankAccounts.tsx` na ni chodí z téhož tlačítka, takže by se jinak jedna
+hláška přeložila a druhá ne.
+
+**Nové klíče:** `chybaApi.formatBezPoradovehoCisla`,
+`chybaApi.podpisNeniPng`, `chybaApi.chybiCisloUctuNeboIban` a
+`chybaApi.ucetNenalezen`.
+
+**Značka, která není značka.** Věta o číselné řadě má v sobě příklad
+formátu `{NNN}`. `prelozitS` nechává na pokoji každou značku, pro kterou
+nepřišla hodnota, takže příklad projde na obrazovku jak má — ale je to past
+na příští dávku: kdyby někdo do té věty přidal skutečnou hodnotu jménem
+`NNN`, dosadí se do příkladu.
+
+**„Neznámá chyba." ve značce by zůstala česky** — stejně jako v 7y a 7z.
+Pět catchů (založení firmy, karta firmy, smazání firmy, přidání účtu, úprava
+a smazání účtu) posílalo `Uložení/Smazání se nezdařilo (${message})` a do
+značky dávalo buď zprávu z výjimky, nebo českou větu. Teď všechny větví: se
+zprávou jde `ulozeniNezdariloS` / `smazaniNezdariloS`, bez ní prostý klíč bez
+značky.
+
+**Obrazovky:** `NewIssuerForm.tsx`, `IssuerForm.tsx`, `BankAccounts.tsx`
+a `PodpisFirmy.tsx` (ta chybu z routy vyhazuje jako `Error`, takže
+`hlaskaChyby` jde do `new Error(...)` a zbytek komponenty zůstal).
+
+**Termíny podle slovníčku:** firma = company, bankovní účet = bank account,
+podpis = signature, číselná řada = number format (tak už ji má obrazovka
+v `mojeFirmy.ciselneRady`).
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7ad):**
+
+1. **Hlášky ze `zod` schémat** — `Název firmy je povinný.` (dvě routy) a
+   `Vyplňte označení účtu.` zůstávají česky. Záložní `'Neplatná data.'` vedle
+   nich klíč dostalo: routa pošle větu od `zod`, a když žádná není, jde klíč.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (22 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po vlastních firmách zůstává kolem
+**175 českých hlášek** — největší kusy jsou návody (19), ceník (18), pozvánky
+údajů (16) a doklady (16). Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

@@ -8,6 +8,7 @@ import type { Currency } from '@prisma/client';
 import { CURRENCIES, CURRENCY_LABELS, nazevMeny } from '@/lib/doklady';
 import { VyberPole } from '@/components/VyberPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 type Account = {
   id: string;
@@ -60,7 +61,7 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || t('mojeFirmy.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('mojeFirmy.ulozeniSelhalo')));
         return false;
       }
       router.refresh();

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { AdminField } from '../../NewCompanyForm';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Založení vlastní fakturační firmy. Stejně jako u Firem stačí vyplnit IČ a
@@ -64,7 +65,7 @@ export function NewIssuerForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('mojeFirmy.zalozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('mojeFirmy.zalozeniSelhalo')));
         return;
       }
       setOpen(false);

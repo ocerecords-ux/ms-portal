@@ -9,6 +9,7 @@ import { CURRENCIES, nazevMeny, previewNumbers } from '@/lib/doklady';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { VyberPole } from '@/components/VyberPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 type Issuer = {
   id: string;
@@ -98,7 +99,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || t('mojeFirmy.ulozeniSelhalo'));
+        setError(hlaskaChyby(data, t, t('mojeFirmy.ulozeniSelhalo')));
         return;
       }
       setSaved(true);

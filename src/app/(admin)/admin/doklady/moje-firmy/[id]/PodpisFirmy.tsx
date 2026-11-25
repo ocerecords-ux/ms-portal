@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
 
 /**
@@ -31,7 +32,7 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
         body: JSON.stringify({ podpis: hodnota }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || t('mojeFirmy.podpisUlozeniSelhalo'));
+      if (!res.ok) throw new Error(hlaskaChyby(data, t, t('mojeFirmy.podpisUlozeniSelhalo')));
       setAktualni(hodnota);
       router.refresh();
     } catch (e) {

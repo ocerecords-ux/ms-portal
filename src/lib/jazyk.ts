@@ -13242,6 +13242,28 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Nastavení se nepodařilo uložit.',
     en: 'The settings could not be saved.',
   },
+
+  /* Moje firmy - routy `api/admin/issuers/**` a `api/admin/ucty/[id]`
+     (dávka 7ae, 24. 11. 2026). Termíny: vlastní fakturační firma = company
+     (jako ve slovníčku), bankovní účet = bank account, číselná řada = number
+     format. Značka `{NNN}` v příkladu formátu zůstává značkou - `prelozitS`
+     nechá na pokoji to, co nemá hodnotu. */
+  'chybaApi.formatBezPoradovehoCisla': {
+    cs: 'Formát musí obsahovat pořadové číslo, například {NNN}.',
+    en: 'The format must contain a sequence number, for example {NNN}.',
+  },
+  'chybaApi.podpisNeniPng': {
+    cs: 'Podpis musí být obrázek PNG.',
+    en: 'The signature must be a PNG image.',
+  },
+  'chybaApi.chybiCisloUctuNeboIban': {
+    cs: 'Vyplňte číslo účtu nebo IBAN.',
+    en: 'Fill in the account number or the IBAN.',
+  },
+  'chybaApi.ucetNenalezen': {
+    cs: 'Účet nenalezen.',
+    en: 'The account was not found.',
+  },
 };
 
 /**
