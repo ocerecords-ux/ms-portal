@@ -973,6 +973,39 @@ export function CalendarBrowser({
     router.push(adresa(zmeny));
   }
 
+  /**
+   * NA DNEŠEK (zadání 25. 11. 2026: „dejme do kalendáře nějakou ikonu, kdy se
+   * naroluju na aktuální datum po stisknutí").
+   *
+   * Dvě věci naráz: přepnout rozsah na dnešek (když je člověk jinde v čase)
+   * a NAROLOVAT na něj. Samotné přepnutí nestačilo - kdo už dnešní týden
+   * otevřený má, tomu se při stisku do teď nestalo nic a dnešek mu zůstal
+   * mimo obrazovku.
+   *
+   * Cílem je čára „teď" (CaraTed): je jen v dnešním sloupci a sedí na
+   * aktuální hodině, takže `scrollIntoView` srovná mřížku vodorovně i svisle
+   * jedním krokem, včetně vnořených posuvníků. V měsíci žádná není, tam se
+   * jde na dnešní buňku.
+   *
+   * Dva pokusy schválně: po `router.push` se mřížka překresluje a první
+   * pokus může sáhnout ještě do té staré. Když ji najde hned, druhý pokus
+   * ji jen srovná na tomtéž místě.
+   */
+  function naDnesek() {
+    const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: pasmoMrizky }).format(new Date());
+    // Dřív se tu bralo `toISOString()`, což je UTC - po půlnoci v Praze to
+    // skočilo na včerejšek.
+    prejdi({ datum: dnes });
+    const naroluj = () => {
+      const cil =
+        document.querySelector('[data-kal-ted]') ?? document.querySelector('[data-kal-dnes]');
+      cil?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      return Boolean(cil);
+    };
+    window.setTimeout(naroluj, 120);
+    window.setTimeout(naroluj, 600);
+  }
+
   /** Datum o `smer` dopředu nebo dozadu podle zvoleného pohledu. */
   function datumPosunu(smer: -1 | 1): string {
     const d = new Date(`${anchorIso}T12:00:00.000Z`);
@@ -1345,11 +1378,29 @@ export function CalendarBrowser({
           >
             ‹
           </button>
+          {/* NA DNEŠEK (zadání 25. 11. 2026: „dejme do kalendáře nějakou ikonu,
+              kdy se naroluju na aktuální datum po stisknutí").
+              Tlačítko tu bylo, ale umělo jen přepnout rozsah - kdo už v dnešním
+              týdnu byl a jen si odroloval, tomu se po stisku nestalo nic.
+              Terčík napovídá, že to teď kromě přeskoku taky naroluje: na čáru
+              „teď" (tedy i na správnou hodinu), a v měsíci na dnešní buňku. */}
           <button
             type="button"
-            onClick={() => prejdi({ datum: new Date().toISOString().slice(0, 10) })}
-            className="rounded-lg border border-line px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
+            onClick={naDnesek}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
           >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="w-4 h-4 shrink-0"
+              aria-hidden="true"
+            >
+              <circle cx="10" cy="10" r="5.5" />
+              <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
+              <path d="M10 1.5v2.2M10 16.3v2.2M1.5 10h2.2M16.3 10h2.2" strokeLinecap="round" />
+            </svg>
             {t('kalendar.dnes')}
           </button>
           <button
@@ -2177,6 +2228,8 @@ function MrizkaPohled({
               {days.map((den) => (
                 <div
                   key={den.key}
+                  // Značka pro tlačítko „Dnes" (25. 11. 2026) - viz naDnesek().
+                  data-kal-dnes={den.key === dnesKey ? '' : undefined}
                   className={`relative isolate border-l border-line ${den.key === dnesKey ? 'bg-brand-green/[0.06]' : ''}`}
                   style={{ height: `${celkovaVyska}px` }}
                   onDoubleClick={(e) => {
@@ -2394,6 +2447,8 @@ function MesicniPohled({
           return (
             <div
               key={den.key}
+              // Značka pro tlačítko „Dnes" (25. 11. 2026) - viz naDnesek().
+              data-kal-dnes={den.key === dnesKey ? '' : undefined}
               onDoubleClick={() => onNovaVeDni(den.key)}
               className={`min-h-[92px] border-t border-l border-line p-1.5 flex flex-col gap-1 ${
                 den.inMonth ? '' : 'bg-paper'

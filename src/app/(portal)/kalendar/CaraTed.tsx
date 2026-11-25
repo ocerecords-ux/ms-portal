@@ -87,6 +87,12 @@ export function CaraTed({ timezone }: { timezone: string }) {
 
   return (
     <div
+      /**
+       * ZNAČKA PRO TLAČÍTKO „DNES" (25. 11. 2026). Čára „teď" je jediné místo,
+       * které zná dnešek i aktuální hodinu zároveň - tlačítko si ji najde
+       * a naroluje na ni, vodorovně i svisle naráz.
+       */
+      data-kal-ted=""
       className="absolute left-0 right-0 z-[500] pointer-events-none"
       style={{ top: `${((minuta - GRID_START_HOUR * 60) * HOUR_PX) / 60}px` }}
       aria-hidden
