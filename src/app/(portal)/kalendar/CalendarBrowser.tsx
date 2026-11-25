@@ -3675,13 +3675,14 @@ function UdalostForm({
  */
 export function druhPrace(
   e: Pick<CalendarEvent, 'kind' | 'state'>,
-): 'NATACENI' | 'STRIH' | 'CASTING' | 'UKLID' | 'UDRZBA' | 'VOLNO' | null {
+): 'NATACENI' | 'STRIH' | 'CASTING' | 'UKLID' | 'AKCE' | 'UDRZBA' | 'VOLNO' | null {
   if (e.kind === 'SLOT') return 'NATACENI';
   if (e.kind !== 'BLOCK') return null;
   if (e.state === 'NATACENI') return 'NATACENI';
   if (e.state === 'STRIH') return 'STRIH';
   if (e.state === 'CASTING') return 'CASTING';
   if (e.state === 'UKLID') return 'UKLID';
+  if (e.state === 'AKCE') return 'AKCE';
   if (e.state === 'MAINTENANCE') return 'UDRZBA';
   if (e.state === 'HOLIDAY' || e.state === 'VACATION') return 'VOLNO';
   return null;
@@ -3693,6 +3694,7 @@ const IKONA_DRUHU: Record<NonNullable<ReturnType<typeof druhPrace>>, string> = {
   STRIH: 'strih',
   CASTING: 'casting',
   UKLID: 'uklid',
+  AKCE: 'hvezda',
   UDRZBA: 'klic',
   VOLNO: 'slunce',
 };

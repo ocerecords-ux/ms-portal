@@ -3010,6 +3010,11 @@ enum StudioBlockKind {
   // Uklid studia"). Vlastni hodnota, ne MAINTENANCE: udrzba je oprava
   // techniky, uklid je pravidelna vec, kterou zapisuje produkce.
   UKLID
+  // Firemni akce - vecirek, skoleni, den otevrenych dveri (zadani
+  // 25. 11. 2026: „potrebuju pridat do studia vanocni vecirek a nemam tam na
+  // to druh"). Neni to ani udrzba, ani interni blokace: studio je obsazene,
+  // ale deje se v nem neco, co ma v kalendari svoje jmeno.
+  AKCE
 }
 
 /// Cas, kdy se ve studiu netoci. Do obsazenosti se pocita stejne jako

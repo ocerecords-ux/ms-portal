@@ -24,7 +24,7 @@ const schema = z.object({
   start: z.string().trim().min(8),
   end: z.string().trim().min(8),
   kind: z
-    .enum(['NATACENI', 'STRIH', 'CASTING', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'UKLID', 'INTERNAL', 'OTHER', 'BOOKING'])
+    .enum(['NATACENI', 'STRIH', 'CASTING', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'UKLID', 'AKCE', 'INTERNAL', 'OTHER', 'BOOKING'])
     .optional(),
   // U natáčení a střihu se popis skládá ze zapsaných polí, takže sem nechodí.
   title: z.string().trim().max(160).optional(),

@@ -150,6 +150,9 @@ export const BLOCK_KIND_LABELS: Record<string, string> = {
   // Úklid studia (zadání 29. 9. 2026). Vlastní druh, ne „Údržba": údržba je
   // oprava techniky, úklid je pravidelná věc, kterou zapisuje produkce.
   UKLID: 'Úklid studia',
+  // Firemní akce (zadání 25. 11. 2026) - večírek, školení, den otevřených
+  // dveří. Studio je obsazené, ale není to údržba ani interní blokace.
+  AKCE: 'Firemní akce',
   INTERNAL: 'Interní blokace',
   OTHER: 'Jiné',
   // Rezervace muzikanta nebo producenta zvenčí (25. 9. 2026). V našem
@@ -183,7 +186,7 @@ export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH', 'CASTING'] as const;
  * druh podržet - viz UdalostForm, který k nabídce přidá i druh upravované
  * události, když v tomhle seznamu není.
  */
-export const DRUHY_K_ZALOZENI = ['NATACENI', 'STRIH', 'CASTING', 'UKLID', 'BOOKING'] as const;
+export const DRUHY_K_ZALOZENI = ['NATACENI', 'STRIH', 'CASTING', 'UKLID', 'AKCE', 'BOOKING'] as const;
 
 /**
  * DRUHY, KE KTERÝM SE NIC DALŠÍHO NEVYPLŇUJE (zadání 29. 9. 2026: „když
