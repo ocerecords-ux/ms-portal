@@ -101,8 +101,10 @@ export function FormularPozvanky({
   return (
     <div className="flex flex-col gap-5 border-t border-line pt-5">
       <div className="flex flex-col gap-2">
+        {/* BEZ OSLOVENI (25. 11. 2026: "v otazce Dorazite by nemelo uz byt
+            osloveni"). Jmeno stoji v hlavicce stranky, v otazce prekazelo. */}
         <span className="font-heading font-semibold text-sm text-ink">
-          {jmeno}, {zakladni?.text ?? 'dorazíte?'}
+          {zakladni?.text ?? 'Dorazíte?'}
         </span>
         {zakladni?.napoveda && (
           <span className="font-body text-xs text-muted">{zakladni.napoveda}</span>
@@ -118,8 +120,15 @@ export function FormularPozvanky({
         </div>
       </div>
 
-      {/* Zbytek ankety nemá smysl u toho, kdo nepřijede. */}
-      {dorazi === true &&
+      {/*
+        CELA ANKETA NA JEDNE STRANCE (25. 11. 2026: "ta anketa musi byt na
+        jedne strance, kdyz se prokliknu z mailu").
+        Otazky se drive odkryly az po klepnuti na "Dorazim" a pusobilo to jako
+        kroky, kterymi se musi projit. Ted jsou videt vsechny rovnou - clovek
+        vi, co ho ceka, a vyplni to odshora dolu. Schovaji se jen tomu, kdo
+        rekne, ze nedorazi; tam uz nema co vyplnovat.
+      */}
+      {dorazi !== false &&
         otazkyPoDorazeni(otazky).map((o) => (
           <div key={o.id} className="flex flex-col gap-2">
             <span className="font-heading font-semibold text-sm text-ink">{o.text}</span>

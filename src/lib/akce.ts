@@ -98,6 +98,61 @@ export const VYCHOZI_OTAZKY: Otazka[] = [
   },
 ];
 
+/**
+ * ČAS Z FORMULÁŘE JE ČAS V PRAZE (oprava 25. 11. 2026: „mám vyplněno 10:00
+ * a v pozvánce došlo 20:00").
+ *
+ * `<input type="datetime-local">` posílá „2026-12-19T10:00" bez pásma a
+ * `new Date(...)` si ho přečte v pásmu STROJE - na Vercelu je to UTC, takže
+ * z desáté dopoledne byla jedenáctá. A protože se políčko při dalším otevření
+ * vyplnilo zpátky už tím posunutým časem, každé další uložení přidalo další
+ * hodinu; po pár úpravách z toho bylo 20:00.
+ *
+ * Řetězec se proto skládá jako UTC a odečte se posun Prahy v ten okamžik.
+ * Dvakrát schválně: u času v noci na přechod letního času vyjde posun
+ * napoprvé z „opačné" strany a druhý průchod to srovná.
+ */
+function posunPrahy(okamzik: Date): number {
+  const casti = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Prague',
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(okamzik);
+  const kus = (typ: string) => Number(casti.find((c) => c.type === typ)?.value ?? '0');
+  const jakoUtc = Date.UTC(
+    kus('year'),
+    kus('month') - 1,
+    kus('day'),
+    kus('hour') % 24,
+    kus('minute'),
+    kus('second'),
+  );
+  return jakoUtc - okamzik.getTime();
+}
+
+/** „2026-12-19T10:00" nebo „2026-12-19" v čase Prahy → skutečný okamžik. */
+export function datumZPrahy(hodnota: string | null | undefined): Date | null {
+  if (!hodnota) return null;
+  const shoda = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(hodnota.trim());
+  if (!shoda) return null;
+  const zakladUtc = Date.UTC(
+    Number(shoda[1]),
+    Number(shoda[2]) - 1,
+    Number(shoda[3]),
+    Number(shoda[4] ?? '0'),
+    Number(shoda[5] ?? '0'),
+  );
+  if (Number.isNaN(zakladUtc)) return null;
+  const prvni = zakladUtc - posunPrahy(new Date(zakladUtc));
+  const druhy = zakladUtc - posunPrahy(new Date(prvni));
+  return new Date(druhy);
+}
+
 /** Klíč nové otázky. Náhodný, aby se dvě stejně pojmenované nepřekryly. */
 export function novyKlicOtazky(): string {
   return `o${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { smiSpravovatAkce } from '@/lib/akceServer';
+import { datumZPrahy } from '@/lib/akce';
 import { buildPozvankaAkceHtml } from '@/lib/email';
 import { odpovedChyby } from '@/lib/chybyApi';
 
@@ -29,12 +30,6 @@ const schema = z.object({
   jmeno: z.string().trim().max(200).nullable().optional(),
 });
 
-function naDatum(hodnota: string | null | undefined): Date | null {
-  if (!hodnota) return null;
-  const d = new Date(hodnota.length <= 10 ? `${hodnota}T00:00:00` : hodnota);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !(await smiSpravovatAkce(session.user.id))) {
@@ -49,10 +44,10 @@ export async function POST(req: NextRequest) {
     to: '',
     jmenoPrijemce: d.jmeno || session.user.name || null,
     nazevAkce: d.nazev?.trim() || 'Název akce',
-    kdy: naDatum(d.kdy),
+    kdy: datumZPrahy(d.kdy),
     misto: d.misto || null,
     text: d.text || null,
-    odpovedDo: naDatum(d.odpovedDo),
+    odpovedDo: datumZPrahy(d.odpovedDo),
     // V náhledu tlačítko nikam nevede - ať se z něj nedá omylem odpovídat
     // za někoho jiného.
     odkaz: '#',

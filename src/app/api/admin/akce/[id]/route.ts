@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { smiSpravovatAkce } from '@/lib/akceServer';
-import { ocistiOtazky } from '@/lib/akce';
+import { ocistiOtazky, datumZPrahy } from '@/lib/akce';
 import { odpovedChyby } from '@/lib/chybyApi';
 
 /** Úprava akce - viz ../route.ts. */
@@ -18,12 +18,6 @@ const schema = z.object({
   odpovedDo: z.string().trim().max(40).nullable().optional(),
   otazky: z.array(z.record(z.unknown())).max(30).optional(),
 });
-
-function naDatum(hodnota: string | null | undefined): Date | null {
-  if (!hodnota) return null;
-  const d = new Date(hodnota.length <= 10 ? `${hodnota}T00:00:00` : hodnota);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -40,10 +34,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       where: { id: params.id },
       data: {
         ...(d.nazev !== undefined ? { nazev: d.nazev } : {}),
-        ...(d.kdy !== undefined ? { kdy: naDatum(d.kdy) } : {}),
+        ...(d.kdy !== undefined ? { kdy: datumZPrahy(d.kdy) } : {}),
         ...(d.misto !== undefined ? { misto: d.misto || null } : {}),
         ...(d.text !== undefined ? { text: d.text || null } : {}),
-        ...(d.odpovedDo !== undefined ? { odpovedDo: naDatum(d.odpovedDo) } : {}),
+        ...(d.odpovedDo !== undefined ? { odpovedDo: datumZPrahy(d.odpovedDo) } : {}),
         ...(d.otazky !== undefined ? { otazky: ocistiOtazky(d.otazky) } : {}),
       },
     });
