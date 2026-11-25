@@ -2,7 +2,12 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { kandidatiNaPozvanku, pozvankyAkce, smiSpravovatAkce } from '@/lib/akceServer';
+import {
+  kandidatiNaPozvanku,
+  otazkyAkce as otazkyZAkce,
+  pozvankyAkce,
+  smiSpravovatAkce,
+} from '@/lib/akceServer';
 import { AkceSprava } from './AkceSprava';
 
 /**
@@ -50,7 +55,15 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
   ]);
 
   const a = vybrana as
-    | { id: string; nazev: string; kdy: Date | null; misto: string | null; text: string | null; odpovedDo: Date | null }
+    | {
+        id: string;
+        nazev: string;
+        kdy: Date | null;
+        misto: string | null;
+        text: string | null;
+        odpovedDo: Date | null;
+        otazky?: unknown;
+      }
     | null;
 
   return (
@@ -68,6 +81,7 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
             }
           : null
       }
+      otazkyAkce={otazkyZAkce(a)}
       pozvanky={pozvanky}
       kandidati={kandidati}
     />

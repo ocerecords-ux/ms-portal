@@ -6223,6 +6223,11 @@ model Akce {
   /// Dokdy se má odpovědět. Jen prosba v textu, nic se po něm nezavírá.
   odpovedDo DateTime?
 
+  /// ANKETA SI POŘADATEL SKLÁDÁ SÁM (zadání 25. 11. 2026: „chci ty anketní
+  /// otázky modifikovat a přidávat nové"). Pole otázek z lib/akce.ts; prázdno
+  /// znamená, že se ptáme jen na to, jestli dorazí.
+  otazky    Json?
+
   /// Kdo akci založil - jméno do patičky mailu a do přehledu.
   zalozilId    String?
   zalozilJmeno String?
@@ -6259,6 +6264,12 @@ model PozvankaNaAkci {
 
   /// Dorazí? Prázdno = ještě neodpověděl.
   dorazi    Boolean?
+
+  /// ODPOVĚDI NA VLASTNÍ OTÁZKY (25. 11. 2026): klíč otázky → odpověď podle
+  /// jejího typu (ano/ne, vybrané možnosti, text). Sloupce níž jsou z první
+  /// verze, kdy byla anketa napevno; zůstávají kvůli odpovědím, které přišly
+  /// ještě před tím.
+  odpovedi  Json?
   /// Potřebuje přespat?
   ubytovani Boolean?
   /// Co pije - klíče z lib/akce.ts, ne volný text, ať se to dá sečíst.

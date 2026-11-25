@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { smiSpravovatAkce } from '@/lib/akceServer';
+import { ocistiOtazky } from '@/lib/akce';
 import { odpovedChyby } from '@/lib/chybyApi';
 
 /** Úprava akce - viz ../route.ts. */
@@ -15,6 +16,7 @@ const schema = z.object({
   misto: z.string().trim().max(300).nullable().optional(),
   text: z.string().trim().max(8000).nullable().optional(),
   odpovedDo: z.string().trim().max(40).nullable().optional(),
+  otazky: z.array(z.record(z.unknown())).max(30).optional(),
 });
 
 function naDatum(hodnota: string | null | undefined): Date | null {
@@ -42,6 +44,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(d.misto !== undefined ? { misto: d.misto || null } : {}),
         ...(d.text !== undefined ? { text: d.text || null } : {}),
         ...(d.odpovedDo !== undefined ? { odpovedDo: naDatum(d.odpovedDo) } : {}),
+        ...(d.otazky !== undefined ? { otazky: ocistiOtazky(d.otazky) } : {}),
       },
     });
     return NextResponse.json({ ok: true });

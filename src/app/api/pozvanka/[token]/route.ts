@@ -13,12 +13,14 @@ import { odpovedChyby } from '@/lib/chybyApi';
  */
 export const dynamic = 'force-dynamic';
 
+/**
+ * Odpovědi na vlastní otázky chodí jako „klíč otázky → odpověď". Co k otázkám
+ * té akce nepatří, zahodí server (viz lib/akce.ts), takže se tady nemusí
+ * popisovat každý možný tvar.
+ */
 const schema = z.object({
   dorazi: z.boolean(),
-  ubytovani: z.boolean(),
-  piti: z.array(z.string().trim().max(40)).max(20),
-  pitiText: z.string().trim().max(500).nullable().optional(),
-  poznamka: z.string().trim().max(2000).nullable().optional(),
+  odpovedi: z.record(z.unknown()).optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
@@ -27,10 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
   const ulozeno = await zapisOdpoved(params.token, {
     dorazi: parsed.data.dorazi,
-    ubytovani: parsed.data.ubytovani,
-    piti: parsed.data.piti,
-    pitiText: parsed.data.pitiText ?? null,
-    poznamka: parsed.data.poznamka ?? null,
+    odpovedi: parsed.data.odpovedi ?? {},
   });
 
   if (!ulozeno) return odpovedChyby('chybaApi.odkazNeplati', 404);

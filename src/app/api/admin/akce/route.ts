@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { smiSpravovatAkce } from '@/lib/akceServer';
+import { ocistiOtazky, VYCHOZI_OTAZKY } from '@/lib/akce';
 import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
@@ -18,6 +19,8 @@ const schema = z.object({
   misto: z.string().trim().max(300).nullable().optional(),
   text: z.string().trim().max(8000).nullable().optional(),
   odpovedDo: z.string().trim().max(40).nullable().optional(),
+  /** Anketa - pořadatel si ji skládá sám (25. 11. 2026). */
+  otazky: z.array(z.record(z.unknown())).max(30).optional(),
 });
 
 /** „2026-12-19T18:00" z formuláře; prázdno znamená „nevyplněno". */
@@ -49,6 +52,8 @@ export async function POST(req: NextRequest) {
         misto: d.misto || null,
         text: d.text || null,
         odpovedDo: naDatum(d.odpovedDo),
+        // Nová akce začíná s výchozí anketou; pořadatel si ji hned upraví.
+        otazky: d.otazky ? ocistiOtazky(d.otazky) : VYCHOZI_OTAZKY,
         zalozilId: session.user.id,
         zalozilJmeno: session.user.name ?? null,
       },

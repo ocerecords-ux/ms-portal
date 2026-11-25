@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { ocistiOtazky, type Odpovedi } from '@/lib/akce';
 import { FormularPozvanky } from './FormularPozvanky';
 
 /**
@@ -80,12 +81,10 @@ export default async function StrankaPozvanky({ params }: { params: { token: str
           jmeno={pozvanka.jmeno}
           doKdy={doKdy}
           uzOdpovedel={Boolean(pozvanka.odpovedelAt)}
+          otazky={ocistiOtazky(akce.otazky ?? [])}
           puvodni={{
             dorazi: pozvanka.dorazi,
-            ubytovani: pozvanka.ubytovani,
-            piti: pozvanka.piti ?? [],
-            pitiText: pozvanka.pitiText,
-            poznamka: pozvanka.poznamka,
+            odpovedi: ((pozvanka.odpovedi ?? {}) as Odpovedi),
           }}
         />
       </div>

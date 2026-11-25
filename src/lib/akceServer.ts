@@ -1,7 +1,14 @@
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { INTERNAL_ROLES, ROBOT_ROLES } from '@/lib/roles';
-import { pouzeZnamePiti, type Kandidat, type PozvankaPrehled } from '@/lib/akce';
+import {
+  ocistiOdpovedi,
+  ocistiOtazky,
+  type Kandidat,
+  type Odpovedi,
+  type Otazka,
+  type PozvankaPrehled,
+} from '@/lib/akce';
 
 export type { Kandidat };
 
@@ -75,14 +82,39 @@ export async function kandidatiNaPozvanku(): Promise<Kandidat[]> {
   }
 }
 
+/** Otázky akce, očištěné - z databáze přijdou jako JSON. */
+export function otazkyAkce(akce: { otazky?: unknown } | null): Otazka[] {
+  return ocistiOtazky(akce?.otazky ?? []);
+}
+
+/**
+ * ODPOVĚDI Z PRVNÍ VERZE ANKETY. Než si pořadatel začal otázky skládat sám
+ * (25. 11. 2026), ukládaly se do vlastních sloupců. Starší pozvánka tak má
+ * odpovědi tam, ne v `odpovedi` - přečtou se pod klíči, které dnes nesou
+ * výchozí otázky, takže v přehledu nic nechybí.
+ */
+function zeStarychSloupcu(radek: {
+  ubytovani: boolean | null;
+  piti: string[] | null;
+  pitiText: string | null;
+  poznamka: string | null;
+}): Odpovedi {
+  const hotove: Odpovedi = {};
+  if (radek.ubytovani !== null && radek.ubytovani !== undefined) hotove.ubytovani = radek.ubytovani;
+  if ((radek.piti ?? []).length > 0) hotove.piti = radek.piti as string[];
+  const vzkaz = [radek.pitiText, radek.poznamka].filter(Boolean).join(' · ');
+  if (vzkaz) hotove.poznamka = vzkaz;
+  return hotove;
+}
+
 export async function pozvankyAkce(akceId: string): Promise<PozvankaPrehled[]> {
   try {
     const radky = await prisma.pozvankaNaAkci.findMany({
       where: { akceId },
       orderBy: [{ jmeno: 'asc' }],
     });
-    // Přes `unknown`: pole typu String[] náš kontrolní stub Prismy nezná
-    // a bez toho by se na nich typová kontrola zasekla.
+    // Přes `unknown`: pole typu String[] a Json náš kontrolní stub Prismy
+    // nezná a bez toho by se na nich typová kontrola zasekla.
     return (radky as unknown as {
       id: string;
       jmeno: string;
@@ -90,22 +122,24 @@ export async function pozvankyAkce(akceId: string): Promise<PozvankaPrehled[]> {
       odeslanoAt: Date | null;
       odpovedelAt: Date | null;
       dorazi: boolean | null;
+      odpovedi: unknown;
       ubytovani: boolean | null;
-      piti: string[];
+      piti: string[] | null;
       pitiText: string | null;
       poznamka: string | null;
-    }[]).map((p) => ({
-      id: p.id,
-      jmeno: p.jmeno,
-      email: p.email,
-      odeslanoAt: p.odeslanoAt ? p.odeslanoAt.toISOString() : null,
-      odpovedelAt: p.odpovedelAt ? p.odpovedelAt.toISOString() : null,
-      dorazi: p.dorazi,
-      ubytovani: p.ubytovani,
-      piti: p.piti ?? [],
-      pitiText: p.pitiText,
-      poznamka: p.poznamka,
-    }));
+    }[]).map((p) => {
+      const nove = (p.odpovedi ?? {}) as Odpovedi;
+      const odpovedi = Object.keys(nove).length > 0 ? nove : zeStarychSloupcu(p);
+      return {
+        id: p.id,
+        jmeno: p.jmeno,
+        email: p.email,
+        odeslanoAt: p.odeslanoAt ? p.odeslanoAt.toISOString() : null,
+        odpovedelAt: p.odpovedelAt ? p.odpovedelAt.toISOString() : null,
+        dorazi: p.dorazi,
+        odpovedi,
+      };
+    });
   } catch (err) {
     console.error(`Pozvánky k akci ${akceId} se nepodařilo načíst:`, err);
     return [];
@@ -136,27 +170,28 @@ export async function pridejPozvane(
   return vysledek.count;
 }
 
-/** Odpověď z otevřeného odkazu. Pití se čistí proti číselníku. */
+/**
+ * Odpověď z otevřeného odkazu. Co nepatří k otázkám té akce, se zahodí -
+ * server si je načte sám, ne z prohlížeče.
+ */
 export async function zapisOdpoved(
   token: string,
-  odpoved: {
-    dorazi: boolean;
-    ubytovani: boolean;
-    piti: string[];
-    pitiText: string | null;
-    poznamka: string | null;
-  },
+  odpoved: { dorazi: boolean; odpovedi: unknown },
 ): Promise<boolean> {
   try {
-    await prisma.pozvankaNaAkci.update({
+    const pozvanka = await prisma.pozvankaNaAkci.findUnique({
       where: { token },
+      select: { id: true, akce: { select: { otazky: true } } },
+    });
+    if (!pozvanka) return false;
+
+    const otazky = otazkyAkce(pozvanka.akce as { otazky?: unknown } | null);
+    await prisma.pozvankaNaAkci.update({
+      where: { id: pozvanka.id },
       data: {
         dorazi: odpoved.dorazi,
-        // Kdo nedorazí, u toho nemá smysl držet postel ani skleničku.
-        ubytovani: odpoved.dorazi ? odpoved.ubytovani : false,
-        piti: odpoved.dorazi ? pouzeZnamePiti(odpoved.piti) : [],
-        pitiText: odpoved.dorazi ? (odpoved.pitiText || null) : null,
-        poznamka: odpoved.poznamka || null,
+        // Kdo nedorazí, u toho zbytek ankety nedává smysl.
+        odpovedi: odpoved.dorazi ? ocistiOdpovedi(otazky, odpoved.odpovedi) : {},
         odpovedelAt: new Date(),
       },
     });

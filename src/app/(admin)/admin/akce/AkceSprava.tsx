@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DRUHY_PITI, nazevPiti, souhrnAkce, type Kandidat, type PozvankaPrehled } from '@/lib/akce';
+import {
+  novyKlicOtazky,
+  popisOdpovedi,
+  souhrnAkce,
+  TYPY_OTAZEK,
+  VYCHOZI_OTAZKY,
+  type Kandidat,
+  type Otazka,
+  type PozvankaPrehled,
+} from '@/lib/akce';
 import { FormularPozvanky } from '@/app/pozvanka/[token]/FormularPozvanky';
 
 /**
@@ -29,6 +38,8 @@ type Detail = {
   odpovedDo: string;
 };
 
+/** Otázky se drží zvlášť - jsou to řádky, ne políčko formuláře. */
+
 const PRAZDNA: Detail = { id: '', nazev: '', kdy: '', misto: '', text: '', odpovedDo: '' };
 
 const SKUPINY: { klic: Kandidat['skupina']; nazev: string }[] = [
@@ -40,16 +51,21 @@ const SKUPINY: { klic: Kandidat['skupina']; nazev: string }[] = [
 export function AkceSprava({
   akce,
   vybrana,
+  otazkyAkce,
   pozvanky,
   kandidati,
 }: {
   akce: { id: string; nazev: string }[];
   vybrana: Detail | null;
+  otazkyAkce: Otazka[];
   pozvanky: PozvankaPrehled[];
   kandidati: Kandidat[];
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<Detail>(vybrana ?? PRAZDNA);
+  const [otazky, setOtazky] = useState<Otazka[]>(
+    vybrana ? otazkyAkce : VYCHOZI_OTAZKY,
+  );
   const [vybrani, setVybrani] = useState<string[]>([]);
   const [rucniJmeno, setRucniJmeno] = useState('');
   const [rucniMail, setRucniMail] = useState('');
@@ -116,7 +132,7 @@ export function AkceSprava({
     () => new Set(pozvanky.map((p) => p.email.toLowerCase())),
     [pozvanky],
   );
-  const souhrn = useMemo(() => souhrnAkce(pozvanky), [pozvanky]);
+  const souhrn = useMemo(() => souhrnAkce(pozvanky, otazky), [pozvanky, otazky]);
   const kVyberu = kandidati.filter((k) => !pozvaneMaily.has(k.email));
 
   async function posli(url: string, telo: unknown, hotovo: string) {
@@ -157,6 +173,7 @@ export function AkceSprava({
       misto: detail.misto || null,
       text: detail.text || null,
       odpovedDo: detail.odpovedDo || null,
+      otazky,
     };
     if (!detail.id) {
       const data = await posli('/api/admin/akce', telo, 'Akce založena.');
@@ -235,6 +252,42 @@ export function AkceSprava({
       { odebrat: id },
       'Odebráno ze seznamu.',
     );
+  }
+
+  /**
+   * ÚPRAVY ANKETY (zadání 25. 11. 2026: „chci ty anketní otázky modifikovat
+   * a přidávat nové"). Mění se jen tady v prohlížeči; uloží se s pozvánkou,
+   * takže se nikam neklikne dvakrát.
+   *
+   * Klíč otázky se po založení UŽ NEMĚNÍ - odpovědi se podle něj ukládají
+   * a přejmenováním klíče by se ztratily.
+   */
+  function upravOtazku(id: string, zmena: Partial<Otazka>) {
+    setOtazky((o) => o.map((x) => (x.id === id ? { ...x, ...zmena } : x)));
+  }
+
+  function pridejOtazku(typ: Otazka['typ']) {
+    setOtazky((o) => [
+      ...o,
+      {
+        id: novyKlicOtazky(),
+        text: '',
+        typ,
+        ...(typ === 'VYBER' ? { moznosti: [], vicMoznosti: true } : {}),
+        napoveda: null,
+      },
+    ]);
+  }
+
+  function posunOtazku(id: string, smer: -1 | 1) {
+    setOtazky((o) => {
+      const i = o.findIndex((x) => x.id === id);
+      const j = i + smer;
+      if (i < 0 || j < 0 || j >= o.length) return o;
+      const nove = [...o];
+      [nove[i], nove[j]] = [nove[j], nove[i]];
+      return nove;
+    });
   }
 
   const stav = (p: PozvankaPrehled) => {
@@ -355,6 +408,136 @@ export function AkceSprava({
         </div>
       </section>
 
+      {/* 1b. ANKETA (zadání 25. 11. 2026: „chci ty anketní otázky modifikovat
+          a přidávat nové"). „Dorazíte?" tu schválně není - tu drží portál sám,
+          stojí na ní celý přehled. Uloží se tlačítkem u pozvánky výš. */}
+      <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
+        <div>
+          <h2 className="font-heading font-semibold text-base text-ink m-0">Anketa</h2>
+          <p className="text-sm font-body text-muted m-0 mt-1">
+            První otázka je vždycky „dorazíte?". Tyhle jdou za ní a ptáme se na ně jen těch,
+            kdo dorazí. Změny se uloží tlačítkem {detail.id ? '„Uložit"' : '„Založit akci"'} výš.
+          </p>
+        </div>
+
+        {otazky.length === 0 && (
+          <p className="text-sm font-body text-muted m-0">
+            Zatím žádná otázka - ptáme se jen, jestli dorazí.
+          </p>
+        )}
+
+        <ul className="list-none p-0 m-0 flex flex-col gap-2">
+          {otazky.map((o, i) => (
+            <li key={o.id} className="rounded-lg border border-line bg-field p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  value={o.text}
+                  onChange={(e) => upravOtazku(o.id, { text: e.target.value })}
+                  placeholder="Na co se ptáme?"
+                  className={`${pole} flex-1 min-w-[200px]`}
+                />
+                <select
+                  value={o.typ}
+                  onChange={(e) => {
+                    const typ = e.target.value as Otazka['typ'];
+                    upravOtazku(o.id, {
+                      typ,
+                      ...(typ === 'VYBER'
+                        ? { moznosti: o.moznosti ?? [], vicMoznosti: o.vicMoznosti !== false }
+                        : {}),
+                    });
+                  }}
+                  className={`${pole} w-[180px]`}
+                >
+                  {TYPY_OTAZEK.map((t) => (
+                    <option key={t.typ} value={t.typ}>
+                      {t.nazev}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => posunOtazku(o.id, -1)}
+                  disabled={i === 0}
+                  aria-label="Posunout nahoru"
+                  className="rounded-lg border border-line px-2 py-1.5 text-sm text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-40"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => posunOtazku(o.id, 1)}
+                  disabled={i === otazky.length - 1}
+                  aria-label="Posunout dolů"
+                  className="rounded-lg border border-line px-2 py-1.5 text-sm text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-40"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOtazky((x) => x.filter((y) => y.id !== o.id))}
+                  aria-label="Smazat otázku"
+                  title="Smazat otázku"
+                  className="rounded-lg border border-line px-2 py-1.5 text-sm text-danger hover:border-danger"
+                >
+                  ×
+                </button>
+              </div>
+
+              <input
+                value={o.napoveda ?? ''}
+                onChange={(e) => upravOtazku(o.id, { napoveda: e.target.value })}
+                placeholder="Věta pod otázkou - nepovinné"
+                className={pole}
+              />
+
+              {o.typ === 'VYBER' && (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={(o.moznosti ?? []).join('\n')}
+                    onChange={(e) =>
+                      upravOtazku(o.id, {
+                        moznosti: e.target.value
+                          .split('\n')
+                          .map((m) => m.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    rows={4}
+                    placeholder={'Jedna možnost na řádek\nBílé víno\nPivo\nNealko'}
+                    className={pole}
+                  />
+                  <label className="flex items-center gap-2 text-xs font-body text-muted">
+                    <input
+                      type="checkbox"
+                      checked={o.vicMoznosti !== false}
+                      onChange={(e) => upravOtazku(o.id, { vicMoznosti: e.target.checked })}
+                      className="w-4 h-4 accent-brand-green"
+                    />
+                    Smí zaškrtnout víc možností
+                  </label>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-body text-muted">Přidat otázku:</span>
+          {TYPY_OTAZEK.map((t) => (
+            <button
+              key={t.typ}
+              type="button"
+              onClick={() => pridejOtazku(t.typ)}
+              title={t.popis}
+              className="rounded-pill border border-line px-3 py-1.5 text-xs font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+            >
+              + {t.nazev}
+            </button>
+          ))}
+        </div>
+      </section>
+
       {detail.id && (
         <>
           {/* 2. KOHO POZVAT */}
@@ -465,7 +648,6 @@ export function AkceSprava({
                 { popis: 'Odpovědělo', hodnota: souhrn.odpovedelo },
                 { popis: 'Dorazí', hodnota: souhrn.dorazi },
                 { popis: 'Nedorazí', hodnota: souhrn.nedorazi },
-                { popis: 'Ubytování', hodnota: souhrn.ubytovani },
               ].map((s) => (
                 <span
                   key={s.popis}
@@ -477,18 +659,50 @@ export function AkceSprava({
               ))}
             </div>
 
-            {souhrn.piti.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {souhrn.piti.map((d) => (
-                  <span
-                    key={d.klic}
-                    className="rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purple px-3 py-1.5 text-xs font-heading font-semibold"
-                  >
-                    {d.nazev}: {d.pocet}
+            {/* Souhrn po otázkách - počítá se jen z těch, kdo dorazí. */}
+            {souhrn.otazky.map((o) => {
+              const maCo =
+                o.ano > 0 || o.ne > 0 || o.moznosti.length > 0 || o.texty.length > 0;
+              if (!maCo) return null;
+              return (
+                <div key={o.otazka.id} className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-heading uppercase tracking-wide text-muted">
+                    {o.otazka.text}
                   </span>
-                ))}
-              </div>
-            )}
+                  {o.otazka.typ === 'ANO_NE' && (
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-pill border border-brand-green/40 bg-brand-green/10 text-brand-greenDeep px-3 py-1.5 text-xs font-heading font-semibold">
+                        ano: {o.ano}
+                      </span>
+                      <span className="rounded-pill border border-line bg-field text-muted px-3 py-1.5 text-xs font-heading font-semibold">
+                        ne: {o.ne}
+                      </span>
+                    </div>
+                  )}
+                  {o.otazka.typ === 'VYBER' && (
+                    <div className="flex flex-wrap gap-2">
+                      {o.moznosti.map((m) => (
+                        <span
+                          key={m.nazev}
+                          className="rounded-pill border border-brand-green/40 bg-brand-green/10 text-brand-greenDeep px-3 py-1.5 text-xs font-heading font-semibold"
+                        >
+                          {m.nazev}: {m.pocet}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {o.otazka.typ === 'TEXT' && (
+                    <ul className="list-none p-0 m-0 flex flex-col gap-1">
+                      {o.texty.map((t) => (
+                        <li key={t.jmeno + t.text} className="text-xs font-body text-ink">
+                          <span className="font-heading font-semibold">{t.jmeno}:</span> {t.text}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
 
             {pozvanky.length === 0 ? (
               <p className="text-sm font-body text-muted m-0">Zatím tu nikdo není.</p>
@@ -512,20 +726,9 @@ export function AkceSprava({
                     >
                       {stav(p)}
                     </span>
-                    {p.ubytovani && (
-                      <span className="text-[11px] font-heading font-semibold text-brand-purple">
-                        ubytování
-                      </span>
-                    )}
-                    {p.piti.length > 0 && (
-                      <span className="text-xs font-body text-muted">
-                        {p.piti.map(nazevPiti).join(', ')}
-                        {p.pitiText ? ` · ${p.pitiText}` : ''}
-                      </span>
-                    )}
-                    {p.poznamka && (
-                      <span className="text-xs font-body text-ink italic basis-full">
-                        „{p.poznamka}"
+                    {p.odpovedelAt && popisOdpovedi(otazky, p.odpovedi) && (
+                      <span className="text-xs font-body text-muted basis-full">
+                        {popisOdpovedi(otazky, p.odpovedi)}
                       </span>
                     )}
                     <span className="ml-auto flex items-center gap-3">
@@ -553,9 +756,6 @@ export function AkceSprava({
                 ))}
               </ul>
             )}
-            <p className="text-xs font-body text-muted m-0">
-              Nabídka pití: {DRUHY_PITI.map((d) => d.nazev).join(', ')}.
-            </p>
           </section>
         </>
       )}
@@ -613,7 +813,8 @@ export function AkceSprava({
               jmeno={pozvanky[0]?.jmeno ?? 'Jméno pozvaného'}
               doKdy={doKdyText}
               uzOdpovedel={false}
-              puvodni={{ dorazi: null, ubytovani: null, piti: [], pitiText: null, poznamka: null }}
+              otazky={otazky}
+              puvodni={{ dorazi: null, odpovedi: {} }}
             />
           </section>
         </div>
