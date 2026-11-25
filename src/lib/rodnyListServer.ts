@@ -9,6 +9,7 @@ import { nazevSpotuZVystupu, sDedenim, type VystupData } from '@/lib/vystupy';
 import { nactiVystupy } from '@/lib/vystupyServer';
 import {
   bezStarePredpony,
+  dnesniDatum,
   formatProductionDate,
   formatSpotLength,
   isRodnyListTriggerStatus,
@@ -17,6 +18,7 @@ import {
   musicLines,
   rodnyListFileName,
   RL_TRIGGER_STATUS,
+  VYCHOZI_REZIE,
   type RodnyListFields,
 } from '@/lib/rodnyList';
 import { hudbaProRodnyList } from '@/lib/hudbaProjektuServer';
@@ -78,17 +80,32 @@ export type RodnyListResult =
       message: string;
     };
 
-/** Prázdné hodnoty RL - použije se, když projekt ještě žádnou ProjectMeta nemá. */
+/**
+ * Prázdné hodnoty RL - použije se, když projekt ještě žádnou ProjectMeta nemá.
+ *
+ * REŽIE A DATUM VÝROBY SE DOPLŇUJÍ STEJNĚ JAKO VE FORMULÁŘI (oprava
+ * 25. 11. 2026: „faktura neodešla — chybí Režie, Datum výroby", a přitom
+ * v Rodném listu obojí bylo).
+ *
+ * Záložka Rodný list režii předvyplňuje jménem režiséra a datum dneškem už
+ * od 10. 9. 2026 - jenže jen v políčku. Kdo na ně nesáhl a nekliknul na
+ * Uložit, měl v databázi prázdno: náhled vypadal hotově, protože se kreslil
+ * z rozepsaného formuláře, ale faktura pak odmítla odejít kvůli údajům, které
+ * měl člověk před očima. Tytéž výchozí hodnoty proto platí i tady, takže
+ * dokument nese přesně to, co náhled ukázal.
+ */
 function fieldsFromMeta(meta: Record<string, unknown> | null, fallbackSpotName: string): RodnyListFields {
+  const datum = (meta?.productionDate as Date | null) ?? null;
   return {
     // Ocisteni stare predpony RL_ (oprava 10. 9. 2026) - viz bezStarePredpony.
     spotName: bezStarePredpony((meta?.spotName as string | null) || fallbackSpotName, fallbackSpotName),
     spotLengthSeconds: (meta?.spotLengthSeconds as number | null) ?? null,
-    directorName: (meta?.directorName as string | null) || '',
+    directorName: ((meta?.directorName as string | null) || '').trim() || VYCHOZI_REZIE,
     musicTitle: (meta?.musicTitle as string | null) || '',
     musicAuthor: (meta?.musicAuthor as string | null) || '',
     noMusic: Boolean(meta?.noMusic),
-    productionDate: (meta?.productionDate as Date | null) ?? null,
+    // Prázdné datum = dnešek, stejně jako v políčku na záložce.
+    productionDate: datum ?? new Date(`${dnesniDatum()}T00:00:00.000Z`),
   };
 }
 
