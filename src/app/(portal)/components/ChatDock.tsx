@@ -4279,7 +4279,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             setVybraniLide((current) => prepniVSeznamu(current, u.id, e.target.checked))
                           }
                           aria-label={u.label}
-                          className="w-4 h-4 accent-brand-purple shrink-0 ml-1"
+                          // Zelene jako vsude jinde, kde se vybira (25. 11. 2026).
+                          className="w-4 h-4 accent-brand-green shrink-0 ml-1"
                         />
                         <button
                           type="button"
@@ -4288,7 +4289,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               ? setVybraniLide((current) => prepniVSeznamu(current, u.id, !vybrany))
                               : otevriNovou({ kind: 'SOUKROMA', userId: u.id })
                           }
-                          className="flex-1 min-w-0 text-left rounded-lg px-2 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
+                          className={`flex-1 min-w-0 text-left rounded-lg px-2 py-1.5 text-sm font-body text-ink flex items-center gap-2 ${
+                            vybrany ? 'bg-brand-green/15' : 'hover:bg-brand-green/10'
+                          }`}
                         >
                           <Avatar label={u.label} photoUrl={u.photoUrl} size={24} />
                           <span className="truncate">{u.label}</span>

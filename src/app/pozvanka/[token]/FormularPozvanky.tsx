@@ -143,7 +143,7 @@ export function FormularPozvanky({
                   onClick={() => prepniPiti(d.klic)}
                   className={`rounded-pill border px-3 py-1.5 text-sm font-heading font-semibold transition-colors ${
                     piti.includes(d.klic)
-                      ? 'border-brand-purple bg-brand-purple text-white'
+                      ? 'border-brand-green bg-brand-green text-onAccent'
                       : 'border-line bg-surface text-muted hover:border-brand-purple hover:text-brand-purple'
                   }`}
                 >

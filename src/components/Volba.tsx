@@ -16,6 +16,18 @@ import type { ReactNode } from 'react';
  * druhy zakázek…). Jednotlivé ano/ne volby (plátce DPH, souhlas s podmínkami)
  * zůstávají obyčejným zaškrtávacím polem - tam není z čeho vybírat.
  */
+/**
+ * VYBRANÉ SVÍTÍ ZELENĚ (Peter Drátva 25. 11. 2026: „výber mien zelenou aby
+ * som videl koho vyberám" - a na doplnění „vždycky, když vybírám").
+ *
+ * Fialová je v portálu barva akce (tlačítka, odkazy, záložky), takže vybraná
+ * položka splývala s ovládáním kolem. Zelená znamená všude jinde „hotovo,
+ * potvrzeno" - a přesně to vybraná položka je. Písmo na zelené je tmavé
+ * (`text-onAccent`), bílé se na zelenou v portálu nedává.
+ *
+ * Platí to pro VÝBĚR, ne pro přepínače pohledu a filtry - ty zůstávají
+ * fialové, jinak by zezelenal celý portál a rozdíl by zmizel.
+ */
 export function Volba({
   vybrano,
   onZmena,
@@ -47,14 +59,14 @@ export function Volba({
         maly ? 'pl-1.5 pr-2.5 py-1 text-xs' : 'pl-2 pr-3.5 py-1.5 text-sm'
       } ${
         vybrano
-          ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+          ? 'border-brand-green bg-brand-green/10 text-brand-greenDeep dark:text-brand-green'
           : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
       }`}
     >
       <span
         aria-hidden="true"
         className={`grid place-items-center w-4 h-4 rounded-[5px] border transition-colors shrink-0 ${
-          vybrano ? 'bg-brand-purple border-brand-purple text-white' : 'border-line bg-field'
+          vybrano ? 'bg-brand-green border-brand-green text-onAccent' : 'border-line bg-field'
         }`}
       >
         {vybrano && (

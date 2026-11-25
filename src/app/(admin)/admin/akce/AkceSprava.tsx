@@ -333,7 +333,7 @@ export function AkceSprava({
                         title={[k.email, k.firma].filter(Boolean).join(' · ')}
                         className={`rounded-pill border px-3 py-1.5 text-xs font-heading font-semibold transition-colors ${
                           vybrani.includes(k.id)
-                            ? 'border-brand-purple bg-brand-purple text-white'
+                            ? 'border-brand-green bg-brand-green text-onAccent'
                             : 'border-line bg-surface text-muted hover:border-brand-purple hover:text-brand-purple'
                         }`}
                       >

@@ -1336,7 +1336,7 @@ export function ProjectMetaForm({
                       }
                       className={`inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-pill border text-sm font-heading font-semibold transition-colors ${
                         zaskrtnuto
-                          ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+                          ? 'border-brand-green bg-brand-green/10 text-brand-greenDeep dark:text-brand-green'
                           : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
                       }`}
                     >
@@ -1345,7 +1345,7 @@ export function ProjectMetaForm({
                       <span
                         className={`grid place-items-center w-4 h-4 rounded-[5px] border transition-colors ${
                           zaskrtnuto
-                            ? 'bg-brand-purple border-brand-purple text-white'
+                            ? 'bg-brand-green border-brand-green text-onAccent'
                             : 'border-line bg-field'
                         }`}
                       >

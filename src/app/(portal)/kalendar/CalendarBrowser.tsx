@@ -3368,7 +3368,7 @@ function UdalostForm({
                           aria-pressed={vybrany}
                           className={`rounded-pill border px-3 py-1.5 font-heading text-xs tabular-nums capitalize transition-colors ${
                             vybrany
-                              ? 'border-brand-purple bg-brand-purple text-white'
+                              ? 'border-brand-green bg-brand-green text-onAccent'
                               : 'border-line bg-surface text-muted hover:border-brand-purple hover:text-ink'
                           } ${hlavni ? 'cursor-default' : ''}`}
                         >
