@@ -195,13 +195,29 @@ export async function zapisOdpoved(
         id: true,
         jmeno: true,
         email: true,
-        akce: { select: { nazev: true, kdy: true, misto: true, mapa: true, otazky: true } },
+        akce: {
+          select: {
+            nazev: true,
+            kdy: true,
+            misto: true,
+            mapa: true,
+            textPotvrzeni: true,
+            otazky: true,
+          },
+        },
       },
     })) as {
       id: string;
       jmeno: string;
       email: string;
-      akce: { nazev: string; kdy: Date | null; misto: string | null; mapa: string | null; otazky?: unknown };
+      akce: {
+        nazev: string;
+        kdy: Date | null;
+        misto: string | null;
+        mapa: string | null;
+        textPotvrzeni: string | null;
+        otazky?: unknown;
+      };
     } | null;
     if (!pozvanka) return false;
 
@@ -246,7 +262,13 @@ async function posliPotvrzeni(vstup: {
   id: string;
   jmeno: string;
   email: string;
-  akce: { nazev: string; kdy: Date | null; misto: string | null; mapa: string | null };
+  akce: {
+    nazev: string;
+    kdy: Date | null;
+    misto: string | null;
+    mapa: string | null;
+    textPotvrzeni: string | null;
+  };
   otazky: Otazka[];
   dorazi: boolean;
   odpovedi: Odpovedi;
@@ -257,6 +279,7 @@ async function posliPotvrzeni(vstup: {
     nazevAkce: vstup.akce.nazev,
     kdy: vstup.akce.kdy,
     misto: vstup.akce.misto,
+    text: vstup.akce.textPotvrzeni,
     odkaz: `${zakladniAdresa()}/pozvanka/${vstup.token}`,
     mapa: odkazNaMapu(vstup.akce.misto, vstup.akce.mapa),
     dorazi: vstup.dorazi,
@@ -298,7 +321,7 @@ export async function pripomenAkce(): Promise<{ odeslano: number; akci: number }
     kdy: Date | null;
     misto: string | null;
     mapa: string | null;
-    text: string | null;
+    textPripomenuti: string | null;
     otazky?: unknown;
   }[];
   if (akce.length === 0) return { odeslano: 0, akci: 0 };
@@ -328,7 +351,7 @@ export async function pripomenAkce(): Promise<{ odeslano: number; akci: number }
           nazevAkce: a.nazev,
           kdy: a.kdy,
           misto: a.misto,
-          text: a.text,
+          text: a.textPripomenuti,
           odkaz: `${zaklad}/pozvanka/${p.token}`,
           mapa,
           odpovedi: radkyOdpovedi(otazky, (p.odpovedi ?? {}) as Odpovedi),

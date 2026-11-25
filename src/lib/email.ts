@@ -4636,6 +4636,12 @@ type PotvrzeniAkceInput = {
   nazevAkce: string;
   kdy: Date | null;
   misto: string | null;
+  /**
+   * VLASTNÍ TEXT POTVRZENÍ (25. 11. 2026: „nemůžu měnit všechny verze
+   * notifikací - myslím textově"). Když je vyplněný, NAHRADÍ výchozí větu;
+   * prázdno = věta ze slovníku pošty.
+   */
+  text?: string | null;
   odkaz: string;
   mapa?: string | null;
   /** Dorazí? Podle toho se liší celý mail, ne jen jedna věta. */
@@ -4684,7 +4690,11 @@ export function buildPotvrzeniAkceHtml(input: PotvrzeniAkceInput): string {
     <span class="badge">${prelozitEmail(jazyk, 'mail.akcePotvrzeni.stitek')}</span>
     <h2>${escapeHtml(input.nazevAkce)}</h2>
     <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
-    <p>${prelozitEmail(jazyk, input.dorazi ? 'mail.akcePotvrzeni.uvod' : 'mail.akcePotvrzeni.uvodNedorazi')}</p>
+    ${
+      (input.text ?? '').trim()
+        ? odstavceTextu(input.text as string)
+        : `<p>${prelozitEmail(jazyk, input.dorazi ? 'mail.akcePotvrzeni.uvod' : 'mail.akcePotvrzeni.uvodNedorazi')}</p>`
+    }
 
     <table role="presentation" class="field-table">
       ${input.dorazi ? radkyKdyKde(jazyk, input.kdy, input.misto) : ''}
@@ -4716,7 +4726,8 @@ export async function sendPotvrzeniAkceEmail(input: PotvrzeniAkceInput) {
     text: [
       pozdravPosty(jazyk, input.jmenoPrijemce),
       '',
-      prelozitEmail(jazyk, input.dorazi ? 'mail.akcePotvrzeni.uvod' : 'mail.akcePotvrzeni.uvodNedorazi'),
+      (input.text ?? '').trim() ||
+        prelozitEmail(jazyk, input.dorazi ? 'mail.akcePotvrzeni.uvod' : 'mail.akcePotvrzeni.uvodNedorazi'),
       '',
       input.dorazi && input.kdy
         ? `${prelozitEmail(jazyk, 'mail.akce.kdy')}: ${datumCasPosty(jazyk, input.kdy)}`
@@ -4742,7 +4753,10 @@ type PripomenutiAkceInput = {
   nazevAkce: string;
   kdy: Date | null;
   misto: string | null;
-  /** Krátký text pořadatele - v připomínce se hodí instrukce (co s sebou). */
+  /**
+   * VLASTNÍ TEXT PŘIPOMÍNKY (25. 11. 2026). Není to text pozvánky - ten do
+   * připomínky nepatří, člověk ho četl před týdnem. Prázdno = výchozí věta.
+   */
   text: string | null;
   odkaz: string;
   mapa?: string | null;
@@ -4760,14 +4774,16 @@ export function buildPripomenutiAkceHtml(input: PripomenutiAkceInput): string {
     <span class="badge">${prelozitEmail(jazyk, 'mail.akcePripomenuti.stitek')}</span>
     <h2>${escapeHtml(input.nazevAkce)}</h2>
     <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
-    <p>${prelozitEmail(jazyk, 'mail.akcePripomenuti.uvod')}</p>
+    ${
+      (input.text ?? '').trim()
+        ? odstavceTextu(input.text as string)
+        : `<p>${prelozitEmail(jazyk, 'mail.akcePripomenuti.uvod')}</p>`
+    }
 
     <table role="presentation" class="field-table">
       ${radkyKdyKde(jazyk, input.kdy, input.misto)}
       ${radkyOdpovedi(input.odpovedi)}
     </table>
-
-    ${input.text ? odstavceTextu(input.text) : ''}
 
     <div class="cta-row">
       ${
@@ -4794,12 +4810,10 @@ export async function sendPripomenutiAkceEmail(input: PripomenutiAkceInput) {
     text: [
       pozdravPosty(jazyk, input.jmenoPrijemce),
       '',
-      prelozitEmail(jazyk, 'mail.akcePripomenuti.uvod'),
+      (input.text ?? '').trim() || prelozitEmail(jazyk, 'mail.akcePripomenuti.uvod'),
       input.kdy ? `${prelozitEmail(jazyk, 'mail.akce.kdy')}: ${datumCasPosty(jazyk, input.kdy)}` : '',
       input.misto ? `${prelozitEmail(jazyk, 'mail.akce.kde')}: ${input.misto}` : '',
       input.mapa ? `${prelozitEmail(jazyk, 'mail.akcePripomenuti.textMapa')} ${input.mapa}` : '',
-      '',
-      input.text ?? '',
       '',
       prelozitEmail(jazyk, 'mail.akcePripomenuti.zmena'),
       input.odkaz,

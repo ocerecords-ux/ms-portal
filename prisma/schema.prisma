@@ -6226,8 +6226,16 @@ model Akce {
   /// ODKAZ S MAPKOU (25. 11. 2026). Nepovinný - bez něj se do pozvánky dá
   /// hledání místa na Mapách Google, viz odkazNaMapu v lib/akce.ts.
   mapa      String?
-  /// Krátký text a instrukce - jak je pořadatel napíše, tak odejdou.
+  /// Krátký text a instrukce v POZVÁNCE - jak je pořadatel napíše, tak
+  /// odejdou.
   text      String?
+  /// VLASTNÍ TEXT POTVRZENÍ a PŘIPOMÍNKY (25. 11. 2026: „nemůžu měnit
+  /// všechny verze notifikací - myslím textově"). Každý mail má svůj; prázdno
+  /// znamená výchozí větu ze slovníku pošty (lib/jazykEmailu.ts). Text
+  /// pozvánky se do dalších dvou mailů nekopíruje - člověk ho četl před
+  /// týdnem a v připomínce jen mátl.
+  textPotvrzeni   String?
+  textPripomenuti String?
   /// Dokdy se má odpovědět. Jen prosba v textu, nic se po něm nezavírá.
   odpovedDo DateTime?
 

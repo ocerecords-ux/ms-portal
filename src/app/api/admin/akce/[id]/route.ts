@@ -16,6 +16,8 @@ const schema = z.object({
   misto: z.string().trim().max(300).nullable().optional(),
   mapa: z.string().trim().max(500).nullable().optional(),
   text: z.string().trim().max(8000).nullable().optional(),
+  textPotvrzeni: z.string().trim().max(8000).nullable().optional(),
+  textPripomenuti: z.string().trim().max(8000).nullable().optional(),
   odpovedDo: z.string().trim().max(40).nullable().optional(),
   otazky: z.array(z.record(z.unknown())).max(30).optional(),
 });
@@ -39,6 +41,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(d.misto !== undefined ? { misto: d.misto || null } : {}),
         ...(d.mapa !== undefined ? { mapa: d.mapa || null } : {}),
         ...(d.text !== undefined ? { text: d.text || null } : {}),
+        ...(d.textPotvrzeni !== undefined ? { textPotvrzeni: d.textPotvrzeni || null } : {}),
+        ...(d.textPripomenuti !== undefined ? { textPripomenuti: d.textPripomenuti || null } : {}),
         ...(d.odpovedDo !== undefined ? { odpovedDo: datumZPrahy(d.odpovedDo) } : {}),
         ...(d.otazky !== undefined ? { otazky: ocistiOtazky(d.otazky) } : {}),
       },

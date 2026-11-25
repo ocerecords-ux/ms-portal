@@ -62,6 +62,8 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
         misto: string | null;
         mapa: string | null;
         text: string | null;
+        textPotvrzeni: string | null;
+        textPripomenuti: string | null;
         odpovedDo: Date | null;
         otazky?: unknown;
       }
@@ -79,6 +81,8 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
               misto: a.misto ?? '',
               mapa: a.mapa ?? '',
               text: a.text ?? '',
+              textPotvrzeni: a.textPotvrzeni ?? '',
+              textPripomenuti: a.textPripomenuti ?? '',
               odpovedDo: proVstup(a.odpovedDo, false),
             }
           : null

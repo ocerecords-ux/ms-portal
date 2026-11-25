@@ -27,6 +27,8 @@ const schema = z.object({
   text: z.string().trim().max(8000).nullable().optional(),
   odpovedDo: z.string().trim().max(40).nullable().optional(),
   mapa: z.string().trim().max(500).nullable().optional(),
+  textPotvrzeni: z.string().trim().max(8000).nullable().optional(),
+  textPripomenuti: z.string().trim().max(8000).nullable().optional(),
   /** Komu je náhled adresovaný - jen do oslovení. */
   jmeno: z.string().trim().max(200).nullable().optional(),
   /**
@@ -79,9 +81,18 @@ export async function POST(req: NextRequest) {
 
   const html =
     d.typ === 'potvrzeni'
-      ? buildPotvrzeniAkceHtml({ ...spolecne, dorazi: true, odpovedi: ukazkove })
+      ? buildPotvrzeniAkceHtml({
+          ...spolecne,
+          dorazi: true,
+          text: d.textPotvrzeni || null,
+          odpovedi: ukazkove,
+        })
       : d.typ === 'pripomenuti'
-        ? buildPripomenutiAkceHtml({ ...spolecne, text: d.text || null, odpovedi: ukazkove })
+        ? buildPripomenutiAkceHtml({
+            ...spolecne,
+            text: d.textPripomenuti || null,
+            odpovedi: ukazkove,
+          })
         : buildPozvankaAkceHtml({
             ...spolecne,
             text: d.text || null,

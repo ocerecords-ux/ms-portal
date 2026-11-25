@@ -37,19 +37,53 @@ type Detail = {
   misto: string;
   /** Vlastní odkaz na mapu. Prázdno = hledání místa na Mapách Google. */
   mapa: string;
+  /** Text POZVÁNKY. Potvrzení a připomínka mají každé svůj, viz níž. */
   text: string;
+  textPotvrzeni: string;
+  textPripomenuti: string;
   odpovedDo: string;
 };
 
 /** Otázky se drží zvlášť - jsou to řádky, ne políčko formuláře. */
 
-const PRAZDNA: Detail = { id: '', nazev: '', kdy: '', misto: '', mapa: '', text: '', odpovedDo: '' };
+const PRAZDNA: Detail = {
+  id: '',
+  nazev: '',
+  kdy: '',
+  misto: '',
+  mapa: '',
+  text: '',
+  textPotvrzeni: '',
+  textPripomenuti: '',
+  odpovedDo: '',
+};
 
 /** Tři maily, které z pozvánky odcházejí - náhled se mezi nimi přepíná. */
 const DRUHY_NAHLEDU = [
-  { klic: 'pozvanka' as const, nazev: 'Pozvánka', popis: 'Co odejde tlačítkem Rozeslat.' },
-  { klic: 'potvrzeni' as const, nazev: 'Potvrzení', popis: 'Přijde hned po vyplnění ankety.' },
-  { klic: 'pripomenuti' as const, nazev: 'Připomínka', popis: 'Den předem, jen tomu, kdo dorazí.' },
+  {
+    klic: 'pozvanka' as const,
+    nazev: 'Pozvánka',
+    popis: 'Co odejde tlačítkem Rozeslat.',
+    pole: 'text' as const,
+    nadpis: 'Text pozvánky',
+    vzor: 'Krátký text pozvánky.\n\nPrázdný řádek dělá odstavec - sem patří instrukce: kdy dorazit, jak se tam dostat, co s sebou.',
+  },
+  {
+    klic: 'potvrzeni' as const,
+    nazev: 'Potvrzení',
+    popis: 'Přijde hned po vyplnění ankety.',
+    pole: 'textPotvrzeni' as const,
+    nadpis: 'Text potvrzení',
+    vzor: 'Prázdné = „díky, máme to. Počítáme s vámi — tady je, co jste vyplnil(a):"\n\nCo sem napíšeš, tu větu nahradí. Odpovědi, termín a tlačítka zůstanou.',
+  },
+  {
+    klic: 'pripomenuti' as const,
+    nazev: 'Připomínka',
+    popis: 'Den předem, jen tomu, kdo dorazí.',
+    pole: 'textPripomenuti' as const,
+    nadpis: 'Text připomínky',
+    vzor: 'Prázdné = „zítra se vidíme. Jen připomínáme, kdy a kde:"\n\nSem patří to, co se hodí den předem: kdy dorazit, kde zaparkovat, co s sebou. Text pozvánky se sem nekopíruje.',
+  },
 ];
 
 const SKUPINY: { klic: Kandidat['skupina']; nazev: string }[] = [
@@ -99,6 +133,9 @@ export function AkceSprava({
   const pole =
     'rounded-lg border border-line bg-field px-3 py-2.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full';
 
+  /** Mail, který je zrovna v náhledu - a jehož text se zrovna píše. */
+  const vybranyDruh = DRUHY_NAHLEDU.find((d) => d.klic === druhNahledu) ?? DRUHY_NAHLEDU[0];
+
   /**
    * NÁHLED MAILU. Skládá ho server toutéž funkcí, která mail doopravdy
    * posílá - jinak by náhled dřív nebo později ukazoval něco jiného, než co
@@ -110,6 +147,8 @@ export function AkceSprava({
     misto: detail.misto,
     mapa: detail.mapa,
     text: detail.text,
+    textPotvrzeni: detail.textPotvrzeni,
+    textPripomenuti: detail.textPripomenuti,
     odpovedDo: detail.odpovedDo,
     typ: druhNahledu,
     // Potvrzení i připomínka vypisují odpovědi - náhled je ukáže podle toho,
@@ -197,6 +236,8 @@ export function AkceSprava({
       misto: detail.misto || null,
       mapa: detail.mapa || null,
       text: detail.text || null,
+      textPotvrzeni: detail.textPotvrzeni || null,
+      textPripomenuti: detail.textPripomenuti || null,
       odpovedDo: detail.odpovedDo || null,
       otazky,
     };
@@ -255,18 +296,31 @@ export function AkceSprava({
     }
   }
 
-  async function rozesli(ids?: string[]) {
+  /**
+   * ROZESLÁNÍ. Bez `ids` jde pozvánka všem, komu ještě neodešla; s jedním id
+   * jen tomu jednomu (zadání 25. 11. 2026: „mělo by jít rozesílat pozvánky po
+   * jednom, ne jen hromadně") - u každého člověka v seznamu je na to
+   * tlačítko.
+   */
+  async function rozesli(ids?: string[], komu?: string) {
     if (!detail.id) return;
     const kolik = ids?.length ?? pozvanky.filter((p) => !p.odeslanoAt).length;
     if (kolik === 0) {
       setHlaska('Všem už pozvánka odešla.');
       return;
     }
-    if (!window.confirm(`Odeslat ${kolik} pozvánek?`)) return;
+    const otazka = komu
+      ? `Poslat pozvánku: ${komu}?`
+      : kolik === 1
+        ? 'Odeslat 1 pozvánku?'
+        : kolik < 5
+          ? `Odeslat ${kolik} pozvánky?`
+          : `Odeslat ${kolik} pozvánek?`;
+    if (!window.confirm(otazka)) return;
     await posli(
       `/api/admin/akce/${encodeURIComponent(detail.id)}/odeslat`,
       ids ? { pozvanky: ids } : {},
-      'Rozesláno.',
+      komu ? 'Pozvánka odeslána.' : 'Rozesláno.',
     );
   }
 
@@ -455,13 +509,35 @@ export function AkceSprava({
             />
           </label>
         </div>
+        {/* TEXT KAŽDÉHO MAILU ZVLÁŠŤ (zadání 25. 11. 2026: „nemůžu měnit
+            všechny verze notifikací - myslím textově"). Píše se do toho
+            mailu, který je zrovna v náhledu vpravo - přepínač nad náhledem
+            přepíná obojí naráz, aby bylo vidět, co se zrovna mění. */}
         <label className="flex flex-col gap-1.5">
-          <span className={popisek}>Text a instrukce</span>
+          <span className="flex items-center justify-between gap-2 flex-wrap">
+            <span className={popisek}>{vybranyDruh.nadpis}</span>
+            <span className="flex items-center gap-1.5">
+              {DRUHY_NAHLEDU.map((d) => (
+                <button
+                  key={d.klic}
+                  type="button"
+                  onClick={() => setDruhNahledu(d.klic)}
+                  className={`rounded-pill border px-2.5 py-1 text-xs font-heading font-semibold transition-colors ${
+                    druhNahledu === d.klic
+                      ? 'border-brand-green bg-brand-green text-onAccent'
+                      : 'border-line text-muted hover:border-brand-purple'
+                  }`}
+                >
+                  {d.nazev}
+                </button>
+              ))}
+            </span>
+          </span>
           <textarea
-            value={detail.text}
-            onChange={(e) => setDetail({ ...detail, text: e.target.value })}
+            value={detail[vybranyDruh.pole]}
+            onChange={(e) => setDetail({ ...detail, [vybranyDruh.pole]: e.target.value })}
             rows={6}
-            placeholder={'Krátký text pozvánky.\n\nPrázdný řádek dělá odstavec - sem patří instrukce: kdy dorazit, jak se tam dostat, co s sebou.'}
+            placeholder={vybranyDruh.vzor}
             className={pole}
           />
         </label>
@@ -913,25 +989,29 @@ export function AkceSprava({
                       </span>
                     )}
                     <span className="ml-auto flex items-center gap-3">
-                      {p.odeslanoAt ? (
-                        <button
-                          type="button"
-                          onClick={() => void rozesli([p.id])}
-                          disabled={pracuje}
-                          className="text-xs font-heading font-semibold text-muted hover:text-brand-purple"
-                        >
-                          Poslat znovu
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => void odeber(p.id)}
-                          disabled={pracuje}
-                          className="text-xs font-heading font-semibold text-danger"
-                        >
-                          Odebrat
-                        </button>
-                      )}
+                      {/* POSLAT JEDNOMU (25. 11. 2026). U nepozvaného je to
+                          hlavní tlačítko - hromadné Rozeslat zůstává nahoře
+                          pro ty, komu ještě nic nešlo. */}
+                      <button
+                        type="button"
+                        onClick={() => void rozesli([p.id], `${p.jmeno} (${p.email})`)}
+                        disabled={pracuje}
+                        className={
+                          p.odeslanoAt
+                            ? 'text-xs font-heading font-semibold text-muted hover:text-brand-purple'
+                            : 'rounded-lg bg-brand-green px-2.5 py-1 text-xs font-heading font-semibold text-onAccent hover:bg-brand-greenDeep transition-colors disabled:opacity-60'
+                        }
+                      >
+                        {p.odeslanoAt ? 'Poslat znovu' : 'Poslat'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void odeber(p.id)}
+                        disabled={pracuje}
+                        className="text-xs font-heading font-semibold text-danger"
+                      >
+                        Odebrat
+                      </button>
                     </span>
                   </li>
                 ))}
