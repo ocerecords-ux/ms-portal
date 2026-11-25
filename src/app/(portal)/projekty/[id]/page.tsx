@@ -212,7 +212,25 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     prisma.recordingRequest.findMany({
       where: { caflouProjectId },
       orderBy: { createdAt: 'desc' },
-      include: { studio: { select: { name: true } }, slots: { select: { state: true } } },
+      include: {
+        studio: { select: { name: true } },
+        /**
+         * KONKRÉTNÍ TERMÍNY, NE JEN POČTY (zadání 25. 11. 2026: „potřebuju,
+         * ať někde v natáčecím plánu jde zkopírovat všechny frekvence
+         * s vybraným hercem - jen studio, jméno herce a datum a čas od kdy do
+         * kdy"). Studio se bere u termínu, ne u nabídky - herec si může
+         * vybrat místo v jiném studiu téhož města.
+         */
+        slots: {
+          orderBy: { start: 'asc' },
+          select: {
+            state: true,
+            start: true,
+            end: true,
+            studio: { select: { name: true, timezone: true } },
+          },
+        },
+      },
     }),
     prisma.user.findMany({
       where: { role: 'HEREC', active: true },
@@ -903,6 +921,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             confirmedCount: r.slots.filter((s) => s.state === 'CONFIRMED').length,
             status: r.status,
             createdAt: r.createdAt.toISOString(),
+            terminy: r.slots.map((s) => ({
+              state: s.state,
+              start: s.start.toISOString(),
+              end: s.end.toISOString(),
+              studioName: s.studio.name,
+              timezone: s.studio.timezone,
+            })),
           }))}
       canManage={canManageCalendar(session.user.role)}
     />

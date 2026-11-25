@@ -8,7 +8,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { mestoStudia, posledniDenFrekvence, prvniDenFrekvence } from '@/lib/volnaMista';
 import { VyberStudii } from '@/components/VyberStudii';
-import { kodJazyka } from '@/lib/jazyk';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
@@ -22,6 +22,14 @@ function klicFrekvenci(pocet: number): string {
   return 'natacPlan.normostranVic';
 }
 
+type Termin = {
+  state: string;
+  start: string;
+  end: string;
+  studioName: string;
+  timezone: string;
+};
+
 type Nabidka = {
   id: string;
   actorName: string;
@@ -32,7 +40,72 @@ type Nabidka = {
   confirmedCount: number;
   status: string;
   createdAt: string;
+  /** Konkrétní termíny nabídky - z nich se skládá text ke zkopírování. */
+  terminy: Termin[];
 };
+
+/**
+ * KOPIE FREKVENCÍ JEDNOHO HERCE (zadání 25. 11. 2026: „potřebuju, ať někde
+ * v natáčecím plánu jde zkopírovat všechny frekvence s vybraným hercem - jen
+ * studio, jméno herce a datum a čas od kdy do kdy").
+ *
+ * Co se kopíruje: POTVRZENÉ A DRŽENÉ termíny, tedy to, co opravdu stojí
+ * v kalendáři. Dokud si herec nevybral, zkopírují se nabídnuté - jinak by
+ * tlačítko u čerstvé nabídky vracelo prázdno.
+ *
+ * Řádek je jedna frekvence a nic víc: `Studio · Herec · datum · čas od-do`.
+ * Je to text do mailu nebo do zprávy, ne tabulka - proto bez stavů, poznámek
+ * a odkazů.
+ */
+export function terminyKeKopii(r: Nabidka): Termin[] {
+  const zavazne = r.terminy.filter((t) => t.state === 'CONFIRMED' || t.state === 'SELECTED');
+  if (zavazne.length > 0) return zavazne;
+  return r.terminy.filter((t) => t.state === 'OFFERED');
+}
+
+/** Jeden řádek kopie. Datum i čas v pásmu studia, ne prohlížeče. */
+export function radekTerminu(r: Nabidka, t: Termin, jazyk: Jazyk): string {
+  const pasmo = t.timezone || 'Europe/Prague';
+  const datum = new Intl.DateTimeFormat(kodJazyka(jazyk), {
+    timeZone: pasmo,
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  }).format(new Date(t.start));
+  const cas = (hodnota: string) =>
+    new Intl.DateTimeFormat(kodJazyka(jazyk), {
+      timeZone: pasmo,
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(hodnota));
+  return `${t.studioName} · ${r.actorName} · ${datum} · ${cas(t.start)}-${cas(t.end)}`;
+}
+
+/**
+ * Popisky tlačítka. Zůstávají tady a ne ve slovníku - v lib/jazyk.ts běží
+ * překladová dávka a nové klíče by se tloukly (stejně jako u Techniky,
+ * admin/technika/TechnikaSprava.tsx).
+ */
+const TEXTY_KOPIE = {
+  cs: {
+    kopirovat: 'Kopírovat termíny',
+    zkopirovano: 'Zkopírováno',
+    popis: 'Zkopíruje do schránky řádky „studio · herec · datum · čas od-do" pro všechny frekvence tohoto herce.',
+    vyzva: 'Zkopírujte termíny:',
+  },
+  en: {
+    kopirovat: 'Copy dates',
+    zkopirovano: 'Copied',
+    popis: 'Copies lines "studio · actor · date · time from-to" for all of this actor\u2019s sessions.',
+    vyzva: 'Copy the dates:',
+  },
+} as const;
+
+export function textTerminu(r: Nabidka, jazyk: Jazyk): string {
+  return terminyKeKopii(r)
+    .map((t) => radekTerminu(r, t, jazyk))
+    .join('\n');
+}
 
 /**
  * Natáčecí frekvence na projektové kartě (zadani 8. 9. 2026). Ukazuje, kolik
@@ -288,6 +361,26 @@ export function RecordingSection({
    */
   const [upominam, setUpominam] = useState<string | null>(null);
 
+  const tk = TEXTY_KOPIE[jazyk === 'en' ? 'en' : 'cs'];
+
+  /** Které nabídce se právě zkopírovaly termíny - jen kvůli hlášce u tlačítka. */
+  const [zkopirovano, setZkopirovano] = useState<string | null>(null);
+
+  async function zkopirujTerminy(r: Nabidka) {
+    const text = textTerminu(r, jazyk);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setZkopirovano(r.id);
+      setTimeout(() => setZkopirovano((akt) => (akt === r.id ? null : akt)), 2000);
+    } catch {
+      // Prohlížeč bez schránky (starší, nebo bez https) - ať to aspoň
+      // neselže tiše a člověk si text označí sám. Stejně jako u odkazů
+      // (components/OdkazTlacitko.tsx).
+      window.prompt(tk.vyzva, text);
+    }
+  }
+
   async function upomen(id: string) {
     setUpominam(id);
     setError(null);
@@ -405,6 +498,31 @@ export function RecordingSection({
                 >
                   {nazevStavuNabidky(r.status, jazyk)}
                 </span>
+                {/* KOPIE FREKVENCÍ (25. 11. 2026). Vidí ji každý, kdo na plán
+                    kouká - je to jen čtení do schránky. Bez termínů se
+                    tlačítko neukáže, aby nekopírovalo prázdno. */}
+                {terminyKeKopii(r).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void zkopirujTerminy(r)}
+                    title={tk.popis}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1 text-xs font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.9"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3.5 h-3.5"
+                    >
+                      <rect x="9" y="9" width="11" height="11" rx="2" />
+                      <path d="M5 15V5a2 2 0 0 1 2-2h8" />
+                    </svg>
+                    {zkopirovano === r.id ? tk.zkopirovano : tk.kopirovat}
+                  </button>
+                )}
                 {/* Upomínka jen tam, kde se opravdu čeká na herce. */}
                 {canManage && ['SENT', 'PICKING', 'RETURNED'].includes(r.status) && (
                   <button
