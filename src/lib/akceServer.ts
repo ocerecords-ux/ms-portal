@@ -4,6 +4,7 @@ import { INTERNAL_ROLES, ROBOT_ROLES } from '@/lib/roles';
 import {
   ocistiOdpovedi,
   ocistiOtazky,
+  sOtazkouDorazi,
   type Kandidat,
   type Odpovedi,
   type Otazka,
@@ -82,9 +83,12 @@ export async function kandidatiNaPozvanku(): Promise<Kandidat[]> {
   }
 }
 
-/** Otázky akce, očištěné - z databáze přijdou jako JSON. */
+/**
+ * Otázky akce, očištěné - z databáze přijdou jako JSON. Základní „dorazíte?"
+ * je vždycky první, i u akce založené dřív, než šla upravovat.
+ */
 export function otazkyAkce(akce: { otazky?: unknown } | null): Otazka[] {
-  return ocistiOtazky(akce?.otazky ?? []);
+  return sOtazkouDorazi(ocistiOtazky(akce?.otazky ?? []));
 }
 
 /**

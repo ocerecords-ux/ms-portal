@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Odpovedi, Otazka } from '@/lib/akce';
+import { KLIC_DORAZI, otazkyPoDorazeni, type Odpovedi, type Otazka } from '@/lib/akce';
 
 /**
  * DOTAZNÍK U POZVÁNKY (zadání 25. 11. 2026: „dotazník, zda někdo potřebuje
@@ -95,24 +95,32 @@ export function FormularPozvanky({
         : 'border-line bg-surface text-muted hover:border-brand-purple hover:text-brand-purple'
     }`;
 
+  /** Základní otázka - text i popisky tlačítek si pořadatel přepsal sám. */
+  const zakladni = otazky.find((o) => o.id === KLIC_DORAZI);
+
   return (
     <div className="flex flex-col gap-5 border-t border-line pt-5">
       <div className="flex flex-col gap-2">
-        <span className="font-heading font-semibold text-sm text-ink">{jmeno}, dorazíte?</span>
+        <span className="font-heading font-semibold text-sm text-ink">
+          {jmeno}, {zakladni?.text ?? 'dorazíte?'}
+        </span>
+        {zakladni?.napoveda && (
+          <span className="font-body text-xs text-muted">{zakladni.napoveda}</span>
+        )}
         {doKdy && <span className="font-body text-xs text-muted">Odpovězte prosím do {doKdy}.</span>}
         <div className="flex gap-2 mt-1">
           <button type="button" onClick={() => setDorazi(true)} className={volba(dorazi === true)}>
-            Dorazím
+            {zakladni?.ano || 'Dorazím'}
           </button>
           <button type="button" onClick={() => setDorazi(false)} className={volba(dorazi === false)}>
-            Nedorazím
+            {zakladni?.ne || 'Nedorazím'}
           </button>
         </div>
       </div>
 
       {/* Zbytek ankety nemá smysl u toho, kdo nepřijede. */}
       {dorazi === true &&
-        otazky.map((o) => (
+        otazkyPoDorazeni(otazky).map((o) => (
           <div key={o.id} className="flex flex-col gap-2">
             <span className="font-heading font-semibold text-sm text-ink">{o.text}</span>
             {o.napoveda && <span className="font-body text-xs text-muted">{o.napoveda}</span>}
@@ -124,14 +132,14 @@ export function FormularPozvanky({
                   onClick={() => nastav(o.id, true)}
                   className={volba(odpovedi[o.id] === true)}
                 >
-                  Ano
+                  {o.ano || 'Ano'}
                 </button>
                 <button
                   type="button"
                   onClick={() => nastav(o.id, false)}
                   className={volba(odpovedi[o.id] === false)}
                 >
-                  Ne
+                  {o.ne || 'Ne'}
                 </button>
               </div>
             )}

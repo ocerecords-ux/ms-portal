@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { ocistiOtazky, type Odpovedi } from '@/lib/akce';
+import { type Odpovedi } from '@/lib/akce';
+import { otazkyAkce } from '@/lib/akceServer';
 import { FormularPozvanky } from './FormularPozvanky';
 
 /**
@@ -81,7 +82,7 @@ export default async function StrankaPozvanky({ params }: { params: { token: str
           jmeno={pozvanka.jmeno}
           doKdy={doKdy}
           uzOdpovedel={Boolean(pozvanka.odpovedelAt)}
-          otazky={ocistiOtazky(akce.otazky ?? [])}
+          otazky={otazkyAkce(akce as { otazky?: unknown })}
           puvodni={{
             dorazi: pozvanka.dorazi,
             odpovedi: ((pozvanka.odpovedi ?? {}) as Odpovedi),

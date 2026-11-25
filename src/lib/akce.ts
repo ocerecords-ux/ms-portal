@@ -31,6 +31,17 @@ export type Otazka = {
   vicMoznosti?: boolean;
   /** Věta pod otázkou - proč se ptáme, co tam napsat. */
   napoveda?: string | null;
+  /** Jen u ANO_NE: popisky tlačítek. Bez nich prosté „Ano" a „Ne". */
+  ano?: string;
+  ne?: string;
+  /**
+   * ZÁKLADNÍ OTÁZKA - „dorazíte?". Text i popisky tlačítek se u ní mění jako
+   * u každé jiné (zadání 25. 11. 2026: „ty anketní otázky chci upravovat
+   * všechny"), ale smazat ani přetypovat nejde: na její odpovědi stojí celý
+   * přehled (kdo přijde, pro koho chystat postel) a zbytek ankety se ptá jen
+   * těch, kdo dorazí.
+   */
+  zaklad?: boolean;
 };
 
 export const TYPY_OTAZEK: { typ: TypOtazky; nazev: string; popis: string }[] = [
@@ -55,7 +66,21 @@ export const VYCHOZI_PITI = [
  * potřebuje ubytování nebo ne" + „a kdo co pije"). Pořadatel si to pak
  * upraví, smaže nebo přidá svoje.
  */
+/** Klíč základní otázky. Odpověď na ni se ukládá do vlastního sloupce. */
+export const KLIC_DORAZI = 'dorazi';
+
+export const VYCHOZI_DORAZI: Otazka = {
+  id: KLIC_DORAZI,
+  text: 'Dorazíte?',
+  typ: 'ANO_NE',
+  ano: 'Dorazím',
+  ne: 'Nedorazím',
+  napoveda: null,
+  zaklad: true,
+};
+
 export const VYCHOZI_OTAZKY: Otazka[] = [
+  VYCHOZI_DORAZI,
   { id: 'ubytovani', text: 'Potřebujete přespat?', typ: 'ANO_NE', napoveda: null },
   {
     id: 'piti',
@@ -104,13 +129,35 @@ export function ocistiOtazky(vstup: unknown): Otazka[] {
     hotove.push({
       id,
       text,
-      typ,
-      ...(typ === 'VYBER' ? { moznosti, vicMoznosti: o.vicMoznosti !== false } : {}),
+      // Základní otázka je vždycky ano/ne - přetypovat ji nejde.
+      typ: id === KLIC_DORAZI ? 'ANO_NE' : typ,
+      ...(typ === 'VYBER' && id !== KLIC_DORAZI
+        ? { moznosti, vicMoznosti: o.vicMoznosti !== false }
+        : {}),
+      ...(o.ano ? { ano: String(o.ano).trim().slice(0, 60) } : {}),
+      ...(o.ne ? { ne: String(o.ne).trim().slice(0, 60) } : {}),
+      ...(id === KLIC_DORAZI ? { zaklad: true } : {}),
       napoveda: o.napoveda ? String(o.napoveda).trim().slice(0, 300) : null,
     });
     if (hotove.length >= 30) break;
   }
   return hotove;
+}
+
+/**
+ * Seznam otázek tak, jak se ptáme: základní „dorazíte?" vždycky první.
+ * Když ji někdo z dat vyhodí (starší akce, ruční zásah), doplní se výchozí -
+ * anketa bez ní nedává smysl.
+ */
+export function sOtazkouDorazi(otazky: Otazka[]): Otazka[] {
+  const zaklad = otazky.find((o) => o.id === KLIC_DORAZI);
+  const zbytek = otazky.filter((o) => o.id !== KLIC_DORAZI);
+  return [{ ...VYCHOZI_DORAZI, ...(zaklad ?? {}), zaklad: true, typ: 'ANO_NE' }, ...zbytek];
+}
+
+/** Otázky, na které se ptáme až po „dorazím" - tedy všechny ostatní. */
+export function otazkyPoDorazeni(otazky: Otazka[]): Otazka[] {
+  return otazky.filter((o) => o.id !== KLIC_DORAZI);
 }
 
 /** Odpovědi na vlastní otázky: klíč otázky → odpověď podle jejího typu. */
@@ -168,7 +215,9 @@ export type Kandidat = {
 export function souhrnAkce(pozvanky: PozvankaPrehled[], otazky: Otazka[]) {
   const dorazi = pozvanky.filter((p) => p.dorazi === true);
 
-  const podleOtazek = otazky.map((o) => {
+  // „Dorazíte?" má vlastní počty nahoře, mezi ostatními otázkami by se jen
+  // zdvojila.
+  const podleOtazek = otazkyPoDorazeni(otazky).map((o) => {
     if (o.typ === 'ANO_NE') {
       const ano = dorazi.filter((p) => p.odpovedi[o.id] === true).length;
       const ne = dorazi.filter((p) => p.odpovedi[o.id] === false).length;
@@ -215,10 +264,10 @@ export function souhrnAkce(pozvanky: PozvankaPrehled[], otazky: Otazka[]) {
 /** Odpověď jednoho člověka do jedné věty - do seznamu pozvaných. */
 export function popisOdpovedi(otazky: Otazka[], odpovedi: Odpovedi): string {
   const kousky: string[] = [];
-  for (const o of otazky) {
+  for (const o of otazkyPoDorazeni(otazky)) {
     const hodnota = odpovedi[o.id];
     if (hodnota === undefined) continue;
-    if (o.typ === 'ANO_NE') kousky.push(`${o.text} ${hodnota ? 'ano' : 'ne'}`);
+    if (o.typ === 'ANO_NE') kousky.push(`${o.text} ${hodnota ? (o.ano ?? 'ano') : (o.ne ?? 'ne')}`);
     else if (Array.isArray(hodnota)) kousky.push(hodnota.join(', '));
     else kousky.push(String(hodnota));
   }
