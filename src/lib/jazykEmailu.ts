@@ -1205,6 +1205,28 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
   'mail.navrhyHercu.typProjekt': { cs: 'projekt', en: 'the project' },
   'mail.navrhyHercu.textOdkaz': { cs: 'Vybrat herce:', en: 'Pick an actor:' },
   'mail.zapracovani.textOdkaz': { cs: 'Poslechnout a pripominkovat:', en: 'Listen and comment:' },
+
+  // --- POZVANKA NA FIREMNI AKCI (25. 11. 2026) ---
+  // Text akce pise poradatel ve formulari, tady jsou jen ramy kolem nej.
+  'mail.akce.stitek': { cs: 'Pozvánka', en: 'Invitation' },
+  'mail.akce.predmet': { cs: 'Pozvánka: {nazev}', en: 'Invitation: {nazev}' },
+  'mail.akce.preheader': {
+    cs: '{nazev} — dejte nám prosím vědět, jestli dorazíte.',
+    en: '{nazev} — please let us know whether you are coming.',
+  },
+  'mail.akce.kdy': { cs: 'Kdy', en: 'When' },
+  'mail.akce.kde': { cs: 'Kde', en: 'Where' },
+  'mail.akce.odpovedDo': { cs: 'Odpovězte prosím do', en: 'Please reply by' },
+  'mail.akce.dotaznik': {
+    cs: 'V odkazu je pár otázek: jestli dorazíte, jestli potřebujete přespat a co pijete.',
+    en: 'The link asks a few questions: whether you are coming, whether you need a bed and what you drink.',
+  },
+  'mail.akce.tlacitko': { cs: 'Odpovědět na pozvánku', en: 'Reply to the invitation' },
+  'mail.akce.textOtevrit': { cs: 'Odpovědět můžete tady:', en: 'You can reply here:' },
+  'mail.akce.odkazJeTvuj': {
+    cs: 'Odkaz je jen váš, nikam ho prosím nepřeposílejte.',
+    en: 'The link is yours alone, please do not forward it.',
+  },
 };
 
 /** Přeloží klíč pošty. Co ve slovníku není, projde česky - a je to vidět. */

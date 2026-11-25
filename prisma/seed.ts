@@ -201,6 +201,7 @@ async function main() {
   await odkazyNaHovory();
   await ranniPrehledOndrejovi();
   await siteJenOndrejovi();
+  await akceJenOndrejovi();
   await zalozTechnickeParametry();
   await palubovkaJenOndrejovi();
   await zalozHistoriiPortalu();
@@ -458,6 +459,40 @@ async function siteJenOndrejovi() {
     console.log(`  site: modul zapnut jen u ${ondrej.email}`);
   } catch (err) {
     console.warn('  site se nepodarilo zapnout:', err);
+  }
+}
+
+/**
+ * AKCE A POZVANKY JEN ONDREJOVI (zadani 25. 11. 2026: „pozvanky na vanocni
+ * vecirek… chci to ovladat jen ja").
+ *
+ * Tentyz postup jako u modulu Site: jednou nastavit a dal uz to ma v ruce
+ * Administrace. Priznak je na karte uctu, takze az to ma prevzit nekdo
+ * dalsi, nesaha se kvuli tomu do kodu.
+ */
+async function akceJenOndrejovi() {
+  const ZNAMKA = 'akce-jen-ondrej';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const ondrej = await prisma.user.findFirst({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        name: { contains: 'Ondřej Černý', mode: 'insensitive' },
+        NOT: { name: { contains: 'ml.', mode: 'insensitive' } },
+      },
+      select: { id: true, email: true },
+    });
+    if (!ondrej) {
+      console.warn('  akce: Ondrejuv ucet nenalezen, sekce se nikomu nezapina');
+      return;
+    }
+    await prisma.user.update({ where: { id: ondrej.id }, data: { spravujeAkce: true } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  akce: sekce zapnuta jen u ${ondrej.email}`);
+  } catch (err) {
+    console.warn('  akce se nepodarilo zapnout:', err);
   }
 }
 

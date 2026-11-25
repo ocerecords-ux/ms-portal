@@ -591,6 +591,12 @@ model User {
   /// 27. 9. 2026: „zatím uvidím jen já"). Zapíná se v Administraci; seed ho
   /// jednou zapne Ondřejovi a nikomu jinému.
   vidiSite       Boolean   @default(false)
+  /// SPRAVUJE FIREMNÍ AKCE (zadání 25. 11. 2026: „pozvánky na vánoční
+  /// večírek, abych mohl rozeslat ze systému… chci to ovládat jen já").
+  /// Kdo to nemá, o sekci Akce vůbec neví - pozvánku dostane mailem jako
+  /// každý jiný. Příznak u účtu, ne jméno v kódu: až to má převzít někdo
+  /// další, překlikne se to v Administraci.
+  spravujeAkce   Boolean   @default(false)
   /// Spravuje technické parametry výroby (zadání 27. 9. 2026: „měnit to můžu
   /// hromadně já nebo Peter. Ostatní zvukaři by to neměli mít možnost
   /// upravovat"). Kdo to nemá, vidí parametry jen ke čtení. Příznak u účtu,
@@ -6195,4 +6201,75 @@ model StopaMeta {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+
+/// FIREMNÍ AKCE A POZVÁNKY (zadání 25. 11. 2026: „pozvánky na vánoční
+/// večírek, abych mohl rozeslat ze systému. Mělo by to obsahovat krátký text
+/// a instrukce a dotazník, zda někdo potřebuje ubytování nebo ne" + „a kdo co
+/// pije").
+///
+/// PROČ VLASTNÍ MODEL A NE JEDNORÁZOVÁ STRÁNKA: večírek je každý rok a jinou
+/// akci (vánoce, letní grilovačka, školení) je pak otázka pěti minut. Text
+/// i instrukce píše pořadatel do formuláře, v kódu žádný není.
+model Akce {
+  id        String   @id @default(cuid())
+  nazev     String
+  /// Kdy to začíná. Prázdno = termín se teprve hledá, do pozvánky se nepíše.
+  kdy       DateTime?
+  misto     String?
+  /// Krátký text a instrukce - jak je pořadatel napíše, tak odejdou.
+  text      String?
+  /// Dokdy se má odpovědět. Jen prosba v textu, nic se po něm nezavírá.
+  odpovedDo DateTime?
+
+  /// Kdo akci založil - jméno do patičky mailu a do přehledu.
+  zalozilId    String?
+  zalozilJmeno String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pozvanky PozvankaNaAkci[]
+}
+
+/// JEDNA POZVÁNKA = JEDEN ČLOVĚK = JEDEN ODKAZ.
+///
+/// Odpovídá se z mailu, bez přihlašování (stejně jako u výzev klientům):
+/// pozvánka jde i klientům a hostům, kteří účet v portálu nemají, a nikdo
+/// nemá vyplňovat dotazník přes přihlašovací okno.
+///
+/// Odpovědi jsou schválně NULLABLE: „ještě neodpověděl" je jiný stav než
+/// „nepřijede" a v přehledu se to musí poznat.
+model PozvankaNaAkci {
+  id     String @id @default(cuid())
+  akceId String
+  akce   Akce   @relation(fields: [akceId], references: [id], onDelete: Cascade)
+
+  /// Účet v portálu, když ho ten člověk má. Bez vazby schválně - pozvánka
+  /// má přežít i smazaný účet a jméno s adresou si drží sama.
+  userId String?
+  jmeno  String
+  email  String
+  /// Odkaz v mailu. Náhodný, jako u ostatních otevřených odkazů v portálu.
+  token  String @unique
+
+  odeslanoAt  DateTime?
+  odpovedelAt DateTime?
+
+  /// Dorazí? Prázdno = ještě neodpověděl.
+  dorazi    Boolean?
+  /// Potřebuje přespat?
+  ubytovani Boolean?
+  /// Co pije - klíče z lib/akce.ts, ne volný text, ať se to dá sečíst.
+  piti      String[] @default([])
+  /// Upřesnění k pití („suché bílé") a cokoliv dalšího.
+  pitiText  String?
+  poznamka  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([akceId, email])
+  @@index([akceId])
 }

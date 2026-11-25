@@ -98,6 +98,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/studia': ['ADMIN'],
   // Technika a kde ktera je (zadani 22. 10. 2026) - inventura studii.
   '/admin/technika': ['ADMIN'],
+  // Firemni akce a pozvanky (zadani 25. 11. 2026: „chci to ovladat jen ja").
+  // Role je jen hrube sito; kdo sekci opravdu vidi, rozhoduje priznak
+  // spravujeAkce na karte uctu - viz lib/akceServer.ts.
+  '/admin/akce': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],
   '/admin/archiv': ['ADMIN'],
   // Site - priprava prispevku na Instagram a LinkedIn (zadani 27. 9. 2026:
@@ -222,6 +226,9 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/studia', label: 'Studia' },
   { href: '/admin/technika', label: 'Technika' },
+  // Akce a pozvanky (25. 11. 2026) - v nabidce je pro kazdeho, ale komu
+  // priznak chybi, toho stranka posle zpatky na projekty.
+  { href: '/admin/akce', label: 'Akce' },
   // Pribehy na Instagram (6. 10. 2026) - zvukar si odkaz prida sam.
   { href: '/site/pribehy', label: 'Příběhy' },
   { href: '/admin/doklady', label: 'Doklady' },

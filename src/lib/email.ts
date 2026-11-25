@@ -4501,3 +4501,108 @@ export async function sendUpominkaTerminuEmail(input: UpominkaTerminuInput) {
 
   return overOdeslani(vysledekPosty, 'sendUpominkaTerminuEmail');
 }
+
+
+// ===========================================================================
+// POZVANKA NA FIREMNI AKCI (zadani 25. 11. 2026: „pozvanky na vanocni
+// vecirek, abych mohl rozeslat ze systemu. Melo by to obsahovat kratky text
+// a instrukce a dotaznik, zda nekdo potrebuje ubytovani nebo ne" + „a kdo co
+// pije").
+//
+// TEXT PISE PORADATEL, NE KOD. Sablona kolem nej jen drzi hlavicku, termin,
+// misto a tlacitko na dotaznik - at se da stejnym mailem pozvat na vanoce
+// i na grilovacku, aniz by se sahalo do kodu.
+// ===========================================================================
+
+type PozvankaAkceInput = {
+  to: string;
+  jmenoPrijemce: string | null;
+  nazevAkce: string;
+  kdy: Date | null;
+  misto: string | null;
+  /** Kratky text a instrukce z formulare - jak je napsany, tak odejde. */
+  text: string | null;
+  odpovedDo: Date | null;
+  odkaz: string;
+  jazyk?: Jazyk;
+};
+
+/** Odstavce z toho, co poradatel napsal. Prazdne radky deli odstavce. */
+function odstavceTextu(text: string): string {
+  return text
+    .split(/\n{2,}/)
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .map((o) => `<p>${escapeHtml(o).replace(/\n/g, '<br />')}</p>`)
+    .join('');
+}
+
+export function buildPozvankaAkceHtml(input: PozvankaAkceInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.akce.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.akce.preheader', { nazev: input.nazevAkce }),
+    body: `
+    <span class="badge">${prelozitEmail(jazyk, 'mail.akce.stitek')}</span>
+    <h2>${escapeHtml(input.nazevAkce)}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
+    ${input.text ? odstavceTextu(input.text) : ''}
+
+    <table role="presentation" class="field-table">
+      ${
+        input.kdy
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.akce.kdy')}</td><td class="value">${datumCasPosty(jazyk, input.kdy)}</td></tr>`
+          : ''
+      }
+      ${
+        input.misto
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.akce.kde')}</td><td class="value regular">${escapeHtml(input.misto)}</td></tr>`
+          : ''
+      }
+      ${
+        input.odpovedDo
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.akce.odpovedDo')}</td><td class="value">${datumPosty(jazyk, input.odpovedDo)}</td></tr>`
+          : ''
+      }
+    </table>
+
+    <p>${prelozitEmail(jazyk, 'mail.akce.dotaznik')}</p>
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.akce.tlacitko')}</a>
+    </div>
+    <p class="small">${prelozitEmail(jazyk, 'mail.akce.odkazJeTvuj')}</p>
+  `,
+  });
+}
+
+export async function sendPozvankaAkceEmail(input: PozvankaAkceInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: prelozitEmailS(jazyk, 'mail.akce.predmet', { nazev: input.nazevAkce }),
+    text: [
+      pozdravPosty(jazyk, input.jmenoPrijemce),
+      '',
+      input.text ?? '',
+      '',
+      input.kdy ? `${prelozitEmail(jazyk, 'mail.akce.kdy')}: ${datumCasPosty(jazyk, input.kdy)}` : '',
+      input.misto ? `${prelozitEmail(jazyk, 'mail.akce.kde')}: ${input.misto}` : '',
+      input.odpovedDo
+        ? `${prelozitEmail(jazyk, 'mail.akce.odpovedDo')}: ${datumPosty(jazyk, input.odpovedDo)}`
+        : '',
+      '',
+      prelozitEmail(jazyk, 'mail.akce.textOtevrit'),
+      input.odkaz,
+    ]
+      .filter((r) => r !== '')
+      .join('\n'),
+    html: buildPozvankaAkceHtml(input),
+  });
+
+  return overOdeslani(vysledekPosty, 'sendPozvankaAkceEmail');
+}
