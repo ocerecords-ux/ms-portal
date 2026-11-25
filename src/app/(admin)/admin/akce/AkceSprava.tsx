@@ -56,6 +56,8 @@ export function AkceSprava({
   const [pracuje, setPracuje] = useState(false);
   const [nahledHtml, setNahledHtml] = useState<string | null>(null);
   const [kreslim, setKreslim] = useState(false);
+  /** Náhled přes celou obrazovku - stejné okno jako u náhledu zpráv. */
+  const [velkyNahled, setVelkyNahled] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
 
@@ -287,7 +289,7 @@ export function AkceSprava({
       {/* VŠECHNO NA JEDNÉ STRÁNCE (25. 11. 2026): vlevo se píše a vybírá,
           vpravo je vidět, co z toho vznikne. Na úzké obrazovce jde náhled
           pod ovládání, ať se nic nemačká. */}
-      <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
+      <div className="grid gap-5 items-start lg:grid-cols-2">
         <div className="flex flex-col gap-5 min-w-0">
 
       {/* 1. POZVÁNKA */}
@@ -562,16 +564,30 @@ export function AkceSprava({
         {/* NÁHLED - mail a anketa pohromadě. */}
         <div className="flex flex-col gap-4 min-w-0 lg:sticky lg:top-24">
           <section className="rounded-card border border-line bg-surface p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <h2 className="font-heading font-semibold text-base text-ink m-0">Jak přijde mail</h2>
-              {kreslim && <span className="text-xs font-body text-muted">překresluju…</span>}
+              <span className="flex items-center gap-3">
+                {kreslim && <span className="text-xs font-body text-muted">překresluju…</span>}
+                {nahledHtml && (
+                  <button
+                    type="button"
+                    onClick={() => setVelkyNahled(true)}
+                    className="rounded-lg border border-line px-2.5 py-1.5 text-xs font-heading font-semibold text-brand-purple hover:border-brand-purple transition-colors"
+                  >
+                    Zvětšit
+                  </button>
+                )}
+              </span>
             </div>
             {nahledHtml ? (
+              /* Rám je „papírový" jako u Rodného listu: člověk se má dívat na
+                 dokument, ne na políčko prohlížeče. Výška podle obrazovky, ať
+                 je vidět celý mail, ne jen jeho hlavička. */
               <iframe
                 title="Náhled pozvánky"
                 srcDoc={nahledHtml}
                 sandbox=""
-                className="w-full h-[440px] rounded-lg border border-line bg-white"
+                className="w-full h-[70vh] min-h-[520px] rounded-lg border border-line bg-white shadow-md"
               />
             ) : (
               <p className="text-sm font-body text-muted m-0">
@@ -602,6 +618,45 @@ export function AkceSprava({
           </section>
         </div>
       </div>
+
+      {/* NÁHLED PŘES CELOU OBRAZOVKU (25. 11. 2026: „ten náhled je malý.
+          Musí to být jako u notifikací a RL"). Stejné okno jako u náhledu
+          odeslaných zpráv - klepnutí vedle ho zavře. */}
+      {velkyNahled && nahledHtml && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setVelkyNahled(false)}
+        >
+          <div
+            className="flex h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-card border border-line bg-surface shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+                  Náhled pozvánky
+                </p>
+                <p className="m-0 truncate text-sm font-heading text-ink">
+                  {detail.nazev || 'Název akce'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVelkyNahled(false)}
+                className="shrink-0 rounded-lg border border-line px-2.5 py-1.5 text-xs font-heading font-semibold text-ink hover:bg-field transition-colors"
+              >
+                Zavřít
+              </button>
+            </div>
+            <iframe
+              title="Náhled pozvánky přes celou obrazovku"
+              srcDoc={nahledHtml}
+              sandbox=""
+              className="flex-1 w-full border-0 bg-white"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
