@@ -35,13 +35,22 @@ type Detail = {
   nazev: string;
   kdy: string;
   misto: string;
+  /** Vlastní odkaz na mapu. Prázdno = hledání místa na Mapách Google. */
+  mapa: string;
   text: string;
   odpovedDo: string;
 };
 
 /** Otázky se drží zvlášť - jsou to řádky, ne políčko formuláře. */
 
-const PRAZDNA: Detail = { id: '', nazev: '', kdy: '', misto: '', text: '', odpovedDo: '' };
+const PRAZDNA: Detail = { id: '', nazev: '', kdy: '', misto: '', mapa: '', text: '', odpovedDo: '' };
+
+/** Tři maily, které z pozvánky odcházejí - náhled se mezi nimi přepíná. */
+const DRUHY_NAHLEDU = [
+  { klic: 'pozvanka' as const, nazev: 'Pozvánka', popis: 'Co odejde tlačítkem Rozeslat.' },
+  { klic: 'potvrzeni' as const, nazev: 'Potvrzení', popis: 'Přijde hned po vyplnění ankety.' },
+  { klic: 'pripomenuti' as const, nazev: 'Připomínka', popis: 'Den předem, jen tomu, kdo dorazí.' },
+];
 
 const SKUPINY: { klic: Kandidat['skupina']; nazev: string }[] = [
   { klic: 'TYM', nazev: 'Tým' },
@@ -80,6 +89,7 @@ export function AkceSprava({
   const [rucniMail, setRucniMail] = useState('');
   const [pracuje, setPracuje] = useState(false);
   const [nahledHtml, setNahledHtml] = useState<string | null>(null);
+  const [druhNahledu, setDruhNahledu] = useState<'pozvanka' | 'potvrzeni' | 'pripomenuti'>('pozvanka');
   const [kreslim, setKreslim] = useState(false);
   /** Náhled přes celou obrazovku - stejné okno jako u náhledu zpráv. */
   const [velkyNahled, setVelkyNahled] = useState(false);
@@ -98,8 +108,13 @@ export function AkceSprava({
     nazev: detail.nazev,
     kdy: detail.kdy,
     misto: detail.misto,
+    mapa: detail.mapa,
     text: detail.text,
     odpovedDo: detail.odpovedDo,
+    typ: druhNahledu,
+    // Potvrzení i připomínka vypisují odpovědi - náhled je ukáže podle toho,
+    // jak je anketa rozepsaná teď.
+    otazky,
   });
   useEffect(() => {
     let platne = true;
@@ -180,6 +195,7 @@ export function AkceSprava({
       nazev: detail.nazev,
       kdy: detail.kdy || null,
       misto: detail.misto || null,
+      mapa: detail.mapa || null,
       text: detail.text || null,
       odpovedDo: detail.odpovedDo || null,
       otazky,
@@ -417,6 +433,15 @@ export function AkceSprava({
               value={detail.misto}
               onChange={(e) => setDetail({ ...detail, misto: e.target.value })}
               placeholder="Adresa nebo název podniku"
+              className={pole}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className={popisek}>Odkaz na mapu</span>
+            <input
+              value={detail.mapa}
+              onChange={(e) => setDetail({ ...detail, mapa: e.target.value })}
+              placeholder="Nepovinné - bez něj se hledá místo na Mapách Google"
               className={pole}
             />
           </label>
@@ -935,6 +960,29 @@ export function AkceSprava({
                 )}
               </span>
             </div>
+            {/* TŘI MAILY POD SEBOU (zadání 25. 11. 2026: „ukaž, jak to bude
+                vypadat"). Přepínač, ne tři rámy vedle sebe - mail je vysoký
+                a tři zmenšené by si nikdo nepřečetl. */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {DRUHY_NAHLEDU.map((d) => (
+                <button
+                  key={d.klic}
+                  type="button"
+                  onClick={() => setDruhNahledu(d.klic)}
+                  title={d.popis}
+                  className={`rounded-pill border px-3 py-1.5 text-xs font-heading font-semibold transition-colors ${
+                    druhNahledu === d.klic
+                      ? 'border-brand-green bg-brand-green text-onAccent'
+                      : 'border-line text-ink hover:border-brand-purple'
+                  }`}
+                >
+                  {d.nazev}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs font-body text-muted m-0">
+              {DRUHY_NAHLEDU.find((d) => d.klic === druhNahledu)?.popis}
+            </p>
             {nahledHtml ? (
               /* Rám je „papírový" jako u Rodného listu: člověk se má dívat na
                  dokument, ne na políčko prohlížeče. Výška podle obrazovky, ať

@@ -153,6 +153,27 @@ export function datumZPrahy(hodnota: string | null | undefined): Date | null {
   return new Date(druhy);
 }
 
+/**
+ * ODKAZ S MAPKOU (zadání 25. 11. 2026: „rovnou odkaz s mapkou").
+ *
+ * Když pořadatel vloží vlastní odkaz (konkrétní špendlík v mapě, stránka
+ * podniku), použije se ten. Jinak se z místa poskládá hledání na Mapách
+ * Google - to otevře kdokoliv, na mobilu i v prohlížeči, bez účtu a bez
+ * aplikace. Prázdné místo = žádné tlačítko, ať mail neposílá lidi hledat
+ * „null". Stejné pravidlo jako u pozvánek hostům na natáčení
+ * (lib/hosteNataceni.ts); tady zvlášť, protože tenhle soubor čte i prohlížeč
+ * a serverová knihovna by se do něj netáhla.
+ */
+export function odkazNaMapu(misto: string | null | undefined, mapa?: string | null): string | null {
+  const vlastni = (mapa ?? '').trim();
+  if (/^https?:\/\//i.test(vlastni)) return vlastni;
+  const kde = (misto ?? '').trim();
+  if (!kde) return null;
+  // Místo samo může být odkaz - pak se nehledá, jde se na něj.
+  if (/^https?:\/\//i.test(kde)) return kde;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(kde)}`;
+}
+
 /** Klíč nové otázky. Náhodný, aby se dvě stejně pojmenované nepřekryly. */
 export function novyKlicOtazky(): string {
   return `o${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -314,6 +335,29 @@ export function souhrnAkce(pozvanky: PozvankaPrehled[], otazky: Otazka[]) {
     nedorazi: pozvanky.filter((p) => p.dorazi === false).length,
     otazky: podleOtazek,
   };
+}
+
+/**
+ * Odpovědi po řádcích - otázka a co na ni ten člověk odpověděl. Do potvrzení
+ * a připomínky, kde je na tabulku místo (na rozdíl od seznamu pozvaných,
+ * kde se vejde jedna věta - viz popisOdpovedi níž).
+ */
+export function radkyOdpovedi(otazky: Otazka[], odpovedi: Odpovedi): { otazka: string; odpoved: string }[] {
+  const radky: { otazka: string; odpoved: string }[] = [];
+  for (const o of otazkyPoDorazeni(otazky)) {
+    const hodnota = odpovedi[o.id];
+    if (hodnota === undefined) continue;
+    const odpoved =
+      o.typ === 'ANO_NE'
+        ? hodnota
+          ? (o.ano ?? 'Ano')
+          : (o.ne ?? 'Ne')
+        : Array.isArray(hodnota)
+          ? hodnota.join(', ')
+          : String(hodnota);
+    if (odpoved.trim()) radky.push({ otazka: o.text, odpoved });
+  }
+  return radky;
 }
 
 /** Odpověď jednoho člověka do jedné věty - do seznamu pozvaných. */

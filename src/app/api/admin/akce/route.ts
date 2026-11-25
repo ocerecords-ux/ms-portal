@@ -17,6 +17,8 @@ const schema = z.object({
   nazev: z.string().trim().min(1, 'Název je povinný.').max(200),
   kdy: z.string().trim().max(40).nullable().optional(),
   misto: z.string().trim().max(300).nullable().optional(),
+  /** Vlastní odkaz na mapu; bez něj se hledá místo na Mapách Google. */
+  mapa: z.string().trim().max(500).nullable().optional(),
   text: z.string().trim().max(8000).nullable().optional(),
   odpovedDo: z.string().trim().max(40).nullable().optional(),
   /** Anketa - pořadatel si ji skládá sám (25. 11. 2026). */
@@ -43,6 +45,7 @@ export async function POST(req: NextRequest) {
         nazev: d.nazev,
         kdy: datumZPrahy(d.kdy),
         misto: d.misto || null,
+        mapa: d.mapa || null,
         text: d.text || null,
         odpovedDo: datumZPrahy(d.odpovedDo),
         // Nová akce začíná s výchozí anketou; pořadatel si ji hned upraví.

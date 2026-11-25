@@ -60,6 +60,7 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
         nazev: string;
         kdy: Date | null;
         misto: string | null;
+        mapa: string | null;
         text: string | null;
         odpovedDo: Date | null;
         otazky?: unknown;
@@ -76,6 +77,7 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
               nazev: a.nazev,
               kdy: proVstup(a.kdy, true),
               misto: a.misto ?? '',
+              mapa: a.mapa ?? '',
               text: a.text ?? '',
               odpovedDo: proVstup(a.odpovedDo, false),
             }

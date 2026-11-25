@@ -6223,6 +6223,9 @@ model Akce {
   /// Kdy to začíná. Prázdno = termín se teprve hledá, do pozvánky se nepíše.
   kdy       DateTime?
   misto     String?
+  /// ODKAZ S MAPKOU (25. 11. 2026). Nepovinný - bez něj se do pozvánky dá
+  /// hledání místa na Mapách Google, viz odkazNaMapu v lib/akce.ts.
+  mapa      String?
   /// Krátký text a instrukce - jak je pořadatel napíše, tak odejdou.
   text      String?
   /// Dokdy se má odpovědět. Jen prosba v textu, nic se po něm nezavírá.
@@ -6266,6 +6269,12 @@ model PozvankaNaAkci {
 
   odeslanoAt  DateTime?
   odpovedelAt DateTime?
+  /// Kdy člověku odešlo potvrzení jeho odpovědi (25. 11. 2026). Přepíše se
+  /// při každé změně odpovědi - potvrzení chodí na tu poslední.
+  potvrzeniAt DateTime?
+  /// Kdy odešla připomínka den předem. Jednou a dost - cron běží každý den
+  /// a bez tohohle razítka by připomínal pořád dokola.
+  pripomenutoAt DateTime?
 
   /// Dorazí? Prázdno = ještě neodpověděl.
   dorazi    Boolean?

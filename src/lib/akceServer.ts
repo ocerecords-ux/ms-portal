@@ -2,14 +2,20 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { INTERNAL_ROLES, ROBOT_ROLES } from '@/lib/roles';
 import {
+  datumZPrahy,
   ocistiOdpovedi,
   ocistiOtazky,
+  odkazNaMapu,
+  radkyOdpovedi,
   sOtazkouDorazi,
   type Kandidat,
   type Odpovedi,
   type Otazka,
   type PozvankaPrehled,
 } from '@/lib/akce';
+import { sendPotvrzeniAkceEmail, sendPripomenutiAkceEmail } from '@/lib/email';
+import { jazykPodleEmailu } from '@/lib/jazykPrijemce';
+import { zakladniAdresa } from '@/lib/aplikace';
 
 export type { Kandidat };
 
@@ -183,25 +189,163 @@ export async function zapisOdpoved(
   odpoved: { dorazi: boolean; odpovedi: unknown },
 ): Promise<boolean> {
   try {
-    const pozvanka = await prisma.pozvankaNaAkci.findUnique({
+    const pozvanka = (await prisma.pozvankaNaAkci.findUnique({
       where: { token },
-      select: { id: true, akce: { select: { otazky: true } } },
-    });
+      select: {
+        id: true,
+        jmeno: true,
+        email: true,
+        akce: { select: { nazev: true, kdy: true, misto: true, mapa: true, otazky: true } },
+      },
+    })) as {
+      id: string;
+      jmeno: string;
+      email: string;
+      akce: { nazev: string; kdy: Date | null; misto: string | null; mapa: string | null; otazky?: unknown };
+    } | null;
     if (!pozvanka) return false;
 
     const otazky = otazkyAkce(pozvanka.akce as { otazky?: unknown } | null);
+    const ulozene = odpoved.dorazi ? ocistiOdpovedi(otazky, odpoved.odpovedi) : {};
     await prisma.pozvankaNaAkci.update({
       where: { id: pozvanka.id },
       data: {
         dorazi: odpoved.dorazi,
         // Kdo nedorazí, u toho zbytek ankety nedává smysl.
-        odpovedi: odpoved.dorazi ? ocistiOdpovedi(otazky, odpoved.odpovedi) : {},
+        odpovedi: ulozene,
         odpovedelAt: new Date(),
+        // Odpověď se dá přepsat - a pak má přijít i nová připomínka s tím,
+        // co člověk vyplnil teď.
+        pripomenutoAt: null,
       },
     });
+
+    // POTVRZENÍ CHODÍ HNED (zadání 25. 11. 2026). Když pošta zlobí, odpověď
+    // už je uložená - mail se kvůli tomu nesmí vrátit jako chyba formuláře.
+    await posliPotvrzeni({
+      token,
+      id: pozvanka.id,
+      jmeno: pozvanka.jmeno,
+      email: pozvanka.email,
+      akce: pozvanka.akce,
+      otazky,
+      dorazi: odpoved.dorazi,
+      odpovedi: ulozene,
+    }).catch((err) => console.error('Potvrzení odpovědi se nepodařilo odeslat:', err));
+
     return true;
   } catch (err) {
     console.error('Odpověď na pozvánku se nepodařilo uložit:', err);
     return false;
   }
+}
+
+/** Potvrzení té odpovědi, kterou člověk právě odeslal. */
+async function posliPotvrzeni(vstup: {
+  token: string;
+  id: string;
+  jmeno: string;
+  email: string;
+  akce: { nazev: string; kdy: Date | null; misto: string | null; mapa: string | null };
+  otazky: Otazka[];
+  dorazi: boolean;
+  odpovedi: Odpovedi;
+}): Promise<void> {
+  const vysledek = await sendPotvrzeniAkceEmail({
+    to: vstup.email,
+    jmenoPrijemce: vstup.jmeno,
+    nazevAkce: vstup.akce.nazev,
+    kdy: vstup.akce.kdy,
+    misto: vstup.akce.misto,
+    odkaz: `${zakladniAdresa()}/pozvanka/${vstup.token}`,
+    mapa: odkazNaMapu(vstup.akce.misto, vstup.akce.mapa),
+    dorazi: vstup.dorazi,
+    odpovedi: radkyOdpovedi(vstup.otazky, vstup.odpovedi),
+    jazyk: await jazykPodleEmailu(vstup.email),
+  });
+  if (!vysledek.sent) return;
+  await prisma.pozvankaNaAkci.update({
+    where: { id: vstup.id },
+    data: { potvrzeniAt: new Date() },
+  });
+}
+
+/**
+ * PŘIPOMÍNKA DEN PŘEDEM (zadání 25. 11. 2026: „pak připomínací mail den
+ * dopředu, když člověk potvrdí účast, kde mu přijde připomenutí a rovnou
+ * odkaz s mapkou").
+ *
+ * KOMU: jen tomu, kdo řekl, že dorazí. Kdo neodpověděl nebo se omluvil,
+ * připomínku nedostane - ta má být službou, ne naháněním.
+ *
+ * KDY: cron běží každé ráno a vezme akce, které začínají ZÍTRA v čase Prahy.
+ * Razítko `pripomenutoAt` hlídá, že odejde jednou; po změně odpovědi se
+ * maže, takže kdo potvrdí na poslední chvíli, připomínku ještě dostane.
+ */
+export async function pripomenAkce(): Promise<{ odeslano: number; akci: number }> {
+  const ted = new Date();
+  const zitra = new Date(ted.getTime() + 24 * 60 * 60 * 1000);
+  const den = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(zitra);
+  const od = datumZPrahy(`${den}T00:00`);
+  const doKdy = datumZPrahy(`${den}T23:59`);
+  if (!od || !doKdy) return { odeslano: 0, akci: 0 };
+
+  const akce = (await prisma.akce.findMany({
+    where: { kdy: { gte: od, lte: doKdy } },
+  })) as {
+    id: string;
+    nazev: string;
+    kdy: Date | null;
+    misto: string | null;
+    mapa: string | null;
+    text: string | null;
+    otazky?: unknown;
+  }[];
+  if (akce.length === 0) return { odeslano: 0, akci: 0 };
+
+  const zaklad = zakladniAdresa();
+  let odeslano = 0;
+
+  for (const a of akce) {
+    const otazky = otazkyAkce(a as { otazky?: unknown });
+    const mapa = odkazNaMapu(a.misto, a.mapa);
+    const pozvanky = (await prisma.pozvankaNaAkci.findMany({
+      where: { akceId: a.id, dorazi: true, pripomenutoAt: null },
+      orderBy: { jmeno: 'asc' },
+    })) as unknown as {
+      id: string;
+      jmeno: string;
+      email: string;
+      token: string;
+      odpovedi: unknown;
+    }[];
+
+    for (const p of pozvanky) {
+      try {
+        const vysledek = await sendPripomenutiAkceEmail({
+          to: p.email,
+          jmenoPrijemce: p.jmeno,
+          nazevAkce: a.nazev,
+          kdy: a.kdy,
+          misto: a.misto,
+          text: a.text,
+          odkaz: `${zaklad}/pozvanka/${p.token}`,
+          mapa,
+          odpovedi: radkyOdpovedi(otazky, (p.odpovedi ?? {}) as Odpovedi),
+          jazyk: await jazykPodleEmailu(p.email),
+        });
+        if (!vysledek.sent) continue;
+        await prisma.pozvankaNaAkci.update({
+          where: { id: p.id },
+          data: { pripomenutoAt: new Date() },
+        });
+        odeslano += 1;
+      } catch (err) {
+        // Jedna neprůchozí adresa nesmí zastavit zbytek rozesílky.
+        console.error(`Připomínku akce ${a.id} se nepodařilo odeslat na ${p.email}:`, err);
+      }
+    }
+  }
+
+  return { odeslano, akci: akce.length };
 }

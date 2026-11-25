@@ -4524,6 +4524,8 @@ type PozvankaAkceInput = {
   text: string | null;
   odpovedDo: Date | null;
   odkaz: string;
+  /** Hotový odkaz na mapu (lib/akce.ts). Prázdno = tlačítko se neukáže. */
+  mapa?: string | null;
   jazyk?: Jazyk;
 };
 
@@ -4535,6 +4537,13 @@ function odstavceTextu(text: string): string {
     .filter(Boolean)
     .map((o) => `<p>${escapeHtml(o).replace(/\n/g, '<br />')}</p>`)
     .join('');
+}
+
+/** Tlačítko na mapu. Tmavé, aby hlavní zelené zůstalo to důležité. */
+function tlacitkoMapy(jazyk: Jazyk, mapa: string | null | undefined): string {
+  const odkaz = (mapa ?? '').trim();
+  if (!odkaz) return '';
+  return `&nbsp;<a href="${escapeHtml(odkaz)}" class="cta-dark">${prelozitEmail(jazyk, 'mail.akce.mapa')}</a>`;
 }
 
 export function buildPozvankaAkceHtml(input: PozvankaAkceInput): string {
@@ -4569,6 +4578,7 @@ export function buildPozvankaAkceHtml(input: PozvankaAkceInput): string {
 
     <div class="cta-row">
       <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.akce.tlacitko')}</a>
+      ${tlacitkoMapy(jazyk, input.mapa)}
     </div>
     <p class="small">${prelozitEmail(jazyk, 'mail.akce.odkazJeTvuj')}</p>
   `,
@@ -4604,4 +4614,200 @@ export async function sendPozvankaAkceEmail(input: PozvankaAkceInput) {
   });
 
   return overOdeslani(vysledekPosty, 'sendPozvankaAkceEmail');
+}
+
+
+// ===========================================================================
+// POTVRZENI ODPOVEDI A PRIPOMINKA DEN PREDEM (zadani 25. 11. 2026: „chtelo by
+// to pak potvrzovaci email, kdyz clovek vyplni formular, a pak pripominaci
+// mail den dopredu, kdyz clovek potvrdi ucast, kde mu prijde pripomenuti
+// a rovnou odkaz s mapkou").
+//
+// OBA MAILY STOJI NA TYCH SAMYCH UDAJICH jako pozvanka - jen jinak zaramovane.
+// Odpovedi se do nich pisou tak, jak je clovek vyplnil (popisOdpovedi
+// v lib/akce.ts), aby nebylo potreba druhe misto, kde se anketa popisuje.
+// ===========================================================================
+
+type OdpovedRadek = { otazka: string; odpoved: string };
+
+type PotvrzeniAkceInput = {
+  to: string;
+  jmenoPrijemce: string | null;
+  nazevAkce: string;
+  kdy: Date | null;
+  misto: string | null;
+  odkaz: string;
+  mapa?: string | null;
+  /** Dorazí? Podle toho se liší celý mail, ne jen jedna věta. */
+  dorazi: boolean;
+  /** Co vyplnil - otázka a jeho odpověď, už v lidské podobě. */
+  odpovedi: OdpovedRadek[];
+  jazyk?: Jazyk;
+};
+
+/** Kdy a kde do tabulky - stejné dva řádky mají potvrzení i připomínka. */
+function radkyKdyKde(jazyk: Jazyk, kdy: Date | null, misto: string | null): string {
+  return `
+      ${
+        kdy
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.akce.kdy')}</td><td class="value">${datumCasPosty(jazyk, kdy)}</td></tr>`
+          : ''
+      }
+      ${
+        misto
+          ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.akce.kde')}</td><td class="value regular">${escapeHtml(misto)}</td></tr>`
+          : ''
+      }`;
+}
+
+function radkyOdpovedi(odpovedi: OdpovedRadek[]): string {
+  return odpovedi
+    .filter((o) => o.odpoved.trim())
+    .map(
+      (o) =>
+        `<tr><td class="label">${escapeHtml(o.otazka)}</td><td class="value regular">${escapeHtml(o.odpoved)}</td></tr>`,
+    )
+    .join('');
+}
+
+export function buildPotvrzeniAkceHtml(input: PotvrzeniAkceInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  const odpovedi = input.dorazi ? radkyOdpovedi(input.odpovedi) : '';
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.akcePotvrzeni.stitek'),
+    preheader: prelozitEmail(
+      jazyk,
+      input.dorazi ? 'mail.akcePotvrzeni.preheader' : 'mail.akcePotvrzeni.preheaderNedorazi',
+    ),
+    body: `
+    <span class="badge">${prelozitEmail(jazyk, 'mail.akcePotvrzeni.stitek')}</span>
+    <h2>${escapeHtml(input.nazevAkce)}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
+    <p>${prelozitEmail(jazyk, input.dorazi ? 'mail.akcePotvrzeni.uvod' : 'mail.akcePotvrzeni.uvodNedorazi')}</p>
+
+    <table role="presentation" class="field-table">
+      ${input.dorazi ? radkyKdyKde(jazyk, input.kdy, input.misto) : ''}
+      ${odpovedi}
+    </table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.akcePotvrzeni.tlacitko')}</a>
+      ${input.dorazi ? tlacitkoMapy(jazyk, input.mapa) : ''}
+    </div>
+    <p class="small">${prelozitEmail(jazyk, 'mail.akcePotvrzeni.zmena')}</p>
+  `,
+  });
+}
+
+export async function sendPotvrzeniAkceEmail(input: PotvrzeniAkceInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: prelozitEmailS(
+      jazyk,
+      input.dorazi ? 'mail.akcePotvrzeni.predmet' : 'mail.akcePotvrzeni.predmetNedorazi',
+      { nazev: input.nazevAkce },
+    ),
+    text: [
+      pozdravPosty(jazyk, input.jmenoPrijemce),
+      '',
+      prelozitEmail(jazyk, input.dorazi ? 'mail.akcePotvrzeni.uvod' : 'mail.akcePotvrzeni.uvodNedorazi'),
+      '',
+      input.dorazi && input.kdy
+        ? `${prelozitEmail(jazyk, 'mail.akce.kdy')}: ${datumCasPosty(jazyk, input.kdy)}`
+        : '',
+      input.dorazi && input.misto ? `${prelozitEmail(jazyk, 'mail.akce.kde')}: ${input.misto}` : '',
+      ...(input.dorazi ? input.odpovedi.filter((o) => o.odpoved.trim()).map((o) => `${o.otazka}: ${o.odpoved}`) : []),
+      '',
+      prelozitEmail(jazyk, 'mail.akcePotvrzeni.zmena'),
+      input.odkaz,
+      input.dorazi && input.mapa ? `${prelozitEmail(jazyk, 'mail.akcePripomenuti.textMapa')} ${input.mapa}` : '',
+    ]
+      .filter((r) => r !== '')
+      .join('\n'),
+    html: buildPotvrzeniAkceHtml(input),
+  });
+
+  return overOdeslani(vysledekPosty, 'sendPotvrzeniAkceEmail');
+}
+
+type PripomenutiAkceInput = {
+  to: string;
+  jmenoPrijemce: string | null;
+  nazevAkce: string;
+  kdy: Date | null;
+  misto: string | null;
+  /** Krátký text pořadatele - v připomínce se hodí instrukce (co s sebou). */
+  text: string | null;
+  odkaz: string;
+  mapa?: string | null;
+  odpovedi: OdpovedRadek[];
+  jazyk?: Jazyk;
+};
+
+export function buildPripomenutiAkceHtml(input: PripomenutiAkceInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.akcePripomenuti.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.akcePripomenuti.preheader', { nazev: input.nazevAkce }),
+    body: `
+    <span class="badge">${prelozitEmail(jazyk, 'mail.akcePripomenuti.stitek')}</span>
+    <h2>${escapeHtml(input.nazevAkce)}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
+    <p>${prelozitEmail(jazyk, 'mail.akcePripomenuti.uvod')}</p>
+
+    <table role="presentation" class="field-table">
+      ${radkyKdyKde(jazyk, input.kdy, input.misto)}
+      ${radkyOdpovedi(input.odpovedi)}
+    </table>
+
+    ${input.text ? odstavceTextu(input.text) : ''}
+
+    <div class="cta-row">
+      ${
+        input.mapa
+          ? `<a href="${escapeHtml(input.mapa)}" class="cta">${prelozitEmail(jazyk, 'mail.akce.mapa')}</a>&nbsp;`
+          : ''
+      }
+      <a href="${escapeHtml(input.odkaz)}" class="cta-dark">${prelozitEmail(jazyk, 'mail.akcePripomenuti.tlacitkoPozvanka')}</a>
+    </div>
+    <p class="small">${prelozitEmail(jazyk, 'mail.akcePripomenuti.zmena')}</p>
+  `,
+  });
+}
+
+export async function sendPripomenutiAkceEmail(input: PripomenutiAkceInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const vysledekPosty = await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: prelozitEmailS(jazyk, 'mail.akcePripomenuti.predmet', { nazev: input.nazevAkce }),
+    text: [
+      pozdravPosty(jazyk, input.jmenoPrijemce),
+      '',
+      prelozitEmail(jazyk, 'mail.akcePripomenuti.uvod'),
+      input.kdy ? `${prelozitEmail(jazyk, 'mail.akce.kdy')}: ${datumCasPosty(jazyk, input.kdy)}` : '',
+      input.misto ? `${prelozitEmail(jazyk, 'mail.akce.kde')}: ${input.misto}` : '',
+      input.mapa ? `${prelozitEmail(jazyk, 'mail.akcePripomenuti.textMapa')} ${input.mapa}` : '',
+      '',
+      input.text ?? '',
+      '',
+      prelozitEmail(jazyk, 'mail.akcePripomenuti.zmena'),
+      input.odkaz,
+    ]
+      .filter((r) => r !== '')
+      .join('\n'),
+    html: buildPripomenutiAkceHtml(input),
+  });
+
+  return overOdeslani(vysledekPosty, 'sendPripomenutiAkceEmail');
 }

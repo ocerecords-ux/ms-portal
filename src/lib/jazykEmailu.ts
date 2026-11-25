@@ -1223,6 +1223,55 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     cs: 'Odkaz je jen váš, nikam ho prosím nepřeposílejte.',
     en: 'The link is yours alone, please do not forward it.',
   },
+  'mail.akce.mapa': { cs: 'Ukázat cestu', en: 'Show directions' },
+
+  // --- POTVRZENI ODPOVEDI (25. 11. 2026) ---
+  'mail.akcePotvrzeni.stitek': { cs: 'Potvrzení', en: 'Confirmation' },
+  'mail.akcePotvrzeni.predmet': { cs: 'Potvrzeno: {nazev}', en: 'Confirmed: {nazev}' },
+  'mail.akcePotvrzeni.predmetNedorazi': {
+    cs: 'Vaše odpověď: {nazev}',
+    en: 'Your reply: {nazev}',
+  },
+  'mail.akcePotvrzeni.preheader': {
+    cs: 'Máme to, počítáme s vámi.',
+    en: 'We have it, we are counting on you.',
+  },
+  'mail.akcePotvrzeni.preheaderNedorazi': {
+    cs: 'Máme to, počítáme bez vás.',
+    en: 'We have it, we are not counting on you.',
+  },
+  'mail.akcePotvrzeni.uvod': {
+    cs: 'díky, máme to. Počítáme s vámi — tady je, co jste vyplnil(a):',
+    en: 'thank you, we have it. We are counting on you — here is what you filled in:',
+  },
+  'mail.akcePotvrzeni.uvodNedorazi': {
+    cs: 'díky za zprávu. Počítáme bez vás — kdyby se to změnilo, stačí odpověď přepsat.',
+    en: 'thank you for letting us know. We will not count on you — if that changes, just rewrite your reply.',
+  },
+  'mail.akcePotvrzeni.odpovedi': { cs: 'Vaše odpovědi', en: 'Your answers' },
+  'mail.akcePotvrzeni.tlacitko': { cs: 'Změnit odpověď', en: 'Change your reply' },
+  'mail.akcePotvrzeni.zmena': {
+    cs: 'Odpověď jde kdykoliv změnit — otevřete pozvánku a vyplňte ji znovu.',
+    en: 'You can change your reply at any time — open the invitation and fill it in again.',
+  },
+
+  // --- PRIPOMINKA DEN PREDEM (25. 11. 2026) ---
+  'mail.akcePripomenuti.stitek': { cs: 'Připomínka', en: 'Reminder' },
+  'mail.akcePripomenuti.predmet': { cs: 'Zítra: {nazev}', en: 'Tomorrow: {nazev}' },
+  'mail.akcePripomenuti.preheader': {
+    cs: '{nazev} — zítra, tady je cesta na místo.',
+    en: '{nazev} — tomorrow, here is how to get there.',
+  },
+  'mail.akcePripomenuti.uvod': {
+    cs: 'zítra se vidíme. Jen připomínáme, kdy a kde:',
+    en: 'see you tomorrow. Just a reminder of when and where:',
+  },
+  'mail.akcePripomenuti.tlacitkoPozvanka': { cs: 'Otevřít pozvánku', en: 'Open the invitation' },
+  'mail.akcePripomenuti.textMapa': { cs: 'Cesta na místo:', en: 'Directions:' },
+  'mail.akcePripomenuti.zmena': {
+    cs: 'Kdyby se vám to na poslední chvíli nevyšlo, dejte prosím vědět — odpověď jde v pozvánce přepsat.',
+    en: 'If something comes up at the last minute, please let us know — you can rewrite your reply in the invitation.',
+  },
 };
 
 /** Přeloží klíč pošty. Co ve slovníku není, projde česky - a je to vidět. */
