@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Napoveda } from '@/components/Napoveda';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -155,6 +155,22 @@ function datumTextem(iso: string, jazyk: Jazyk): string {
  * data jen vypisou ke cteni; skutecnou kontrolu prav dela server (viz
  * /api/projects/[id]/meta).
  */
+/**
+ * Dva popisky k přepínači nabídky klientů. Zůstávají tady a ne v lib/jazyk.ts:
+ * tam běží překladová dávka a dvě ruce v jednom souboru končí přepsanou prací
+ * (stejně jako u Techniky a u kopie termínů).
+ */
+const TEXTY_KLIENTU = {
+  cs: {
+    vsichni: 'Ukázat i klienty z jiných firem',
+    jenFirma: 'Zpátky jen na klienty vybrané firmy',
+  },
+  en: {
+    vsichni: 'Show clients from other companies too',
+    jenFirma: 'Back to the selected company only',
+  },
+} as const;
+
 export function ProjectMetaForm({
   caflouProjectId,
   canEdit,
@@ -285,7 +301,31 @@ export function ProjectMetaForm({
   const router = useRouter();
   const jazyk = useJazyk();
   const t = usePreklad();
+  const kodTextu = jazyk === 'en' ? 'en' : 'cs';
   const [values, setValues] = useState<Initial>(initial);
+  /**
+   * Nabídka klientů se drží vybrané firmy (26. 11. 2026). Tohle je ruční
+   * „ukaž i ostatní" - kvůli koprodukcím, kde u projektu sedí člověk odjinud.
+   */
+  const [vsichniKlienti, setVsichniKlienti] = useState(false);
+
+  /** Klienti vybrané firmy. Bez firmy prázdno - tam se nabízí celý seznam. */
+  const klientiFirmy = useMemo(
+    () => (values.companyId ? klienti.filter((k) => k.companyId === values.companyId) : []),
+    [klienti, values.companyId],
+  );
+  /**
+   * Zbytek. S vybranou firmou se schová (viz zadání 26. 11. 2026). Zůstanou
+   * dva případy: KLIENT BEZ FIRMY - účet, který k firmě ještě nikdo
+   * nepřiřadil (stejně to má zakládání projektu, NovyProjektForm.tsx), a kdo
+   * je u projektu vybraný TEĎ - člověk z koprodukce by jinak z nabídky zmizel
+   * a při nejbližším uložení by se tiše ztratil.
+   */
+  const klientiOstatni = useMemo(() => {
+    const ostatni = klienti.filter((k) => !values.companyId || k.companyId !== values.companyId);
+    if (!values.companyId || vsichniKlienti) return ostatni;
+    return ostatni.filter((k) => !k.companyId || k.id === values.klientUserId);
+  }, [klienti, values.companyId, values.klientUserId, vsichniKlienti]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -1142,29 +1182,42 @@ export function ProjectMetaForm({
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               >
                 <option value="">{t('obecne.nevybrano')}</option>
-                {/* Nahore lide z vybrane firmy, pod nimi zbytek - u koprodukci
-                    sedi u projektu clovek odjinud, takze se nabidka neomezuje. */}
-                {values.companyId && klienti.some((k) => k.companyId === values.companyId) && (
+                {/* JEN KLIENTI VYBRANÉ FIRMY (zadání 26. 11. 2026: „když má
+                    navolenou firmu, tak mi musí vyjet jen klienti pod tou
+                    firmou, ne všichni"). Seznam klientů jsou stovky jmen
+                    a hledat mezi nimi toho jednoho z Con Gusta je zbytečná
+                    práce. Koprodukce tím nezaniká - odkazem pod polem se
+                    zbytek vypíše; a kdo u projektu sedí dnes, zůstane
+                    v nabídce vidět, i když je odjinud (jinak by se při
+                    uložení tiše ztratil). */}
+                {values.companyId && klientiFirmy.length > 0 && (
                   <optgroup label={t('projektMeta.klientZFirmy')}>
-                    {klienti
-                      .filter((k) => k.companyId === values.companyId)
-                      .map((k) => (
-                        <option key={k.id} value={k.id}>
-                          {k.label}
-                        </option>
-                      ))}
-                  </optgroup>
-                )}
-                <optgroup label={t('projektMeta.klientOstatni')}>
-                  {klienti
-                    .filter((k) => !values.companyId || k.companyId !== values.companyId)
-                    .map((k) => (
+                    {klientiFirmy.map((k) => (
                       <option key={k.id} value={k.id}>
                         {k.label}
                       </option>
                     ))}
-                </optgroup>
+                  </optgroup>
+                )}
+                {klientiOstatni.length > 0 && (
+                  <optgroup label={values.companyId ? t('projektMeta.klientOstatni') : ''}>
+                    {klientiOstatni.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </VyberPole>
+              {values.companyId && (
+                <button
+                  type="button"
+                  onClick={() => setVsichniKlienti((v) => !v)}
+                  className="self-start text-xs font-heading text-brand-purple hover:underline"
+                >
+                  {vsichniKlienti ? TEXTY_KLIENTU[kodTextu].jenFirma : TEXTY_KLIENTU[kodTextu].vsichni}
+                </button>
+              )}
               {/* PROJEKT S FIRMOU, ALE BEZ KLIENTA (zadání 12. 10. 2026:
                   „klient Radka Kopecká ho teď nevidí ve svých projektech").
                   Ručně zadaný projekt tohle pole běžně prázdné má a nikde to
