@@ -82,11 +82,17 @@ export function nazevTrackuSMezerami(text: string): string {
  *
  * ZA ČÍSLEM STOJÍ PODTRŽÍTKO NEBO MEZERA (16. 11. 2026). Náš tvar je
  * `01_NAZEV`, Audiotéka odevzdává `01 NAZEV` - číslo se přepisuje v obou.
+ *
+ * A TEČKA TAKY (oprava 26. 11. 2026: „když se v tracklistu rozdělí track,
+ * musí se změnit i číselná řada, nemůže tam být stejné číslo tracku").
+ * Seznamy, které přijdou od klienta nebo z obsahu knihy, bývají psané
+ * `01. KAPITOLA 1.` - na tenhle tvar vzorek nesedl, číslo se tedy
+ * nepřepisovalo a po rozdělení stopy zůstaly v seznamu dvě „01.".
  */
 export function precislujTracky<T extends { nazevTracku: string }>(seznam: T[]): T[] {
   return seznam.map((radek, i) => {
     // Bez vlajky /s - ta vyzaduje novejsi cil prekladu. [\s\S] delá totéž.
-    const shoda = /^\s*(\d{1,3})([_ ][\s\S]*)?$/.exec(radek.nazevTracku);
+    const shoda = /^\s*(\d{1,3})([._\- ][\s\S]*)?$/.exec(radek.nazevTracku);
     if (!shoda) return radek;
     return { ...radek, nazevTracku: `${cisloTracku(i + 1)}${shoda[2] ?? ''}` };
   });

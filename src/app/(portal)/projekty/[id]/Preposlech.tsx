@@ -245,6 +245,16 @@ export function Preposlech({
    */
   const mrizkaRef = useRef<HTMLDivElement | null>(null);
   const [vyskaSekce, setVyskaSekce] = useState<number | null>(null);
+  /**
+   * Je okno dost široké na dva sloupce vedle sebe (xl)? Pod tím se sloupce
+   * řadí pod sebe a stránka roluje - tam zůstávají původní výšky.
+   *
+   * SLOUPEC SE STOPAMI JE PŘESNĚ TAK VYSOKÝ JAKO TEXT (oprava 26. 11. 2026:
+   * „to roztažení tracků je moc, chtěl jsem to jen na velikost PDF, zbytek se
+   * doscroluje"). Bez tohohle se panel natahoval podle počtu stop a u knihy
+   * o osmdesáti stopách přerostl text o kus obrazovky.
+   */
+  const [siroko, setSiroko] = useState(false);
   /** Ktery zaznam se prave upravuje a co je v policku (zadani 12. 9. 2026). */
   const [upravovana, setUpravovana] = useState<string | null>(null);
   const [upravaText, setUpravaText] = useState('');
@@ -2078,9 +2088,11 @@ export function Preposlech({
       if (!mrizka || window.innerHeight < 200) return;
       if (window.innerWidth < 1280) {
         posledni = -1;
+        setSiroko(false);
         setVyskaSekce(null);
         return;
       }
+      setSiroko(true);
       const ramecek = mrizka.getBoundingClientRect();
       // Mimo fullscreen pocitame pozici v DOKUMENTU, ne v okne. Kdyby se
       // bralo ramecek.top, sekce by pri rolovani stranky rostla a smrskavala
@@ -2829,7 +2841,12 @@ export function Preposlech({
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 min-h-0 xl:h-full">
+        <div
+          className="flex flex-col gap-4 min-h-0"
+          /* Stejná výška jako sloupec s textem: buď změřená výška sekce, nebo
+             těch 72vh, na kterých stojí PDF, když se měření nepovede. */
+          style={siroko ? { height: vyskaSekce ?? '72vh' } : undefined}
+        >
           {/* V pravem sloupci zustava UZ JEN PREHRAVAC A STOPY (zadani
               12. 9. 2026: „vlevo bude pdf s textem a v te cele prave casti
               bude jen prehravac s displejem a pod tim tracky"). Seznam
@@ -2972,7 +2989,11 @@ export function Preposlech({
               takže `flex-1` dobere, co po přehrávači zbude. Na úzkém okně,
               kde se sloupce řadí pod sebe, platí 34vh dál: tam by se seznam
               stop natáhl přes celou obrazovku. */}
-          <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden flex flex-col xl:flex-1 xl:min-h-0">
+          <div
+            className={`bg-surface rounded-card border border-line shadow-sm overflow-hidden flex flex-col ${
+              siroko ? 'flex-1 min-h-0' : ''
+            }`}
+          >
             <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3 flex-wrap shrink-0">
               <span className="flex items-center gap-2.5 flex-wrap min-w-0">
                 <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('preposlech.zvukoveStopy')}</h3>
@@ -3055,7 +3076,10 @@ export function Preposlech({
                 </span>
               )}
             </div>
-            <div className="p-3 flex flex-col gap-2 overflow-y-auto max-h-[34vh] xl:max-h-none xl:flex-1 xl:min-h-0">
+            <div
+              className={`p-3 flex flex-col gap-2 overflow-y-auto ${siroko ? 'flex-1 min-h-0' : ''}`}
+              style={siroko ? undefined : { maxHeight: '34vh' }}
+            >
               {stopy.length === 0 ? (
                 <p className="text-sm font-body text-muted m-0 px-1 py-5 text-center">
                   {zDisku === 'nacitam' ? t('preposlech.nacitamStopy') : t('preposlech.bezStop')}
