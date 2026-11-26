@@ -143,6 +143,26 @@ export function AkceSprava({
     proKoho: PRO_VSECHNY,
   });
 
+  /**
+   * ZÁLOŽKY (zadání 26. 11. 2026: „vůbec to není přehledné, musíme
+   * jednotlivé sekce oddělit"). Čtyři kroky, jak se s akcí doopravdy
+   * pracuje - a nejčastěji se člověk vrací ke „Kdo dorazí", takže u akce,
+   * která je už rozeslaná, se otevře rovnou ta.
+   */
+  const [zalozka, setZalozka] = useState<'pozvanka' | 'lide' | 'odpovedi' | 'nakup'>(
+    vybrana && pozvanky.some((p) => p.odeslanoAt) ? 'odpovedi' : 'pozvanka',
+  );
+  /** Bez založené akce je jediná možná záložka pozvánka - není co rozesílat. */
+  const vidimZalozku = detail.id ? zalozka : 'pozvanka';
+
+  /** Tři hromádky jmen do přehledu „kdo dorazí". */
+  const dorazi = useMemo(() => pozvanky.filter((p) => p.dorazi === true), [pozvanky]);
+  const nedorazi = useMemo(() => pozvanky.filter((p) => p.dorazi === false), [pozvanky]);
+  const ceka = useMemo(
+    () => pozvanky.filter((p) => p.dorazi !== true && p.dorazi !== false),
+    [pozvanky],
+  );
+
   /** Otázky bez té základní („Dorazíte?") - ta má v tabulce vlastní sloupec. */
   const otazkyBezDorazeni = useMemo(() => otazkyPoDorazeni(otazky), [otazky]);
   /** Do tabulky jen ti, kdo odpověděli (volba 26. 11. 2026). */
@@ -546,6 +566,30 @@ export function AkceSprava({
         </div>
       </div>
 
+      {detail.id && (
+        <div className="flex items-center gap-1.5 flex-wrap border-b border-line pb-3">
+          {[
+            { klic: 'pozvanka' as const, nazev: 'Pozvánka a anketa' },
+            { klic: 'lide' as const, nazev: `Lidé (${souhrn.pozvano})` },
+            { klic: 'odpovedi' as const, nazev: `Kdo dorazí (${dorazi.length})` },
+            { klic: 'nakup' as const, nazev: 'Co nakoupit' },
+          ].map((z) => (
+            <button
+              key={z.klic}
+              type="button"
+              onClick={() => setZalozka(z.klic)}
+              className={`rounded-pill border px-3.5 py-2 text-xs font-heading font-semibold transition-colors ${
+                vidimZalozku === z.klic
+                  ? 'border-brand-green bg-brand-green text-onAccent'
+                  : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+              }`}
+            >
+              {z.nazev}
+            </button>
+          ))}
+        </div>
+      )}
+
       {chyba && (
         <p className="text-sm font-body text-danger bg-dangerTint rounded-lg px-3 py-2 m-0">{chyba}</p>
       )}
@@ -554,9 +598,13 @@ export function AkceSprava({
       {/* VŠECHNO NA JEDNÉ STRÁNCE (25. 11. 2026): vlevo se píše a vybírá,
           vpravo je vidět, co z toho vznikne. Na úzké obrazovce jde náhled
           pod ovládání, ať se nic nemačká. */}
-      <div className="grid gap-5 items-start lg:grid-cols-2">
+      <div
+        className={`grid gap-5 items-start ${vidimZalozku === 'pozvanka' ? 'lg:grid-cols-2' : ''}`}
+      >
         <div className="flex flex-col gap-5 min-w-0">
 
+      {vidimZalozku === 'pozvanka' && (
+        <>
       {/* 1. POZVÁNKA */}
       <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-base text-ink m-0">Pozvánka</h2>
@@ -835,9 +883,13 @@ export function AkceSprava({
           ))}
         </div>
       </section>
+        </>
+      )}
 
       {detail.id && (
         <>
+          {vidimZalozku === 'lide' && (
+            <>
           {/* 2. KOHO POZVAT - sbalené, ať formulář nezabírá celou stránku. */}
           <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -981,7 +1033,7 @@ export function AkceSprava({
             </div>
           </section>
 
-          {/* 3. ROZESLÁNÍ A ODPOVĚDI */}
+          {/* 3a. ROZESLÁNÍ - komu co odešlo a odkud se posílá znovu. */}
           <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <h2 className="font-heading font-semibold text-base text-ink m-0">
@@ -995,6 +1047,106 @@ export function AkceSprava({
               >
                 Rozeslat ({pozvanky.filter((p) => !p.odeslanoAt).length})
               </button>
+            </div>
+            {pozvanky.length === 0 ? (
+              <p className="text-sm font-body text-muted m-0">Zatím tu nikdo není.</p>
+            ) : (
+              <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
+                {pozvanky.map((p) => (
+                  <li
+                    key={p.id}
+                    className="rounded-lg border border-line bg-field px-3 py-2 flex items-center gap-3 flex-wrap"
+                  >
+                    <span className="font-heading font-semibold text-sm text-ink">{p.jmeno}</span>
+                    <span className="text-xs font-body text-muted">{p.email}</span>
+                    <span
+                      className={`rounded-pill px-2 py-0.5 text-[11px] font-heading font-semibold ${
+                        p.dorazi === true
+                          ? 'bg-brand-green/15 text-brand-greenDeep'
+                          : p.dorazi === false
+                            ? 'bg-dangerTint text-danger'
+                            : 'bg-surface text-muted border border-line'
+                      }`}
+                    >
+                      {stav(p)}
+                    </span>
+                    {p.odpovedelAt && popisOdpovedi(otazky, p.odpovedi) && (
+                      <span className="text-xs font-body text-muted basis-full">
+                        {popisOdpovedi(otazky, p.odpovedi)}
+                      </span>
+                    )}
+                    <span className="ml-auto flex items-center gap-3">
+                      {/* POSLAT JEDNOMU (25. 11. 2026). U nepozvaného je to
+                          hlavní tlačítko - hromadné Rozeslat zůstává nahoře
+                          pro ty, komu ještě nic nešlo. */}
+                      <button
+                        type="button"
+                        onClick={() => void rozesli([p.id], `${p.jmeno} (${p.email})`)}
+                        disabled={pracuje}
+                        className={
+                          p.odeslanoAt
+                            ? 'text-xs font-heading font-semibold text-muted hover:text-brand-purple'
+                            : 'rounded-lg bg-brand-green px-2.5 py-1 text-xs font-heading font-semibold text-onAccent hover:bg-brand-greenDeep transition-colors disabled:opacity-60'
+                        }
+                      >
+                        {p.odeslanoAt ? 'Poslat znovu' : 'Poslat'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void odeber(p.id)}
+                        disabled={pracuje}
+                        className="text-xs font-heading font-semibold text-danger"
+                      >
+                        Odebrat
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+            </>
+          )}
+
+          {vidimZalozku === 'odpovedi' && (
+          <>
+          {/* 3. KDO DORAZÍ (zadání 26. 11. 2026: „chci přehledně vidět na
+              jednom místě, kdo dorazí"). Nejdřív jména ve třech sloupcích -
+              dorazí, nedorazí, čeká se - a teprve pod nimi podrobnosti.
+              Rozesílání se přestěhovalo do záložky Lidé; tahle záložka se
+              jen kouká. */}
+          <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="font-heading font-semibold text-base text-ink m-0">Kdo dorazí</h2>
+              <span className="text-xs font-body text-muted">
+                Odpovědělo {souhrn.odpovedelo} z {souhrn.pozvano}
+              </span>
+            </div>
+
+            {/* Tři sloupce jmen - tohle je to „jedno místo". */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { nazev: 'Dorazí', lide: dorazi, barva: 'border-brand-green/40 bg-brand-green/10 text-brand-greenDeep' },
+                { nazev: 'Nedorazí', lide: nedorazi, barva: 'border-line bg-dangerTint text-danger' },
+                { nazev: 'Čeká se', lide: ceka, barva: 'border-line bg-field text-muted' },
+              ].map((sl) => (
+                <div key={sl.nazev} className={`rounded-lg border px-3 py-2.5 flex flex-col gap-1.5 ${sl.barva}`}>
+                  <span className="text-[11px] font-heading uppercase tracking-wide">
+                    {sl.nazev} <strong className="tabular-nums">{sl.lide.length}</strong>
+                  </span>
+                  {sl.lide.length === 0 ? (
+                    <span className="text-xs font-body opacity-70">—</span>
+                  ) : (
+                    <ul className="list-none p-0 m-0 flex flex-col gap-0.5 max-h-[240px] overflow-y-auto">
+                      {sl.lide.map((p) => (
+                        <li key={p.id} className="text-xs font-body text-ink">
+                          {p.jmeno}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -1123,64 +1275,12 @@ export function AkceSprava({
               </div>
             )}
 
-            {pozvanky.length === 0 ? (
-              <p className="text-sm font-body text-muted m-0">Zatím tu nikdo není.</p>
-            ) : (
-              <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
-                {pozvanky.map((p) => (
-                  <li
-                    key={p.id}
-                    className="rounded-lg border border-line bg-field px-3 py-2 flex items-center gap-3 flex-wrap"
-                  >
-                    <span className="font-heading font-semibold text-sm text-ink">{p.jmeno}</span>
-                    <span className="text-xs font-body text-muted">{p.email}</span>
-                    <span
-                      className={`rounded-pill px-2 py-0.5 text-[11px] font-heading font-semibold ${
-                        p.dorazi === true
-                          ? 'bg-brand-green/15 text-brand-greenDeep'
-                          : p.dorazi === false
-                            ? 'bg-dangerTint text-danger'
-                            : 'bg-surface text-muted border border-line'
-                      }`}
-                    >
-                      {stav(p)}
-                    </span>
-                    {p.odpovedelAt && popisOdpovedi(otazky, p.odpovedi) && (
-                      <span className="text-xs font-body text-muted basis-full">
-                        {popisOdpovedi(otazky, p.odpovedi)}
-                      </span>
-                    )}
-                    <span className="ml-auto flex items-center gap-3">
-                      {/* POSLAT JEDNOMU (25. 11. 2026). U nepozvaného je to
-                          hlavní tlačítko - hromadné Rozeslat zůstává nahoře
-                          pro ty, komu ještě nic nešlo. */}
-                      <button
-                        type="button"
-                        onClick={() => void rozesli([p.id], `${p.jmeno} (${p.email})`)}
-                        disabled={pracuje}
-                        className={
-                          p.odeslanoAt
-                            ? 'text-xs font-heading font-semibold text-muted hover:text-brand-purple'
-                            : 'rounded-lg bg-brand-green px-2.5 py-1 text-xs font-heading font-semibold text-onAccent hover:bg-brand-greenDeep transition-colors disabled:opacity-60'
-                        }
-                      >
-                        {p.odeslanoAt ? 'Poslat znovu' : 'Poslat'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void odeber(p.id)}
-                        disabled={pracuje}
-                        className="text-xs font-heading font-semibold text-danger"
-                      >
-                        Odebrat
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
           </section>
+          </>
+          )}
 
+          {vidimZalozku === 'nakup' && (
+          <>
           {/* 4. CO NAKOUPIT (zadání 26. 11. 2026: „odhad, kolik toho nakoupit…
               plánovač jídla - napíšu položku, třeba šunka, a vedle mi to
               udělá odhad, kolik toho koupit celkem").
@@ -1349,11 +1449,15 @@ export function AkceSprava({
               ostatní. Změny se ukládají samy.
             </p>
           </section>
+          </>
+          )}
         </>
       )}
         </div>
 
-        {/* NÁHLED - mail a anketa pohromadě. */}
+        {/* NÁHLED - mail a anketa pohromadě. Patří k psaní pozvánky, takže
+            u ostatních záložek ustoupí a tabulky dostanou celou šířku. */}
+        {vidimZalozku === 'pozvanka' && (
         <div className="flex flex-col gap-4 min-w-0 lg:sticky lg:top-24">
           <section className="rounded-card border border-line bg-surface p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1433,6 +1537,7 @@ export function AkceSprava({
             />
           </section>
         </div>
+        )}
       </div>
 
       {/* NÁHLED PŘES CELOU OBRAZOVKU (25. 11. 2026: „ten náhled je malý.
