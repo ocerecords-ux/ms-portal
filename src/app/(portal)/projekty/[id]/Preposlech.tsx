@@ -1041,6 +1041,16 @@ export function Preposlech({
 
   /** Která stopa je v přehrávači (adresa z Disku) a blob, když hraje z počítače. */
   const zdrojStopyRef = useRef<string | null>(null);
+  /**
+   * STOPY NA SEBE NAVAZUJÍ (zadání 26. 11. 2026: „aby tracky navazovaly
+   * v přehrávání - když skončí jeden, tak se přepne automaticky na další").
+   *
+   * Přepnout zdroj a hned zavolat `play()` nejde - prohlížeč zrovna načítá
+   * metadata a odmítne to. Tohle razítko řekne `onCanPlay`, že se má rozjet
+   * samo; nastavuje se jen při dojetí stopy na konec, takže ruční kliknutí
+   * na stopu se chová jako dřív (vybere a čeká na Play).
+   */
+  const rozjedPoNacteniRef = useRef(false);
   const blobStopyRef = useRef<string | null>(null);
 
   const vyberStopu = useCallback((index: number, skocNa?: number) => {
@@ -2253,9 +2263,19 @@ export function Preposlech({
         onWaiting={() => zaneprazdnen(true)}
         onSeeking={() => zaneprazdnen(true)}
         onSeeked={() => zaneprazdnen(false)}
-        onCanPlay={() => {
+        onCanPlay={(e) => {
           zaneprazdnen(false);
           zapomenChybuZvuku();
+          // Navázání na předchozí stopu - viz rozjedPoNacteniRef.
+          if (rozjedPoNacteniRef.current) {
+            rozjedPoNacteniRef.current = false;
+            const prehravac = e.currentTarget;
+            prehravac.playbackRate = rychlostRef.current;
+            void prehravac.play().catch(() => {
+              // Prohlížeč samospuštění odmítl (přísné nastavení) - stopa je
+              // vybraná a čeká na Play, nic se nerozbilo.
+            });
+          }
         }}
         onPlaying={() => {
           zaneprazdnen(false);
@@ -2294,6 +2314,17 @@ export function Preposlech({
               },
               `pozice:${poradi}`,
             );
+
+            /**
+             * A ROVNOU DALŠÍ STOPA (zadání 26. 11. 2026). Kniha se poslouchá
+             * v kuse; po každé stopě sahat po myši je zbytečné. Na poslední
+             * stopě se nic nepřepíná - tam přehrávání končí.
+             */
+            const dalsi = aktivniRef.current + 1;
+            if (dalsi < stopyRef.current.length) {
+              rozjedPoNacteniRef.current = true;
+              vyberStopu(dalsi);
+            }
           }
         }}
         onError={() => {
@@ -2798,7 +2829,7 @@ export function Preposlech({
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 min-h-0">
+        <div className="flex flex-col gap-4 min-h-0 xl:h-full">
           {/* V pravem sloupci zustava UZ JEN PREHRAVAC A STOPY (zadani
               12. 9. 2026: „vlevo bude pdf s textem a v te cele prave casti
               bude jen prehravac s displejem a pod tim tracky"). Seznam
@@ -2932,7 +2963,16 @@ export function Preposlech({
             )}
           </div>
 
-          <div className={`bg-surface rounded-card border border-line shadow-sm overflow-hidden ${vyskaSekce ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
+          {/* STOPY SAHAJÍ AŽ K TEXTU (zadání 26. 11. 2026: „potřebuju, ať se
+              protáhne to okno s trackama na úroveň textu").
+              Dřív se panel roztáhl, jen když se povedlo změřit výšku sekce
+              (`vyskaSekce`); jinak zůstal na 34vh a vedle vysokého PDF z něj
+              byl pahýl s prázdnem pod sebou. Teď se na širokém okně roztahuje
+              vždycky - sloupce v mřížce jsou stejně vysoké (items-stretch),
+              takže `flex-1` dobere, co po přehrávači zbude. Na úzkém okně,
+              kde se sloupce řadí pod sebe, platí 34vh dál: tam by se seznam
+              stop natáhl přes celou obrazovku. */}
+          <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden flex flex-col xl:flex-1 xl:min-h-0">
             <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3 flex-wrap shrink-0">
               <span className="flex items-center gap-2.5 flex-wrap min-w-0">
                 <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('preposlech.zvukoveStopy')}</h3>
@@ -3015,10 +3055,7 @@ export function Preposlech({
                 </span>
               )}
             </div>
-            <div
-              className={`p-3 flex flex-col gap-2 overflow-y-auto ${vyskaSekce ? 'flex-1 min-h-0' : ''}`}
-              style={vyskaSekce ? undefined : { maxHeight: '34vh' }}
-            >
+            <div className="p-3 flex flex-col gap-2 overflow-y-auto max-h-[34vh] xl:max-h-none xl:flex-1 xl:min-h-0">
               {stopy.length === 0 ? (
                 <p className="text-sm font-body text-muted m-0 px-1 py-5 text-center">
                   {zDisku === 'nacitam' ? t('preposlech.nacitamStopy') : t('preposlech.bezStop')}
