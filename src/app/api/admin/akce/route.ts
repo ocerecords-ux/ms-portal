@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { smiSpravovatAkce } from '@/lib/akceServer';
-import { ocistiOtazky, VYCHOZI_OTAZKY, datumZPrahy } from '@/lib/akce';
+import { ocistiNakup, ocistiOtazky, VYCHOZI_OTAZKY, datumZPrahy } from '@/lib/akce';
 import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
@@ -25,6 +25,7 @@ const schema = z.object({
   odpovedDo: z.string().trim().max(40).nullable().optional(),
   /** Anketa - pořadatel si ji skládá sám (25. 11. 2026). */
   otazky: z.array(z.record(z.unknown())).max(30).optional(),
+  nakup: z.array(z.record(z.unknown())).max(100).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
         odpovedDo: datumZPrahy(d.odpovedDo),
         // Nová akce začíná s výchozí anketou; pořadatel si ji hned upraví.
         otazky: d.otazky ? ocistiOtazky(d.otazky) : VYCHOZI_OTAZKY,
+        nakup: d.nakup ? ocistiNakup(d.nakup) : [],
         zalozilId: session.user.id,
         zalozilJmeno: session.user.name ?? null,
       },

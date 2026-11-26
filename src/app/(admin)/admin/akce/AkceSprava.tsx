@@ -3,14 +3,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  cileNakupu,
   KLIC_DORAZI,
+  mnozstviPolozky,
   novyKlicOtazky,
+  novyKlicPolozky,
+  otazkyPoDorazeni,
+  pocetProCil,
+  popisCile,
   popisOdpovedi,
+  PRO_VSECHNY,
   souhrnAkce,
   TYPY_OTAZEK,
   VYCHOZI_OTAZKY,
   type Kandidat,
   type Otazka,
+  type PolozkaNakupu,
   type PozvankaPrehled,
 } from '@/lib/akce';
 import { FormularPozvanky } from '@/app/pozvanka/[token]/FormularPozvanky';
@@ -98,12 +106,14 @@ export function AkceSprava({
   otazkyAkce,
   pozvanky,
   kandidati,
+  nakupAkce,
 }: {
   akce: { id: string; nazev: string }[];
   vybrana: Detail | null;
   otazkyAkce: Otazka[];
   pozvanky: PozvankaPrehled[];
   kandidati: Kandidat[];
+  nakupAkce: PolozkaNakupu[];
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<Detail>(vybrana ?? PRAZDNA);
@@ -121,6 +131,24 @@ export function AkceSprava({
   const [skupinaFiltr, setSkupinaFiltr] = useState<Kandidat['skupina'] | 'VSE'>('VSE');
   const [rucniJmeno, setRucniJmeno] = useState('');
   const [rucniMail, setRucniMail] = useState('');
+  /**
+   * NÁKUPNÍ SEZNAM (26. 11. 2026). Ukládá se sám - je to tabulka, ne
+   * formulář; kdo do ní píše, nebude lovit tlačítko Uložit o tři sekce výš.
+   */
+  const [nakup, setNakup] = useState<PolozkaNakupu[]>(nakupAkce);
+  const [novaPolozka, setNovaPolozka] = useState({
+    nazev: '',
+    naOsobu: '',
+    jednotka: 'ks',
+    proKoho: PRO_VSECHNY,
+  });
+
+  /** Otázky bez té základní („Dorazíte?") - ta má v tabulce vlastní sloupec. */
+  const otazkyBezDorazeni = useMemo(() => otazkyPoDorazeni(otazky), [otazky]);
+  /** Do tabulky jen ti, kdo odpověděli (volba 26. 11. 2026). */
+  const odpovedeli = useMemo(() => pozvanky.filter((p) => p.odpovedelAt), [pozvanky]);
+  /** Nabídka „pro koho" v nákupu - všichni, kdo dorazí, plus každá odpověď. */
+  const cile = useMemo(() => cileNakupu(otazky), [otazky]);
   const [pracuje, setPracuje] = useState(false);
   const [nahledHtml, setNahledHtml] = useState<string | null>(null);
   const [druhNahledu, setDruhNahledu] = useState<'pozvanka' | 'potvrzeni' | 'pripomenuti'>('pozvanka');
@@ -264,6 +292,76 @@ export function AkceSprava({
       router.refresh();
     } finally {
       setPracuje(false);
+    }
+  }
+
+  /** Uložení nákupního seznamu. Pošle se jen on, zbytek akce se nedotkne. */
+  async function ulozNakup(seznam: PolozkaNakupu[]) {
+    setNakup(seznam);
+    if (!detail.id) return;
+    try {
+      const res = await fetch(`/api/admin/akce/${encodeURIComponent(detail.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nakup: seznam }),
+      });
+      if (!res.ok) setChyba('Nákupní seznam se nepodařilo uložit.');
+    } catch (err) {
+      console.error('Nakup akce:', err);
+      setChyba('Nákupní seznam se nepodařilo uložit.');
+    }
+  }
+
+  function pridejPolozku() {
+    const nazev = novaPolozka.nazev.trim();
+    if (!nazev) {
+      setChyba('Napište název položky.');
+      return;
+    }
+    const naOsobu = Number(novaPolozka.naOsobu.replace(',', '.'));
+    void ulozNakup([
+      ...nakup,
+      {
+        id: novyKlicPolozky(),
+        nazev,
+        naOsobu: Number.isFinite(naOsobu) && naOsobu > 0 ? naOsobu : 1,
+        jednotka: novaPolozka.jednotka.trim() || 'ks',
+        proKoho: novaPolozka.proKoho,
+      },
+    ]);
+    setNovaPolozka({ nazev: '', naOsobu: '', jednotka: novaPolozka.jednotka, proKoho: novaPolozka.proKoho });
+  }
+
+  function upravPolozku(id: string, zmena: Partial<PolozkaNakupu>) {
+    setNakup((p) => p.map((x) => (x.id === id ? { ...x, ...zmena } : x)));
+  }
+
+  /** Odpověď jednoho člověka na jednu otázku - do buňky tabulky. */
+  function bunkaOdpovedi(o: Otazka, p: PozvankaPrehled): string {
+    const hodnota = p.odpovedi[o.id];
+    if (hodnota === undefined) return '—';
+    if (o.typ === 'ANO_NE') return hodnota ? (o.ano ?? 'ano') : (o.ne ?? 'ne');
+    if (Array.isArray(hodnota)) return hodnota.join(', ');
+    return String(hodnota);
+  }
+
+  /**
+   * Tabulka do schránky (TSV). Lepí se do Excelu i do mailu podniku - víc než
+   * jméno a odpovědi nikdo nepotřebuje.
+   */
+  async function zkopirujTabulku() {
+    const hlavicka = ['Jméno', 'Dorazí', ...otazkyBezDorazeni.map((o) => o.text)];
+    const radky = odpovedeli.map((p) => [
+      p.jmeno,
+      p.dorazi === true ? 'ano' : 'ne',
+      ...otazkyBezDorazeni.map((o) => bunkaOdpovedi(o, p)),
+    ]);
+    const text = [hlavicka, ...radky].map((r) => r.join('\t')).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setHlaska('Tabulka zkopírována.');
+    } catch {
+      window.prompt('Zkopírujte tabulku:', text);
     }
   }
 
@@ -961,6 +1059,70 @@ export function AkceSprava({
               );
             })}
 
+            {/* TABULKA ODPOVĚDÍ (zadání 26. 11. 2026: „chci už průběžný přehled
+                v tabulce, kolik kdo čeho bude pít, kdo potřebuje hotel").
+                Jen ti, kdo odpověděli - na koho se čeká, je vidět v seznamu
+                níž. Vodorovné rolování, protože otázek může přibývat. */}
+            {odpovedeli.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[11px] font-heading uppercase tracking-wide text-muted">
+                    Kdo co vyplnil ({odpovedeli.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void zkopirujTabulku()}
+                    className="text-xs font-heading font-semibold text-brand-purple hover:underline"
+                  >
+                    Kopírovat tabulku
+                  </button>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-line">
+                  <table className="w-full border-collapse text-xs font-body">
+                    <thead>
+                      <tr className="bg-field">
+                        <th className="text-left font-heading font-semibold text-muted px-3 py-2">Jméno</th>
+                        <th className="text-left font-heading font-semibold text-muted px-3 py-2">Dorazí</th>
+                        {otazkyBezDorazeni.map((o) => (
+                          <th
+                            key={o.id}
+                            className="text-left font-heading font-semibold text-muted px-3 py-2 whitespace-nowrap"
+                          >
+                            {o.text}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {odpovedeli.map((p) => (
+                        <tr key={p.id} className="border-t border-line">
+                          <td className="px-3 py-2 font-heading font-semibold text-ink whitespace-nowrap">
+                            {p.jmeno}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span
+                              className={`rounded-pill px-2 py-0.5 text-[11px] font-heading font-semibold ${
+                                p.dorazi === true
+                                  ? 'bg-brand-green/15 text-brand-greenDeep'
+                                  : 'bg-dangerTint text-danger'
+                              }`}
+                            >
+                              {p.dorazi === true ? 'ano' : 'ne'}
+                            </span>
+                          </td>
+                          {otazkyBezDorazeni.map((o) => (
+                            <td key={o.id} className="px-3 py-2 text-ink align-top">
+                              {bunkaOdpovedi(o, p)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {pozvanky.length === 0 ? (
               <p className="text-sm font-body text-muted m-0">Zatím tu nikdo není.</p>
             ) : (
@@ -1017,6 +1179,175 @@ export function AkceSprava({
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* 4. CO NAKOUPIT (zadání 26. 11. 2026: „odhad, kolik toho nakoupit…
+              plánovač jídla - napíšu položku, třeba šunka, a vedle mi to
+              udělá odhad, kolik toho koupit celkem").
+              Jídlo i pití v jedné tabulce - je to totéž počítání, liší se jen
+              to, pro koho se počítá. */}
+          <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="font-heading font-semibold text-base text-ink m-0">Co nakoupit</h2>
+              <span className="text-xs font-body text-muted">
+                Jisté = kdo potvrdil · Strop = i ti, co ještě neodpověděli
+              </span>
+            </div>
+
+            {nakup.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border border-line">
+                <table className="w-full border-collapse text-xs font-body">
+                  <thead>
+                    <tr className="bg-field">
+                      <th className="text-left font-heading font-semibold text-muted px-3 py-2">Položka</th>
+                      <th className="text-left font-heading font-semibold text-muted px-3 py-2">Na osobu</th>
+                      <th className="text-left font-heading font-semibold text-muted px-3 py-2">Pro koho</th>
+                      <th className="text-right font-heading font-semibold text-muted px-3 py-2">Lidí</th>
+                      <th className="text-right font-heading font-semibold text-muted px-3 py-2">Koupit jistě</th>
+                      <th className="text-right font-heading font-semibold text-muted px-3 py-2">Strop</th>
+                      <th className="px-3 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nakup.map((polozka) => {
+                      const pocet = pocetProCil(pozvanky, polozka.proKoho);
+                      return (
+                        <tr key={polozka.id} className="border-t border-line">
+                          <td className="px-3 py-2">
+                            <input
+                              value={polozka.nazev}
+                              onChange={(e) => upravPolozku(polozka.id, { nazev: e.target.value })}
+                              onBlur={() => void ulozNakup(nakup)}
+                              className="w-[150px] rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="flex items-center gap-1.5">
+                              <input
+                                value={String(polozka.naOsobu)}
+                                onChange={(e) =>
+                                  upravPolozku(polozka.id, {
+                                    naOsobu: Number(e.target.value.replace(',', '.')) || 0,
+                                  })
+                                }
+                                onBlur={() => void ulozNakup(nakup)}
+                                inputMode="decimal"
+                                className="w-[70px] rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink tabular-nums outline-none focus:border-brand-purple"
+                              />
+                              <input
+                                value={polozka.jednotka}
+                                onChange={(e) => upravPolozku(polozka.id, { jednotka: e.target.value })}
+                                onBlur={() => void ulozNakup(nakup)}
+                                className="w-[60px] rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple"
+                              />
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <select
+                              value={polozka.proKoho}
+                              onChange={(e) =>
+                                void ulozNakup(
+                                  nakup.map((x) =>
+                                    x.id === polozka.id ? { ...x, proKoho: e.target.value } : x,
+                                  ),
+                                )
+                              }
+                              className="max-w-[220px] rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple"
+                            >
+                              {cile.map((c) => (
+                                <option key={c.klic} value={c.klic}>
+                                  {c.popis}
+                                </option>
+                              ))}
+                              {!cile.some((c) => c.klic === polozka.proKoho) && (
+                                <option value={polozka.proKoho}>{popisCile(otazky, polozka.proKoho)}</option>
+                              )}
+                            </select>
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-muted whitespace-nowrap">
+                            {pocet.jiste}
+                            {pocet.strop > pocet.jiste && <span className="text-muted"> / {pocet.strop}</span>}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums font-heading font-semibold text-ink whitespace-nowrap">
+                            {mnozstviPolozky(polozka.naOsobu, pocet.jiste)} {polozka.jednotka}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-muted whitespace-nowrap">
+                            {mnozstviPolozky(polozka.naOsobu, pocet.strop)} {polozka.jednotka}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => void ulozNakup(nakup.filter((x) => x.id !== polozka.id))}
+                              className="text-xs font-heading font-semibold text-danger"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Přidání položky - jídlo i pití stejnou cestou. */}
+            <div className="flex items-end gap-2 flex-wrap border-t border-line pt-3">
+              <label className="flex flex-col gap-1.5 w-[170px]">
+                <span className={popisek}>Položka</span>
+                <input
+                  value={novaPolozka.nazev}
+                  onChange={(e) => setNovaPolozka({ ...novaPolozka, nazev: e.target.value })}
+                  placeholder="Šunka"
+                  className={pole}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 w-[100px]">
+                <span className={popisek}>Na osobu</span>
+                <input
+                  value={novaPolozka.naOsobu}
+                  onChange={(e) => setNovaPolozka({ ...novaPolozka, naOsobu: e.target.value })}
+                  placeholder="0,08"
+                  inputMode="decimal"
+                  className={pole}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 w-[90px]">
+                <span className={popisek}>Jednotka</span>
+                <input
+                  value={novaPolozka.jednotka}
+                  onChange={(e) => setNovaPolozka({ ...novaPolozka, jednotka: e.target.value })}
+                  placeholder="kg"
+                  className={pole}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 w-[240px]">
+                <span className={popisek}>Pro koho</span>
+                <select
+                  value={novaPolozka.proKoho}
+                  onChange={(e) => setNovaPolozka({ ...novaPolozka, proKoho: e.target.value })}
+                  className={pole}
+                >
+                  {cile.map((c) => (
+                    <option key={c.klic} value={c.klic}>
+                      {c.popis}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={pridejPolozku}
+                className="rounded-lg border border-line px-4 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
+              >
+                Přidat položku
+              </button>
+            </div>
+            <p className="text-xs font-body text-muted m-0">
+              Pití se počítá jen těm, kdo tu možnost zaškrtli; jídlo obvykle všem, kdo dorazí.
+              U stropu se ti, kdo ještě neodpověděli, rozpočítají v poměru, v jakém odpověděli
+              ostatní. Změny se ukládají samy.
+            </p>
           </section>
         </>
       )}

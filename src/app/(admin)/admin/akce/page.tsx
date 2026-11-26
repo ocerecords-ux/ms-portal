@@ -8,6 +8,7 @@ import {
   pozvankyAkce,
   smiSpravovatAkce,
 } from '@/lib/akceServer';
+import { ocistiNakup } from '@/lib/akce';
 import { AkceSprava } from './AkceSprava';
 
 /**
@@ -66,6 +67,7 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
         textPripomenuti: string | null;
         odpovedDo: Date | null;
         otazky?: unknown;
+        nakup?: unknown;
       }
     | null;
 
@@ -88,6 +90,7 @@ export default async function AkcePage({ searchParams }: { searchParams: { id?: 
           : null
       }
       otazkyAkce={otazkyZAkce(a)}
+      nakupAkce={ocistiNakup(a?.nakup ?? [])}
       pozvanky={pozvanky}
       kandidati={kandidati}
     />

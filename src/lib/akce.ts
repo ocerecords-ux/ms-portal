@@ -337,6 +337,131 @@ export function souhrnAkce(pozvanky: PozvankaPrehled[], otazky: Otazka[]) {
   };
 }
 
+/* ------------------------------------------------------------------ *
+ * NÁKUP A PLÁNOVAČ JÍDLA (zadání 26. 11. 2026: „chci už průběžný přehled
+ * v tabulce, kolik kdo čeho bude pít, kdo potřebuje hotel, a odhad kolik toho
+ * nakoupit. Pak bych přidal ještě plánovač jídla - napíšu položku, třeba
+ * šunka, a vedle mi to udělá odhad, kolik toho koupit celkem").
+ *
+ * JEDNA TABULKA NA PITÍ I JÍDLO. Obojí je totéž počítání: dávka na osobu krát
+ * počet lidí. Liší se jen to, pro koho se počítá - šunka pro všechny, pivo
+ * jen pro ty, kdo pivo zaškrtli. Proto má položka `proKoho`: buď všichni, kdo
+ * dorazí, nebo konkrétní odpověď z ankety.
+ *
+ * DVĚ ČÍSLA, NE JEDNO (volba 26. 11. 2026): JISTÉ podle potvrzených
+ * a STROP, kdyby dorazili i ti, co ještě mlčí. U otázek se mlčící rozpočítají
+ * v poměru, v jakém odpověděli ostatní - víc se z toho vyčíst nedá a nula by
+ * lhala stejně jako plný počet.
+ * ------------------------------------------------------------------ */
+
+/** Pro koho se položka počítá: všichni, kdo dorazí. */
+export const PRO_VSECHNY = 'vsichni';
+/** Oddělovač v klíči cíle: „<id otázky>::<odpověď>". */
+const DELIC_CILE = '::';
+
+export type PolozkaNakupu = {
+  id: string;
+  nazev: string;
+  /** Dávka na jednoho člověka - 4 (piva), 0.08 (kg šunky). */
+  naOsobu: number;
+  /** Jednotka, jak ji pořadatel napíše: ks, kg, l, plátky. */
+  jednotka: string;
+  /** PRO_VSECHNY, nebo „<id otázky>::<ano|ne|název možnosti>". */
+  proKoho: string;
+};
+
+export function novyKlicPolozky(): string {
+  return `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/** Klíč cíle - skládá se na jednom místě, ať se rozpad nerozejde. */
+export function klicCile(otazkaId: string, hodnota: string): string {
+  return `${otazkaId}${DELIC_CILE}${hodnota}`;
+}
+
+function rozlozCil(cil: string): { otazkaId: string; hodnota: string } | null {
+  const kde = cil.indexOf(DELIC_CILE);
+  if (kde <= 0) return null;
+  return { otazkaId: cil.slice(0, kde), hodnota: cil.slice(kde + DELIC_CILE.length) };
+}
+
+/** Co přišlo z databáze nebo z formuláře, očištěné na použitelný tvar. */
+export function ocistiNakup(vstup: unknown): PolozkaNakupu[] {
+  if (!Array.isArray(vstup)) return [];
+  const hotove: PolozkaNakupu[] = [];
+  for (const radek of vstup.slice(0, 100)) {
+    if (!radek || typeof radek !== 'object') continue;
+    const r = radek as Record<string, unknown>;
+    const nazev = String(r.nazev ?? '').trim().slice(0, 120);
+    if (!nazev) continue;
+    const naOsobu = Number(r.naOsobu);
+    hotove.push({
+      id: String(r.id ?? '').trim().slice(0, 40) || novyKlicPolozky(),
+      nazev,
+      naOsobu: Number.isFinite(naOsobu) && naOsobu > 0 ? Math.min(naOsobu, 10000) : 0,
+      jednotka: String(r.jednotka ?? '').trim().slice(0, 20),
+      proKoho: String(r.proKoho ?? PRO_VSECHNY).trim().slice(0, 200) || PRO_VSECHNY,
+    });
+  }
+  return hotove;
+}
+
+/**
+ * Nabídka do sloupce „pro koho". Všichni, kdo dorazí, a pak každá odpověď
+ * z ankety zvlášť - z nich se dělají řádky na pití a na hotel.
+ */
+export function cileNakupu(otazky: Otazka[]): { klic: string; popis: string }[] {
+  const cile = [{ klic: PRO_VSECHNY, popis: 'Všichni, kdo dorazí' }];
+  for (const o of otazkyPoDorazeni(otazky)) {
+    if (o.typ === 'ANO_NE') {
+      cile.push({ klic: klicCile(o.id, 'ano'), popis: `${o.text} — ${o.ano ?? 'ano'}` });
+      cile.push({ klic: klicCile(o.id, 'ne'), popis: `${o.text} — ${o.ne ?? 'ne'}` });
+    } else if (o.typ === 'VYBER') {
+      for (const m of o.moznosti ?? []) cile.push({ klic: klicCile(o.id, m), popis: `${o.text} — ${m}` });
+    }
+  }
+  return cile;
+}
+
+/** Popis cíle pro tabulku. Co ve slovníku není (smazaná otázka), projde syrové. */
+export function popisCile(otazky: Otazka[], cil: string): string {
+  return cileNakupu(otazky).find((c) => c.klic === cil)?.popis ?? cil;
+}
+
+/**
+ * Kolik lidí na položku připadá. `jiste` jsou potvrzení, `strop` počítá i ty,
+ * kdo ještě neodpověděli - u odpovědí v poměru, v jakém odpověděli ostatní.
+ */
+export function pocetProCil(
+  pozvanky: PozvankaPrehled[],
+  cil: string,
+): { jiste: number; strop: number } {
+  const dorazi = pozvanky.filter((p) => p.dorazi === true);
+  const mlci = pozvanky.filter((p) => p.dorazi !== true && p.dorazi !== false).length;
+
+  if (cil === PRO_VSECHNY) return { jiste: dorazi.length, strop: dorazi.length + mlci };
+
+  const rozklad = rozlozCil(cil);
+  if (!rozklad) return { jiste: 0, strop: 0 };
+  const { otazkaId, hodnota } = rozklad;
+
+  const sedi = (p: PozvankaPrehled) => {
+    const odpoved = p.odpovedi[otazkaId];
+    if (hodnota === 'ano') return odpoved === true;
+    if (hodnota === 'ne') return odpoved === false;
+    return Array.isArray(odpoved) && odpoved.includes(hodnota);
+  };
+
+  const jiste = dorazi.filter(sedi).length;
+  const podil = dorazi.length > 0 ? jiste / dorazi.length : 0;
+  return { jiste, strop: jiste + Math.ceil(mlci * podil) };
+}
+
+/** Kolik toho koupit. Dvě desetinná místa - 0,08 kg na osobu je běžná dávka. */
+export function mnozstviPolozky(naOsobu: number, pocet: number): number {
+  return Math.round(naOsobu * pocet * 100) / 100;
+}
+
 /**
  * Odpovědi po řádcích - otázka a co na ni ten člověk odpověděl. Do potvrzení
  * a připomínky, kde je na tabulku místo (na rozdíl od seznamu pozvaných,
