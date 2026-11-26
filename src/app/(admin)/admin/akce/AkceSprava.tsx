@@ -6,8 +6,10 @@ import {
   cileNakupu,
   KLIC_DORAZI,
   mnozstviPolozky,
+  navrhNakupu,
   novyKlicOtazky,
   novyKlicPolozky,
+  odhadPolozky,
   otazkyPoDorazeni,
   pocetProCil,
   popisCile,
@@ -169,6 +171,8 @@ export function AkceSprava({
   const odpovedeli = useMemo(() => pozvanky.filter((p) => p.odpovedelAt), [pozvanky]);
   /** Nabídka „pro koho" v nákupu - všichni, kdo dorazí, plus každá odpověď. */
   const cile = useMemo(() => cileNakupu(otazky), [otazky]);
+  /** Co portál navrhne k rozepsané položce - ukazuje se rovnou pod formulářem. */
+  const odhadNove = useMemo(() => odhadPolozky(novaPolozka.nazev), [novaPolozka.nazev]);
   const [pracuje, setPracuje] = useState(false);
   const [nahledHtml, setNahledHtml] = useState<string | null>(null);
   const [druhNahledu, setDruhNahledu] = useState<'pozvanka' | 'potvrzeni' | 'pripomenuti'>('pozvanka');
@@ -332,24 +336,43 @@ export function AkceSprava({
     }
   }
 
+  /**
+   * DÁVKU NAVRHNE PORTÁL (zadání 26. 11. 2026: „to nechci nastavovat").
+   * Stačí napsat název; kdo chce, číslo přepíše a od té chvíle platí jeho.
+   */
   function pridejPolozku() {
     const nazev = novaPolozka.nazev.trim();
     if (!nazev) {
       setChyba('Napište název položky.');
       return;
     }
-    const naOsobu = Number(novaPolozka.naOsobu.replace(',', '.'));
+    const rucni = Number(novaPolozka.naOsobu.replace(',', '.'));
+    const odhad = odhadPolozky(nazev);
+    const maRucni = Number.isFinite(rucni) && rucni > 0;
     void ulozNakup([
       ...nakup,
       {
         id: novyKlicPolozky(),
         nazev,
-        naOsobu: Number.isFinite(naOsobu) && naOsobu > 0 ? naOsobu : 1,
-        jednotka: novaPolozka.jednotka.trim() || 'ks',
+        naOsobu: maRucni ? rucni : odhad.naOsobu,
+        jednotka: novaPolozka.jednotka.trim() || odhad.jednotka,
         proKoho: novaPolozka.proKoho,
+        odhad: !maRucni,
       },
     ]);
-    setNovaPolozka({ nazev: '', naOsobu: '', jednotka: novaPolozka.jednotka, proKoho: novaPolozka.proKoho });
+    setNovaPolozka({ nazev: '', naOsobu: '', jednotka: '', proKoho: novaPolozka.proKoho });
+  }
+
+  /** Přejmenovaná položka s odhadem si vezme dávku podle nového názvu. */
+  function prejmenujPolozku(id: string, nazev: string) {
+    setNakup((p) =>
+      p.map((x) => {
+        if (x.id !== id) return x;
+        if (!x.odhad) return { ...x, nazev };
+        const odhad = odhadPolozky(nazev);
+        return { ...x, nazev, naOsobu: odhad.naOsobu, jednotka: odhad.jednotka };
+      }),
+    );
   }
 
   function upravPolozku(id: string, zmena: Partial<PolozkaNakupu>) {
@@ -1289,8 +1312,17 @@ export function AkceSprava({
           <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <h2 className="font-heading font-semibold text-base text-ink m-0">Co nakoupit</h2>
-              <span className="text-xs font-body text-muted">
-                Jisté = kdo potvrdil · Strop = i ti, co ještě neodpověděli
+              <span className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-body text-muted">
+                  Jisté = kdo potvrdil · Strop = i ti, co ještě neodpověděli
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void ulozNakup(navrhNakupu(otazky, nakup))}
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs font-heading font-semibold text-brand-purple hover:border-brand-purple transition-colors"
+                >
+                  Navrhnout nákup
+                </button>
               </span>
             </div>
 
@@ -1316,7 +1348,7 @@ export function AkceSprava({
                           <td className="px-3 py-2">
                             <input
                               value={polozka.nazev}
-                              onChange={(e) => upravPolozku(polozka.id, { nazev: e.target.value })}
+                              onChange={(e) => prejmenujPolozku(polozka.id, e.target.value)}
                               onBlur={() => void ulozNakup(nakup)}
                               className="w-[150px] rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple"
                             />
@@ -1328,6 +1360,9 @@ export function AkceSprava({
                                 onChange={(e) =>
                                   upravPolozku(polozka.id, {
                                     naOsobu: Number(e.target.value.replace(',', '.')) || 0,
+                                    // Přepsané číslo je vlastní - odhad do něj
+                                    // od téhle chvíle nemluví.
+                                    odhad: false,
                                   })
                                 }
                                 onBlur={() => void ulozNakup(nakup)}
@@ -1336,10 +1371,18 @@ export function AkceSprava({
                               />
                               <input
                                 value={polozka.jednotka}
-                                onChange={(e) => upravPolozku(polozka.id, { jednotka: e.target.value })}
+                                onChange={(e) => upravPolozku(polozka.id, { jednotka: e.target.value, odhad: false })}
                                 onBlur={() => void ulozNakup(nakup)}
                                 className="w-[60px] rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple"
                               />
+                              {polozka.odhad && (
+                                <span
+                                  title={`Odhad portálu: ${odhadPolozky(polozka.nazev).proc}. Přepiš číslo a platí tvoje.`}
+                                  className="rounded-pill border border-line bg-field px-2 py-0.5 text-[10px] font-heading font-semibold text-muted whitespace-nowrap"
+                                >
+                                  odhad
+                                </span>
+                              )}
                             </span>
                           </td>
                           <td className="px-3 py-2">
@@ -1402,12 +1445,12 @@ export function AkceSprava({
                   className={pole}
                 />
               </label>
-              <label className="flex flex-col gap-1.5 w-[100px]">
+              <label className="flex flex-col gap-1.5 w-[110px]">
                 <span className={popisek}>Na osobu</span>
                 <input
                   value={novaPolozka.naOsobu}
                   onChange={(e) => setNovaPolozka({ ...novaPolozka, naOsobu: e.target.value })}
-                  placeholder="0,08"
+                  placeholder={String(odhadNove.naOsobu)}
                   inputMode="decimal"
                   className={pole}
                 />
@@ -1417,7 +1460,7 @@ export function AkceSprava({
                 <input
                   value={novaPolozka.jednotka}
                   onChange={(e) => setNovaPolozka({ ...novaPolozka, jednotka: e.target.value })}
-                  placeholder="kg"
+                  placeholder={odhadNove.jednotka}
                   className={pole}
                 />
               </label>
@@ -1444,9 +1487,24 @@ export function AkceSprava({
               </button>
             </div>
             <p className="text-xs font-body text-muted m-0">
-              Pití se počítá jen těm, kdo tu možnost zaškrtli; jídlo obvykle všem, kdo dorazí.
-              U stropu se ti, kdo ještě neodpověděli, rozpočítají v poměru, v jakém odpověděli
-              ostatní. Změny se ukládají samy.
+              {novaPolozka.nazev.trim() ? (
+                <>
+                  Odhad pro „{novaPolozka.nazev.trim()}":{' '}
+                  <strong className="font-heading text-ink">
+                    {odhadNove.naOsobu} {odhadNove.jednotka}
+                  </strong>{' '}
+                  na osobu — {odhadNove.proc}. Políčka nech prázdná a portál to doplní sám.
+                </>
+              ) : (
+                <>
+                  Dávku na osobu navrhne portál podle názvu (pivo 4 ks, šunka 0,08 kg, víno 0,4 l);
+                  stačí napsat položku. Tlačítkem <strong className="font-heading text-ink">Navrhnout
+                  nákup</strong> si necháš rovnou poskládat celý seznam z ankety.
+                </>
+              )}{' '}
+              Pití se počítá jen těm, kdo tu možnost zaškrtli; jídlo všem, kdo dorazí. U stropu se
+              ti, kdo ještě neodpověděli, rozpočítají v poměru, v jakém odpověděli ostatní. Změny se
+              ukládají samy.
             </p>
           </section>
           </>

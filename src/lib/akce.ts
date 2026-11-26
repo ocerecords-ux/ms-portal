@@ -368,6 +368,11 @@ export type PolozkaNakupu = {
   jednotka: string;
   /** PRO_VSECHNY, nebo „<id otázky>::<ano|ne|název možnosti>". */
   proKoho: string;
+  /**
+   * Dávku navrhl portál (26. 11. 2026) a drží ji podle názvu. Jakmile ji
+   * pořadatel přepíše, příznak zmizí a portál do čísla už nemluví.
+   */
+  odhad?: boolean;
 };
 
 export function novyKlicPolozky(): string {
@@ -401,6 +406,7 @@ export function ocistiNakup(vstup: unknown): PolozkaNakupu[] {
       naOsobu: Number.isFinite(naOsobu) && naOsobu > 0 ? Math.min(naOsobu, 10000) : 0,
       jednotka: String(r.jednotka ?? '').trim().slice(0, 20),
       proKoho: String(r.proKoho ?? PRO_VSECHNY).trim().slice(0, 200) || PRO_VSECHNY,
+      odhad: r.odhad === true,
     });
   }
   return hotove;
@@ -455,6 +461,133 @@ export function pocetProCil(
   const jiste = dorazi.filter(sedi).length;
   const podil = dorazi.length > 0 ? jiste / dorazi.length : 0;
   return { jiste, strop: jiste + Math.ceil(mlci * podil) };
+}
+
+/* ------------------------------------------------------------------ *
+ * ODHAD DÁVKY NA OSOBU (zadání 26. 11. 2026: „chci, abys navrhnul, kolik toho
+ * na osobu na večer máme cca nakoupit odhadem - to nechci nastavovat").
+ *
+ * Tabulka běžných dávek NA JEDEN VEČER a na jednoho člověka. Není to věda,
+ * je to to, co se v praxi nakupuje: čtyři piva, osm deka šunky, dva kusy
+ * pečiva. Pořadatel napíše jen název položky a číslo si portál doplní sám;
+ * přepsat ho samozřejmě jde - od té chvíle je položka „vlastní" a odhad do ní
+ * nemluví.
+ *
+ * HLEDÁ SE PODLE KOUSKŮ SLOV v názvu, bez háčků a velikosti písmen; platí
+ * nejdelší shoda, takže „sýrové tyčinky" padnou na tyčinky, ne na sýr.
+ * Kmeny, ne celá slova - „pálenku" a „pálenka" musí trefit totéž. Co se
+ * nepozná, dostane 1 kus na osobu: viditelně špatně, a tím pádem opravitelně.
+ * ------------------------------------------------------------------ */
+
+export type Odhad = { naOsobu: number; jednotka: string; proc: string };
+
+const DAVKY: { slova: string[]; odhad: Odhad }[] = [
+  // --- pití ---
+  { slova: ['piv', 'beer'], odhad: { naOsobu: 4, jednotka: 'ks', proc: '≈ 2 litry za večer, tedy čtyři půllitry' } },
+  { slova: ['vin', 'wine'], odhad: { naOsobu: 0.4, jednotka: 'l', proc: 'něco přes půl lahve na hlavu' } },
+  { slova: ['sekt', 'prosecco', 'bublink', 'champagne'], odhad: { naOsobu: 0.2, jednotka: 'l', proc: 'dvě sklenky na přípitek' } },
+  { slova: ['whiskey', 'whisky', 'rum', 'gin', 'vodka', 'tequila', 'destilat', 'palenk', 'slivovic', 'becherovka'], odhad: { naOsobu: 0.2, jednotka: 'l', proc: 'čtyři až pět panáků' } },
+  { slova: ['nealko', 'limo', 'kofol', 'cola', 'dzus', 'juice'], odhad: { naOsobu: 1, jednotka: 'l', proc: 'litr nealka na večer' } },
+  { slova: ['vod', 'mineralk'], odhad: { naOsobu: 1, jednotka: 'l', proc: 'litr vody k pití mezi' } },
+  { slova: ['kav', 'coffee'], odhad: { naOsobu: 2, jednotka: 'ks', proc: 'dvě kávy' } },
+  { slova: ['led', 'ice'], odhad: { naOsobu: 0.3, jednotka: 'kg', proc: 'led do sklenic' } },
+  // --- jídlo ---
+  { slova: ['chlebic', 'jednohub', 'canape'], odhad: { naOsobu: 4, jednotka: 'ks', proc: 'čtyři kousky na hlavu' } },
+  { slova: ['sunk', 'salam', 'uzenin', 'prosciutto', 'slanin'], odhad: { naOsobu: 0.08, jednotka: 'kg', proc: 'osm deka na talíř' } },
+  { slova: ['syr', 'cheese', 'hermelin', 'eidam'], odhad: { naOsobu: 0.07, jednotka: 'kg', proc: 'sedm deka na talíř' } },
+  { slova: ['klobas', 'parek', 'parky', 'spekac'], odhad: { naOsobu: 0.15, jednotka: 'kg', proc: 'jedna pořádná klobása' } },
+  { slova: ['maso', 'steak', 'gril', 'kure', 'veprov', 'hovez'], odhad: { naOsobu: 0.25, jednotka: 'kg', proc: 'čtvrt kila masa jako hlavní jídlo' } },
+  { slova: ['ryb', 'losos', 'kapr'], odhad: { naOsobu: 0.2, jednotka: 'kg', proc: 'dvacet deka ryby' } },
+  { slova: ['peciv', 'chleb', 'rohlik', 'baget', 'housk'], odhad: { naOsobu: 2, jednotka: 'ks', proc: 'dva kusy pečiva' } },
+  { slova: ['brambor', 'hranolk', 'ryze', 'testovin'], odhad: { naOsobu: 0.2, jednotka: 'kg', proc: 'dvacet deka přílohy' } },
+  { slova: ['salat', 'zelenin', 'okurk', 'rajc', 'paprik'], odhad: { naOsobu: 0.15, jednotka: 'kg', proc: 'patnáct deka zeleniny' } },
+  { slova: ['ovoc', 'jablk', 'hrozn'], odhad: { naOsobu: 0.15, jednotka: 'kg', proc: 'patnáct deka ovoce' } },
+  { slova: ['chips', 'orisk', 'tycink', 'slan', 'popcorn', 'krekr'], odhad: { naOsobu: 0.05, jednotka: 'kg', proc: 'pět deka k pivu' } },
+  { slova: ['dezert', 'zakus', 'dort', 'kolac', 'cukrovi'], odhad: { naOsobu: 1, jednotka: 'ks', proc: 'jeden kousek na hlavu' } },
+  { slova: ['dip', 'omack', 'kecup', 'tatark'], odhad: { naOsobu: 0.05, jednotka: 'kg', proc: 'pět deka dipu' } },
+  { slova: ['polevk'], odhad: { naOsobu: 0.3, jednotka: 'l', proc: 'tři deci polévky' } },
+  // --- kolem stolu ---
+  { slova: ['ubrous', 'servitk'], odhad: { naOsobu: 4, jednotka: 'ks', proc: 'čtyři ubrousky' } },
+  { slova: ['kelim', 'sklenic', 'talir', 'pribor', 'brcka'], odhad: { naOsobu: 2, jednotka: 'ks', proc: 'dva kusy, než se ztratí' } },
+  { slova: ['pokoj', 'ubytovan', 'hotel', 'postel', 'nocleh'], odhad: { naOsobu: 1, jednotka: 'ks', proc: 'jedno lůžko na člověka' } },
+];
+
+/** Výchozí odhad, když se v názvu nic nepozná. */
+const ODHAD_NEZNAMA: Odhad = { naOsobu: 1, jednotka: 'ks', proc: 'neznámá položka - jeden kus na člověka' };
+
+function bezHacku(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/** Kolik čeho na osobu na jeden večer. Nikdy nevrací prázdno - vždy něco navrhne. */
+export function odhadPolozky(nazev: string): Odhad {
+  const text = bezHacku(nazev);
+  if (!text) return ODHAD_NEZNAMA;
+  let nejlepsi: { delka: number; odhad: Odhad } | null = null;
+  for (const radek of DAVKY) {
+    for (const slovo of radek.slova) {
+      if (text.includes(slovo) && (!nejlepsi || slovo.length > nejlepsi.delka)) {
+        nejlepsi = { delka: slovo.length, odhad: radek.odhad };
+      }
+    }
+  }
+  return nejlepsi?.odhad ?? ODHAD_NEZNAMA;
+}
+
+/** Co pořadatel vůbec nemá kupovat - „donesu si vlastní", „nic nepiju". */
+function neniKNakupu(nazev: string): boolean {
+  const text = bezHacku(nazev);
+  return ['vlastni', 'nic ', 'nepiju', 'nepiji', 'zadn'].some((s) => text.includes(s));
+}
+
+/**
+ * NÁVRH CELÉHO NÁKUPU. Pití se vezme z ankety - každá možnost, kterou někdo
+ * může zaškrtnout, je jeden řádek počítaný jen těm, kdo ji zaškrtli. K tomu
+ * základ, který se na večírku kupuje vždycky, pro všechny, kdo dorazí.
+ *
+ * Co už v seznamu je, se nepřidává znovu (podle názvu a cíle), takže se dá
+ * zmáčknout i nad rozdělanou tabulkou.
+ */
+const ZAKLAD_VECERA = ['Pečivo', 'Šunka', 'Sýr', 'Zelenina', 'Slané', 'Dezert', 'Voda', 'Ubrousky'];
+
+export function navrhNakupu(otazky: Otazka[], stavajici: PolozkaNakupu[] = []): PolozkaNakupu[] {
+  const uz = new Set(stavajici.map((p) => `${bezHacku(p.nazev)}|${p.proKoho}`));
+  const pridane: PolozkaNakupu[] = [];
+
+  const pridej = (nazev: string, proKoho: string) => {
+    const klic = `${bezHacku(nazev)}|${proKoho}`;
+    if (uz.has(klic) || neniKNakupu(nazev)) return;
+    uz.add(klic);
+    const odhad = odhadPolozky(nazev);
+    pridane.push({
+      id: novyKlicPolozky(),
+      nazev,
+      naOsobu: odhad.naOsobu,
+      jednotka: odhad.jednotka,
+      proKoho,
+      odhad: true,
+    });
+  };
+
+  for (const o of otazkyPoDorazeni(otazky)) {
+    if (o.typ === 'VYBER') {
+      for (const m of o.moznosti ?? []) pridej(m, klicCile(o.id, m));
+    } else if (o.typ === 'ANO_NE') {
+      // Ano/ne otázka se do nákupu hodí jen tam, kde se za „ano" něco kupuje
+      // (ubytování), proto podle názvu - ne každé „ano" je položka.
+      if (!neniKNakupu(o.text) && odhadPolozky(o.text) !== ODHAD_NEZNAMA) {
+        pridej(o.text, klicCile(o.id, 'ano'));
+      }
+    }
+  }
+
+  for (const nazev of ZAKLAD_VECERA) pridej(nazev, PRO_VSECHNY);
+
+  return [...stavajici, ...pridane];
 }
 
 /** Kolik toho koupit. Dvě desetinná místa - 0,08 kg na osobu je běžná dávka. */
