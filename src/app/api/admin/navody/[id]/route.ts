@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { hledaciText } from '@/lib/navody';
 import { volnySlug } from '@/lib/navodyServer';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * ÚPRAVA A SMAZÁNÍ NÁVODU (zadání 16. 9. 2026).
@@ -28,20 +29,20 @@ const schema = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message || 'Neplatná data.' },
-      { status: 400 },
-    );
+    // Věta od `zod` jde první, a když žádná není, jde klíč (vzor z dávky 7s).
+    return parsed.error.issues[0]?.message
+      ? NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+      : odpovedChyby('chybaApi.neplatnaData', 400);
   }
   const d = parsed.data;
 
   try {
     const stary = await prisma.navod.findUnique({ where: { id: params.id } });
-    if (!stary) return NextResponse.json({ error: 'Návod nenalezen.' }, { status: 404 });
+    if (!stary) return odpovedChyby('chybaApi.navodNenalezen', 404);
 
     const navod = await prisma.navod.update({
       where: { id: params.id },
@@ -63,19 +64,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json(navod);
   } catch (err) {
     console.error('PATCH /api/admin/navody/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Návod se nepodařilo uložit.' }, { status: 500 });
+    return odpovedChyby('chybaApi.navodNeulozen', 500);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   try {
     await prisma.navod.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/admin/navody/[id] selhalo:', err);
-    return NextResponse.json({ error: 'Návod se nepodařilo smazat.' }, { status: 500 });
+    return odpovedChyby('chybaApi.navodNesmazan', 500);
   }
 }

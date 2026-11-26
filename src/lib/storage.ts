@@ -755,7 +755,7 @@ export async function uploadPripominkaObrazek(
   buffer: Buffer,
   nazev: string,
   typSouboru?: string,
-): Promise<{ url: string; name: string } | { error: string }> {
+): Promise<{ url: string; name: string } | { error: string; klic?: string }> {
   const client = getClient();
   const bucket = process.env.S3_BUCKET;
 
@@ -779,7 +779,11 @@ export async function uploadPripominkaObrazek(
   }
 
   if (buffer.byteLength > MAX_INLINE_SCREENSHOT_BYTES) {
-    return { error: 'Obrázek je moc velký. Zkuste ho oříznout jen na tu část obrazovky, o kterou jde.' };
+    // Klíč vedle české věty, ať si ji obrazovka přeloží (dávka 7af, vzor z 7w).
+    return {
+      error: 'Obrázek je moc velký. Zkuste ho oříznout jen na tu část obrazovky, o kterou jde.',
+      klic: 'chybaApi.obrazekMocVelkyZkusteOriznout',
+    };
   }
 
   const mime = typSouboru || 'image/png';

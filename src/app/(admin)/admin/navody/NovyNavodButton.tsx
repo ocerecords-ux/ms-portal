@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Založí prázdný článek a rovnou ho otevře k psaní (zadání 16. 9. 2026).
@@ -38,7 +39,7 @@ export function NovyClanekButton({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('navod.nezalozen'));
+        setChyba(hlaskaChyby(data, t, t('navod.nezalozen')));
         return;
       }
       router.push(`/admin/navody/${data.id}`);

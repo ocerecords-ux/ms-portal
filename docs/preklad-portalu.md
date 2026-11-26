@@ -106,6 +106,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 7ac | 22. 11. | Hlášky rout techniky klíčem — `api/admin/technika/**` (4 routy, 1 obrazovka); devátá agenda z `api/admin/**` | [x] |
 | 7ad | 23. 11. | Hlášky rout pokladny klíčem — `api/admin/pokladna/**` (2 routy, 1 obrazovka) a k tomu důvody z `lib/pokladnaServer.ts`, které chodily na obrazovku hotové česky; desátá agenda z `api/admin/**` | [x] |
 | 7ae | 24. 11. | Hlášky rout vlastních firem klíčem — `api/admin/issuers/**` a k nim `api/admin/ucty/[id]` (4 routy, 4 obrazovky); jedenáctá agenda z `api/admin/**` | [x] |
+| 7af | 26. 11. | Hlášky rout Návodů a Procesů klíčem — `api/admin/navody/**` (3 routy, 2 obrazovky) a k tomu důvod z `lib/storage.ts`, který chodil na obrazovku hotový česky; dvanáctá agenda z `api/admin/**` | [x] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
@@ -2500,6 +2501,63 @@ v `mojeFirmy.ciselneRady`).
 **Co zbývá v `api/admin/**`:** po vlastních firmách zůstává kolem
 **175 českých hlášek** — největší kusy jsou návody (19), ceník (18), pozvánky
 údajů (16) a doklady (16). Dál po agendách, jedna za večer.
+
+### Dávka 7af je HOTOVÁ (26. 11. 2026)
+
+**Dvanáctá agenda z `api/admin/**`: Návody a Procesy.** Vzor pořád z dávky 7o
+(`odpovedChyby(klíč, status)`), obrazovka čte chybu přes
+`hlaskaChyby(data, t, záloha)`. Rozsah: **3 routy, 2 obrazovky, 1 knihovna,
+19 přepsaných míst a slovník +7 klíčů**. `chybaApi.bezOpravneni` (4×),
+`chybaApi.neplatnaData` (2×) a `chybaApi.neniObrazek` už ve slovníku byly
+z dávek 7o–7ae.
+
+**Routy:** `navody` (založení článku), `navody/[id]` (úprava a smazání)
+a `navody/obrazek` (printscreen do textu). Jsou to tytéž routy pro NÁVODY
+i PROCESY — je to jeden model, liší se jen druhem (viz `lib/navody.ts`),
+takže se nic nepřekládalo dvakrát.
+
+**Knihovna, protože hláška vzniká tam, ne v routě** (stejné jako banka
+v dávce 7w a pokladna v 7ad): `uploadPripominkaObrazek()`
+v `lib/storage.ts` vracela `{ error: 'Obrázek je moc velký…' }` a routa to
+posílala ven, jak to přišlo. Teď vrací vedle věty i `klic` (nepovinný, takže
+se zbylí dva volající nemuseli dotknout) a routa z něj udělá
+`odpovedChyby(…, 400)`.
+
+**Dvě hlášky o velkém obrázku, dva klíče.** Jedna je z routy (osm megabajtů,
+„ořízněte ho…"), druhá z `lib/storage.ts` (obrázek do databáze, „Zkuste ho
+oříznout…"). Významem je to totéž, ale VĚTY se liší — a čeština je zdroj
+pravdy (pravidlo 1), takže se tady české věty nesjednocovaly. Kdo je chce mít
+stejné, je to úklid textů, ne práce překladu.
+
+**Nové klíče:** `chybaApi.navodNezalozen`, `chybaApi.navodNenalezen`,
+`chybaApi.navodNeulozen`, `chybaApi.navodNesmazan`,
+`chybaApi.obrazekNedosel`, `chybaApi.obrazekMocVelkyOriznete`
+a `chybaApi.obrazekMocVelkyZkusteOriznout`.
+
+**Obrazovky:** `NovyNavodButton.tsx` (zakládání, slouží i Procesům)
+a `[id]/NavodForm.tsx` (tři místa — vložení obrázku, uložení, smazání).
+U smazání se odpověď dřív vůbec nečetla: obrazovka ukázala rovnou svou
+záložní větu, takže klíč z routy by se zahodil. Teď se `res.json()` přečte
+a záloha `navod.nesmazano` zůstává poslední v řadě.
+
+**Termín podle obrazovky:** návod = guide, proces = procedure (tak to má
+`navod.*` od dávky 7d) — do slovníčku se nic nepřidávalo.
+
+**Co se NEDĚLALO (schválně, stejně jako v 7s–7ae):**
+
+1. **Hlášky ze `zod` schémat** — `Napište název návodu.` (dvě routy) zůstává
+   česky; záložní `'Neplatná data.'` vedle ní klíč dostalo.
+2. **`'Ostatní'` jako výchozí kategorie** — zapisuje se do DAT článku, ne na
+   obrazovku (stejná třída jako `ucelZVydaje()` v dávce 7ad).
+3. **Zbylí dva volající `uploadPripominkaObrazek()`** (`api/pripominky`
+   a `api/site/obrazky`) klíč zatím nečtou. Patří ke svým agendám, ne
+   k Návodům — `klic` na ně počká.
+
+**Typová kontrola: diff proti známým hláškám prázdný** (22 řádků beze změny).
+
+**Co zbývá v `api/admin/**`:** po Návodech zůstává kolem **160 českých
+hlášek** — největší kusy jsou pozvánky údajů (11), ceník (8), projekty (8)
+a upomínky (7). Dál po agendách, jedna za večer.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

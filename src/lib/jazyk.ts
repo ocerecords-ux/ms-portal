@@ -13264,6 +13264,41 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Účet nenalezen.',
     en: 'The account was not found.',
   },
+
+  /* Návody a Procesy - routy `api/admin/navody/**` (dávka 7af, 26. 11. 2026).
+     Termín podle obrazovky: návod = guide (tak to má `navod.*` od dávky 7d).
+     Dvě hlášky o velkém obrázku se liší VĚTOU, ne významem: jedna je z routy
+     (osm megabajtů), druhá z `lib/storage.ts` (obrázek do databáze). Čeština
+     je zdroj pravdy, takže mají každá svůj klíč - sjednocovat české věty není
+     práce překladu. */
+  'chybaApi.navodNezalozen': {
+    cs: 'Návod se nepodařilo založit.',
+    en: 'The guide could not be created.',
+  },
+  'chybaApi.navodNenalezen': {
+    cs: 'Návod nenalezen.',
+    en: 'The guide was not found.',
+  },
+  'chybaApi.navodNeulozen': {
+    cs: 'Návod se nepodařilo uložit.',
+    en: 'The guide could not be saved.',
+  },
+  'chybaApi.navodNesmazan': {
+    cs: 'Návod se nepodařilo smazat.',
+    en: 'The guide could not be deleted.',
+  },
+  'chybaApi.obrazekNedosel': {
+    cs: 'Nepřišel žádný obrázek.',
+    en: 'No image arrived.',
+  },
+  'chybaApi.obrazekMocVelkyOriznete': {
+    cs: 'Obrázek je moc velký - ořízněte ho jen na tu část obrazovky, o kterou jde.',
+    en: 'The image is too large — crop it to just the part of the screen that matters.',
+  },
+  'chybaApi.obrazekMocVelkyZkusteOriznout': {
+    cs: 'Obrázek je moc velký. Zkuste ho oříznout jen na tu část obrazovky, o kterou jde.',
+    en: 'The image is too large. Try cropping it to just the part of the screen that matters.',
+  },
 };
 
 /**

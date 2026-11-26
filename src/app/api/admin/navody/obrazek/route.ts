@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
 import { uploadPripominkaObrazek } from '@/lib/storage';
+import { odpovedChyby } from '@/lib/chybyApi';
 
 /**
  * OBRÁZEK DO NÁVODU NEBO PROCESU (zadání 28. 9. 2026: „aby se tam dal psát
@@ -22,27 +23,27 @@ const MAX_BAJTU = 8 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!session) return odpovedChyby('chybaApi.bezOpravneni', 403);
 
   const formData = await req.formData().catch(() => null);
   const soubor = formData?.get('obrazek');
   if (!(soubor instanceof File) || soubor.size === 0) {
-    return NextResponse.json({ error: 'Nepřišel žádný obrázek.' }, { status: 400 });
+    return odpovedChyby('chybaApi.obrazekNedosel', 400);
   }
   if (!soubor.type.startsWith('image/')) {
-    return NextResponse.json({ error: 'Tohle není obrázek.' }, { status: 400 });
+    return odpovedChyby('chybaApi.neniObrazek', 400);
   }
   if (soubor.size > MAX_BAJTU) {
-    return NextResponse.json(
-      { error: 'Obrázek je moc velký - ořízněte ho jen na tu část obrazovky, o kterou jde.' },
-      { status: 400 },
-    );
+    return odpovedChyby('chybaApi.obrazekMocVelkyOriznete', 400);
   }
 
   const buffer = Buffer.from(await soubor.arrayBuffer());
   const vysledek = await uploadPripominkaObrazek(buffer, soubor.name || 'obrazek.png', soubor.type);
   if ('error' in vysledek) {
-    return NextResponse.json({ error: vysledek.error }, { status: 400 });
+    // Hláška vzniká v `lib/storage.ts`, klíč přichází vedle ní (vzor z dávky 7w).
+    return vysledek.klic
+      ? odpovedChyby(vysledek.klic, 400)
+      : NextResponse.json({ error: vysledek.error }, { status: 400 });
   }
   return NextResponse.json({ url: vysledek.url, nazev: vysledek.name }, { status: 201 });
 }

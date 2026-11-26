@@ -8,6 +8,7 @@ import { nazevRole } from '@/lib/roles';
 import { ALL_ROLES } from '@/lib/menu';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { PlochaProPretazeni } from '@/components/PlochaProPretazeni';
+import { hlaskaChyby } from '@/lib/chybaZOdpovedi';
 
 /**
  * Psaní návodu (zadání 16. 9. 2026).
@@ -53,7 +54,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
       const res = await fetch('/api/admin/navody/obrazek', { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.url) {
-        setChybaObrazku(data?.error || t('navod.obrazekNenahran'));
+        setChybaObrazku(hlaskaChyby(data, t, t('navod.obrazekNenahran')));
         return;
       }
       // Popis obrazku je soucast textu navodu, tedy data - zustava, jak je.
@@ -90,7 +91,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || t('navod.neulozeno'));
+        setChyba(hlaskaChyby(data, t, t('navod.neulozeno')));
         return;
       }
       setZprava(t('navod.ulozeno'));
@@ -111,7 +112,9 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
     try {
       const res = await fetch(`/api/admin/navody/${n.id}`, { method: 'DELETE' });
       if (!res.ok) {
-        setChyba(t('navod.nesmazano'));
+        // Routa od dávky 7af posílá klíč, tak ho tady čteme - záloha zůstává.
+        const data = await res.json().catch(() => ({}));
+        setChyba(hlaskaChyby(data, t, t('navod.nesmazano')));
         return;
       }
       router.push('/admin/navody');
