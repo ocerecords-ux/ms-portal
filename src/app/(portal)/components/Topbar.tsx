@@ -29,33 +29,29 @@ import { useZarizeni } from '@/lib/useZarizeni';
  * na které uživatel opravdu smí.
  */
 /**
- * Rampouchy u spodní hrany lišty (vánoční mód). Pevný seznam, ne náhoda:
- * server i prohlížeč musí vykreslit totéž, jinak React hlásí, že se stránka
- * po načtení změnila - a rampouchy by při překreslení poskakovaly.
- * Nepravidelné délky schválně, aby to vypadalo namrzle, a ne jako hřeben.
+ * NAMRZLÉ SKLO NA LIŠTĚ (vánoční mód, vybraná varianta 27. 11. 2026).
+ * Pár ledových krystalků, jako když namrzne okno - skoro průhledných, bez
+ * pohybu. Pevný seznam, ne náhoda: server i prohlížeč musí vykreslit totéž,
+ * jinak React hlásí, že se stránka po načtení změnila, a krystalky by při
+ * každém překreslení poskakovaly.
  */
-const RAMPOUCHY = [
-  { vlevo: 3, sirka: 8, delka: 20 },
-  { vlevo: 7, sirka: 6, delka: 11 },
-  { vlevo: 11, sirka: 9, delka: 26 },
-  { vlevo: 16, sirka: 6, delka: 14 },
-  { vlevo: 20, sirka: 7, delka: 9 },
-  { vlevo: 25, sirka: 8, delka: 22 },
-  { vlevo: 30, sirka: 6, delka: 12 },
-  { vlevo: 35, sirka: 7, delka: 17 },
-  { vlevo: 41, sirka: 6, delka: 9 },
-  { vlevo: 46, sirka: 9, delka: 25 },
-  { vlevo: 51, sirka: 6, delka: 13 },
-  { vlevo: 56, sirka: 7, delka: 10 },
-  { vlevo: 61, sirka: 8, delka: 21 },
-  { vlevo: 66, sirka: 6, delka: 12 },
-  { vlevo: 71, sirka: 7, delka: 18 },
-  { vlevo: 76, sirka: 6, delka: 9 },
-  { vlevo: 81, sirka: 9, delka: 24 },
-  { vlevo: 86, sirka: 6, delka: 13 },
-  { vlevo: 90, sirka: 7, delka: 10 },
-  { vlevo: 95, sirka: 8, delka: 19 },
-  { vlevo: 98, sirka: 6, delka: 12 },
+const KRYSTALY = [
+  { vlevo: 44.4, shora: 49.8, velikost: 21, otoceni: 28, sila: 0.26 },
+  { vlevo: 57.4, shora: 19.8, velikost: 16, otoceni: 38, sila: 0.31 },
+  { vlevo: 10.0, shora: 29.3, velikost: 11, otoceni: 49, sila: 0.29 },
+  { vlevo: 5.0, shora: 83.6, velikost: 22, otoceni: 39, sila: 0.28 },
+  { vlevo: 16.1, shora: 6.2, velikost: 16, otoceni: 4, sila: 0.21 },
+  { vlevo: 24.2, shora: 7.4, velikost: 16, otoceni: 26, sila: 0.31 },
+  { vlevo: 50.8, shora: 56.2, velikost: 16, otoceni: 40, sila: 0.25 },
+  { vlevo: 27.7, shora: 84.8, velikost: 22, otoceni: 50, sila: 0.29 },
+  { vlevo: 31.3, shora: 23.4, velikost: 13, otoceni: 4, sila: 0.30 },
+  { vlevo: 39.4, shora: 72.7, velikost: 15, otoceni: 57, sila: 0.32 },
+  { vlevo: 1.1, shora: 21.8, velikost: 21, otoceni: 28, sila: 0.34 },
+  { vlevo: 39.2, shora: 10.8, velikost: 18, otoceni: 47, sila: 0.22 },
+  { vlevo: 9.4, shora: 31.6, velikost: 22, otoceni: 45, sila: 0.20 },
+  { vlevo: 24.7, shora: 13.1, velikost: 11, otoceni: 48, sila: 0.21 },
+  { vlevo: 54.7, shora: 40.8, velikost: 12, otoceni: 44, sila: 0.20 },
+  { vlevo: 62.8, shora: 14.3, velikost: 15, otoceni: 13, sila: 0.22 },
 ];
 
 export function Topbar({
@@ -333,60 +329,41 @@ export function Topbar({
     // (`sm:`) zustava lista presne takova, jaka byla - jeden radek.
     <header data-lista className="relative sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
       {/* NAMRZLÁ LIŠTA (upřesnění 27. 11. 2026: „pojďme to udělat namrzle,
-          ten vrchní panel"). Žádný sníh, žádný Santa, žádné blikání: lišta
-          vypadá, jako když na ni dýchne mráz - u horní hrany visí rampouchy,
-          v rozích sedí jinovatka a dole se drží poprašek. Je to jedna vrstva
-          POD obsahem lišty, neklikatelná a bez animace, takže portál pod ní
-          vypadá a funguje přesně jako jindy. */}
+          ten vrchní panel", po dvou pokusech zúžené na ledové sklo). Žádný
+          sníh, žádný Santa, žádné rampouchy ani blikání - jen studený nádech
+          přes lištu a několik krystalků namrzlých na skle. Jedna neklikatelná
+          vrstva POD obsahem lišty, bez animace; portál pod ní vypadá a funguje
+          přesně jako jindy. */}
       {vanoce && (
-        <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          {/* Mráz od rohů a nádech námrazy odshora i odspodu. */}
-          <span
-            className="absolute inset-0"
-            style={{
-              background:
-                'radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,0.30), rgba(255,255,255,0) 55%), radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.30), rgba(255,255,255,0) 55%), linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0) 40%), linear-gradient(to top, rgba(214,238,255,0.22), rgba(214,238,255,0) 24%)',
-            }}
-          />
-
-          {/* Jinovatka v rozích - tenké větvičky, jak namrzá sklo. */}
-          <svg viewBox="0 0 60 60" className="absolute left-0 top-0 h-full w-[150px] opacity-30">
-            <g stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" fill="none">
-              <path d="M2 2 C16 8 24 18 30 32 M12 3 L15 12 M22 12 L19 21 M30 32 L23 36 M30 32 L37 27" />
-              <path d="M2 22 C14 25 22 32 27 46 M11 21 L13 30 M21 31 L18 39" />
-            </g>
-          </svg>
-          <svg viewBox="0 0 60 60" className="absolute right-0 top-0 h-full w-[150px] opacity-30 scale-x-[-1]">
-            <g stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" fill="none">
-              <path d="M2 2 C16 8 24 18 30 32 M12 3 L15 12 M22 12 L19 21 M30 32 L23 36 M30 32 L37 27" />
-              <path d="M2 22 C14 25 22 32 27 46 M11 21 L13 30 M21 31 L18 39" />
-            </g>
-          </svg>
-
-          {/* Rampouchy visí z horní hrany dovnitř lišty - ne pod ni, aby
-              nezasahovaly do stránky a nevypadaly jako zuby. */}
-          <span className="absolute inset-x-0 top-0">
-            {RAMPOUCHY.map((r, i) => (
-              <span
-                key={i}
-                className="absolute top-0"
-                style={{
-                  left: `${r.vlevo}%`,
-                  width: r.sirka,
-                  height: r.delka,
-                  background:
-                    'linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(255,255,255,0.18))',
-                  clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-                }}
-              />
-            ))}
-          </span>
-
-          {/* Poprašek u spodní hrany. */}
-          <span
-            className="absolute inset-x-0 bottom-0 h-[7px]"
-            style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.5), rgba(255,255,255,0))' }}
-          />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(226,242,255,0.20), rgba(226,242,255,0.06))',
+          }}
+        >
+          {KRYSTALY.map((k, i) => (
+            <svg
+              key={i}
+              viewBox="0 0 24 24"
+              className="absolute"
+              style={{
+                left: `${k.vlevo}%`,
+                top: `${k.shora}%`,
+                width: k.velikost,
+                height: k.velikost,
+                opacity: k.sila,
+                transform: `rotate(${k.otoceni}deg)`,
+              }}
+            >
+              <g stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" fill="none">
+                <path d="M12 2 V22 M3.3 7 L20.7 17 M3.3 17 L20.7 7" />
+                <path d="M12 6 L9.5 8 M12 6 L14.5 8 M12 18 L9.5 16 M12 18 L14.5 16" />
+                <path d="M7 9.5 L6.8 12.6 M17 14.5 L17.2 11.4 M7 14.5 L6.8 11.4 M17 9.5 L17.2 12.6" />
+              </g>
+            </svg>
+          ))}
         </span>
       )}
 

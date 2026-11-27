@@ -109,7 +109,7 @@ export function VanoceKarta({
       <div>
         <h2 className="font-heading font-semibold text-ink m-0">Vánoční výzdoba</h2>
         <p className="text-sm font-body text-muted m-0 mt-1">
-          Horní lišta namrzne - jinovatka po okrajích a rampouchy u spodní hrany. Sama se zapne
+          Horní lišta namrzne - studený nádech a pár ledových krystalků na skle. Sama se zapne
           1. prosince a zhasne 2. ledna; portál se jinak nijak nemění.
           {!bezi && ' Teď není sezóna, takže je lišta čistá - leda že si ji zapneš níž.'}
         </p>
