@@ -44,6 +44,36 @@ export async function smiSpravovatAkce(userId: string): Promise<boolean> {
   }
 }
 
+/**
+ * ZKRATKA NA LIŠTU (zadání 27. 11. 2026: „přístup bude přes nějakou zkratku
+ * na hlavní liště… zmizí den po večírku").
+ *
+ * Vrátí nejbližší akci, kterou ten člověk spravuje - a jen dokud je po čem
+ * koukat: den po akci zkratka zmizí sama, nikdo ji nemusí schovávat. Akce bez
+ * data se bere jako rozdělaná, takže se ukazuje taky.
+ *
+ * Běží to při každém vykreslení portálu, proto je to jeden malý dotaz a při
+ * chybě prostě nic - lišta kvůli zkratce nesmí spadnout.
+ */
+export async function zkratkaNaAkci(
+  userId: string,
+): Promise<{ id: string; nazev: string; kdy: string | null } | null> {
+  try {
+    if (!(await smiSpravovatAkce(userId))) return null;
+    const hranice = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const akce = (await prisma.akce.findFirst({
+      where: { OR: [{ kdy: null }, { kdy: { gte: hranice } }] },
+      orderBy: [{ kdy: 'asc' }],
+      select: { id: true, nazev: true, kdy: true },
+    })) as { id: string; nazev: string; kdy: Date | null } | null;
+    if (!akce) return null;
+    return { id: akce.id, nazev: akce.nazev, kdy: akce.kdy ? akce.kdy.toISOString() : null };
+  } catch (err) {
+    console.error('Zkratku na akci se nepodařilo načíst:', err);
+    return null;
+  }
+}
+
 /** Náhodný odkaz do mailu - stejně dlouhý jako ostatní otevřené odkazy. */
 export function novyTokenPozvanky(): string {
   return randomBytes(24).toString('base64url');

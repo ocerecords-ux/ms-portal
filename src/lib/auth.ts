@@ -106,6 +106,9 @@ export const authOptions: NextAuthOptions = {
           pristupy: user.pristupy ?? [],
           superadmin: user.superadmin === true,
           vedouciStudii: vedeStudii > 0,
+          // Spravuje firemni akce (27. 11. 2026) - podle toho ho middleware
+          // pusti do /admin/akce, i kdyz neni Zuzo-labuzo.
+          spravujeAkce: user.spravujeAkce === true,
         };
       },
     }),
@@ -150,6 +153,7 @@ export const authOptions: NextAuthOptions = {
         token.pristupy = ((user as any).pristupy ?? []) as string[];
         token.superadmin = (user as any).superadmin === true;
         token.vedouciStudii = (user as any).vedouciStudii === true;
+        token.spravujeAkce = (user as any).spravujeAkce === true;
         token.overenoAt = Date.now();
         token.neaktivni = false;
         return token;
@@ -178,6 +182,8 @@ export const authOptions: NextAuthOptions = {
             // Vedouci pobocky (24. 11. 2026) - podle toho ho middleware pusti
             // na Techniku, viz nize a src/middleware.ts.
             vedeStudia: { select: { id: true } },
+            // Spravce firemnich akci (27. 11. 2026) - viz src/middleware.ts.
+            spravujeAkce: true,
           },
         });
         if (!ucet || !ucet.active) {
@@ -192,6 +198,7 @@ export const authOptions: NextAuthOptions = {
         token.pristupy = (ucet.pristupy ?? []) as string[];
         token.superadmin = ucet.superadmin === true;
         token.vedouciStudii = ((ucet.vedeStudia ?? []) as { id: string }[]).length > 0;
+        token.spravujeAkce = (ucet as { spravujeAkce?: boolean }).spravujeAkce === true;
         token.neaktivni = false;
         token.overenoAt = Date.now();
       } catch (err) {

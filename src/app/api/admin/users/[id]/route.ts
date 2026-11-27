@@ -55,6 +55,7 @@ const schema = z.object({
   fakturaceProjektu: z.string().trim().optional(),
   /** Zvoneček, když klient vyplní tracklist (19. 11. 2026). */
   tracklistKlienta: z.string().trim().optional(),
+  spravujeAkce: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
   vidiPokladnu: z.string().trim().optional(),
   spravujeTechParametry: z.string().trim().optional(),
@@ -126,6 +127,7 @@ function readFormData(formData: FormData) {
     kopieNabidekTerminu: has('kopieNabidekTerminu') ? formData.get('kopieNabidekTerminu') : undefined,
     fakturaceProjektu: has('fakturaceProjektu') ? formData.get('fakturaceProjektu') : undefined,
     tracklistKlienta: has('tracklistKlienta') ? formData.get('tracklistKlienta') : undefined,
+    spravujeAkce: has('spravujeAkce') ? formData.get('spravujeAkce') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
     vidiPokladnu: has('vidiPokladnu') ? formData.get('vidiPokladnu') : undefined,
     spravujeTechParametry: has('spravujeTechParametry') ? formData.get('spravujeTechParametry') : undefined,
@@ -353,6 +355,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.kopieNabidekTerminu !== undefined
         ? { kopieNabidekTerminu: data.kopieNabidekTerminu === '1' }
         : {}),
+      ...(data.spravujeAkce !== undefined ? { spravujeAkce: data.spravujeAkce === '1' } : {}),
       ...(data.tracklistKlienta !== undefined
         ? { tracklistKlienta: data.tracklistKlienta === '1' }
         : {}),

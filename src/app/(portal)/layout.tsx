@@ -34,6 +34,7 @@ import { PrepinacFirem } from './components/PrepinacFirem';
 import { nahledZHodnoty } from '@/lib/nahledRole';
 import { maStudioSRezervacemi } from '@/lib/bookingServer';
 import { maVanocniVyzdobu } from '@/lib/vanoceServer';
+import { zkratkaNaAkci } from '@/lib/akceServer';
 import { VanocniOzdoby } from './components/VanocniOzdoby';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
@@ -219,6 +220,8 @@ export default async function PortalLayout({ children }: { children: React.React
 
   /** Vánoční výzdoba (27. 11. 2026) - datum, vypínač portálu a vypínač u mě. */
   const vanoce = await maVanocniVyzdobu(session.user.id);
+  /** Zkratka na firemní akci v liště (27. 11. 2026) - mizí den po akci. */
+  const zkratkaAkce = await zkratkaNaAkci(session.user.id);
 
   const maNapovedu = internal
     ? true
@@ -258,6 +261,7 @@ export default async function PortalLayout({ children }: { children: React.React
         interni={internal}
         napoveda={maNapovedu}
         vanoce={vanoce}
+        akce={zkratkaAkce}
       />
       {/* VÁNOČNÍ VÝZDOBA (zadání 27. 11. 2026). Sníh a světýlka přes celou
           stránku; vypíná se v Mém účtu, v lednu zhasne sama. */}

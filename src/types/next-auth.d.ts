@@ -63,5 +63,7 @@ declare module 'next-auth/jwt' {
      * sáhnout nejde. Obnovuje se spolu s rolí, tedy do pěti minut od změny.
      */
     vedouciStudii?: boolean;
+    /** Spravuje firemní akce a pozvánky (27. 11. 2026). */
+    spravujeAkce?: boolean;
   }
 }

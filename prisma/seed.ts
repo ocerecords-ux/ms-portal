@@ -202,6 +202,7 @@ async function main() {
   await ranniPrehledOndrejovi();
   await siteJenOndrejovi();
   await akceJenOndrejovi();
+  await akceTakyPeterKarolinaHelca();
   await zalozTechnickeParametry();
   await palubovkaJenOndrejovi();
   await zalozHistoriiPortalu();
@@ -493,6 +494,38 @@ async function akceJenOndrejovi() {
     console.log(`  akce: sekce zapnuta jen u ${ondrej.email}`);
   } catch (err) {
     console.warn('  akce se nepodarilo zapnout:', err);
+  }
+}
+
+/**
+ * VÁNOČNÍ VEČÍREK VIDÍ I PRODUKCE (zadání 27. 11. 2026: „zpřístupni teď
+ * vánoční večírek Peterovi, Karolíně a Helči").
+ *
+ * Jednorázově, ať to nemusí nikdo doklikávat; dál to řídí zaškrtávátko
+ * *Spravuje akce* na kartě uživatele. Hledá se podle příjmení, protože id
+ * i tvar e-mailu se v každé databázi liší; komu příznak chybí, ten ho
+ * dostane, komu už ho někdo dal, tomu se nic nemění.
+ */
+async function akceTakyPeterKarolinaHelca() {
+  const ZNAMKA = 'akce-produkce-2026-11-27';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: {
+        active: true,
+        OR: [
+          { name: { contains: 'Dratva', mode: 'insensitive' } },
+          { name: { contains: 'Zbořilová', mode: 'insensitive' } },
+          { name: { contains: 'Rychlík', mode: 'insensitive' } },
+        ],
+      },
+      data: { spravujeAkce: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  akce: sekce zapnuta u dalsich ${vysledek.count} uctu`);
+  } catch (err) {
+    console.warn('  akce se nepodarilo zapnout produkci:', err);
   }
 }
 

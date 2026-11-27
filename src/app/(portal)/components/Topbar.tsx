@@ -68,6 +68,7 @@ export function Topbar({
   interni = false,
   napoveda = true,
   vanoce = false,
+  akce = null,
 }: {
   userLabel: string;
   /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
@@ -84,8 +85,13 @@ export function Topbar({
   itemsMobil?: NavItem[];
   /** Stránky, které si smí do lišty přidat. */
   pageOptions: NavItem[];
-  /** Vánoční výzdoba (27. 11. 2026) - čepice na logu. Zapíná ji server. */
+  /** Vánoční výzdoba (27. 11. 2026) - namrzlá lišta. Zapíná ji server. */
   vanoce?: boolean;
+  /**
+   * ZKRATKA NA FIREMNÍ AKCI (27. 11. 2026). Ukáže se jen tomu, kdo akce
+   * spravuje, a jen dokud je akce aktuální - den po ní zmizí sama.
+   */
+  akce?: { id: string; nazev: string; kdy: string | null } | null;
   /**
    * Čísla k odkazům (adresa → počet). Ukazují se jako odznak vedle názvu
    * (zadání 15. 9. 2026: „když tam přibude nový bonus, který má Petr
@@ -412,6 +418,34 @@ export function Topbar({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
         </button>
+        {/* ZKRATKA NA AKCI (zadání 27. 11. 2026: „přístup bude přes nějakou
+            zkratku na hlavní liště, dejme tam prozatímně nějakou ikonu vedle
+            animovaného loga. Zmizí den po večírku").
+            Prozatímní ikona - skleničky na přípitek. Vidí ji jen ten, kdo akci
+            spravuje; o tom, jestli se vykreslí, rozhoduje server. */}
+        {akce && (
+          <a
+            href={`/admin/akce?id=${encodeURIComponent(akce.id)}`}
+            title={akce.nazev}
+            aria-label={akce.nazev}
+            className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 transition-colors no-underline"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#1FDF67"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+            >
+              <path d="M5 3 L9 3 L10.5 10 A3 3 0 0 1 4.5 10 Z" />
+              <path d="M7.2 13 V20 M5 20 H9.5" />
+              <path d="M15 4 L19 4 L20.5 11 A3 3 0 0 1 14.5 11 Z" />
+              <path d="M17.2 14 V21 M15 21 H19.5" />
+            </svg>
+          </a>
+        )}
       </span>
 
       {/* py-3 -my-3: posuvny pruh oreze vsechno, co z nej cni - a krizky

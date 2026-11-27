@@ -67,6 +67,8 @@ type EditableUser = {
   fakturaceProjektu: boolean;
   /** Zvoneček, když klient vyplní tracklist (19. 11. 2026). */
   tracklistKlienta: boolean;
+  /** Spravuje firemní akce a pozvánky (27. 11. 2026). */
+  spravujeAkce: boolean;
   /** Vidí sekci Banka (zadání 17. 9. 2026). */
   vidiBanku: boolean;
   vidiPokladnu: boolean;
@@ -189,6 +191,12 @@ export function UserEditForm({
    * ne jména v kódu - seed ho jednou zapne těm třem.
    */
   const [tracklistKlienta, setTracklistKlienta] = useState(user.tracklistKlienta ?? false);
+  /**
+   * SPRAVUJE FIREMNÍ AKCE (zadání 27. 11. 2026: „zpřístupni teď vánoční
+   * večírek Peterovi, Karolíně a Helči"). Příznak na kartě, ne jména v kódu -
+   * seed ho jednou zapne těm třem a dál se to dává a bere tady.
+   */
+  const [spravujeAkce, setSpravujeAkce] = useState(user.spravujeAkce ?? false);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
   const [vidiPokladnu, setVidiPokladnu] = useState(user.vidiPokladnu);
   const [spravujeTechParametry, setSpravujeTechParametry] = useState(user.spravujeTechParametry);
@@ -341,6 +349,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('kopieNabidekTerminu', kopieNabidek ? '1' : '0');
         if (isMediaspace) fd.set('fakturaceProjektu', fakturaceProjektu ? '1' : '0');
         if (isMediaspace) fd.set('tracklistKlienta', tracklistKlienta ? '1' : '0');
+        if (isMediaspace) fd.set('spravujeAkce', spravujeAkce ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
         if (isMediaspace) fd.set('vidiPokladnu', vidiPokladnu ? '1' : '0');
         if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
@@ -1020,6 +1029,27 @@ export function UserEditForm({
                 {t('uzivatel.tracklistKlienta')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.tracklistKlientaPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* SPRAVUJE FIREMNÍ AKCE (27. 11. 2026) - pozvánky na večírek,
+            seznam kdo dorazí a nákup. Zkratka na lištu se objeví sama. */}
+        {zalozka === 'PRISTUPY' && isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={spravujeAkce}
+                onChange={(e) => setSpravujeAkce(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Spravuje akce
+                <span className="block text-xs text-muted">
+                  Firemní akce a pozvánky - rozesílání, kdo dorazí, co nakoupit.
                 </span>
               </span>
             </label>

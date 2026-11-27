@@ -208,6 +208,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           kopieNabidekTerminu: user.kopieNabidekTerminu ?? false,
           fakturaceProjektu: user.fakturaceProjektu ?? false,
           tracklistKlienta: user.tracklistKlienta ?? false,
+          spravujeAkce: (user as { spravujeAkce?: boolean | null }).spravujeAkce ?? false,
           vidiBanku: user.vidiBanku,
           vidiPokladnu: user.vidiPokladnu,
           spravujeTechParametry: user.spravujeTechParametry,

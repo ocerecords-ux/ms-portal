@@ -89,6 +89,16 @@ export default withAuth(
            * (lib/technikaPristup.ts); tohle je jen vrátnice.
            */
           if (cesta.startsWith('/admin/technika') && token.vedouciStudii === true) return true;
+          /**
+           * SPRÁVCE FIREMNÍCH AKCÍ (zadání 27. 11. 2026: „zpřístupni teď
+           * vánoční večírek Peterovi, Karolíně a Helči").
+           *
+           * Akce jsou sice pod /admin, ale se zbytkem administrace nemají nic
+           * společného - je to pozvánka a seznam, kdo dorazí. Pustí sem
+           * kohokoliv s příznakem *Spravuje akce* na kartě; co uvnitř uvidí,
+           * si stejně hlídá server (lib/akceServer.ts).
+           */
+          if (cesta.startsWith('/admin/akce') && token.spravujeAkce === true) return true;
           if (!podlehaPristupum(String(token.role))) return false;
           const sekce = sekceCesty(cesta);
           if (!sekce) return false;
