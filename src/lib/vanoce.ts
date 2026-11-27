@@ -3,10 +3,10 @@
  * portálu" → vybraná varianta: dekorace a zapínání samo od 1. 12. do 1. 1.
  * s možností vypnout).
  *
- * JEN VÝZDOBA, NIC JINÉHO. Sníh, čepice na logu, světýlka pod lištou
- * a vánoční ikona v záložce prohlížeče. Žádné tlačítko, žádný stav projektu
- * ani barva, podle které se v portálu něco pozná, se nemění - portál musí
- * v prosinci fungovat úplně stejně jako v červnu.
+ * JEN VÝZDOBA, NIC JINÉHO. Namrzlá horní lišta (jinovatka po okrajích,
+ * rampouchy u spodní hrany) a vánoční ikona v záložce prohlížeče. Žádné
+ * tlačítko, žádný stav projektu ani barva, podle které se v portálu něco
+ * pozná, se nemění - portál musí v prosinci fungovat stejně jako v červnu.
  *
  * Čistá část (bez Prismy), ať si ji vezme prohlížeč i server - stejně jako
  * lib/akce.ts nebo lib/tracklist.ts.
@@ -40,15 +40,25 @@ export function rezimZHodnoty(hodnota: unknown): RezimVanoc {
 }
 
 /**
- * Smí se u tohohle člověka svítit? Rozhoduje režim portálu a vlastní vypínač
- * toho člověka - ten má vždycky poslední slovo, i když portál svítí všem.
+ * Smí se u tohohle člověka namrzat? VLASTNÍ VOLBA MÁ PŘEDNOST (upřesnění
+ * 27. 11. 2026: „ať už si to můžu zapnout i já teď a ostatním až od 1. 12.,
+ * ať to můžu testovat").
+ *
+ * Kdo má u sebe „vzdy", vidí výzdobu hned, i když portál jede podle data;
+ * kdo má „nikdy", nevidí ji, ani kdyby portál svítil všem. „auto" znamená
+ * řídit se portálem.
  */
 export function vanocniVyzdoba(vstup: {
   ted?: Date;
+  /** Režim celého portálu. */
   rezim?: RezimVanoc | string | null;
-  vypnutoUzivateli?: boolean | null;
+  /** Režim toho jednoho člověka. */
+  rezimUzivatele?: RezimVanoc | string | null;
 }): boolean {
-  if (vstup.vypnutoUzivateli) return false;
+  const muj = rezimZHodnoty(vstup.rezimUzivatele);
+  if (muj === 'vzdy') return true;
+  if (muj === 'nikdy') return false;
+
   const rezim = rezimZHodnoty(vstup.rezim);
   if (rezim === 'nikdy') return false;
   if (rezim === 'vzdy') return true;

@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { rezimVanocPortalu } from '@/lib/vanoceServer';
-import { jeVanocniObdobi } from '@/lib/vanoce';
+import { jeVanocniObdobi, rezimZHodnoty } from '@/lib/vanoce';
 import { MyAccountForm } from './MyAccountForm';
 import { FakturaceKarta } from './FakturaceKarta';
 import { UpozorneniKarta } from './UpozorneniKarta';
@@ -157,7 +157,7 @@ export default async function MyAccountPage() {
       {/* Vánoční výzdoba (27. 11. 2026) - svítí všem, vypnout si ji smí
           každý sám; správce ji může zhasnout celému portálu. */}
       <VanoceKarta
-        uMe={!(user as { vanoceVypnute?: boolean | null }).vanoceVypnute}
+        uMe={rezimZHodnoty((user as { vanoceRezim?: string | null }).vanoceRezim)}
         rezim={vanoceRezim}
         jsemSpravce={jsemSpravce}
         bezi={jeVanocniObdobi()}

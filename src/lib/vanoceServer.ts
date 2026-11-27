@@ -27,13 +27,13 @@ export async function maVanocniVyzdobu(userId: string): Promise<boolean> {
     const [uzivatel, rezim] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { vanoceVypnute: true },
-      }) as Promise<{ vanoceVypnute: boolean | null } | null>,
+        select: { vanoceRezim: true },
+      }) as Promise<{ vanoceRezim: string | null } | null>,
       rezimVanocPortalu(),
     ]);
     return vanocniVyzdoba({
       rezim,
-      vypnutoUzivateli: uzivatel?.vanoceVypnute ?? false,
+      rezimUzivatele: uzivatel?.vanoceRezim ?? 'auto',
     });
   } catch (err) {
     console.error('Vánoční výzdobu se nepodařilo zjistit:', err);

@@ -587,9 +587,10 @@ model User {
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").
   /// Zapina se v Muj ucet; posila se do soukromeho chatu s Brunem.
   ranniPrehled   Boolean   @default(false)
-  /// VÁNOČNÍ VÝZDOBA U MĚ (27. 11. 2026). Sníh a čepice běží v prosinci samy;
-  /// kdo je nechce, vypne si je v Mém účtu a tohle si to pamatuje.
-  vanoceVypnute  Boolean   @default(false)
+  /// VÁNOČNÍ VÝZDOBA U MĚ (27. 11. 2026). „auto" = jako celý portál (tedy
+  /// od 1. 12.), „vzdy" = chci ji vidět hned, i mimo sezónu - na vyzkoušení,
+  /// „nikdy" = nechci ji vůbec. Vlastní volba má přednost před portálem.
+  vanoceRezim    String    @default("auto")
   /// Vidí modul Sítě - příprava příspěvků na Instagram a LinkedIn (zadání
   /// 27. 9. 2026: „zatím uvidím jen já"). Zapíná se v Administraci; seed ho
   /// jednou zapne Ondřejovi a nikomu jinému.

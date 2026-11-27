@@ -28,6 +28,36 @@ import { useZarizeni } from '@/lib/useZarizeni';
  * (lib/menu.ts > PAGE_ACCESS); nabídka pod "+" proto obsahuje jen stránky,
  * na které uživatel opravdu smí.
  */
+/**
+ * Rampouchy u spodní hrany lišty (vánoční mód). Pevný seznam, ne náhoda:
+ * server i prohlížeč musí vykreslit totéž, jinak React hlásí, že se stránka
+ * po načtení změnila - a rampouchy by při překreslení poskakovaly.
+ * Nepravidelné délky schválně, aby to vypadalo namrzle, a ne jako hřeben.
+ */
+const RAMPOUCHY = [
+  { vlevo: 3, sirka: 8, delka: 20 },
+  { vlevo: 7, sirka: 6, delka: 11 },
+  { vlevo: 11, sirka: 9, delka: 26 },
+  { vlevo: 16, sirka: 6, delka: 14 },
+  { vlevo: 20, sirka: 7, delka: 9 },
+  { vlevo: 25, sirka: 8, delka: 22 },
+  { vlevo: 30, sirka: 6, delka: 12 },
+  { vlevo: 35, sirka: 7, delka: 17 },
+  { vlevo: 41, sirka: 6, delka: 9 },
+  { vlevo: 46, sirka: 9, delka: 25 },
+  { vlevo: 51, sirka: 6, delka: 13 },
+  { vlevo: 56, sirka: 7, delka: 10 },
+  { vlevo: 61, sirka: 8, delka: 21 },
+  { vlevo: 66, sirka: 6, delka: 12 },
+  { vlevo: 71, sirka: 7, delka: 18 },
+  { vlevo: 76, sirka: 6, delka: 9 },
+  { vlevo: 81, sirka: 9, delka: 24 },
+  { vlevo: 86, sirka: 6, delka: 13 },
+  { vlevo: 90, sirka: 7, delka: 10 },
+  { vlevo: 95, sirka: 8, delka: 19 },
+  { vlevo: 98, sirka: 6, delka: 12 },
+];
+
 export function Topbar({
   userLabel,
   userPhotoUrl,
@@ -302,24 +332,61 @@ export function Topbar({
     // `w-full` u odkazu je posle pod znacku a ovladaci prvky, od tabletu vys
     // (`sm:`) zustava lista presne takova, jaka byla - jeden radek.
     <header data-lista className="relative sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
-      {/* SVĚTÝLKA VISÍ Z LIŠTY (vánoční mód, 27. 11. 2026). Půlka řetězu
-          přečuhuje přes spodní hranu, jako když se pověsí na parapet; kliknout
-          se na ně nedá a na výšku lišty nemají vliv. */}
+      {/* NAMRZLÁ LIŠTA (upřesnění 27. 11. 2026: „pojďme to udělat namrzle,
+          ten vrchní panel"). Žádný sníh, žádný Santa, žádné blikání: lišta
+          vypadá, jako když na ni dýchne mráz - u horní hrany visí rampouchy,
+          v rozích sedí jinovatka a dole se drží poprašek. Je to jedna vrstva
+          POD obsahem lišty, neklikatelná a bez animace, takže portál pod ní
+          vypadá a funguje přesně jako jindy. */}
       {vanoce && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1/2 flex items-center justify-between px-2"
-        >
-          {Array.from({ length: 28 }, (_, i) => {
-            const barva = ['#1FDF67', '#FFD36B', '#FF6B6B', '#C9B6FF'][i % 4];
-            return (
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          {/* Mráz od rohů a nádech námrazy odshora i odspodu. */}
+          <span
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,0.30), rgba(255,255,255,0) 55%), radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.30), rgba(255,255,255,0) 55%), linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0) 40%), linear-gradient(to top, rgba(214,238,255,0.22), rgba(214,238,255,0) 24%)',
+            }}
+          />
+
+          {/* Jinovatka v rozích - tenké větvičky, jak namrzá sklo. */}
+          <svg viewBox="0 0 60 60" className="absolute left-0 top-0 h-full w-[150px] opacity-30">
+            <g stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" fill="none">
+              <path d="M2 2 C16 8 24 18 30 32 M12 3 L15 12 M22 12 L19 21 M30 32 L23 36 M30 32 L37 27" />
+              <path d="M2 22 C14 25 22 32 27 46 M11 21 L13 30 M21 31 L18 39" />
+            </g>
+          </svg>
+          <svg viewBox="0 0 60 60" className="absolute right-0 top-0 h-full w-[150px] opacity-30 scale-x-[-1]">
+            <g stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" fill="none">
+              <path d="M2 2 C16 8 24 18 30 32 M12 3 L15 12 M22 12 L19 21 M30 32 L23 36 M30 32 L37 27" />
+              <path d="M2 22 C14 25 22 32 27 46 M11 21 L13 30 M21 31 L18 39" />
+            </g>
+          </svg>
+
+          {/* Rampouchy visí z horní hrany dovnitř lišty - ne pod ni, aby
+              nezasahovaly do stránky a nevypadaly jako zuby. */}
+          <span className="absolute inset-x-0 top-0">
+            {RAMPOUCHY.map((r, i) => (
               <span
                 key={i}
-                className="block h-2 w-2 rounded-full"
-                style={{ background: barva, boxShadow: `0 0 7px ${barva}` }}
+                className="absolute top-0"
+                style={{
+                  left: `${r.vlevo}%`,
+                  width: r.sirka,
+                  height: r.delka,
+                  background:
+                    'linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(255,255,255,0.18))',
+                  clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+                }}
               />
-            );
-          })}
+            ))}
+          </span>
+
+          {/* Poprašek u spodní hrany. */}
+          <span
+            className="absolute inset-x-0 bottom-0 h-[7px]"
+            style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.5), rgba(255,255,255,0))' }}
+          />
         </span>
       )}
 
@@ -365,24 +432,8 @@ export function Topbar({
           aria-label={t('listou.nacistZnovu')}
           className="flex items-center cursor-pointer"
         >
-          {/* ČEPICE NA LOGU (vánoční mód, 27. 11. 2026). Visí nad logem jako
-              samostatná vrstva, takže se nesahá na samotný gif - po Vánocích
-              prostě zmizí. */}
-          <span className="relative inline-flex items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
-            {vanoce && (
-              <svg
-                viewBox="0 0 48 34"
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-1 -left-1 h-5 w-5 sm:-top-2 sm:-left-2 sm:h-8 sm:w-8 rotate-[-18deg]"
-              >
-                <path d="M6 26 C8 10 20 2 33 6 c7 2 10 9 8 15 l-2 5 -33 0 z" fill="#E4453F" />
-                <rect x="3" y="24" width="40" height="8" rx="4" fill="#FFFFFF" />
-                <circle cx="41" cy="9" r="6" fill="#FFFFFF" />
-              </svg>
-            )}
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
         </button>
       </span>
 

@@ -8,7 +8,9 @@ import { nastavVanocePortalu } from '@/lib/vanoceServer';
 /**
  * VÁNOČNÍ VÝZDOBA - přepínače (zadání 27. 11. 2026).
  *
- * `uMe` mění VÝHRADNĚ vlastní účet (id ze session, nikdy z těla požadavku).
+ * `uMe` mění VÝHRADNĚ vlastní účet (id ze session, nikdy z těla požadavku) -
+ * a má přednost před nastavením portálu, takže si jde výzdoba zapnout i mimo
+ * sezónu, aniž by ji viděl kdokoliv další.
  * `rezim` přepíná celý portál (podle data / svítit pořád / zhasnout) - a to
  * smí jen Žůžo-labůžo; ostatním se to tiše neprovede, vrátí se 403, ať je
  * vidět proč.
@@ -16,7 +18,7 @@ import { nastavVanocePortalu } from '@/lib/vanoceServer';
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  uMe: z.boolean().optional(),
+  uMe: z.enum(['auto', 'vzdy', 'nikdy']).optional(),
   rezim: z.enum(['auto', 'vzdy', 'nikdy']).optional(),
 });
 
@@ -32,9 +34,7 @@ export async function PATCH(req: NextRequest) {
     if (uMe !== undefined) {
       await prisma.user.update({
         where: { id: session.user.id },
-        // Zaškrtnuté políčko znamená „chci výzdobu", v databázi je opačný
-        // příznak „vypnuto" - výchozí stav je totiž svítit.
-        data: { vanoceVypnute: !uMe },
+        data: { vanoceRezim: uMe },
       });
     }
 
