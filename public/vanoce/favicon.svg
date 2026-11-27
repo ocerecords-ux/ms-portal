@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Vánoční ikona portálu (27. 11. 2026): fialové pozadí značky, zelený
+       stromek a zlatá hvězda. Vektor, ať je ostrá i na retina displeji. -->
+  <rect width="64" height="64" rx="14" fill="#6B2AF0"/>
+  <path d="M32 10 L42 27 H36 L45 41 H37 L46 52 H18 L27 41 H19 L28 27 H22 Z" fill="#1FDF67"/>
+  <rect x="29" y="52" width="6" height="6" rx="1.5" fill="#3A2A1A"/>
+  <circle cx="32" cy="9" r="4" fill="#FFD36B"/>
+</svg>

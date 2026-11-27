@@ -33,6 +33,8 @@ import { PrepinacNahledu } from './components/PrepinacNahledu';
 import { PrepinacFirem } from './components/PrepinacFirem';
 import { nahledZHodnoty } from '@/lib/nahledRole';
 import { maStudioSRezervacemi } from '@/lib/bookingServer';
+import { maVanocniVyzdobu } from '@/lib/vanoceServer';
+import { VanocniOzdoby } from './components/VanocniOzdoby';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
 // zdroj pravdy o tom, kdo je přihlášen a pod jakou firmu (companyId) patří
@@ -215,6 +217,9 @@ export default async function PortalLayout({ children }: { children: React.React
           .catch(() => [])
       : [];
 
+  /** Vánoční výzdoba (27. 11. 2026) - datum, vypínač portálu a vypínač u mě. */
+  const vanoce = await maVanocniVyzdobu(session.user.id);
+
   const maNapovedu = internal
     ? true
     : await prisma.navod
@@ -252,7 +257,11 @@ export default async function PortalLayout({ children }: { children: React.React
         spravcePripominek={role === 'ADMIN'}
         interni={internal}
         napoveda={maNapovedu}
+        vanoce={vanoce}
       />
+      {/* VÁNOČNÍ VÝZDOBA (zadání 27. 11. 2026). Sníh a světýlka přes celou
+          stránku; vypíná se v Mém účtu, v lednu zhasne sama. */}
+      {vanoce && <VanocniOzdoby />}
       {/* Pruh náhledového účtu (zadání 18. 9. 2026). Vidí ho jen ten jeden
           účet - ostatním se nevykreslí vůbec. */}
       {session.user.jenNahled && (

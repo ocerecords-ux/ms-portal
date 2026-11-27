@@ -41,6 +41,7 @@ export function Topbar({
   spravcePripominek = false,
   interni = false,
   napoveda = true,
+  vanoce = false,
 }: {
   userLabel: string;
   /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
@@ -57,6 +58,8 @@ export function Topbar({
   itemsMobil?: NavItem[];
   /** Stránky, které si smí do lišty přidat. */
   pageOptions: NavItem[];
+  /** Vánoční výzdoba (27. 11. 2026) - čepice na logu. Zapíná ji server. */
+  vanoce?: boolean;
   /**
    * Čísla k odkazům (adresa → počet). Ukazují se jako odznak vedle názvu
    * (zadání 15. 9. 2026: „když tam přibude nový bonus, který má Petr
@@ -298,7 +301,28 @@ export function Topbar({
     // neslo dostat. Zalamuje se schvalne jen v uzkem miste: `flex-wrap` plus
     // `w-full` u odkazu je posle pod znacku a ovladaci prvky, od tabletu vys
     // (`sm:`) zustava lista presne takova, jaka byla - jeden radek.
-    <header data-lista className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
+    <header data-lista className="relative sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
+      {/* SVĚTÝLKA VISÍ Z LIŠTY (vánoční mód, 27. 11. 2026). Půlka řetězu
+          přečuhuje přes spodní hranu, jako když se pověsí na parapet; kliknout
+          se na ně nedá a na výšku lišty nemají vliv. */}
+      {vanoce && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1/2 flex items-center justify-between px-2"
+        >
+          {Array.from({ length: 28 }, (_, i) => {
+            const barva = ['#1FDF67', '#FFD36B', '#FF6B6B', '#C9B6FF'][i % 4];
+            return (
+              <span
+                key={i}
+                className="block h-2 w-2 rounded-full"
+                style={{ background: barva, boxShadow: `0 0 7px ${barva}` }}
+              />
+            );
+          })}
+        </span>
+      )}
+
       {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
           (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
           logo (jeste zvetseno 5. 9. 2026). */}
@@ -341,8 +365,24 @@ export function Topbar({
           aria-label={t('listou.nacistZnovu')}
           className="flex items-center cursor-pointer"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
+          {/* ČEPICE NA LOGU (vánoční mód, 27. 11. 2026). Visí nad logem jako
+              samostatná vrstva, takže se nesahá na samotný gif - po Vánocích
+              prostě zmizí. */}
+          <span className="relative inline-flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
+            {vanoce && (
+              <svg
+                viewBox="0 0 48 34"
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-1 -left-1 h-5 w-5 sm:-top-2 sm:-left-2 sm:h-8 sm:w-8 rotate-[-18deg]"
+              >
+                <path d="M6 26 C8 10 20 2 33 6 c7 2 10 9 8 15 l-2 5 -33 0 z" fill="#E4453F" />
+                <rect x="3" y="24" width="40" height="8" rx="4" fill="#FFFFFF" />
+                <circle cx="41" cy="9" r="6" fill="#FFFFFF" />
+              </svg>
+            )}
+          </span>
         </button>
       </span>
 

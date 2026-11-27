@@ -3,12 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
+import { rezimVanocPortalu } from '@/lib/vanoceServer';
+import { jeVanocniObdobi } from '@/lib/vanoce';
 import { MyAccountForm } from './MyAccountForm';
 import { FakturaceKarta } from './FakturaceKarta';
 import { UpozorneniKarta } from './UpozorneniKarta';
 import { RanniPrehledKarta } from './RanniPrehledKarta';
 import { PripominkyKarta } from './PripominkyKarta';
 import { PodpisKarta } from './PodpisKarta';
+import { VanoceKarta } from './VanoceKarta';
 import { mojePripominky, vsechnyPripominky } from '@/lib/pripominkyServer';
 import Link from 'next/link';
 import { nactiJazyk } from '@/lib/jazykServer';
@@ -51,6 +54,9 @@ export default async function MyAccountPage() {
     .findUnique({ where: { id: user.id }, select: { tabulePristup: { select: { id: true } } } })
     .then((u) => ((u?.tabulePristup ?? []) as { id: string }[]).length)
     .catch(() => 0);
+
+  /** Režim vánoční výzdoby pro celý portál (27. 11. 2026). */
+  const vanoceRezim = await rezimVanocPortalu();
 
   const maWiki = Boolean(
     await prisma.wikiClanek.findUnique({ where: { userId: user.id }, select: { id: true } }).catch(() => null),
@@ -147,6 +153,15 @@ export default async function MyAccountPage() {
       {/* Ranní přehled od Bruna (23. 9. 2026) - jen pro tým; klient ani herec
           v kalendáři nic svého nemá. */}
       {internal && <RanniPrehledKarta initial={user.ranniPrehled} />}
+
+      {/* Vánoční výzdoba (27. 11. 2026) - svítí všem, vypnout si ji smí
+          každý sám; správce ji může zhasnout celému portálu. */}
+      <VanoceKarta
+        uMe={!(user as { vanoceVypnute?: boolean | null }).vanoceVypnute}
+        rezim={vanoceRezim}
+        jsemSpravce={jsemSpravce}
+        bezi={jeVanocniObdobi()}
+      />
 
       {/* Tabule ve studiu - jen komu ji admin povolil (23. 9. 2026). */}
       {tabuli > 0 && (

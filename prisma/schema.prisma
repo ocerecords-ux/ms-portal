@@ -587,6 +587,9 @@ model User {
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").
   /// Zapina se v Muj ucet; posila se do soukromeho chatu s Brunem.
   ranniPrehled   Boolean   @default(false)
+  /// VÁNOČNÍ VÝZDOBA U MĚ (27. 11. 2026). Sníh a čepice běží v prosinci samy;
+  /// kdo je nechce, vypne si je v Mém účtu a tohle si to pamatuje.
+  vanoceVypnute  Boolean   @default(false)
   /// Vidí modul Sítě - příprava příspěvků na Instagram a LinkedIn (zadání
   /// 27. 9. 2026: „zatím uvidím jen já"). Zapíná se v Administraci; seed ho
   /// jednou zapne Ondřejovi a nikomu jinému.
@@ -4339,6 +4342,18 @@ model NastaveniNotifikaci {
   prodlevaSekund Int      @default(10)
   zmenilJmeno    String?
   updatedAt      DateTime @updatedAt
+}
+
+/// VÁNOČNÍ VÝZDOBA PORTÁLU (27. 11. 2026). Jeden řádek pro celý portál:
+/// `vypnuto` zhasne sníh a čepice všem, bez ohledu na datum. Každý si ji navíc
+/// může vypnout u sebe (User.vanoceVypnute).
+model NastaveniVanoc {
+  id          String   @id @default("vychozi")
+  /// „auto" = podle data (1. 12. - 1. 1.), „vzdy" = svítit pořád (na
+  /// vyzkoušení i mimo sezónu), „nikdy" = zhasnuto celému portálu.
+  rezim       String   @default("auto")
+  zmenilJmeno String?
+  updatedAt   DateTime @updatedAt
 }
 
 /// STAV NAVRZENEHO BONUSU ZVUKARE (zadani 15. 9. 2026).
