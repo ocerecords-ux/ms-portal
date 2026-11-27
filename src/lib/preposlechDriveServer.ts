@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
 import { extractDriveFolderId, getAccessToken, listFolder, type DriveItem } from '@/lib/googleDrive';
+// Jedno pravidlo, dvě místa: co je režijní edit, rozhoduje lib/zalohaTextuServer.ts.
+import { jeTextRE } from '@/lib/zalohaTextuServer';
 
 /**
  * Nahrávky a text pro přeposlech, načtené rovnou ze složky projektu na Disku
@@ -9,9 +11,9 @@ import { extractDriveFolderId, getAccessToken, listFolder, type DriveItem } from
  * DVĚ DOHODNUTÁ PRAVIDLA POJMENOVÁNÍ, na kterých to stojí:
  *  1. stopy se značí pořadím na začátku názvu — `01_jméno`, `02_…`, `03_…`
  *     Z toho se bere pořadí, a tedy i offset na časové ose Cubase.
- *  2. text je PDF, jehož název končí `_RE` (režijní edit) — to je ta správná
+ *  2. text je PDF, které má v názvu `_RE` (režijní edit) — to je ta správná
  *     verze. Když takové PDF ve složce není, vezme se jediné PDF; když je jich
- *     víc a žádné nekončí _RE, radši se nebere žádné a řekne se to.
+ *     víc a žádné nemá _RE, radši se nebere žádné a řekne se to.
  */
 
 const ZVUKOVE_PRIPONY = ['.wav', '.mp3', '.m4a', '.aac', '.flac', '.aif', '.aiff', '.ogg', '.opus'];
@@ -32,7 +34,8 @@ export type PreposlechZDisku =
       slozkaId: string;
       slozkaUrl: string | null;
       stopy: StopaZDisku[];
-      text: { id: string; name: string } | null;
+      /** Režijní edit ze složky. `zmeneno` je čas poslední změny na Disku. */
+      text: { id: string; name: string; zmeneno: string | null } | null;
       /** Proč text není, když není - ať se člověk nediví prázdnému panelu. */
       poznamkaKTextu: string | null;
     }
@@ -51,12 +54,6 @@ function poradiZNazvu(name: string): number | null {
   if (!shoda) return null;
   const cislo = Number(shoda[1]);
   return Number.isFinite(cislo) && cislo > 0 ? cislo : null;
-}
-
-/** Název bez přípony - kvůli koncovce _RE. */
-function bezPripony(name: string): string {
-  const tecka = name.lastIndexOf('.');
-  return tecka > 0 ? name.slice(0, tecka) : name;
 }
 
 /** Složka projektu; když ji projekt nemá, zkusí se složka firmy. */
@@ -182,20 +179,32 @@ export async function nactiZDisku(caflouProjectId: string): Promise<PreposlechZD
     });
 
   const pdfka = obsah.filter((i) => !i.isFolder && i.name.toLowerCase().endsWith('.pdf'));
-  const rezijni = pdfka.filter((i) => bezPripony(i.name).toUpperCase().endsWith('_RE'));
+  /**
+   * STAČÍ, KDYŽ JE „_RE" V NÁZVU (oprava 27. 11. 2026: „někde nám zmizel text
+   * s R na projektu Vila").
+   *
+   * Do teď se vyžadovalo, aby název KONČIL na `_RE`. Jenže k režijnímu editu
+   * se běžně připisuje verze - `Vila_RE (1).pdf`, `Vila_RE_v2.pdf`,
+   * `Vila_RE 2.pdf` - a od té chvíle portál žádný text neviděl, přestože ve
+   * složce byl. Teď platí TOTÉŽ PRAVIDLO JAKO U ZÁLOHY
+   * (lib/zalohaTextuServer.ts): `_RE` jako samostatná značka, za kterou smí
+   * být konec, mezera, tečka, podtržítko, pomlčka, závorka nebo číslo.
+   * „_REŽIE" ani „_RECEPT" se dál nepočítá.
+   */
+  const rezijni = pdfka.filter((i) => jeTextRE(i.name));
 
-  let text: { id: string; name: string } | null = null;
+  let text: { id: string; name: string; zmeneno: string | null } | null = null;
   let poznamkaKTextu: string | null = null;
   if (rezijni.length > 0) {
     // Kdyz je rezijnich editu vic, bere se ten naposledy zmeneny.
     const vybrany = [...rezijni].sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime))[0];
-    text = { id: vybrany.id, name: vybrany.name };
+    text = { id: vybrany.id, name: vybrany.name, zmeneno: vybrany.modifiedTime ?? null };
   } else if (pdfka.length === 1) {
-    text = { id: pdfka[0].id, name: pdfka[0].name };
-    poznamkaKTextu = 'Ve složce není žádné PDF končící _RE, tak se vzalo to jediné, které tam je.';
+    text = { id: pdfka[0].id, name: pdfka[0].name, zmeneno: pdfka[0].modifiedTime ?? null };
+    poznamkaKTextu = 'Ve složce není žádné PDF s _RE v názvu, tak se vzalo to jediné, které tam je.';
   } else if (pdfka.length > 1) {
     poznamkaKTextu =
-      'Ve složce je víc PDF a žádné nekončí _RE, tak portál nehádá, které je režijní edit — vyberte ho ručně.';
+      'Ve složce je víc PDF a v žádném není _RE, tak portál nehádá, které je režijní edit — vyberte ho ručně.';
   } else {
     poznamkaKTextu = 'Ve složce zatím není žádné PDF s textem.';
   }

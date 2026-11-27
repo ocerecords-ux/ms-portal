@@ -71,6 +71,10 @@
     {
       "path": "/api/cron/akce-pripomenuti",
       "schedule": "40 7 * * *"
+    },
+    {
+      "path": "/api/cron/texty-do-portalu",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

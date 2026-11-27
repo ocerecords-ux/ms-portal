@@ -3,6 +3,7 @@ import { getAccessToken } from '@/lib/googleDrive';
 import { souborPreposlechu } from '@/lib/preposlechDriveServer';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { odpovedChyby } from '@/lib/chybyApi';
+import { obsahTextu, ulozenyText } from '@/lib/textVPortaluServer';
 
 /**
  * Výdej jednoho souboru ze složky projektu pro přeposlech (zadání 11. 9.
@@ -29,6 +30,28 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const soubor = await souborPreposlechu(params.id, fileId);
   if (!soubor.ok) return NextResponse.json({ error: soubor.duvod }, { status: soubor.status });
+
+  /**
+   * TEXT JDE Z PORTÁLU (zadání 27. 11. 2026: „aby se nezasekávaly texty při
+   * poslechu v AudioTaggeru"). Kopie PDF leží v databázi - když tam je a je
+   * to ten soubor, o který si prohlížeč říká, vydá se rovnou, bez Disku.
+   * Jinak se jede po staru a úloha ji doplní.
+   */
+  const ulozeny = await ulozenyText(params.id);
+  if (ulozeny && ulozeny.driveFileId === fileId) {
+    const obsah = await obsahTextu(params.id);
+    if (obsah) {
+      return new NextResponse(new Uint8Array(obsah.data), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Length': String(obsah.data.length),
+          'Cache-Control': 'private, max-age=600',
+          'Content-Disposition': 'inline',
+        },
+      });
+    }
+  }
 
   const token = await getAccessToken();
   if (!token) return odpovedChyby('chybaApi.diskNeniNastaveny', 503);

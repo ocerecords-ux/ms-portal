@@ -1177,6 +1177,10 @@ model ProjectMeta {
   /// hudba nevložila. Vyprázdní se, jakmile projekt hudbu dostane - kdyby
   /// se mu zase odebrala, upozornění přijde znovu.
   hudbaUpozornenoAt DateTime?
+  /// Kdy portál naposledy zkoušel stáhnout text projektu do portálu
+  /// (27. 11. 2026). Drží pořadí v úloze /api/cron/texty-do-portalu, aby se
+  /// nezkoušely pořád dokola tytéž projekty - i ty, které text nemají.
+  textZkusenoAt     DateTime?
 
   companyId       String?
   company         Company?         @relation("ProjektFirma", fields: [companyId], references: [id])
@@ -4348,6 +4352,26 @@ model NastaveniNotifikaci {
 /// VÁNOČNÍ VÝZDOBA PORTÁLU (27. 11. 2026). Jeden řádek pro celý portál:
 /// `vypnuto` zhasne sníh a čepice všem, bez ohledu na datum. Každý si ji navíc
 /// může vypnout u sebe (User.vanoceVypnute).
+/// TEXT PROJEKTU ULOŽENÝ V PORTÁLU (zadání 27. 11. 2026: „chtěl bych to do
+/// budoucna udělat tak, aby všechny texty byly v portálu a nenačítaly se
+/// z disku… ať si ho jednou načtou a uloží se, aby se nezasekávaly texty při
+/// poslechu v AudioTaggeru").
+///
+/// MEZIKROK, NE CÍL. Zdrojem pravdy je pořád režijní edit na Disku; tohle je
+/// jeho kopie, aby se PDF vydávalo z portálu a ne přes Google API. Nová verze
+/// na Disku se pozná podle `zmenenoNaDisku` a kopie se přepíše.
+model TextProjektu {
+  caflouProjectId String    @id
+  driveFileId     String
+  nazev           String
+  /// Čas poslední změny souboru na Disku - podle něj se pozná nová verze.
+  zmenenoNaDisku  DateTime?
+  velikost        Int
+  obsah           Bytes
+  nactenoAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
 model NastaveniVanoc {
   id          String   @id @default("vychozi")
   /// „auto" = podle data (1. 12. - 1. 1.), „vzdy" = svítit pořád (na

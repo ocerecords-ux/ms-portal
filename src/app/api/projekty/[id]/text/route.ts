@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { getAccessToken } from '@/lib/googleDrive';
 import { nactiZDisku } from '@/lib/preposlechDriveServer';
+import { obsahTextu, stahniTextDoPortalu } from '@/lib/textVPortaluServer';
 
 /**
  * TEXT PROJEKTU PRO HERCE (zadání 19. 9. 2026: „v projektech by měl herec
@@ -36,6 +37,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (!jeHerec) return hlaska('K tomuto projektu nemáte přístup.', 403);
   }
 
+  /**
+   * NEJDŘÍV PORTÁL, PAK DISK (27. 11. 2026). Uloženou kopii vydáme hned;
+   * na Disk se chodí, jen když ji projekt ještě nemá.
+   */
+  const stahnoutRovnou = req.nextUrl.searchParams.get('stahnout') === '1';
+  const zPortalu = await obsahTextu(params.id);
+  if (zPortalu) {
+    return new NextResponse(new Uint8Array(zPortalu.data), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Length': String(zPortalu.data.length),
+        'Cache-Control': 'private, max-age=600',
+        'Content-Disposition': `${stahnoutRovnou ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(zPortalu.nazev)}`,
+      },
+    });
+  }
+
   const obsah = await nactiZDisku(params.id);
   if (!obsah.ok) return hlaska('Text k projektu jsme ještě nenahráli.', 404);
   if (!obsah.text) return hlaska('Text k projektu jsme ještě nenahráli.', 404);
@@ -51,6 +70,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     console.error('Vydej textu projektu selhal:', odpoved.status);
     return hlaska('Text se teď nepodařilo načíst, zkuste to za chvíli.', 502);
   }
+
+  // Když už jsme ho z Disku vytáhli, rovnou si ho necháme - příště půjde
+  // z portálu. Chyba uložení výdej textu neshodí.
+  void stahniTextDoPortalu(params.id, obsah.text, token).catch(() => false);
 
   const hlavicky = new Headers();
   hlavicky.set('Content-Type', 'application/pdf');

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nactiZDisku } from '@/lib/preposlechDriveServer';
+import { zajistiTextVPortalu } from '@/lib/textVPortaluServer';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { prisma } from '@/lib/db';
 import { oznamNoveStopy } from '@/lib/preposlechPosluchaciServer';
@@ -19,6 +20,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const vysledek = await nactiZDisku(params.id);
   if (!vysledek.ok) return NextResponse.json({ error: vysledek.duvod }, { status: 409 });
+
+  /**
+   * TEXT SI PORTÁL ROVNOU NECHÁ (zadání 27. 11. 2026). Kdo otevře
+   * AudioTagger, tím zároveň naplní kopii PDF v portálu - příští poslech už
+   * text nestahuje z Disku a nezasekne se na něm. Čeká se na to schválně:
+   * na Vercelu by se práce po odeslání odpovědi nemusela dokončit. Když se
+   * uložení nepovede, poslech jede dál po staru.
+   */
+  if (vysledek.text) {
+    await zajistiTextVPortalu(params.id).catch((err) =>
+      console.error('Uložení textu do portálu selhalo:', err),
+    );
+  }
 
   // POČET STOP SI PAMATUJEME (zadání 12. 9. 2026: sloupec „K přeposlechu"
   // v klientském přehledu). Seznam projektů se na Disk neptá - u padesáti
