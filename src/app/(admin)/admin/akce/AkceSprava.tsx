@@ -179,6 +179,13 @@ export function AkceSprava({
   const [kreslim, setKreslim] = useState(false);
   /** Náhled přes celou obrazovku - stejné okno jako u náhledu zpráv. */
   const [velkyNahled, setVelkyNahled] = useState(false);
+  /**
+   * OKNA MÍSTO DLOUHÉ STRÁNKY (zadání 27. 11. 2026: „to odesílání pozvánky
+   * příjemcům bych dal do vyskakovacího okna po stisknutí tlačítka… na úvodní
+   * straně jen přehledy").
+   */
+  const [rozesilaniOtevrene, setRozesilaniOtevrene] = useState(false);
+  const [anketaOtevrena, setAnketaOtevrena] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
 
@@ -722,189 +729,48 @@ export function AkceSprava({
         </div>
       </section>
 
-      {/* 1b. ANKETA (zadání 25. 11. 2026: „chci ty anketní otázky modifikovat
-          a přidávat nové"). „Dorazíte?" tu schválně není - tu drží portál sám,
-          stojí na ní celý přehled. Uloží se tlačítkem u pozvánky výš. */}
+      {/* ANKETA SE OTEVÍRÁ V OKNĚ (zadání 27. 11. 2026: „to nastavení… dal
+          do karty. Na úvodní straně jen přehledy"). Na stránce zůstává jen
+          karta s tím, na co se ptáme; editor otázek je za tlačítkem. */}
       <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
-        <div>
-          <h2 className="font-heading font-semibold text-base text-ink m-0">Anketa</h2>
-          <p className="text-sm font-body text-muted m-0 mt-1">
-            První otázka je základní - přepsat ji můžeš, ale smazat ne; na její odpovědi stojí
-            celý přehled a na zbytek se ptáme jen těch, kdo dorazí. Změny se uloží tlačítkem{' '}
-            {detail.id ? '„Uložit"' : '„Založit akci"'} výš.
-          </p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="font-heading font-semibold text-base text-ink m-0">Anketa</h2>
+            <p className="text-sm font-body text-muted m-0 mt-1">
+              Na co se v pozvánce ptáme. Změny se uloží tlačítkem{' '}
+              {detail.id ? '„Uložit"' : '„Založit akci"'} výš.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAnketaOtevrena(true)}
+            className="rounded-lg border border-line px-3.5 py-2 text-xs font-heading font-semibold text-brand-purple hover:border-brand-purple transition-colors"
+          >
+            Upravit otázky ({otazky.length})
+          </button>
         </div>
-
-
-        <ul className="list-none p-0 m-0 flex flex-col gap-2">
-          {otazky.map((o, i) => {
-            const jeZaklad = o.id === KLIC_DORAZI;
-            return (
-            <li key={o.id} className="rounded-lg border border-line bg-field p-3 flex flex-col gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <input
-                  value={o.text}
-                  onChange={(e) => upravOtazku(o.id, { text: e.target.value })}
-                  placeholder="Na co se ptáme?"
-                  className={`${pole} flex-1 min-w-[200px]`}
-                />
-                {jeZaklad ? (
-                  <span
-                    title="Tahle otázka musí zůstat - podle ní se pozná, kdo dorazí."
-                    className="rounded-pill border border-brand-green/50 bg-brand-green/10 text-brand-greenDeep px-3 py-1.5 text-xs font-heading font-semibold"
-                  >
-                    základní otázka
-                  </span>
-                ) : (
-                  <select
-                    value={o.typ}
-                    onChange={(e) => {
-                      const typ = e.target.value as Otazka['typ'];
-                      upravOtazku(o.id, {
-                        typ,
-                        ...(typ === 'VYBER'
-                          ? { moznosti: o.moznosti ?? [], vicMoznosti: o.vicMoznosti !== false }
-                          : {}),
-                      });
-                    }}
-                    className={`${pole} w-[180px]`}
-                  >
-                    {TYPY_OTAZEK.map((t) => (
-                      <option key={t.typ} value={t.typ}>
-                        {t.nazev}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {!jeZaklad && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => posunOtazku(o.id, -1)}
-                      disabled={i <= 1}
-                      aria-label="Posunout nahoru"
-                      className="rounded-lg border border-line px-2 py-1.5 text-sm text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-40"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => posunOtazku(o.id, 1)}
-                      disabled={i === otazky.length - 1}
-                      aria-label="Posunout dolů"
-                      className="rounded-lg border border-line px-2 py-1.5 text-sm text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-40"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOtazky((x) => x.filter((y) => y.id !== o.id))}
-                      aria-label="Smazat otázku"
-                      title="Smazat otázku"
-                      className="rounded-lg border border-line px-2 py-1.5 text-sm text-danger hover:border-danger"
-                    >
-                      ×
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Popisky tlačítek u ano/ne - „Dorazím / Nedorazím", „Přespím
-                  / Odjedu"… Prázdné znamená prosté Ano a Ne. */}
-              {o.typ === 'ANO_NE' && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <input
-                    value={o.ano ?? ''}
-                    onChange={(e) => upravOtazku(o.id, { ano: e.target.value })}
-                    placeholder="Popisek pro ano"
-                    className={`${pole} w-[180px]`}
-                  />
-                  <input
-                    value={o.ne ?? ''}
-                    onChange={(e) => upravOtazku(o.id, { ne: e.target.value })}
-                    placeholder="Popisek pro ne"
-                    className={`${pole} w-[180px]`}
-                  />
-                </div>
-              )}
-
-              <input
-                value={o.napoveda ?? ''}
-                onChange={(e) => upravOtazku(o.id, { napoveda: e.target.value })}
-                placeholder="Věta pod otázkou - nepovinné"
-                className={pole}
-              />
-
-              {o.typ === 'VYBER' && (
-                <div className="flex flex-col gap-2">
-                  <span className="text-[11px] font-heading uppercase tracking-wide text-muted">
-                    Možnosti na výběr
-                  </span>
-                  {(o.moznosti ?? []).length === 0 && (
-                    <span className="text-xs font-body text-muted">
-                      Zatím žádná možnost - přidej první.
-                    </span>
-                  )}
-                  <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
-                    {(o.moznosti ?? []).map((m, poradi) => (
-                      <li key={poradi} className="flex items-center gap-2">
-                        <input
-                          value={m}
-                          onChange={(e) => upravMoznost(o.id, poradi, e.target.value)}
-                          placeholder={`Možnost ${poradi + 1}`}
-                          className={`${pole} flex-1`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => smazMoznost(o.id, poradi)}
-                          aria-label="Smazat možnost"
-                          title="Smazat možnost"
-                          className="rounded-lg border border-line px-2 py-1.5 text-sm text-danger hover:border-danger"
-                        >
-                          ×
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => pridejMoznost(o.id)}
-                      className="rounded-pill border border-line px-3 py-1.5 text-xs font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
-                    >
-                      + Přidat možnost
-                    </button>
-                    <label className="flex items-center gap-2 text-xs font-body text-muted">
-                      <input
-                        type="checkbox"
-                        checked={o.vicMoznosti !== false}
-                        onChange={(e) => upravOtazku(o.id, { vicMoznosti: e.target.checked })}
-                        className="w-4 h-4 accent-brand-green"
-                      />
-                      Smí zaškrtnout víc možností
-                    </label>
-                  </div>
-                </div>
+        <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
+          {otazky.map((o) => (
+            <li
+              key={o.id}
+              className="rounded-lg border border-line bg-field px-3 py-2 flex items-center gap-2 flex-wrap"
+            >
+              <span className="text-sm font-heading text-ink">{o.text || '(bez otázky)'}</span>
+              <span className="text-[11px] font-body text-muted">
+                {o.typ === 'ANO_NE'
+                  ? `${o.ano ?? 'ano'} / ${o.ne ?? 'ne'}`
+                  : o.typ === 'VYBER'
+                    ? (o.moznosti ?? []).join(' · ')
+                    : 'vlastní slova'}
+              </span>
+              {o.id === KLIC_DORAZI && (
+                <span className="ml-auto rounded-pill border border-line px-2 py-0.5 text-[10px] font-heading font-semibold text-muted">
+                  základní
+                </span>
               )}
             </li>
-            );
-          })}
-        </ul>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-body text-muted">Přidat otázku:</span>
-          {TYPY_OTAZEK.map((t) => (
-            <button
-              key={t.typ}
-              type="button"
-              onClick={() => pridejOtazku(t.typ)}
-              title={t.popis}
-              className="rounded-pill border border-line px-3 py-1.5 text-xs font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
-            >
-              + {t.nazev}
-            </button>
           ))}
-        </div>
+        </ul>
       </section>
         </>
       )}
@@ -1056,77 +922,26 @@ export function AkceSprava({
             </div>
           </section>
 
-          {/* 3a. ROZESLÁNÍ - komu co odešlo a odkud se posílá znovu. */}
+          {/* ROZESÍLÁNÍ JE V OKNĚ (zadání 27. 11. 2026: „to odesílání pozvánky
+              příjemcům bych dal do vyskakovacího okna po stisknutí tlačítka").
+              Na stránce zůstane jen to, jak na tom rozesílka je. */}
           <section className="rounded-card border border-line bg-surface p-4 sm:p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <h2 className="font-heading font-semibold text-base text-ink m-0">
-                Pozvaní ({souhrn.pozvano})
+                Rozesílání ({souhrn.odeslano} z {souhrn.pozvano})
               </h2>
               <button
                 type="button"
-                onClick={() => void rozesli()}
-                disabled={pracuje}
-                className="rounded-lg bg-brand-green text-onAccent font-heading font-semibold text-sm px-4 py-2 border-0 cursor-pointer disabled:opacity-60"
+                onClick={() => setRozesilaniOtevrene(true)}
+                className="rounded-lg bg-brand-green text-onAccent font-heading font-semibold text-sm px-4 py-2 border-0 cursor-pointer"
               >
-                Rozeslat ({pozvanky.filter((p) => !p.odeslanoAt).length})
+                Rozeslat pozvánky ({pozvanky.filter((p) => !p.odeslanoAt).length})
               </button>
             </div>
-            {pozvanky.length === 0 ? (
-              <p className="text-sm font-body text-muted m-0">Zatím tu nikdo není.</p>
-            ) : (
-              <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
-                {pozvanky.map((p) => (
-                  <li
-                    key={p.id}
-                    className="rounded-lg border border-line bg-field px-3 py-2 flex items-center gap-3 flex-wrap"
-                  >
-                    <span className="font-heading font-semibold text-sm text-ink">{p.jmeno}</span>
-                    <span className="text-xs font-body text-muted">{p.email}</span>
-                    <span
-                      className={`rounded-pill px-2 py-0.5 text-[11px] font-heading font-semibold ${
-                        p.dorazi === true
-                          ? 'bg-brand-green/15 text-brand-greenDeep'
-                          : p.dorazi === false
-                            ? 'bg-dangerTint text-danger'
-                            : 'bg-surface text-muted border border-line'
-                      }`}
-                    >
-                      {stav(p)}
-                    </span>
-                    {p.odpovedelAt && popisOdpovedi(otazky, p.odpovedi) && (
-                      <span className="text-xs font-body text-muted basis-full">
-                        {popisOdpovedi(otazky, p.odpovedi)}
-                      </span>
-                    )}
-                    <span className="ml-auto flex items-center gap-3">
-                      {/* POSLAT JEDNOMU (25. 11. 2026). U nepozvaného je to
-                          hlavní tlačítko - hromadné Rozeslat zůstává nahoře
-                          pro ty, komu ještě nic nešlo. */}
-                      <button
-                        type="button"
-                        onClick={() => void rozesli([p.id], `${p.jmeno} (${p.email})`)}
-                        disabled={pracuje}
-                        className={
-                          p.odeslanoAt
-                            ? 'text-xs font-heading font-semibold text-muted hover:text-brand-purple'
-                            : 'rounded-lg bg-brand-green px-2.5 py-1 text-xs font-heading font-semibold text-onAccent hover:bg-brand-greenDeep transition-colors disabled:opacity-60'
-                        }
-                      >
-                        {p.odeslanoAt ? 'Poslat znovu' : 'Poslat'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void odeber(p.id)}
-                        disabled={pracuje}
-                        className="text-xs font-heading font-semibold text-danger"
-                      >
-                        Odebrat
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <p className="text-sm font-body text-muted m-0">
+              V okně je vidět, komu pozvánka odešla, komu ještě ne, a dá se poslat jednomu
+              člověku i všem najednou.
+            </p>
           </section>
             </>
           )}
@@ -1189,13 +1004,19 @@ export function AkceSprava({
               ))}
             </div>
 
-            {/* Souhrn po otázkách - počítá se jen z těch, kdo dorazí. */}
+            {/* KAŽDÁ OTÁZKA SVOJE KARTA (zadání 27. 11. 2026: „seznam pití bych
+                dal do karty"). Počítá se jen z těch, kdo dorazí - skleničku
+                pro nepřítomného nikdo nechystá. */}
+            <div className="grid gap-3 sm:grid-cols-2">
             {souhrn.otazky.map((o) => {
               const maCo =
                 o.ano > 0 || o.ne > 0 || o.moznosti.length > 0 || o.texty.length > 0;
               if (!maCo) return null;
               return (
-                <div key={o.otazka.id} className="flex flex-col gap-1.5">
+                <div
+                  key={o.otazka.id}
+                  className="rounded-card border border-line bg-field p-3 flex flex-col gap-2"
+                >
                   <span className="text-[11px] font-heading uppercase tracking-wide text-muted">
                     {o.otazka.text}
                   </span>
@@ -1222,7 +1043,7 @@ export function AkceSprava({
                     </div>
                   )}
                   {o.otazka.typ === 'TEXT' && (
-                    <ul className="list-none p-0 m-0 flex flex-col gap-1">
+                    <ul className="list-none p-0 m-0 flex flex-col gap-1 max-h-[200px] overflow-y-auto">
                       {o.texty.map((t) => (
                         <li key={t.jmeno + t.text} className="text-xs font-body text-ink">
                           <span className="font-heading font-semibold">{t.jmeno}:</span> {t.text}
@@ -1233,6 +1054,7 @@ export function AkceSprava({
                 </div>
               );
             })}
+            </div>
 
             {/* TABULKA ODPOVĚDÍ (zadání 26. 11. 2026: „chci už průběžný přehled
                 v tabulce, kolik kdo čeho bude pít, kdo potřebuje hotel").
@@ -1597,6 +1419,328 @@ export function AkceSprava({
         </div>
         )}
       </div>
+
+      {rozesilaniOtevrene && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setRozesilaniOtevrene(false)}
+        >
+          <div
+            className="flex h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-card border border-line bg-surface shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+                  Rozesílání pozvánek
+                </p>
+                <p className="m-0 truncate text-sm font-heading text-ink">
+                  {detail.nazev || 'Akce'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRozesilaniOtevrene(false)}
+                className="rounded-lg border border-line px-3 py-1.5 text-xs font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
+              >
+                Zavřít
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+          {/* 3a. ROZESLÁNÍ - komu co odešlo a odkud se posílá znovu. */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="font-heading font-semibold text-base text-ink m-0">
+                Pozvaní ({souhrn.pozvano})
+              </h2>
+              <button
+                type="button"
+                onClick={() => void rozesli()}
+                disabled={pracuje}
+                className="rounded-lg bg-brand-green text-onAccent font-heading font-semibold text-sm px-4 py-2 border-0 cursor-pointer disabled:opacity-60"
+              >
+                Rozeslat ({pozvanky.filter((p) => !p.odeslanoAt).length})
+              </button>
+            </div>
+            {pozvanky.length === 0 ? (
+              <p className="text-sm font-body text-muted m-0">Zatím tu nikdo není.</p>
+            ) : (
+              <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
+                {pozvanky.map((p) => (
+                  <li
+                    key={p.id}
+                    className="rounded-lg border border-line bg-field px-3 py-2 flex items-center gap-3 flex-wrap"
+                  >
+                    <span className="font-heading font-semibold text-sm text-ink">{p.jmeno}</span>
+                    <span className="text-xs font-body text-muted">{p.email}</span>
+                    <span
+                      className={`rounded-pill px-2 py-0.5 text-[11px] font-heading font-semibold ${
+                        p.dorazi === true
+                          ? 'bg-brand-green/15 text-brand-greenDeep'
+                          : p.dorazi === false
+                            ? 'bg-dangerTint text-danger'
+                            : 'bg-surface text-muted border border-line'
+                      }`}
+                    >
+                      {stav(p)}
+                    </span>
+                    {p.odpovedelAt && popisOdpovedi(otazky, p.odpovedi) && (
+                      <span className="text-xs font-body text-muted basis-full">
+                        {popisOdpovedi(otazky, p.odpovedi)}
+                      </span>
+                    )}
+                    <span className="ml-auto flex items-center gap-3">
+                      {/* POSLAT JEDNOMU (25. 11. 2026). U nepozvaného je to
+                          hlavní tlačítko - hromadné Rozeslat zůstává nahoře
+                          pro ty, komu ještě nic nešlo. */}
+                      <button
+                        type="button"
+                        onClick={() => void rozesli([p.id], `${p.jmeno} (${p.email})`)}
+                        disabled={pracuje}
+                        className={
+                          p.odeslanoAt
+                            ? 'text-xs font-heading font-semibold text-muted hover:text-brand-purple'
+                            : 'rounded-lg bg-brand-green px-2.5 py-1 text-xs font-heading font-semibold text-onAccent hover:bg-brand-greenDeep transition-colors disabled:opacity-60'
+                        }
+                      >
+                        {p.odeslanoAt ? 'Poslat znovu' : 'Poslat'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void odeber(p.id)}
+                        disabled={pracuje}
+                        className="text-xs font-heading font-semibold text-danger"
+                      >
+                        Odebrat
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {anketaOtevrena && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setAnketaOtevrena(false)}
+        >
+          <div
+            className="flex h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-card border border-line bg-surface shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
+                  Otázky v anketě
+                </p>
+                <p className="m-0 truncate text-sm font-heading text-ink">
+                  {detail.nazev || 'Akce'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAnketaOtevrena(false)}
+                className="rounded-lg border border-line px-3 py-1.5 text-xs font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
+              >
+                Zavřít
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+      {/* 1b. ANKETA (zadání 25. 11. 2026: „chci ty anketní otázky modifikovat
+          a přidávat nové"). „Dorazíte?" tu schválně není - tu drží portál sám,
+          stojí na ní celý přehled. Uloží se tlačítkem u pozvánky výš. */}
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 className="font-heading font-semibold text-base text-ink m-0">Anketa</h2>
+          <p className="text-sm font-body text-muted m-0 mt-1">
+            První otázka je základní - přepsat ji můžeš, ale smazat ne; na její odpovědi stojí
+            celý přehled a na zbytek se ptáme jen těch, kdo dorazí. Změny se uloží tlačítkem{' '}
+            {detail.id ? '„Uložit"' : '„Založit akci"'} výš.
+          </p>
+        </div>
+
+
+        <ul className="list-none p-0 m-0 flex flex-col gap-2">
+          {otazky.map((o, i) => {
+            const jeZaklad = o.id === KLIC_DORAZI;
+            return (
+            <li key={o.id} className="rounded-lg border border-line bg-field p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  value={o.text}
+                  onChange={(e) => upravOtazku(o.id, { text: e.target.value })}
+                  placeholder="Na co se ptáme?"
+                  className={`${pole} flex-1 min-w-[200px]`}
+                />
+                {jeZaklad ? (
+                  <span
+                    title="Tahle otázka musí zůstat - podle ní se pozná, kdo dorazí."
+                    className="rounded-pill border border-brand-green/50 bg-brand-green/10 text-brand-greenDeep px-3 py-1.5 text-xs font-heading font-semibold"
+                  >
+                    základní otázka
+                  </span>
+                ) : (
+                  <select
+                    value={o.typ}
+                    onChange={(e) => {
+                      const typ = e.target.value as Otazka['typ'];
+                      upravOtazku(o.id, {
+                        typ,
+                        ...(typ === 'VYBER'
+                          ? { moznosti: o.moznosti ?? [], vicMoznosti: o.vicMoznosti !== false }
+                          : {}),
+                      });
+                    }}
+                    className={`${pole} w-[180px]`}
+                  >
+                    {TYPY_OTAZEK.map((t) => (
+                      <option key={t.typ} value={t.typ}>
+                        {t.nazev}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {!jeZaklad && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => posunOtazku(o.id, -1)}
+                      disabled={i <= 1}
+                      aria-label="Posunout nahoru"
+                      className="rounded-lg border border-line px-2 py-1.5 text-sm text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-40"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => posunOtazku(o.id, 1)}
+                      disabled={i === otazky.length - 1}
+                      aria-label="Posunout dolů"
+                      className="rounded-lg border border-line px-2 py-1.5 text-sm text-muted hover:text-brand-purple hover:border-brand-purple disabled:opacity-40"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOtazky((x) => x.filter((y) => y.id !== o.id))}
+                      aria-label="Smazat otázku"
+                      title="Smazat otázku"
+                      className="rounded-lg border border-line px-2 py-1.5 text-sm text-danger hover:border-danger"
+                    >
+                      ×
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Popisky tlačítek u ano/ne - „Dorazím / Nedorazím", „Přespím
+                  / Odjedu"… Prázdné znamená prosté Ano a Ne. */}
+              {o.typ === 'ANO_NE' && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    value={o.ano ?? ''}
+                    onChange={(e) => upravOtazku(o.id, { ano: e.target.value })}
+                    placeholder="Popisek pro ano"
+                    className={`${pole} w-[180px]`}
+                  />
+                  <input
+                    value={o.ne ?? ''}
+                    onChange={(e) => upravOtazku(o.id, { ne: e.target.value })}
+                    placeholder="Popisek pro ne"
+                    className={`${pole} w-[180px]`}
+                  />
+                </div>
+              )}
+
+              <input
+                value={o.napoveda ?? ''}
+                onChange={(e) => upravOtazku(o.id, { napoveda: e.target.value })}
+                placeholder="Věta pod otázkou - nepovinné"
+                className={pole}
+              />
+
+              {o.typ === 'VYBER' && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[11px] font-heading uppercase tracking-wide text-muted">
+                    Možnosti na výběr
+                  </span>
+                  {(o.moznosti ?? []).length === 0 && (
+                    <span className="text-xs font-body text-muted">
+                      Zatím žádná možnost - přidej první.
+                    </span>
+                  )}
+                  <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
+                    {(o.moznosti ?? []).map((m, poradi) => (
+                      <li key={poradi} className="flex items-center gap-2">
+                        <input
+                          value={m}
+                          onChange={(e) => upravMoznost(o.id, poradi, e.target.value)}
+                          placeholder={`Možnost ${poradi + 1}`}
+                          className={`${pole} flex-1`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => smazMoznost(o.id, poradi)}
+                          aria-label="Smazat možnost"
+                          title="Smazat možnost"
+                          className="rounded-lg border border-line px-2 py-1.5 text-sm text-danger hover:border-danger"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => pridejMoznost(o.id)}
+                      className="rounded-pill border border-line px-3 py-1.5 text-xs font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+                    >
+                      + Přidat možnost
+                    </button>
+                    <label className="flex items-center gap-2 text-xs font-body text-muted">
+                      <input
+                        type="checkbox"
+                        checked={o.vicMoznosti !== false}
+                        onChange={(e) => upravOtazku(o.id, { vicMoznosti: e.target.checked })}
+                        className="w-4 h-4 accent-brand-green"
+                      />
+                      Smí zaškrtnout víc možností
+                    </label>
+                  </div>
+                </div>
+              )}
+            </li>
+            );
+          })}
+        </ul>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-body text-muted">Přidat otázku:</span>
+          {TYPY_OTAZEK.map((t) => (
+            <button
+              key={t.typ}
+              type="button"
+              onClick={() => pridejOtazku(t.typ)}
+              title={t.popis}
+              className="rounded-pill border border-line px-3 py-1.5 text-xs font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+            >
+              + {t.nazev}
+            </button>
+          ))}
+        </div>
+      </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NÁHLED PŘES CELOU OBRAZOVKU (25. 11. 2026: „ten náhled je malý.
           Musí to být jako u notifikací a RL"). Stejné okno jako u náhledu
