@@ -430,19 +430,25 @@ export function Topbar({
             aria-label={akce.nazev}
             className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 transition-colors no-underline"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#1FDF67"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5"
-            >
-              <path d="M5 3 L9 3 L10.5 10 A3 3 0 0 1 4.5 10 Z" />
-              <path d="M7.2 13 V20 M5 20 H9.5" />
-              <path d="M15 4 L19 4 L20.5 11 A3 3 0 0 1 14.5 11 Z" />
-              <path d="M17.2 14 V21 M15 21 H19.5" />
+            <svg viewBox="0 0 24 24" className="w-5 h-5">
+              {/* Přípitek a nad ním hvězdička - ať je na první pohled vidět,
+                  že jde o vánoční akci (upřesnění 27. 11. 2026). */}
+              <g
+                fill="none"
+                stroke="#1FDF67"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 6 L8 6 L9.4 12.4 A2.8 2.8 0 0 1 3.6 12.4 Z" />
+                <path d="M6.3 15 V21 M4.2 21 H8.4" />
+                <path d="M14.6 8 L18.6 8 L20 14.4 A2.8 2.8 0 0 1 14.2 14.4 Z" />
+                <path d="M16.9 17 V22 M14.8 22 H19" />
+              </g>
+              <path
+                d="M17.5 1 L18.6 4 L21.6 5.1 L18.6 6.2 L17.5 9.2 L16.4 6.2 L13.4 5.1 L16.4 4 Z"
+                fill="#FFD36B"
+              />
             </svg>
           </a>
         )}

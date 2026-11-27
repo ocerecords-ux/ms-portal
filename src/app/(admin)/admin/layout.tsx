@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from '@/app/(portal)/components/Topbar';
+import { maVanocniVyzdobu } from '@/lib/vanoceServer';
+import { zkratkaNaAkci } from '@/lib/akceServer';
 import { RozdeleneOkno } from '@/app/(portal)/components/RozdeleneOkno';
 import { TaskDock } from '@/app/(portal)/components/TaskDock';
 import { QuickDock } from '@/app/(portal)/components/QuickDock';
@@ -69,6 +71,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     prisma.user.findUnique({ where: { id: session.user.id }, select: { maFotku: true } }).catch(() => null),
   ]);
 
+  /**
+   * ZKRATKA NA AKCI A VÁNOČNÍ VÝZDOBA I V ADMINISTRACI (oprava 27. 11. 2026:
+   * „kliknu na ni a ona zmizí"). Administrace má vlastní layout, a ten lištu
+   * o zkratce neinformoval - po prokliku do Akcí tedy ikona ze lišty zmizela,
+   * přesně tam, kde má svítit nejvíc.
+   */
+  const [vanoce, zkratkaAkce] = await Promise.all([
+    maVanocniVyzdobu(session.user.id),
+    zkratkaNaAkci(session.user.id),
+  ]);
+
   return (
     <JazykProvider jazyk={jazyk}>
     <div className="min-h-screen bg-paper">
@@ -84,6 +97,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         pripominky={pripominkyKVyrizeni}
         spravcePripominek
         interni
+        vanoce={vanoce}
+        akce={zkratkaAkce}
       />
       {/* Od 5. 9. 2026 stejne siroky obsah jako v klientske casti portalu
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
